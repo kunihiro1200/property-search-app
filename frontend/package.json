@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "不動産売主リスト管理システム - フロントエンド",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
