@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "vercel-build": "npx vite build --logLevel info",
+    "build": "vite build",
+    "vercel-build": "vite build --logLevel info",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
