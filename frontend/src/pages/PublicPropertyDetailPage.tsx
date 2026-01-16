@@ -1,0 +1,605 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
+  Paper,
+  Chip,
+  Button,
+  CircularProgress,
+  Alert,
+  Divider,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PrintIcon from '@mui/icons-material/Print';
+import { usePublicProperty } from '../hooks/usePublicProperties';
+import PublicInquiryForm from '../components/PublicInquiryForm';
+import PropertyImageGallery from '../components/PropertyImageGallery';
+import PublicPropertyHeader from '../components/PublicPropertyHeader';
+import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
+import { getBadgeType } from '../utils/propertyStatusUtils';
+import { SEOHead } from '../components/SEOHead';
+import { StructuredData } from '../components/StructuredData';
+import { generatePropertyStructuredData } from '../utils/structuredData';
+import '../styles/print.css';
+
+const PublicPropertyDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ判定（600px未満）
+  
+  // 全データの状態管理
+  const [completeData, setCompleteData] = useState<any>(null);
+  const [isLoadingComplete, setIsLoadingComplete] = useState(true);
+  
+  // 概算書PDF生成の状態管理
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const { data: property, isLoading, isError, error } = usePublicProperty(id);
+
+  // 成約済み判定
+  const isSold = property ? getBadgeType(property.atbb_status) === 'sold' : false;
+
+  // 全データを一度に取得
+  useEffect(() => {
+    if (!id) return;
+    
+    const fetchCompleteData = async () => {
+      setIsLoadingComplete(true);
+      try {
+        const response = await fetch(`/api/public/properties/${id}/complete`);
+        if (response.ok) {
+          const data = await response.json();
+          setCompleteData(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch complete data:', error);
+      } finally {
+        setIsLoadingComplete(false);
+      }
+    };
+    
+    fetchCompleteData();
+  }, [id]);
+  
+  const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
+    if (!property) return;
+    
+    setIsGeneratingPdf(true);
+    try {
+      const response = await fetch(
+        `/api/public/properties/${property.property_number}/estimate-pdf`,
+        { method: 'POST' }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (mode === 'preview') {
+          // プレビュー：新しいタブで開く
+          window.open(data.pdfUrl, '_blank');
+        } else {
+          // ダウンロード：ファイルとしてダウンロード
+          const link = document.createElement('a');
+          link.href = data.pdfUrl;
+          link.download = `概算書_${property.property_number}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || '概算書の生成に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to generate estimate PDF:', error);
+      alert('概算書の生成に失敗しました');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleBackClick = () => {
+    // ブラウザの戻るボタンと同じ動作（location.stateを保持）
+    navigate(-1);
+  };
+
+  // 印刷ボタンのハンドラー
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // 価格をフォーマット
+  const formatPrice = (price: number | undefined) => {
+    if (!price) return '価格応談';
+    return `${(price / 10000).toLocaleString()}万円`;
+  };
+
+  // 物件タイプの表示名
+  const getPropertyTypeLabel = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'detached_house': '一戸建て',
+      'apartment': 'マンション',
+      'land': '土地',
+      'other': 'その他',
+    };
+    return typeMap[type] || type;
+  };
+
+  // 新築年月のフォーマット
+  const formattedConstructionDate = property ? formatConstructionDate(property.construction_year_month) : null;
+  const showConstructionDate = property && shouldShowConstructionDate(property.property_type) && formattedConstructionDate;
+
+  // 日付フォーマット関数
+  const formatSettlementDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // ローディング状態
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // エラー状態（404含む）
+  if (isError || !property) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error?.status === 404
+            ? 'お探しの物件が見つかりませんでした'
+            : error?.message || '物件の読み込みに失敗しました'}
+        </Alert>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBackClick}
+        >
+          物件一覧に戻る
+        </Button>
+      </Container>
+    );
+  }
+
+  return (
+    <>
+      {/* SEO Meta Tags */}
+      {property && (
+        <>
+          <SEOHead
+            title={`${property.address} - ${property.property_type}`}
+            description={`${property.property_type}の物件です。価格: ${property.price}万円。${property.address}に位置しています。`}
+            keywords={[
+              '不動産',
+              '物件',
+              property.property_type,
+              property.address,
+              '大分',
+              '売買',
+            ]}
+            canonicalUrl={typeof window !== 'undefined' ? window.location.href : ''}
+            ogImage={property.images?.[0]}
+          />
+          
+          {/* Structured Data */}
+          <StructuredData
+            data={generatePropertyStructuredData({
+              id: property.id,
+              propertyNumber: property.property_number,
+              address: property.address,
+              price: property.price || 0,
+              propertyType: property.property_type,
+              description: property.description,
+              landArea: property.land_area,
+              buildingArea: property.building_area,
+              buildYear: property.construction_year_month ? parseInt(property.construction_year_month.substring(0, 4)) : undefined,
+              rooms: property.floor_plan,
+              images: property.images?.map(url => ({ url })),
+              latitude: property.latitude,
+              longitude: property.longitude,
+            })}
+          />
+        </>
+      )}
+      
+      <PublicPropertyHeader 
+        showBackButton={true}
+        atbbStatus={property?.atbb_status}
+        navigationState={location.state}
+      />
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+        <Container maxWidth="lg">
+          {/* 印刷ボタン（右上に固定） */}
+          <Box
+            className="no-print"
+            sx={{
+              position: 'fixed',
+              top: 120,
+              right: 16,
+              zIndex: 1000,
+            }}
+          >
+            <IconButton
+              onClick={handlePrint}
+              sx={{
+                bgcolor: 'primary.main',
+                color: 'white',
+                boxShadow: 3,
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+              }}
+            >
+              <PrintIcon />
+            </IconButton>
+          </Box>
+
+          <Grid container spacing={4}>
+            {/* 左カラム: 物件情報 */}
+            <Grid item xs={12} md={8}>
+              {/* 物件画像ギャラリー */}
+              <Paper elevation={2} sx={{ mb: 3, p: 2 }}>
+                {/* お気に入り文言を「物件画像」見出しの上に配置 */}
+                {completeData?.favoriteComment && (
+                  <Box sx={{ marginBottom: '20px' }} className="favorite-comment-container">
+                    <Box className="favorite-comment-bubble" sx={{
+                      background: '#FFF9E6',
+                      border: '2px solid #FFC107',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <Box component="span" className="favorite-comment-icon" sx={{ mr: 1, fontSize: '20px' }}>⭐</Box>
+                      <Box component="span" className="favorite-comment-content" sx={{ fontWeight: 'bold' }}>
+                        {completeData.favoriteComment}
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
+                
+                <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
+                  物件画像
+                </Typography>
+                
+                <PropertyImageGallery
+                  propertyId={property.id}
+                  canDelete={false}
+                  canHide={false}
+                  showHiddenImages={false}
+                />
+              </Paper>
+
+              {/* 物件基本情報 */}
+              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              {/* 物件タイプ */}
+              <Box sx={{ mb: 2 }}>
+                <Chip
+                  label={getPropertyTypeLabel(property.property_type)}
+                  color="primary"
+                  variant="outlined"
+                />
+              </Box>
+
+              {/* 価格 */}
+              <Typography variant="h4" component="h1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                {formatPrice(property.price)}
+              </Typography>
+
+              {/* 住所 */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                <Typography variant="h6" color="text.secondary">
+                  {property.display_address || property.address}
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              {/* 物件詳細 */}
+              <Grid container spacing={2}>
+                {showConstructionDate && (
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      新築年月
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {formattedConstructionDate}
+                    </Typography>
+                  </Grid>
+                )}
+                {property.land_area && (
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      土地面積
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {property.land_area}㎡
+                    </Typography>
+                  </Grid>
+                )}
+                {property.building_area && (
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      建物面積
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {property.building_area}㎡
+                    </Typography>
+                  </Grid>
+                )}
+                {property.building_age !== undefined && property.building_age !== null && (
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      築年数
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      築{property.building_age}年
+                    </Typography>
+                  </Grid>
+                )}
+                {property.floor_plan && (
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      間取り
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {property.floor_plan}
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+
+              {/* 物件説明 */}
+              {property.description && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    物件の説明
+                  </Typography>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {property.description}
+                  </Typography>
+                </>
+              )}
+
+              {/* 物件の特徴 */}
+              {property.features && property.features.length > 0 && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    物件の特徴
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {property.features.map((feature, index) => (
+                      <Chip key={index} label={feature} variant="outlined" />
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              {/* Google Map（「地図」見出しなし） */}
+              {property.google_map_url && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Button
+                    variant="outlined"
+                    startIcon={<LocationOnIcon />}
+                    href={property.google_map_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    fullWidth
+                  >
+                    Google Mapで見る
+                  </Button>
+                </>
+              )}
+            </Paper>
+
+            {/* 成約済み物件の場合: 成約情報を表示 */}
+            {isSold && (
+              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  成約情報
+                </Typography>
+                
+                {/* 物件番号 */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    物件番号
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium">
+                    {property.property_number}
+                  </Typography>
+                </Box>
+                
+                {/* 成約日（決済日が存在する場合のみ） */}
+                {completeData?.settlementDate && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      成約日
+                    </Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {formatSettlementDate(completeData.settlementDate)}
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            )}
+
+            {/* Athome情報セクション - 削除（Google DriveのURLを表示しないため） */}
+
+            {/* おすすめコメントセクション */}
+            {completeData?.recommendedComments && completeData.recommendedComments.length > 0 && (
+              <Paper
+                elevation={2}
+                className="recommended-comment-section"
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  backgroundColor: '#FFF9E6',
+                  borderLeft: '4px solid #FFC107',
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#F57C00' }}>
+                  おすすめポイント
+                </Typography>
+                <Box sx={{ m: 0 }}>
+                  {completeData.recommendedComments.map((row: string[], rowIndex: number) => (
+                    <Typography key={rowIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                      {row.join(' ')}
+                    </Typography>
+                  ))}
+                </Box>
+              </Paper>
+            )}
+            
+            {/* 「こちらの物件について」セクション（見出しなし） */}
+            {completeData?.propertyAbout && (
+              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {completeData.propertyAbout}
+                </Typography>
+              </Paper>
+            )}
+            
+            {/* 「概算書」セクション（印刷時は非表示） */}
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }} className="no-print">
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                概算書
+              </Typography>
+              
+              {/* PC: 概算書ボタン1つのみ */}
+              {!isMobile && (
+                <Button
+                  variant="contained"
+                  onClick={() => handleGenerateEstimatePdf('preview')}
+                  disabled={isGeneratingPdf}
+                  fullWidth
+                >
+                  {isGeneratingPdf ? '生成中...' : '概算書'}
+                </Button>
+              )}
+              
+              {/* スマホ: プレビューとダウンロードの2つのボタン */}
+              {isMobile && (
+                <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => handleGenerateEstimatePdf('preview')}
+                    disabled={isGeneratingPdf}
+                    fullWidth
+                  >
+                    {isGeneratingPdf ? '生成中...' : 'プレビュー'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleGenerateEstimatePdf('download')}
+                    disabled={isGeneratingPdf}
+                    fullWidth
+                  >
+                    ダウンロード
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+
+            {/* 会社署名（印刷時のみ表示） */}
+            <Box sx={{ display: 'none', '@media print': { display: 'block' } }} className="company-signature">
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'flex-end',
+                flexDirection: 'column',
+                textAlign: 'right'
+              }}>
+                <Box className="company-info" sx={{
+                  fontSize: '12px',
+                  lineHeight: 1.6,
+                  color: '#666',
+                  textAlign: 'right'
+                }}>
+                  <Box sx={{ mb: 0.5 }}>
+                    <span>商号（名称）：</span>
+                    <span>株式会社　威風</span>
+                  </Box>
+                  <Box sx={{ mb: 0.5 }}>
+                    <span>代表者：</span>
+                    <span>國廣智子</span>
+                  </Box>
+                  <Box sx={{ mb: 0.5 }}>
+                    <span>主たる事務所の所在地：</span>
+                    <span>大分市舞鶴町1-3-30</span>
+                  </Box>
+                  {/* 成約済みの場合は電話番号を非表示 */}
+                  {!isSold && (
+                    <Box sx={{ mb: 0.5 }}>
+                      <span>電話番号：</span>
+                      <span>097-533-2022</span>
+                    </Box>
+                  )}
+                  <Box>
+                    <span>免許証番号：</span>
+                    <span>大分県知事（３）第3183号</span>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* 印刷用署名（フォールバック） - 各ページの最後に表示 */}
+            <Box className="print-signature-fallback" sx={{ display: 'none' }}>
+              <Box sx={{
+                textAlign: 'right',
+                fontSize: '5pt',
+                lineHeight: 1.2,
+                color: '#666'
+              }}>
+                <div>商号（名称）：株式会社　威風</div>
+                <div>代表者：國廣智子</div>
+                <div>主たる事務所の所在地：大分市舞鶴町1-3-30</div>
+                {!isSold && <div>電話番号：097-533-2022</div>}
+                <div>免許証番号：大分県知事（３）第3183号</div>
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* 右カラム: お問い合わせフォーム（成約済みの場合は非表示） */}
+          {!isSold && (
+            <Grid item xs={12} md={4} className="no-print">
+              <Box sx={{ position: 'sticky', top: 16 }}>
+                <PublicInquiryForm
+                  propertyId={property.id}
+                  propertyAddress={property.display_address || property.address}
+                  propertyNumber={property.property_number}
+                />
+              </Box>
+            </Grid>
+          )}
+        </Grid>
+      </Container>
+    </Box>
+    </>
+  );
+};
+
+export default PublicPropertyDetailPage;
