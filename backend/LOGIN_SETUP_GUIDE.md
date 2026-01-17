@@ -26,8 +26,8 @@
 3. 以下の情報を入力：
 
 ```
-Client ID: <Google Cloud ConsoleのClient IDを入力>
-Client Secret: <Google Cloud ConsoleのClient Secretを入力>
+Client ID: [Google Cloud ConsoleのClient IDを入力]
+Client Secret: [Google Cloud ConsoleのClient Secretを入力]
 ```
 
 **注意**: 実際の値は`.env`ファイルまたはGoogle Cloud Consoleから取得してください。

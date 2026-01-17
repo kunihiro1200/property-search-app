@@ -333,12 +333,12 @@ npx ts-node src/scripts/test-sheets-connection.ts
 #### 環境変数設定 (`backend/.env`)
 ```env
 # Supabase Configuration
-SUPABASE_URL=https://fzcuexscuwhoywcicdqq.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_URL=[Supabase DashboardのProject URLを入力]
+SUPABASE_ANON_KEY=[Supabase DashboardのAnon Keyを入力]
+SUPABASE_SERVICE_KEY=[Supabase DashboardのService Role Keyを入力]
 
 # Encryption
-ENCRYPTION_KEY=1rJEtoCusAIMzyR86P6TQr0ND600D/dU
+ENCRYPTION_KEY=[32文字のランダムな文字列を生成して入力]
 
 # Google Sheets API Configuration
 GOOGLE_SHEETS_SPREADSHEET_ID=1wKBRLWbT6pSKa9IlTDabjhjTnfs_GxX6Rn6M6kbio1I
@@ -349,8 +349,8 @@ GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./google-service-account.json
 ```
 
 #### サービスアカウント情報
-- メールアドレス: `spreadsheet-sync@seller-management-personal.iam.gserviceaccount.com`
-- プロジェクトID: `seller-management-personal`
+- メールアドレス: `[google-service-account.jsonのclient_emailを参照]`
+- プロジェクトID: `[Google Cloud ConsoleのProject IDを参照]`
 - JSONキーファイル: `backend/google-service-account.json`
 
 ### 📋 データベーススキーマの調整
@@ -378,10 +378,9 @@ ALTER TABLE sellers ALTER COLUMN status DROP NOT NULL;
    - 社員レコードの自動作成
 
 3. **Supabase設定**
-   - プロジェクトURL: `https://fzcuexscuwhoywcicdqq.supabase.co`
-   - anon key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Y3VleHNjdXdob3l3Y2ljZHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0ODc3MDUsImV4cCI6MjA4MDA2MzcwNX0.rsmIbn3XqXs3oHIcG-W8wEnjgP7ocu6p3iIAmcg0Ak4`
-   - service_role key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Y3VleHNjdXdob3l3Y2ljZHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0ODc3MDUsImV4cCI6MjA4MDA2MzcwNX0.rsmIbn3XqXs3oHIcG-W8wEnjgP7ocu6p3iIAmcg0Ak4`
-   - **注意**: anon keyとservice_role keyが同じ値ですが、これは正常です（無料プランでは同じ値になることがあります）
+   - プロジェクトURL: `[Supabase DashboardのProject URLを参照]`
+   - anon key: `[Supabase DashboardのAnon Keyを参照]`
+   - service_role key: `[Supabase DashboardのService Role Keyを参照]`
 
 ### 🚀 次のステップ
 
@@ -392,14 +391,14 @@ ALTER TABLE sellers ALTER COLUMN status DROP NOT NULL;
 ##### ステップ1: Supabaseダッシュボードでの設定
 
 1. [Supabaseダッシュボード](https://supabase.com/dashboard)にアクセス
-2. プロジェクト `fzcuexscuwhoywcicdqq` を選択
+2. プロジェクト `[あなたのProject ID]` を選択
 3. 左メニューから「Authentication」→「Providers」を選択
 4. 「Google」を探してクリック
 5. 以下の設定を行う:
    - **Enable Sign in with Google**: ONにする
-   - **Client ID**: `<Google Cloud ConsoleのClient IDを入力>`
-   - **Client Secret**: `<Google Cloud ConsoleのClient Secretを入力>`
-   - **Callback URL (for OAuth)**: `https://fzcuexscuwhoywcicdqq.supabase.co/auth/v1/callback`（自動管理、編集不要）
+   - **Client ID**: `[Google Cloud ConsoleのClient IDを入力]`
+   - **Client Secret**: `[Google Cloud ConsoleのClient Secretを入力]`
+   - **Callback URL (for OAuth)**: `[Supabase DashboardのCallback URLを参照]`（自動管理、編集不要）
 6. **「Save」をクリック**（これを忘れないでください！）
 
 ##### ステップ2: Google Cloud Consoleでの設定
@@ -412,7 +411,7 @@ Supabaseの設定を保存したら、Google Cloud Consoleで承認済みリダ�
 4. OAuth 2.0 クライアントIDのリストから、使用するClient IDをクリック
 5. 「承認済みのリダイレクトURI」セクションで「URIを追加」をクリック
 6. 以下のURIを追加:
-   - `https://fzcuexscuwhoywcicdqq.supabase.co/auth/v1/callback`（Supabaseのコールバック）
+   - `[Supabase DashboardのCallback URLを入力]`（Supabaseのコールバック）
    - `http://localhost:5174/auth/callback`（ローカル開発用、既に追加されている場合はスキップ）
 7. 「保存」をクリック
 

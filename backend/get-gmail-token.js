@@ -1,10 +1,16 @@
 const { google } = require('googleapis');
 const readline = require('readline');
+require('dotenv').config();
 
 // 環境変数から認証情報を読み込む
-const CLIENT_ID = '111282429644-7j3br7ehkp57mmfforgit7djsnfaog5k.apps.googleusercontent.com';
-const CLIENT_SECRET = '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';
-const REDIRECT_URI = 'http://localhost:3000/auth/google/callback';
+const CLIENT_ID = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.error('❌ エラー: GMAIL_CLIENT_IDとGMAIL_CLIENT_SECRETを.envファイルに設定してください');
+  process.exit(1);
+}
 
 // OAuth2クライアントを作成
 const oauth2Client = new google.auth.OAuth2(
