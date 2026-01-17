@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>物件タイプバッジ表示診断 - 詳細版</title>
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .diagnostic-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .diagnostic-section h2 {
+      margin-top: 0;
+      color: #2563EB;
+    }
+    .code-block {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .result.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .result.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .result.warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    button {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 物件タイプバッジ表示診断 - 詳細版</h1>
+  
+  <div class="diagnostic-section">
+    <h2>📋 診断手順</h2>
+    <ol>
+      <li>物件公開ページ（http://localhost:5173/public/properties）を開く</li>
+      <li>ブラウザの開発者ツール（F12）を開く</li>
+      <li>Consoleタブを開く</li>
+      <li>下記のコードをコピーして実行</li>
+    </ol>
+  </div>
+
+  <div class="diagnostic-section">
+    <h2>🔧 診断コード</h2>
+    <p>以下のコードをブラウザのコンソールにコピー＆ペーストして実行してください：</p>
+    
+    <div class="code-block">
+// 物件タイプバッジの詳細診断
+(function() {
+  console.log('=== 物件タイプバッジ診断開始 ===\n');
+  
+  // 1. バッジ要素の検索
+  const badges = document.querySelectorAll('.property-type-badge');
+  console.log(`✓ 見つかったバッジ数: ${badges.length}`);
+  
+  if (badges.length === 0) {
+    console.error('❌ バッジが見つかりません！');
+    return;
+  }
+  
+  // 2. 各バッジの詳細情報を取得
+  badges.forEach((badge, index) => {
+    console.log(`\n--- バッジ ${index + 1} の詳細 ---`);
+    
+    // 基本情報
+    console.log('テキスト:', badge.textContent);
+    console.log('クラス:', badge.className);
+    
+    // 計算されたスタイル
+    const computed = window.getComputedStyle(badge);
+    console.log('\n📊 計算されたスタイル:');
+    console.log('  position:', computed.position);
+    console.log('  z-index:', computed.zIndex);
+    console.log('  top:', computed.top);
+    console.log('  left:', computed.left);
+    console.log('  display:', computed.display);
+    console.log('  visibility:', computed.visibility);
+    console.log('  opacity:', computed.opacity);
+    console.log('  background-color:', computed.backgroundColor);
+    console.log('  color:', computed.color);
+    console.log('  width:', computed.width);
+    console.log('  height:', computed.height);
+    console.log('  padding:', computed.padding);
+    console.log('  font-size:', computed.fontSize);
+    console.log('  font-weight:', computed.fontWeight);
+    
+    // 位置情報
+    const rect = badge.getBoundingClientRect();
+    console.log('\n📍 位置情報:');
+    console.log('  top:', rect.top);
+    console.log('  left:', rect.left);
+    console.log('  width:', rect.width);
+    console.log('  height:', rect.height);
+    console.log('  画面内に表示:', rect.top >= 0 && rect.left >= 0);
+    
+    // 親要素の情報
+    const parent = badge.parentElement;
+    if (parent) {
+      const parentComputed = window.getComputedStyle(parent);
+      console.log('\n👨‍👦 親要素の情報:');
+      console.log('  クラス:', parent.className);
+      console.log('  position:', parentComputed.position);
+      console.log('  z-index:', parentComputed.zIndex);
+      console.log('  overflow:', parentComputed.overflow);
+    }
+    
+    // オーバーレイとの関係
+    const overlay = parent?.querySelector('.property-card-image-overlay');
+    if (overlay) {
+      const overlayComputed = window.getComputedStyle(overlay);
+      console.log('\n🎭 オーバーレイの情報:');
+      console.log('  z-index:', overlayComputed.zIndex);
+      console.log('  position:', overlayComputed.position);
+    }
+    
+    // 問題の診断
+    console.log('\n🔍 問題診断:');
+    const issues = [];
+    
+    if (computed.display === 'none') {
+      issues.push('❌ display: none が設定されています');
+    }
+    if (computed.visibility === 'hidden') {
+      issues.push('❌ visibility: hidden が設定されています');
+    }
+    if (parseFloat(computed.opacity) === 0) {
+      issues.push('❌ opacity: 0 が設定されています');
+    }
+    if (computed.position !== 'absolute') {
+      issues.push('⚠️ position が absolute ではありません');
+    }
+    if (parseInt(computed.zIndex) < 10) {
+      issues.push('⚠️ z-index が 10 未満です');
+    }
+    if (rect.width === 0 || rect.height === 0) {
+      issues.push('❌ 幅または高さが 0 です');
+    }
+    if (computed.color === computed.backgroundColor) {
+      issues.push('⚠️ 文字色と背景色が同じです');
+    }
+    
+    if (issues.length === 0) {
+      console.log('✅ 問題は見つかりませんでした');
+    } else {
+      console.log('見つかった問題:');
+      issues.forEach(issue => console.log('  ' + issue));
+    }
+  });
+  
+  console.log('\n=== 診断完了 ===');
+})();
+    </div>
+    
+    <button onclick="copyCode()">📋 コードをコピー</button>
+  </div>
+
+  <div class="diagnostic-section">
+    <h2>🎯 期待される結果</h2>
+    <div class="result success">
+      <strong>正常な場合:</strong>
+      <ul>
+        <li>position: absolute</li>
+        <li>z-index: 10</li>
+        <li>display: inline-flex または flex</li>
+        <li>visibility: visible</li>
+        <li>opacity: 1</li>
+        <li>width と height が 0 より大きい</li>
+      </ul>
+    </div>
+    
+    <div class="result error">
+      <strong>問題がある場合:</strong>
+      <ul>
+        <li>display: none</li>
+        <li>visibility: hidden</li>
+        <li>opacity: 0</li>
+        <li>z-index が低い（1以下）</li>
+        <li>width または height が 0</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="diagnostic-section">
+    <h2>🛠️ 一時的な修正テスト</h2>
+    <p>問題が見つかった場合、以下のコードで一時的に修正できるかテストしてください：</p>
+    
+    <div class="code-block">
+// バッジを強制的に表示
+document.querySelectorAll('.property-type-badge').forEach(badge => {
+  badge.style.display = 'inline-flex';
+  badge.style.visibility = 'visible';
+  badge.style.opacity = '1';
+  badge.style.position = 'absolute';
+  badge.style.zIndex = '10';
+  badge.style.top = '16px';
+  badge.style.left = '16px';
+  console.log('✓ バッジのスタイルを強制適用しました');
+});
+    </div>
+    
+    <button onclick="copyFixCode()">📋 修正コードをコピー</button>
+  </div>
+
+  <script>
+    function copyCode() {
+      const code = document.querySelector('.code-block').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('✅ コードをコピーしました！\nブラウザのコンソールに貼り付けて実行してください。');
+      });
+    }
+    
+    function copyFixCode() {
+      const code = document.querySelectorAll('.code-block')[1].textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('✅ 修正コードをコピーしました！\nブラウザのコンソールに貼り付けて実行してください。');
+      });
+    }
+  </script>
+</body>
+</html>

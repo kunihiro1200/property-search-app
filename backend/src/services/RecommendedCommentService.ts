@@ -1,6 +1,5 @@
 import { GoogleSheetsClient } from './GoogleSheetsClient';
-import { PropertyListingService } from './PropertyListingService';
-import { WorkTaskService } from './WorkTaskService';
+import { GyomuListService } from './GyomuListService';
 import { getRedisClient } from '../config/redis';
 
 export interface RecommendedCommentResult {
@@ -11,8 +10,8 @@ export interface RecommendedCommentResult {
 /**
  * おすすめコメント取得サービス
  * 
- * 物件個別のスプレッドシートの「athome」シート（または「athome 」シート）から
- * 物件タイプに応じたおすすめコメントを取得します。
+ * 業務リスト（業務依頼シート）の「スプシURL」から個別物件スプレッドシートを取得し、
+ * その「athome」シート（または「athome 」シート）から物件タイプに応じたおすすめコメントを取得します。
  * 
  * 物件種別に応じて以下のセル範囲から複数のコメントを取得:
  * - 土地: B63:L79
@@ -20,14 +19,12 @@ export interface RecommendedCommentResult {
  * - マンション: B149:L163
  */
 export class RecommendedCommentService {
-  private propertyListingService: PropertyListingService;
-  private workTaskService: WorkTaskService;
+  private gyomuListService: GyomuListService;
   private cachePrefix = 'recommended-comment:';
   private cacheTTL = 300; // 5分間（秒）
   
   constructor() {
-    this.propertyListingService = new PropertyListingService();
-    this.workTaskService = new WorkTaskService();
+    this.gyomuListService = new GyomuListService();
   }
   
   /**
@@ -121,32 +118,17 @@ export class RecommendedCommentService {
     cellRange: string
   ): Promise<string[][]> {
     try {
-      // 物件情報を取得してスプレッドシートURLを取得
-      const properties = await this.propertyListingService.searchByPropertyNumber(propertyNumber, true);
+      // 業務リストから個別物件スプレッドシートURLを取得
+      const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
       
-      if (!properties || properties.length === 0) {
+      if (!gyomuData || !gyomuData.spreadsheetUrl) {
         console.log(
-          `[RecommendedCommentService] Property not found: ${propertyNumber}`
+          `[RecommendedCommentService] No spreadsheet URL for property ${propertyNumber} in 業務リスト`
         );
         return [];
       }
       
-      const property = properties[0];
-      let spreadsheetUrl = property.storage_location;
-      
-      // storage_locationがフォルダURLの場合、work_tasksからspreadsheet_urlを取得
-      if (!spreadsheetUrl || !spreadsheetUrl.includes('/spreadsheets/d/')) {
-        const workTask = await this.workTaskService.getByPropertyNumber(propertyNumber);
-        spreadsheetUrl = (workTask as any)?.spreadsheet_url;
-      }
-      
-      // スプレッドシートURLがない場合
-      if (!spreadsheetUrl) {
-        console.log(
-          `[RecommendedCommentService] No spreadsheet URL for property ${propertyNumber}`
-        );
-        return [];
-      }
+      const spreadsheetUrl = gyomuData.spreadsheetUrl;
       
       // スプレッドシートURLからIDを抽出
       const spreadsheetId = this.extractSpreadsheetId(spreadsheetUrl);

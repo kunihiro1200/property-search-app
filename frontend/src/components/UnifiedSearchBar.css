@@ -1,0 +1,125 @@
+.unified-search-bar {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.search-input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  background: white;
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary, #6b7280);
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #FFC107;
+  color: #000;
+  border: 1px solid #000;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.search-button:hover {
+  background: #FFB300;
+  border-color: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.search-button:active {
+  transform: translateY(0);
+}
+
+.search-button:focus-visible {
+  outline: 2px solid #FFC107;
+  outline-offset: 2px;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 640px) {
+  .search-input-wrapper {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .search-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .search-button-text {
+    display: inline;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .search-button-text {
+    display: none;
+  }
+
+  .search-button {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .search-button-text {
+    display: inline;
+  }
+}
+
+/* アクセシビリティ: 高コントラストモード */
+@media (prefers-contrast: high) {
+  .search-input-wrapper {
+    border: 2px solid currentColor;
+  }
+
+  .search-button {
+    border: 2px solid transparent;
+  }
+
+  .search-button:focus-visible {
+    border-color: currentColor;
+  }
+}
+
+/* アクセシビリティ: モーション削減 */
+@media (prefers-reduced-motion: reduce) {
+  .search-input-wrapper,
+  .search-button {
+    transition: none;
+  }
+
+  .search-button:hover {
+    transform: none;
+  }
+}

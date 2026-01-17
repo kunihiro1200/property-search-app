@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PropertyTypeFilterButtons 診断</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .test-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            margin: 10px 0;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 PropertyTypeFilterButtons 診断ツール</h1>
+    
+    <div class="section">
+        <h2>1. ページ情報</h2>
+        <div id="page-info"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. React/MUI ライブラリチェック</h2>
+        <div id="library-check"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. コンポーネント検査</h2>
+        <button onclick="inspectComponent()">コンポーネントを検査</button>
+        <div id="component-info"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. DOM構造チェック</h2>
+        <button onclick="checkDOMStructure()">DOM構造を確認</button>
+        <div id="dom-structure"></div>
+    </div>
+
+    <div class="section">
+        <h2>5. スタイル適用チェック</h2>
+        <button onclick="checkStyles()">スタイルを確認</button>
+        <div id="style-check"></div>
+    </div>
+
+    <div class="section">
+        <h2>6. コンソールログ</h2>
+        <div id="console-logs" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        // ページ情報を表示
+        function displayPageInfo() {
+            const info = document.getElementById('page-info');
+            info.innerHTML = `
+                <div class="status success">
+                    <strong>URL:</strong> ${window.location.href}<br>
+                    <strong>User Agent:</strong> ${navigator.userAgent}<br>
+                    <strong>画面サイズ:</strong> ${window.innerWidth} x ${window.innerHeight}
+                </div>
+            `;
+        }
+
+        // ライブラリチェック
+        function checkLibraries() {
+            const check = document.getElementById('library-check');
+            let html = '';
+
+            // React チェック
+            if (window.React) {
+                html += '<div class="status success">✅ React が読み込まれています (バージョン: ' + window.React.version + ')</div>';
+            } else {
+                html += '<div class="status error">❌ React が読み込まれていません</div>';
+            }
+
+            // ReactDOM チェック
+            if (window.ReactDOM) {
+                html += '<div class="status success">✅ ReactDOM が読み込まれています</div>';
+            } else {
+                html += '<div class="status error">❌ ReactDOM が読み込まれていません</div>';
+            }
+
+            // MUI チェック
+            if (window.MaterialUI) {
+                html += '<div class="status success">✅ Material-UI が読み込まれています</div>';
+            } else {
+                html += '<div class="status warning">⚠️ Material-UI がグローバルスコープにありません（これは正常な場合があります）</div>';
+            }
+
+            check.innerHTML = html;
+        }
+
+        // コンポーネント検査
+        function inspectComponent() {
+            const info = document.getElementById('component-info');
+            
+            // PropertyTypeFilterButtons コンポーネントを探す
+            const buttons = document.querySelectorAll('[class*="PropertyTypeFilterButtons"]');
+            const muiButtons = document.querySelectorAll('[class*="MuiButton"]');
+            const muiBox = document.querySelectorAll('[class*="MuiBox"]');
+            
+            let html = '<pre><code>';
+            html += `PropertyTypeFilterButtons 要素: ${buttons.length}個\n`;
+            html += `MUI Button 要素: ${muiButtons.length}個\n`;
+            html += `MUI Box 要素: ${muiBox.length}個\n\n`;
+            
+            if (muiButtons.length > 0) {
+                html += '✅ MUI Buttonコンポーネントが見つかりました\n\n';
+                html += '最初のボタンの情報:\n';
+                const firstButton = muiButtons[0];
+                html += `  クラス: ${firstButton.className}\n`;
+                html += `  テキスト: ${firstButton.textContent}\n`;
+                html += `  表示状態: ${window.getComputedStyle(firstButton).display}\n`;
+                html += `  可視性: ${window.getComputedStyle(firstButton).visibility}\n`;
+            } else {
+                html += '❌ MUI Buttonコンポーネントが見つかりません\n';
+            }
+            
+            html += '</code></pre>';
+            info.innerHTML = html;
+        }
+
+        // DOM構造チェック
+        function checkDOMStructure() {
+            const structure = document.getElementById('dom-structure');
+            
+            // 物件を絞り込むセクションを探す
+            const filterSection = Array.from(document.querySelectorAll('div')).find(
+                el => el.textContent.includes('物件を絞り込む')
+            );
+            
+            let html = '<pre><code>';
+            
+            if (filterSection) {
+                html += '✅ "物件を絞り込む" セクションが見つかりました\n\n';
+                html += 'セクション内の構造:\n';
+                html += filterSection.innerHTML.substring(0, 500) + '...\n';
+            } else {
+                html += '❌ "物件を絞り込む" セクションが見つかりません\n';
+            }
+            
+            html += '</code></pre>';
+            structure.innerHTML = html;
+        }
+
+        // スタイルチェック
+        function checkStyles() {
+            const check = document.getElementById('style-check');
+            const muiButtons = document.querySelectorAll('[class*="MuiButton"]');
+            
+            let html = '<pre><code>';
+            
+            if (muiButtons.length > 0) {
+                const button = muiButtons[0];
+                const styles = window.getComputedStyle(button);
+                
+                html += 'ボタンの計算済みスタイル:\n\n';
+                html += `  display: ${styles.display}\n`;
+                html += `  visibility: ${styles.visibility}\n`;
+                html += `  opacity: ${styles.opacity}\n`;
+                html += `  width: ${styles.width}\n`;
+                html += `  height: ${styles.height}\n`;
+                html += `  padding: ${styles.padding}\n`;
+                html += `  margin: ${styles.margin}\n`;
+                html += `  background-color: ${styles.backgroundColor}\n`;
+                html += `  color: ${styles.color}\n`;
+                html += `  border: ${styles.border}\n`;
+                html += `  font-size: ${styles.fontSize}\n`;
+                html += `  font-weight: ${styles.fontWeight}\n`;
+            } else {
+                html += '❌ MUI Buttonが見つからないため、スタイルを確認できません\n';
+            }
+            
+            html += '</code></pre>';
+            check.innerHTML = html;
+        }
+
+        // コンソールログをキャプチャ
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const logs = [];
+
+        function captureLog(type, args) {
+            const message = Array.from(args).map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            logs.push({ type, message, time: new Date().toLocaleTimeString() });
+            updateConsoleLogs();
+        }
+
+        console.log = function(...args) {
+            captureLog('log', args);
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            captureLog('error', args);
+            originalError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            captureLog('warn', args);
+            originalWarn.apply(console, args);
+        };
+
+        function updateConsoleLogs() {
+            const logsDiv = document.getElementById('console-logs');
+            logsDiv.innerHTML = logs.map(log => {
+                const className = log.type === 'error' ? 'error' : log.type === 'warn' ? 'warning' : 'success';
+                return `<div class="status ${className}"><strong>[${log.time}] ${log.type.toUpperCase()}:</strong> ${log.message}</div>`;
+            }).join('');
+        }
+
+        // 初期化
+        window.addEventListener('load', () => {
+            displayPageInfo();
+            checkLibraries();
+            
+            // 2秒後に自動検査
+            setTimeout(() => {
+                inspectComponent();
+                checkDOMStructure();
+                checkStyles();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

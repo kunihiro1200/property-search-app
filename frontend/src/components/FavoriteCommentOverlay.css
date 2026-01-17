@@ -1,0 +1,121 @@
+/* お気に入り文言コンテナ */
+.favorite-comment-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 0 20px;
+  width: 100%;
+}
+
+/* 吹き出しスタイル */
+.favorite-comment-bubble {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: linear-gradient(135deg, #FFD54F 0%, #FFC107 100%);
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  width: 100%;
+  animation: slideIn 0.4s ease-out;
+  pointer-events: auto; /* 吹き出し自体はクリック可能 */
+  backdrop-filter: blur(2px); /* 背景を少しぼかして視認性向上 */
+}
+
+
+
+/* アイコン */
+.favorite-comment-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F57C00;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  padding: 4px;
+}
+
+/* コンテンツ */
+.favorite-comment-content {
+  flex: 1;
+  color: #3E2723;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  word-wrap: break-word;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+/* アニメーション */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .favorite-comment-container {
+    padding: 0 15px;
+  }
+
+  .favorite-comment-bubble {
+    width: 100%;
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+
+
+  .favorite-comment-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .favorite-comment-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .favorite-comment-content {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .favorite-comment-container {
+    padding: 0 10px;
+  }
+
+  .favorite-comment-bubble {
+    width: 100%;
+    padding: 12px 14px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+
+
+
+  .favorite-comment-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .favorite-comment-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .favorite-comment-content {
+    font-size: 13px;
+  }
+}

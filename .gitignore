@@ -8,6 +8,10 @@ node_modules/
 .env.*.local
 VERCEL_ENV_VARIABLES.md
 
+# Google Service Account
+google-service-account.json
+backend/google-service-account.json
+
 # Build outputs
 dist/
 build/

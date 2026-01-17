@@ -1,0 +1,63 @@
+-- Migration 026 (Fixed): Add sync logs and error logs tables
+-- Purpose: Track spreadsheet sync operations and errors for property_listings and buyers
+-- Fix: Use inline CHECK constraints and avoid DO blocks to prevent schema visibility issues
+
+-- Step 1: Create sync_logs table with inline CHECK constraints
+CREATE TABLE IF NOT EXISTS sync_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sync_type VARCHAR(50) NOT NULL CHECK (sync_type IN ('migration', 'create', 'update', 'delete', 'manual', 'batch')),
+  entity_type VARCHAR(50) NOT NULL CHECK (entity_type IN ('property_listing', 'buyer', 'seller')),
+  entity_id UUID,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'in_progress', 'success', 'failed')),
+  error_message TEXT,
+  rows_affected INTEGER DEFAULT 0,
+  started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE,
+  duration_ms INTEGER,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Step 2: Create error_logs table with inline CHECK constraints
+CREATE TABLE IF NOT EXISTS error_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  error_type VARCHAR(50) NOT NULL CHECK (error_type IN ('network', 'validation', 'rate_limit', 'auth', 'conflict', 'unknown')),
+  error_message TEXT NOT NULL,
+  stack_trace TEXT,
+  entity_type VARCHAR(50) CHECK (entity_type IN ('property_listing', 'buyer', 'seller')),
+  entity_id UUID,
+  operation VARCHAR(50),
+  retry_count INTEGER DEFAULT 0,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Step 3: Add synced_to_sheet_at columns (using ALTER TABLE IF NOT EXISTS pattern)
+ALTER TABLE property_listings ADD COLUMN IF NOT EXISTS synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE buyers ADD COLUMN IF NOT EXISTS synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+
+-- Step 4: Create indexes
+CREATE INDEX IF NOT EXISTS idx_sync_logs_entity_type ON sync_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_entity_id ON sync_logs(entity_id);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_sync_type ON sync_logs(sync_type);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_status ON sync_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_started_at ON sync_logs(started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_error_logs_entity_type ON error_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_error_logs_entity_id ON error_logs(entity_id);
+CREATE INDEX IF NOT EXISTS idx_error_logs_error_type ON error_logs(error_type);
+CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_property_listings_synced_to_sheet_at ON property_listings(synced_to_sheet_at);
+CREATE INDEX IF NOT EXISTS idx_buyers_synced_to_sheet_at ON buyers(synced_to_sheet_at);
+CREATE INDEX IF NOT EXISTS idx_sellers_synced_to_sheet_at ON sellers(synced_to_sheet_at);
+
+-- Step 5: Add comments
+COMMENT ON TABLE sync_logs IS 'Tracks all spreadsheet sync operations for property_listings, buyers, and sellers';
+COMMENT ON TABLE error_logs IS 'Tracks all sync-related errors';
+COMMENT ON COLUMN sync_logs.entity_type IS 'Type of entity being synced: property_listing, buyer, or seller';
+COMMENT ON COLUMN sync_logs.entity_id IS 'UUID of the entity being synced';
+COMMENT ON COLUMN property_listings.synced_to_sheet_at IS 'Last time this property listing was synced to spreadsheet';
+COMMENT ON COLUMN buyers.synced_to_sheet_at IS 'Last time this buyer was synced to spreadsheet';
+COMMENT ON COLUMN sellers.synced_to_sheet_at IS 'Last time this seller was synced to spreadsheet';

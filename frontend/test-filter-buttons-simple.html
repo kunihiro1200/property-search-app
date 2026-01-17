@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件タイプフィルターボタン診断</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>物件タイプフィルターボタン診断</h1>
+    
+    <div class="section">
+        <h2>1. ページアクセステスト</h2>
+        <p>以下のURLにアクセスしてください:</p>
+        <a href="http://localhost:5173/public/properties" target="_blank">
+            http://localhost:5173/public/properties
+        </a>
+    </div>
+
+    <div class="section">
+        <h2>2. ブラウザ開発者ツールでの確認手順</h2>
+        <ol>
+            <li>F12キーを押して開発者ツールを開く</li>
+            <li><strong>Console</strong>タブを開く</li>
+            <li>以下のコマンドを実行:
+                <pre>document.querySelector('.space-y-3')</pre>
+                結果が<span class="success">null以外</span>なら、コンポーネントは存在します
+            </li>
+            <li>以下のコマンドで物件タイプボタンを確認:
+                <pre>document.querySelectorAll('button[aria-label*="で絞り込む"]')</pre>
+                結果が<span class="success">4つのボタン</span>なら正常です
+            </li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>3. Elementsタブでの確認</h2>
+        <ol>
+            <li><strong>Elements</strong>タブを開く</li>
+            <li>Ctrl+F で検索ボックスを開く</li>
+            <li>「物件タイプ」で検索</li>
+            <li>以下のような構造が見つかるか確認:
+                <pre>&lt;div class="space-y-3"&gt;
+  &lt;div class="text-sm font-medium text-gray-700"&gt;
+    物件タイプ
+  &lt;/div&gt;
+  &lt;div class="flex flex-wrap gap-2"&gt;
+    &lt;button ...&gt;戸建て&lt;/button&gt;
+    &lt;button ...&gt;マンション&lt;/button&gt;
+    &lt;button ...&gt;土地&lt;/button&gt;
+    &lt;button ...&gt;収益物件&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+            </li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>4. Networkタブでの確認</h2>
+        <ol>
+            <li><strong>Network</strong>タブを開く</li>
+            <li>ページをリロード (Ctrl+R)</li>
+            <li>「PropertyTypeFilterButtons」で検索</li>
+            <li>該当ファイルが読み込まれているか確認</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>5. コンソールでのデバッグコマンド</h2>
+        <p>以下のコマンドをConsoleタブで実行して、詳細情報を取得:</p>
+        <pre>// 物件タイプフィルターセクション全体を取得
+const filterSection = document.querySelector('.space-y-3');
+console.log('フィルターセクション:', filterSection);
+
+// ボタンを全て取得
+const buttons = document.querySelectorAll('button[aria-label*="で絞り込む"]');
+console.log('ボタン数:', buttons.length);
+buttons.forEach((btn, i) => {
+    console.log(`ボタン${i+1}:`, btn.textContent, btn.className);
+});
+
+// 親要素を確認
+if (filterSection) {
+    console.log('親要素:', filterSection.parentElement);
+    console.log('表示状態:', window.getComputedStyle(filterSection).display);
+    console.log('可視性:', window.getComputedStyle(filterSection).visibility);
+}</pre>
+    </div>
+
+    <div class="section">
+        <h2>6. 問題が見つかった場合</h2>
+        <ul>
+            <li><span class="error">コンポーネントが見つからない</span> → Reactコンポーネントが正しくマウントされていない可能性</li>
+            <li><span class="error">ボタンが0個</span> → レンダリングロジックに問題がある可能性</li>
+            <li><span class="error">display: none</span> → CSSで非表示になっている可能性</li>
+            <li><span class="error">Networkエラー</span> → ビルドやバンドルに問題がある可能性</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('診断ページが読み込まれました');
+        console.log('次のステップ: http://localhost:5173/public/properties にアクセスしてください');
+    </script>
+</body>
+</html>

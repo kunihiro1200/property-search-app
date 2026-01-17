@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>物件タイプフィルターボタン - テスト</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #2196f3;
+      padding-bottom: 10px;
+    }
+    
+    h2 {
+      color: #555;
+      margin-top: 0;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    
+    .status.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.warning {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    
+    button {
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    
+    button:hover {
+      background-color: #1976d2;
+    }
+    
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .code-block {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px;
+      margin: 5px 0;
+      background-color: #f8f9fa;
+      border-left: 4px solid #2196f3;
+    }
+    
+    .checklist li.checked {
+      background-color: #d4edda;
+      border-left-color: #28a745;
+    }
+    
+    .checklist li.failed {
+      background-color: #f8d7da;
+      border-left-color: #dc3545;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 物件タイプフィルターボタン - 診断ツール</h1>
+  
+  <div class="test-section">
+    <h2>📋 現在の状況</h2>
+    <ul class="checklist" id="status-checklist">
+      <li id="status-url">URLチェック: 確認中...</li>
+      <li id="status-component">コンポーネント存在チェック: 確認中...</li>
+      <li id="status-css">CSSファイル読み込みチェック: 確認中...</li>
+      <li id="status-buttons">ボタン要素チェック: 確認中...</li>
+      <li id="status-styles">スタイル適用チェック: 確認中...</li>
+    </ul>
+  </div>
+  
+  <div class="test-section">
+    <h2>🧪 自動診断</h2>
+    <button onclick="runDiagnostics()">診断を実行</button>
+    <div id="diagnostic-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>🔧 手動テスト</h2>
+    <p>以下のボタンをクリックして、各機能をテストしてください：</p>
+    <button onclick="testComponentExists()">1. コンポーネント存在確認</button>
+    <button onclick="testButtonCount()">2. ボタン数確認</button>
+    <button onclick="testCSSLoaded()">3. CSS読み込み確認</button>
+    <button onclick="testStylesApplied()">4. スタイル適用確認</button>
+    <button onclick="testButtonClick()">5. ボタンクリック動作確認</button>
+    <div id="manual-test-results"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>📝 診断結果の解釈</h2>
+    <div id="interpretation"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>💡 解決策</h2>
+    <div id="solutions"></div>
+  </div>
+
+  <script>
+    // ページ読み込み時に自動チェック
+    window.addEventListener('load', () => {
+      setTimeout(runInitialChecks, 1000);
+    });
+    
+    function runInitialChecks() {
+      // URLチェック
+      const currentUrl = window.location.href;
+      const urlCheck = document.getElementById('status-url');
+      if (currentUrl.includes('localhost:5174') || currentUrl.includes('localhost:5173')) {
+        urlCheck.textContent = '✅ URLチェック: 正しいポート番号でアクセスしています';
+        urlCheck.classList.add('checked');
+      } else {
+        urlCheck.textContent = '❌ URLチェック: localhost:5174 でアクセスしてください';
+        urlCheck.classList.add('failed');
+      }
+      
+      // コンポーネント存在チェック
+      const componentCheck = document.getElementById('status-component');
+      const container = document.querySelector('.property-type-filter-buttons');
+      if (container) {
+        componentCheck.textContent = '✅ コンポーネント存在チェック: コンポーネントが見つかりました';
+        componentCheck.classList.add('checked');
+      } else {
+        componentCheck.textContent = '❌ コンポーネント存在チェック: コンポーネントが見つかりません';
+        componentCheck.classList.add('failed');
+      }
+      
+      // ボタン要素チェック
+      const buttonsCheck = document.getElementById('status-buttons');
+      const buttons = document.querySelectorAll('.filter-button');
+      if (buttons.length === 4) {
+        buttonsCheck.textContent = `✅ ボタン要素チェック: ${buttons.length}個のボタンが見つかりました`;
+        buttonsCheck.classList.add('checked');
+      } else if (buttons.length > 0) {
+        buttonsCheck.textContent = `⚠️ ボタン要素チェック: ${buttons.length}個のボタンが見つかりました（期待値: 4個）`;
+        buttonsCheck.classList.add('failed');
+      } else {
+        buttonsCheck.textContent = '❌ ボタン要素チェック: ボタンが見つかりません';
+        buttonsCheck.classList.add('failed');
+      }
+      
+      // スタイル適用チェック
+      const stylesCheck = document.getElementById('status-styles');
+      if (container) {
+        const styles = window.getComputedStyle(container);
+        if (styles.display === 'flex') {
+          stylesCheck.textContent = '✅ スタイル適用チェック: CSSが正しく適用されています';
+          stylesCheck.classList.add('checked');
+        } else {
+          stylesCheck.textContent = `❌ スタイル適用チェック: display=${styles.display}（期待値: flex）`;
+          stylesCheck.classList.add('failed');
+        }
+      } else {
+        stylesCheck.textContent = '❌ スタイル適用チェック: コンポーネントが存在しないため確認できません';
+        stylesCheck.classList.add('failed');
+      }
+    }
+    
+    function runDiagnostics() {
+      const results = document.getElementById('diagnostic-results');
+      results.innerHTML = '<p>診断を実行中...</p>';
+      
+      const diagnostics = [];
+      
+      // 1. コンポーネントの存在確認
+      const container = document.querySelector('.property-type-filter-buttons');
+      diagnostics.push({
+        test: 'コンポーネントの存在',
+        passed: !!container,
+        message: container ? 'コンポーネントが見つかりました' : 'コンポーネントが見つかりません',
+        details: container ? container.outerHTML.substring(0, 200) + '...' : 'N/A'
+      });
+      
+      // 2. ボタンの数
+      const buttons = document.querySelectorAll('.filter-button');
+      diagnostics.push({
+        test: 'ボタンの数',
+        passed: buttons.length === 4,
+        message: `${buttons.length}個のボタンが見つかりました（期待値: 4個）`,
+        details: Array.from(buttons).map(b => b.textContent).join(', ')
+      });
+      
+      // 3. CSSの読み込み
+      if (container) {
+        const styles = window.getComputedStyle(container);
+        diagnostics.push({
+          test: 'CSSの適用',
+          passed: styles.display === 'flex',
+          message: `display: ${styles.display}（期待値: flex）`,
+          details: `gap: ${styles.gap}, margin-bottom: ${styles.marginBottom}`
+        });
+      }
+      
+      // 4. ボタンのスタイル
+      if (buttons.length > 0) {
+        const buttonStyles = window.getComputedStyle(buttons[0]);
+        diagnostics.push({
+          test: 'ボタンのスタイル',
+          passed: buttonStyles.padding !== '0px',
+          message: `padding: ${buttonStyles.padding}`,
+          details: `border: ${buttonStyles.border}, background: ${buttonStyles.backgroundColor}`
+        });
+      }
+      
+      // 結果を表示
+      let html = '<div style="margin-top: 20px;">';
+      diagnostics.forEach(d => {
+        const statusClass = d.passed ? 'success' : 'error';
+        html += `
+          <div class="status ${statusClass}">
+            <strong>${d.passed ? '✅' : '❌'} ${d.test}</strong><br>
+            ${d.message}<br>
+            <small>${d.details}</small>
+          </div>
+        `;
+      });
+      html += '</div>';
+      
+      results.innerHTML = html;
+      
+      // 解釈と解決策を表示
+      showInterpretation(diagnostics);
+      showSolutions(diagnostics);
+    }
+    
+    function showInterpretation(diagnostics) {
+      const interpretation = document.getElementById('interpretation');
+      const allPassed = diagnostics.every(d => d.passed);
+      
+      if (allPassed) {
+        interpretation.innerHTML = `
+          <div class="status success">
+            <strong>✅ すべてのテストに合格しました！</strong><br>
+            物件タイプフィルターボタンは正常に動作しています。
+          </div>
+        `;
+      } else {
+        const failedTests = diagnostics.filter(d => !d.passed);
+        interpretation.innerHTML = `
+          <div class="status error">
+            <strong>❌ ${failedTests.length}個のテストが失敗しました</strong><br>
+            以下の問題が検出されました：
+            <ul>
+              ${failedTests.map(t => `<li>${t.test}: ${t.message}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+    }
+    
+    function showSolutions(diagnostics) {
+      const solutions = document.getElementById('solutions');
+      const failedTests = diagnostics.filter(d => !d.passed);
+      
+      if (failedTests.length === 0) {
+        solutions.innerHTML = '<p>問題は検出されませんでした。</p>';
+        return;
+      }
+      
+      let html = '<h3>推奨される解決策：</h3>';
+      
+      failedTests.forEach(test => {
+        if (test.test === 'コンポーネントの存在') {
+          html += `
+            <div class="status warning">
+              <strong>コンポーネントが見つかりません</strong>
+              <ol>
+                <li>ブラウザのキャッシュをクリア（Ctrl+Shift+R）</li>
+                <li>正しいURL（http://localhost:5174/public/properties）にアクセス</li>
+                <li>開発者ツールのConsoleタブでJavaScriptエラーを確認</li>
+              </ol>
+            </div>
+          `;
+        }
+        
+        if (test.test === 'CSSの適用') {
+          html += `
+            <div class="status warning">
+              <strong>CSSが正しく適用されていません</strong>
+              <ol>
+                <li>ブラウザのキャッシュをクリア</li>
+                <li>開発者ツールのNetworkタブでCSSファイルの読み込みを確認</li>
+                <li>他のCSSとの競合がないか確認</li>
+              </ol>
+            </div>
+          `;
+        }
+      });
+      
+      solutions.innerHTML = html;
+    }
+    
+    // 手動テスト関数
+    function testComponentExists() {
+      const results = document.getElementById('manual-test-results');
+      const container = document.querySelector('.property-type-filter-buttons');
+      
+      if (container) {
+        results.innerHTML = `
+          <div class="status success">
+            ✅ コンポーネントが見つかりました<br>
+            <div class="code-block">${container.outerHTML.substring(0, 300)}...</div>
+          </div>
+        `;
+      } else {
+        results.innerHTML = `
+          <div class="status error">
+            ❌ コンポーネントが見つかりません<br>
+            ページ上に .property-type-filter-buttons クラスを持つ要素が存在しません。
+          </div>
+        `;
+      }
+    }
+    
+    function testButtonCount() {
+      const results = document.getElementById('manual-test-results');
+      const buttons = document.querySelectorAll('.filter-button');
+      
+      results.innerHTML = `
+        <div class="status ${buttons.length === 4 ? 'success' : 'error'}">
+          ${buttons.length === 4 ? '✅' : '❌'} ${buttons.length}個のボタンが見つかりました（期待値: 4個）<br>
+          ボタンのテキスト: ${Array.from(buttons).map(b => b.textContent).join(', ')}
+        </div>
+      `;
+    }
+    
+    function testCSSLoaded() {
+      const results = document.getElementById('manual-test-results');
+      const stylesheets = Array.from(document.styleSheets);
+      const cssFiles = stylesheets.map(s => s.href).filter(h => h);
+      
+      results.innerHTML = `
+        <div class="status success">
+          ✅ ${cssFiles.length}個のCSSファイルが読み込まれています<br>
+          <div class="code-block">${cssFiles.join('<br>')}</div>
+        </div>
+      `;
+    }
+    
+    function testStylesApplied() {
+      const results = document.getElementById('manual-test-results');
+      const container = document.querySelector('.property-type-filter-buttons');
+      
+      if (!container) {
+        results.innerHTML = `
+          <div class="status error">
+            ❌ コンポーネントが見つからないため、スタイルを確認できません
+          </div>
+        `;
+        return;
+      }
+      
+      const styles = window.getComputedStyle(container);
+      const expectedStyles = {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '12px',
+        marginBottom: '24px'
+      };
+      
+      let html = '<div class="status success"><strong>スタイル確認結果：</strong><br><ul>';
+      for (const [prop, expected] of Object.entries(expectedStyles)) {
+        const actual = styles[prop];
+        const match = actual.includes(expected) || expected.includes(actual);
+        html += `<li>${match ? '✅' : '❌'} ${prop}: ${actual} ${!match ? `(期待値: ${expected})` : ''}</li>`;
+      }
+      html += '</ul></div>';
+      
+      results.innerHTML = html;
+    }
+    
+    function testButtonClick() {
+      const results = document.getElementById('manual-test-results');
+      const buttons = document.querySelectorAll('.filter-button');
+      
+      if (buttons.length === 0) {
+        results.innerHTML = `
+          <div class="status error">
+            ❌ ボタンが見つからないため、クリックテストを実行できません
+          </div>
+        `;
+        return;
+      }
+      
+      results.innerHTML = `
+        <div class="status warning">
+          ⚠️ 最初のボタンをクリックします...<br>
+          ボタンが青色に変わるか確認してください。
+        </div>
+      `;
+      
+      setTimeout(() => {
+        buttons[0].click();
+        
+        setTimeout(() => {
+          const hasActiveClass = buttons[0].classList.contains('active');
+          results.innerHTML = `
+            <div class="status ${hasActiveClass ? 'success' : 'error'}">
+              ${hasActiveClass ? '✅' : '❌'} ボタンクリック: ${hasActiveClass ? '正常に動作しています' : '動作していません'}<br>
+              activeクラス: ${hasActiveClass ? 'あり' : 'なし'}
+            </div>
+          `;
+        }, 500);
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

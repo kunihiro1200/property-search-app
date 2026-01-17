@@ -1,0 +1,104 @@
+{
+  "timestamp": "2025-12-10T01:04:17.380Z",
+  "totalFixed": 16,
+  "fixes": [
+    {
+      "sellerNumber": "AA1116",
+      "propertyId": "5875b75c-6fbc-4469-ac3a-2272225d6f56",
+      "oldValue": null,
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA4450",
+      "propertyId": "bfc4050a-d633-4e43-ad5a-8001522d9160",
+      "oldValue": "detached_house",
+      "newValue": "マ"
+    },
+    {
+      "sellerNumber": "AA5645",
+      "propertyId": "24e2a8f6-2b44-4e47-8d3c-b24cb5b717a8",
+      "oldValue": "マンション",
+      "newValue": "マ"
+    },
+    {
+      "sellerNumber": "AA10201",
+      "propertyId": "e0bba993-c934-422a-adde-263afa9878c6",
+      "oldValue": "detached_house",
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA12252",
+      "propertyId": "86b323fe-c202-4231-b684-9c718495e67d",
+      "oldValue": "detached_house",
+      "newValue": "マ"
+    },
+    {
+      "sellerNumber": "AA4455",
+      "propertyId": "8d707fe8-9a02-474d-8a26-520158134543",
+      "oldValue": "detached_house",
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA9481",
+      "propertyId": "196e996c-6d14-423e-bf56-372a709b109a",
+      "oldValue": "detached_house",
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA2093",
+      "propertyId": "d0e59835-e377-4b5d-8d21-fa8f231ebee0",
+      "oldValue": null,
+      "newValue": "土"
+    },
+    {
+      "sellerNumber": "AA2594",
+      "propertyId": "ec323347-0305-418f-a137-b8ca0fc26aa2",
+      "oldValue": null,
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA9173",
+      "propertyId": "fcdd87ad-1775-4188-a9d0-26fd55225035",
+      "oldValue": "戸建",
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA1650",
+      "propertyId": "218efc74-60fe-4484-9fcd-11049285c71a",
+      "oldValue": null,
+      "newValue": "マ"
+    },
+    {
+      "sellerNumber": "AA3435",
+      "propertyId": "ef11168b-80af-4717-9332-b268498acb8c",
+      "oldValue": "マンション",
+      "newValue": "マ"
+    },
+    {
+      "sellerNumber": "AA4331",
+      "propertyId": "3f698191-02b5-4818-83e1-01ce8b1236cf",
+      "oldValue": "detached_house",
+      "newValue": null
+    },
+    {
+      "sellerNumber": "AA908",
+      "propertyId": "0daa011c-1557-459d-ba27-0d945e3dece0",
+      "oldValue": null,
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA5859",
+      "propertyId": "0b38e580-c440-4426-9eae-6357c85d8465",
+      "oldValue": "detached_house",
+      "newValue": "戸"
+    },
+    {
+      "sellerNumber": "AA4483",
+      "propertyId": "5ffd42d2-5a4e-4316-8205-b248dbcc439f",
+      "oldValue": "マンション",
+      "newValue": "マ"
+    }
+  ],
+  "errors": [],
+  "duration": 6385
+}

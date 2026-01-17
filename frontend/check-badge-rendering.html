@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>バッジレンダリングチェック</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>物件カードバッジレンダリングチェック</h1>
+    <button onclick="runCheck()">チェック実行</button>
+    <div id="results"></div>
+
+    <script>
+        async function runCheck() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>チェック中...</p>';
+            
+            let results = [];
+            
+            // 1. APIレスポンスチェック
+            try {
+                const response = await fetch('http://localhost:3000/api/public/properties?limit=3');
+                const data = await response.json();
+                
+                results.push({
+                    title: '1. APIレスポンス',
+                    success: true,
+                    message: `${data.properties.length}件の物件を取得`,
+                    details: data.properties.map(p => `${p.property_number}: ${p.property_type}`).join('<br>')
+                });
+                
+                // 2. 物件タイプの値チェック
+                const types = data.properties.map(p => p.property_type);
+                const validTypes = ['detached_house', 'apartment', 'land', 'other', 'income'];
+                const invalidTypes = types.filter(t => !validTypes.includes(t));
+                
+                results.push({
+                    title: '2. 物件タイプの値',
+                    success: invalidTypes.length === 0,
+                    message: invalidTypes.length === 0 ? '全て有効な値です' : `無効な値: ${invalidTypes.join(', ')}`,
+                    details: `取得した値: ${[...new Set(types)].join(', ')}`
+                });
+                
+                // 3. getPropertyTypeConfig関数のシミュレーション
+                const getPropertyTypeConfig = (type) => {
+                    const configs = {
+                        'detached_house': { label: '一戸建て', color: '#8B5CF6', bgColor: '#EDE9FE' },
+                        'apartment': { label: 'マンション', color: '#EC4899', bgColor: '#FCE7F3' },
+                        'land': { label: '土地', color: '#14B8A6', bgColor: '#CCFBF1' },
+                        'other': { label: 'その他', color: '#6B7280', bgColor: '#F3F4F6' },
+                    };
+                    return configs[type] || configs.other;
+                };
+                
+                const configs = types.map(t => {
+                    const config = getPropertyTypeConfig(t);
+                    return `${t} → ${config.label}`;
+                });
+                
+                results.push({
+                    title: '3. タイプ→ラベル変換',
+                    success: true,
+                    message: '変換成功',
+                    details: configs.join('<br>')
+                });
+                
+            } catch (error) {
+                results.push({
+                    title: 'エラー',
+                    success: false,
+                    message: error.message,
+                    details: error.stack
+                });
+            }
+            
+            // 結果を表示
+            let html = '';
+            results.forEach(result => {
+                html += `<div class="test-result ${result.success ? 'success' : 'error'}">`;
+                html += `<h3>${result.title}</h3>`;
+                html += `<p><strong>${result.message}</strong></p>`;
+                if (result.details) {
+                    html += `<pre>${result.details}</pre>`;
+                }
+                html += '</div>';
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

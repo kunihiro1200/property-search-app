@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通話履歴サマリーAPI テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-case {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        .summary-box {
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+        .metadata {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .loading {
+            color: #2196F3;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 通話履歴サマリーAPI テスト</h1>
+    
+    <div style="background: #fff3cd; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+        <strong>📝 使い方:</strong>
+        <ol>
+            <li>このページが開いたら、自動的にテストが開始されます</li>
+            <li>各テストケースの結果を確認してください</li>
+            <li>生成されたサマリーの品質をチェックしてください</li>
+        </ol>
+    </div>
+
+    <button onclick="runAllTests()" id="runButton">🔄 テストを再実行</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000';
+        
+        // トークンを自動取得
+        const token = localStorage.getItem('session_token');
+        
+        const testData = {
+            test1: {
+                name: 'テストケース1: 簡単なメモ配列（後方互換性）',
+                data: {
+                    memos: [
+                        '3/2 12:00 訪問査定の日程調整を行った',
+                        '2/28 15:30 物件情報のヒアリング完了',
+                        '2/25 10:00 初回コンタクト、興味あり'
+                    ]
+                }
+            },
+            test2: {
+                name: 'テストケース2: 実際のデータ例1（土地売却、相続）',
+                data: {
+                    memos: [
+                        '10/1 売るのはもう少し様子を見たいとのこと',
+                        '9/7 今年中に売りたい　県外にいるので大分に来てから実際にいふうとあってから募集するようにしたいとのこと。土地を売ったとしても、買い主様には来年の4月以降に建物を建ててほしい。理由は相続で親戚の方がそこを売りたくないという思いが強いので、自分が今その近くに住んでいて、引っ越したら家を建てても文句を言われないからとのこと（少しあやしい）',
+                        '9/5 面積はだいたい　更地にしている。駐車場として月極で貸している。売却のご予定あり。土地への思いがあるので変な使い方はされたくない。当社が売買に強く、問合せが多いと伝えるとかなり興味津々でどんな方か？等くいついてきた。訪問査定はまだ考えるとのこと',
+                        '★希望連絡時間：9時～12時'
+                    ]
+                }
+            },
+            test3: {
+                name: 'テストケース3: 実際のデータ例2（建物解体、1年後売却）',
+                data: {
+                    memos: [
+                        '10/19 いったんでるが切られる',
+                        '10/12 自分本人ではない　嫁のお母様が所有　1年後くらいにうる予定。　買いたいという人がいたら紹介してもよい。媒介契約に伺う日程は嫁のお母様と話し合うので来週また電話してほしいとのこと',
+                        '面積100坪　建物はこわす　土地として売却　机上査定メール希望　まだ売るかどうか不明な状態'
+                    ]
+                }
+            },
+            test4: {
+                name: 'テストケース4: 実際のデータ例3（他社専任媒介）',
+                data: {
+                    memos: [
+                        '2025/1/31 久光大分で買って専任媒介結んでしまった。3190万で募集中とのこと',
+                        '2024/11/29 13:09 状況変化なし。',
+                        '2024/10/4 17:21 訪問査定は他社含めまだ考えていない。引越も急いでいない、時期未定とのこと。',
+                        '2024/9/30 17:49 金額的にもう少しといったところ。ほかの会社は3000万こえるとのこと。買取で2000万出してもいいと言っている会社もある。赤ちゃんが泣きだしたので電話切られる。',
+                        '2024/9/28 18:04 太陽光の売電期間は11月に終わる。ハウスメーカーは大和ハウス、次のお住まいは子供が小学校に通っていて、松岡小あたりで検討中'
+                    ]
+                }
+            }
+        };
+
+        async function runTest(testKey, testInfo) {
+            const resultsDiv = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test-case';
+            testDiv.id = testKey;
+            testDiv.innerHTML = `<h2>${testInfo.name}</h2><p class="loading">⏳ テスト実行中...</p>`;
+            resultsDiv.appendChild(testDiv);
+
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch(`${API_BASE_URL}/api/summarize/call-memos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(testInfo.data)
+                });
+
+                const processingTime = Date.now() - startTime;
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    testDiv.innerHTML = `
+                        <h2>${testInfo.name}</h2>
+                        <p class="error">❌ テスト失敗</p>
+                        <p>ステータス: ${response.status}</p>
+                        <pre>${JSON.stringify(error, null, 2)}</pre>
+                    `;
+                    return;
+                }
+
+                const result = await response.json();
+                
+                let metadataHtml = '';
+                if (result.metadata) {
+                    metadataHtml = `
+                        <div class="metadata">
+                            <strong>📊 メタデータ:</strong><br>
+                            通話回数（履歴）: ${result.metadata.callsFromHistory}回<br>
+                            通話回数（コメント）: ${result.metadata.callsFromComments}回<br>
+                            合計通話回数: ${result.metadata.totalCalls}回<br>
+                            生成されたセクション: ${result.metadata.sectionsGenerated.join(', ')}<br>
+                            ${result.metadata.oldestEntry ? `最古のエントリー: ${result.metadata.oldestEntry}<br>` : ''}
+                            ${result.metadata.newestEntry ? `最新のエントリー: ${result.metadata.newestEntry}` : ''}
+                        </div>
+                    `;
+                }
+                
+                testDiv.innerHTML = `
+                    <h2>${testInfo.name}</h2>
+                    <p class="success">✅ テスト成功</p>
+                    <p>処理時間: ${processingTime}ms</p>
+                    ${metadataHtml}
+                    <div class="summary-box">${result.summary}</div>
+                `;
+            } catch (error) {
+                testDiv.innerHTML = `
+                    <h2>${testInfo.name}</h2>
+                    <p class="error">❌ テスト失敗</p>
+                    <p>エラー: ${error.message}</p>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            const button = document.getElementById('runButton');
+            button.disabled = true;
+            button.textContent = '⏳ テスト実行中...';
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!token) {
+                resultsDiv.innerHTML = `
+                    <div class="test-case">
+                        <h2 class="error">❌ エラー</h2>
+                        <p>トークンが見つかりません。ログインしてください。</p>
+                    </div>
+                `;
+                button.disabled = false;
+                button.textContent = '🔄 テストを再実行';
+                return;
+            }
+
+            for (const [key, testInfo] of Object.entries(testData)) {
+                await runTest(key, testInfo);
+            }
+
+            button.disabled = false;
+            button.textContent = '🔄 テストを再実行';
+            
+            resultsDiv.innerHTML += `
+                <div class="test-case" style="background: #e8f5e9;">
+                    <h2 class="success">✅ 全テスト完了</h2>
+                    <p>生成されたサマリーの品質を確認してください：</p>
+                    <ul>
+                        <li>タイムスタンプが正しく解析されているか</li>
+                        <li>通話回数が正確にカウントされているか</li>
+                        <li>情報が適切なカテゴリーに分類されているか</li>
+                        <li>重複した内容が除外されているか</li>
+                        <li>処理時間が2秒以内か</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // ページ読み込み時に自動実行
+        window.onload = runAllTests;
+    </script>
+</body>
+</html>

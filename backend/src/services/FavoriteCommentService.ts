@@ -1,6 +1,5 @@
 import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { PropertyListingService } from './PropertyListingService';
-import { WorkTaskService } from './WorkTaskService';
 import { getRedisClient } from '../config/redis';
 
 export interface FavoriteCommentResult {
@@ -21,13 +20,11 @@ export interface FavoriteCommentResult {
  */
 export class FavoriteCommentService {
   private propertyListingService: PropertyListingService;
-  private workTaskService: WorkTaskService;
   private cachePrefix = 'favorite-comment:';
   private cacheTTL = 300; // 5分間（秒）
 
   constructor() {
     this.propertyListingService = new PropertyListingService();
-    this.workTaskService = new WorkTaskService();
   }
 
   /**
@@ -67,19 +64,30 @@ export class FavoriteCommentService {
         return result;
       }
 
-      // スプレッドシートURLを取得（storage_locationを優先、なければwork_tasksから）
-      let spreadsheetUrl = storage_location;
-      
-      // storage_locationがフォルダURLの場合、work_tasksからspreadsheet_urlを取得
-      if (!spreadsheetUrl || !spreadsheetUrl.includes('/spreadsheets/d/')) {
-        const workTask = await this.workTaskService.getByPropertyNumber(property_number);
-        spreadsheetUrl = (workTask as any)?.spreadsheet_url;
+      // 業務リストから個別物件スプレッドシートURLを取得
+      const gyomuListService = new (await import('./GyomuListService')).GyomuListService();
+      const gyomuData = await gyomuListService.getByPropertyNumber(property_number);
+      let spreadsheetUrl = gyomuData?.spreadsheetUrl || null;
+
+      // 業務リストにない場合、Driveフォルダから検索
+      if (!spreadsheetUrl) {
+        console.log(
+          `[FavoriteCommentService] Not found in 業務リスト, searching Drive folder for ${property_number}`
+        );
+        const gyomuDriveService = new (await import('./GyomuDriveFolderService')).GyomuDriveFolderService();
+        spreadsheetUrl = await gyomuDriveService.findSpreadsheetByPropertyNumber(property_number);
+        
+        if (spreadsheetUrl) {
+          console.log(
+            `[FavoriteCommentService] Found spreadsheet in Drive folder: ${spreadsheetUrl}`
+          );
+        }
       }
 
       // スプレッドシートURLがない場合
       if (!spreadsheetUrl) {
         console.log(
-          `[FavoriteCommentService] No spreadsheet URL for property ${propertyId}`
+          `[FavoriteCommentService] No spreadsheet URL for property ${propertyId} (not in 業務リスト or Drive folder)`
         );
         const result = { comment: null, propertyType: property_type };
         await this.cacheComment(propertyId, result);

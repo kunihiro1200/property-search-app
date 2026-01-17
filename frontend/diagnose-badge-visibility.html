@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>物件タイプバッジ表示診断ツール</title>
+  <style>
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .diagnostic-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #2563EB;
+      margin-top: 0;
+    }
+    .result {
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 4px solid #2563EB;
+      background: #f0f9ff;
+    }
+    .error {
+      border-left-color: #EF4444;
+      background: #fef2f2;
+    }
+    .success {
+      border-left-color: #10B981;
+      background: #f0fdf4;
+    }
+    .warning {
+      border-left-color: #F59E0B;
+      background: #fffbeb;
+    }
+    button {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1D4ED8;
+    }
+    pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .badge-preview {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 物件タイプバッジ表示診断ツール</h1>
+  
+  <div class="diagnostic-panel">
+    <h2>📋 診断手順</h2>
+    <p>1. <strong>localhost:5173/public/properties</strong> を開いてください</p>
+    <p>2. このページを別タブで開いたまま、下のボタンをクリックしてください</p>
+    <p>3. 診断結果を確認してください</p>
+    <button onclick="runDiagnostics()">🚀 診断を実行</button>
+    <button onclick="location.reload()">🔄 リセット</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    function addResult(title, content, type = 'result') {
+      const resultsDiv = document.getElementById('results');
+      const panel = document.createElement('div');
+      panel.className = 'diagnostic-panel';
+      panel.innerHTML = `
+        <h2>${title}</h2>
+        <div class="${type}">${content}</div>
+      `;
+      resultsDiv.appendChild(panel);
+    }
+
+    function runDiagnostics() {
+      document.getElementById('results').innerHTML = '';
+      
+      // Check 1: Badge elements exist
+      addResult('✅ Step 1: バッジ要素の存在確認', `
+        <p>ブラウザのコンソールで以下を実行してください:</p>
+        <pre>document.querySelectorAll('.property-type-badge').length</pre>
+        <p><strong>期待値:</strong> 物件数と同じ数（例: 10件なら10）</p>
+        <p><strong>0の場合:</strong> バッジ要素が生成されていません（コンポーネントの問題）</p>
+      `);
+
+      // Check 2: Computed styles
+      addResult('🎨 Step 2: バッジのスタイル確認', `
+        <p>コンソールで以下を実行してください:</p>
+        <pre>
+const badge = document.querySelector('.property-type-badge');
+if (badge) {
+  const styles = window.getComputedStyle(badge);
+  console.log({
+    display: styles.display,
+    visibility: styles.visibility,
+    opacity: styles.opacity,
+    position: styles.position,
+    zIndex: styles.zIndex,
+    top: styles.top,
+    left: styles.left,
+    width: styles.width,
+    height: styles.height,
+    backgroundColor: styles.backgroundColor,
+    color: styles.color
+  });
+}
+        </pre>
+        <p><strong>確認ポイント:</strong></p>
+        <ul>
+          <li>display: "none" → バッジが非表示</li>
+          <li>visibility: "hidden" → バッジが非表示</li>
+          <li>opacity: "0" → バッジが透明</li>
+          <li>width/height: "0px" → バッジのサイズがゼロ</li>
+          <li>zIndex: 負の値 → 他の要素の下に隠れている</li>
+        </ul>
+      `);
+
+      // Check 3: Parent container
+      addResult('📦 Step 3: 親コンテナの確認', `
+        <p>コンソールで以下を実行してください:</p>
+        <pre>
+const container = document.querySelector('.property-card-image-container');
+if (container) {
+  const styles = window.getComputedStyle(container);
+  console.log({
+    position: styles.position,
+    overflow: styles.overflow,
+    zIndex: styles.zIndex,
+    width: styles.width,
+    height: styles.height
+  });
+}
+        </pre>
+        <p><strong>確認ポイント:</strong></p>
+        <ul>
+          <li>position: "relative" でない → absolute配置が効かない</li>
+          <li>overflow: "hidden" → バッジが切り取られている可能性</li>
+        </ul>
+      `);
+
+      // Check 4: Overlay z-index
+      addResult('🔝 Step 4: オーバーレイのz-index確認', `
+        <p>コンソールで以下を実行してください:</p>
+        <pre>
+const overlay = document.querySelector('.property-card-image-overlay');
+if (overlay) {
+  const styles = window.getComputedStyle(overlay);
+  console.log({
+    position: styles.position,
+    zIndex: styles.zIndex,
+    pointerEvents: styles.pointerEvents
+  });
+}
+        </pre>
+        <p><strong>問題の可能性:</strong></p>
+        <ul>
+          <li>オーバーレイのz-indexがバッジより大きい → バッジが隠れている</li>
+          <li>オーバーレイがバッジを覆っている</li>
+        </ul>
+      `);
+
+      // Check 5: MUI Chip styles
+      addResult('💎 Step 5: MUI Chipのスタイル確認', `
+        <p>コンソールで以下を実行してください:</p>
+        <pre>
+const badge = document.querySelector('.property-type-badge');
+if (badge) {
+  console.log('Badge classes:', badge.className);
+  console.log('Badge inline styles:', badge.style.cssText);
+  console.log('Badge parent:', badge.parentElement.className);
+}
+        </pre>
+        <p><strong>確認ポイント:</strong></p>
+        <ul>
+          <li>MUI-Chip-root クラスが存在するか</li>
+          <li>インラインスタイルが正しく適用されているか</li>
+        </ul>
+      `);
+
+      // Check 6: Visual test
+      addResult('👁️ Step 6: 視覚的テスト', `
+        <p>コンソールで以下を実行してバッジを強制表示:</p>
+        <pre>
+document.querySelectorAll('.property-type-badge').forEach(badge => {
+  badge.style.cssText = \`
+    position: absolute !important;
+    top: 16px !important;
+    left: 16px !important;
+    z-index: 9999 !important;
+    background-color: red !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 9999px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  \`;
+});
+        </pre>
+        <p><strong>結果:</strong></p>
+        <ul>
+          <li>✅ 赤いバッジが表示される → CSS specificity の問題</li>
+          <li>❌ 表示されない → DOM構造またはJavaScriptの問題</li>
+        </ul>
+      `);
+
+      // Check 7: CSS specificity
+      addResult('🎯 Step 7: CSS詳細度の確認', `
+        <p>コンソールで以下を実行:</p>
+        <pre>
+const badge = document.querySelector('.property-type-badge');
+if (badge) {
+  const allRules = [];
+  for (let sheet of document.styleSheets) {
+    try {
+      for (let rule of sheet.cssRules) {
+        if (rule.selectorText && badge.matches(rule.selectorText)) {
+          allRules.push({
+            selector: rule.selectorText,
+            styles: rule.style.cssText
+          });
+        }
+      }
+    } catch(e) {}
+  }
+  console.table(allRules);
+}
+        </pre>
+        <p><strong>確認:</strong> どのCSSルールがバッジに適用されているか</p>
+      `);
+
+      // Solution suggestions
+      addResult('💡 解決策の提案', `
+        <h3>問題パターン別の解決策:</h3>
+        
+        <h4>1️⃣ z-indexの問題</h4>
+        <p>オーバーレイがバッジを覆っている場合:</p>
+        <pre>
+.property-type-badge {
+  z-index: 10 !important;
+}
+.property-card-image-overlay {
+  z-index: 1 !important;
+}
+        </pre>
+
+        <h4>2️⃣ MUI Chipのスタイル上書き</h4>
+        <p>MUIのデフォルトスタイルが問題の場合:</p>
+        <pre>
+.property-card-image-container .MuiChip-root.property-type-badge {
+  position: absolute !important;
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+        </pre>
+
+        <h4>3️⃣ 親要素のoverflow</h4>
+        <p>バッジが切り取られている場合:</p>
+        <pre>
+.property-card-image-container {
+  overflow: visible !important;
+}
+        </pre>
+
+        <h4>4️⃣ ポジショニングの問題</h4>
+        <p>absolute配置が効かない場合:</p>
+        <pre>
+.property-card-image-container {
+  position: relative !important;
+}
+        </pre>
+      `, 'success');
+    }
+  </script>
+</body>
+</html>

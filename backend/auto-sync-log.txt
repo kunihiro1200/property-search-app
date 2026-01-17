@@ -1,0 +1,2397 @@
+[2026-01-15T10:30:47.059Z] 🚀 自動バッチ同期開始
+[2026-01-15T10:30:47.061Z] 設定: バッチサイズ=20件, 待機時間=10分
+[2026-01-15T10:30:47.062Z] ℹ️ 最初の20件は既に処理済みのため、21件目から開始します
+[2026-01-15T10:30:47.062Z] 
+============================================================
+[2026-01-15T10:30:47.063Z] 📦 バッチ 2 開始（オフセット: 20）
+[2026-01-15T10:30:47.063Z] ============================================================
+[2026-01-15T10:31:32.111Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 20
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13188: https://drive.google.com/drive/folders/1MlxY-NMdrsnuQBYtI8h0NOvLiByVRP-i?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13188 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA8736: https://drive.google.com/drive/u/0/folders/1zZpVEsbjSNkFJH-DtPuE2Bi6VERsV7DH
+[PropertyListingService] Enriched storage_location for AA8736 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10606: https://drive.google.com/drive/u/0/folders/1Dc-RzIiAjv_4LSdfjrxZlFHsJAvr6w2a
+[PropertyListingService] Enriched storage_location for AA10606 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10164: https://drive.google.com/drive/folders/1P3hrtzJNfDUOMCpsmc6jCYiT_lzSmL6X?usp=sharing
+[PropertyListingService] Enriched storage_location for AA10164 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13226: https://drive.google.com/drive/folders/1nscBkrzFmBPSr7OLJ2gOoNiRqSuymoST?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13226 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA3333: https://drive.google.com/drive/folders/1PYFvOXze4vfItoiNgmL0x1a-l32fanJy?usp=sharing
+[PropertyListingService] Enriched storage_location for AA3333 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5564: https://drive.google.com/drive/folders/13DVOejqXWwTPm1MFsYErdV9pRRSdar80?usp=sharing
+[PropertyListingService] Enriched storage_location for AA5564 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13230: https://drive.google.com/drive/folders/17Kdv5o8vNSnKQpql2YApcC6k23Nxu1NF?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13230 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13127: https://drive.google.com/drive/folders/1nwiEXONGfSgMypKQnVA0Jxw_wK0QgP5h?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13127 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12480: https://drive.google.com/drive/u/0/folders/1W96bDI7tH3Ms8Ub_wG-mmJv4n4wZgGAg
+[PropertyListingService] Enriched storage_location for AA12480 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13158: https://drive.google.com/drive/folders/1JSvo9GAqHTp8I-3PI2nPDUZxs6nD9r4O?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13158 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13223: https://drive.google.com/drive/folders/1GgqMJrbabmlKH8CoOEM0joaPOC3YJFP-?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13223 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13100: https://drive.google.com/drive/u/0/folders/1C538j6av1_Ysg5WEVx9unIlT00yqPnk_
+[PropertyListingService] Enriched storage_location for AA13100 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA214: https://drive.google.com/drive/u/0/folders/1hprgdptW8WTn_bDNUINtqWC3E6l4r4Ew
+[PropertyListingService] Enriched storage_location for AA214 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13149: https://drive.google.com/drive/folders/1t6rsNQ0UenNt92bHPgg_Ko2ZfaQegvcM?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13149 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA3912: https://drive.google.com/drive/u/0/folders/1C-YYaRoHhEyNoScIVaFAIt2Vx5ysrzq3
+[PropertyListingService] Enriched storage_location for AA3912 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12972: https://drive.google.com/drive/u/0/folders/1QKHfKUsNri4pqVBIiyCqANGJXVDufwDs
+[PropertyListingService] Enriched storage_location for AA12972 from work_tasks
+📊 Found 16 public properties (out of 1291 total, offset: 20)
+
+
+📝 Processing AA13230 (店舗（事務所）)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA13230, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13230: https://drive.google.com/drive/folders/17Kdv5o8vNSnKQpql2YApcC6k23Nxu1NF?usp=sharing
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/17Kdv5o8vNSnKQpql2YApcC6k23Nxu1NF?usp=sharing
+[FavoriteCommentService] Unsupported property type: other for a5869911-fd55-479d-9692-349a7c93de9f
+   ⚠️ No favorite comment found
+
+📝 Processing AA10606 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13226 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10164 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13127 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13223 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13188 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13129 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA5564 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13149 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA8736 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA214 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13158 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA3333 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA3912 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA3912, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA3912 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/u/0/folders/1C-YYaRoHhEyNoScIVaFAIt2Vx5ysrzq3
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA3912
+   ⚠️ No favorite comment found
+
+📝 Processing AA13100 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 16
+✅ 成功: 0件
+⏭️ スキップ: 14件
+⚠️ データなし: 2件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T10:31:32.116Z] 
+📊 バッチ 2 結果:
+[2026-01-15T10:31:32.117Z]    ✅ 成功: 0件
+[2026-01-15T10:31:32.117Z]    ⏭️ スキップ: 14件
+[2026-01-15T10:31:32.117Z]    ⚠️ データなし: 2件
+[2026-01-15T10:31:32.118Z]    ❌ 失敗: 0件
+[2026-01-15T10:31:32.118Z]    🔄 クォータエラー: なし
+[2026-01-15T10:31:32.119Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T10:31:32.119Z]    次のバッチ: 3, オフセット: 40
+[2026-01-15T10:41:32.131Z] 
+============================================================
+[2026-01-15T10:41:32.134Z] 📦 バッチ 3 開始（オフセット: 40）
+[2026-01-15T10:41:32.135Z] ============================================================
+[2026-01-15T10:41:59.570Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 40
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12862: https://drive.google.com/drive/u/0/folders/1Zu0UnsCkMd45y8DYXwLHFSqGQl50jKph
+[PropertyListingService] Enriched storage_location for AA12862 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9406: https://drive.google.com/file/d/1spyd1jwQ0Hdt_zZoifXz6jd4edvTdC4j/view?usp=sharing
+[PropertyListingService] Enriched storage_location for AA9406 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for BB23: https://drive.google.com/drive/u/0/folders/1HdHhGd2VC_gpUB7PkcFHyi9mp1jahgxo
+[PropertyListingService] Enriched storage_location for BB23 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12843: https://drive.google.com/drive/u/0/folders/13F9Bk2yziCa3AQSoCJJJKps3UG4g0VYm
+[PropertyListingService] Enriched storage_location for AA12843 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12903: https://drive.google.com/drive/u/0/folders/1Lv2YR10BExU--hGfxvZt-FdlKtAhlkaX
+[PropertyListingService] Enriched storage_location for AA12903 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13154: https://drive.google.com/drive/folders/16QXSMwwqVxpsRytUZl7vgnIpIMPaGH58?usp=sharing
+[PropertyListingService] Enriched storage_location for AA13154 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12825: https://drive.google.com/drive/u/0/folders/1BsD66TG7Wr2M0ClV-64Jx_d4MflKwZbO
+[PropertyListingService] Enriched storage_location for AA12825 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13022: https://drive.google.com/drive/u/0/folders/1W4UYLNuPlPOizUbA5cfYPXCaetd40p6Y
+[PropertyListingService] Enriched storage_location for AA13022 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12908: https://drive.google.com/drive/u/0/folders/1DWW71fmNKkjrR8FsNaNsSggj9Aa-j-Sq
+[PropertyListingService] Enriched storage_location for AA12908 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5834: https://drive.google.com/drive/folders/1_8WGLB-CBrvlLe7Gt_RhyWlmzEnGaZmB
+[PropertyListingService] Enriched storage_location for AA5834 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13122: https://drive.google.com/drive/u/0/folders/1Vqw6VtCbZ9UoW_XIKUruqj5-3yhnS01f
+[PropertyListingService] Enriched storage_location for AA13122 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA11165: https://drive.google.com/drive/u/0/folders/15qiDOyoQqyTFjBvLSa0OpChDKkGhEFdZ
+[PropertyListingService] Enriched storage_location for AA11165 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12974: https://drive.google.com/drive/u/0/folders/1bH2VWMVAE4xXwpdUSjfrnU-nD_5EJ0vy
+[PropertyListingService] Enriched storage_location for AA12974 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12636: https://drive.google.com/drive/folders/1Bed6IopEDuUgn01e-n9N6H_uwbodOPhY?usp=sharing
+[PropertyListingService] Enriched storage_location for AA12636 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12894: https://drive.google.com/file/d/1ltrgY5zXLQh9RTuAngJ5Sl_QSw9Ysl_l/view?usp=sharing
+[PropertyListingService] Enriched storage_location for AA12894 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13102: https://drive.google.com/drive/u/0/folders/1ukgETF2D2ZMIk-uqGGEVHo6VCOZ7FqZ9
+[PropertyListingService] Enriched storage_location for AA13102 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12896: https://drive.google.com/drive/u/0/folders/1HcaV2OGZR--ZzKXlx6UWAVcPz_-NkvWD
+[PropertyListingService] Enriched storage_location for AA12896 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10475: https://drive.google.com/drive/u/0/folders/1d9Ib23IVjfF8KX1gREY4EgqqBhpge5bz
+[PropertyListingService] Enriched storage_location for AA10475 from work_tasks
+📊 Found 15 public properties (out of 1291 total, offset: 40)
+
+
+📝 Processing AA13154 (収益物件)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA13154, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA13154: https://drive.google.com/drive/folders/16QXSMwwqVxpsRytUZl7vgnIpIMPaGH58?usp=sharing
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/16QXSMwwqVxpsRytUZl7vgnIpIMPaGH58?usp=sharing
+[FavoriteCommentService] Unsupported property type: other for 8d0bab96-ff26-40d6-b7da-d978bbc970b9
+   ⚠️ No favorite comment found
+
+📝 Processing AA13122 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13102 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9406 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12825 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12636 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA11165 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12862 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA5128-2 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12903 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12843 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12974 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10475 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA13022 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12896 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 15
+✅ 成功: 0件
+⏭️ スキップ: 14件
+⚠️ データなし: 1件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T10:41:59.573Z] 
+📊 バッチ 3 結果:
+[2026-01-15T10:41:59.573Z]    ✅ 成功: 0件
+[2026-01-15T10:41:59.574Z]    ⏭️ スキップ: 14件
+[2026-01-15T10:41:59.574Z]    ⚠️ データなし: 1件
+[2026-01-15T10:41:59.574Z]    ❌ 失敗: 0件
+[2026-01-15T10:41:59.575Z]    🔄 クォータエラー: なし
+[2026-01-15T10:41:59.575Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T10:41:59.576Z]    次のバッチ: 4, オフセット: 60
+[2026-01-15T10:51:59.587Z] 
+============================================================
+[2026-01-15T10:51:59.602Z] 📦 バッチ 4 開始（オフセット: 60）
+[2026-01-15T10:51:59.603Z] ============================================================
+[2026-01-15T10:52:25.520Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 60
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA1243: https://drive.google.com/drive/u/0/folders/157Rv5KA6KSjqrmzb0XqyrAL-_JK2oXfg
+[PropertyListingService] Enriched storage_location for AA1243 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10611: https://drive.google.com/drive/u/0/folders/1HzxX6R8bCFdtZAM1A9XBRvbEgSh44rTD
+[PropertyListingService] Enriched storage_location for AA10611 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12773: https://drive.google.com/drive/u/0/folders/1mFIz5VSedgfw6z7vDPJhrPxe9fqpbil9
+[PropertyListingService] Enriched storage_location for AA12773 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12829: https://drive.google.com/drive/u/0/folders/1lmTWq59t7_4c3yYPD717WRbnBuxJOy35
+[PropertyListingService] Enriched storage_location for AA12829 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12579: https://drive.google.com/drive/u/0/folders/1EyqMTJ2aWkOqtoPTmTyd89t1bq96YKgI
+[PropertyListingService] Enriched storage_location for AA12579 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12766: https://drive.google.com/drive/u/0/folders/1wryukUMs1hDaR2sQQbOWnCXKlwEs2-we
+[PropertyListingService] Enriched storage_location for AA12766 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12897: https://drive.google.com/drive/u/0/folders/1aGrUl5Y29qK739duXTw-p8uk-6Qcp2LU
+[PropertyListingService] Enriched storage_location for AA12897 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12691: https://drive.google.com/drive/u/0/folders/1ApoHNPdyhyAzkXrVbOB7zJCUuuqBiTvy
+[PropertyListingService] Enriched storage_location for AA12691 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12647: https://drive.google.com/drive/u/0/folders/1uzubaEp0OrRCsbP5CMyuYWVyI1TPSw7M
+[PropertyListingService] Enriched storage_location for AA12647 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA3921-2: https://drive.google.com/drive/u/0/folders/15Ch50hl72aicXfLcA84TZV4nGRyi7MoE
+[PropertyListingService] Enriched storage_location for AA3921-2 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12770: https://drive.google.com/drive/u/0/folders/1MmdHKFmrlA5yoICu8XmG9k8b6Y0KlBDP
+[PropertyListingService] Enriched storage_location for AA12770 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12400: https://drive.google.com/drive/u/0/folders/1DZz8LzQUSSqmBf3hPtbhJvTm9MNvuFis
+[PropertyListingService] Enriched storage_location for AA12400 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA58: https://drive.google.com/drive/u/0/folders/1gX9QokPUj58Enr0fkGefLoevz1kny4Tr
+[PropertyListingService] Enriched storage_location for AA58 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10342: https://drive.google.com/drive/folders/15PaLt92K-8OAA87nymUhk1EHXbT14WLz
+[PropertyListingService] Enriched storage_location for AA10342 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12449: https://drive.google.com/drive/u/0/folders/16UFWczQ_PDaPlj4OvX-2HRFefoi8Q-1N
+[PropertyListingService] Enriched storage_location for AA12449 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12853: https://drive.google.com/drive/u/0/folders/1NQjK2GNWkJ2lG4YoFmSnAu1TGN_cQC2z
+[PropertyListingService] Enriched storage_location for AA12853 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12721: https://drive.google.com/drive/u/0/folders/1qFguAMkG6gUq-lM1Gmvjzt8eak_PVa_W
+[PropertyListingService] Enriched storage_location for AA12721 from work_tasks
+📊 Found 17 public properties (out of 1291 total, offset: 60)
+
+
+📝 Processing AA12449 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA1243 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA3921-2 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA4982 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12897 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10611 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12851 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12853 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12770 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12400 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12691 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12829 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA58 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12721 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12700 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12579 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12766 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 17
+✅ 成功: 0件
+⏭️ スキップ: 17件
+⚠️ データなし: 0件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T10:52:25.522Z] 
+📊 バッチ 4 結果:
+[2026-01-15T10:52:25.523Z]    ✅ 成功: 0件
+[2026-01-15T10:52:25.524Z]    ⏭️ スキップ: 17件
+[2026-01-15T10:52:25.524Z]    ⚠️ データなし: 0件
+[2026-01-15T10:52:25.524Z]    ❌ 失敗: 0件
+[2026-01-15T10:52:25.525Z]    🔄 クォータエラー: なし
+[2026-01-15T10:52:25.525Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T10:52:25.525Z]    次のバッチ: 5, オフセット: 80
+[2026-01-15T11:02:25.530Z] 
+============================================================
+[2026-01-15T11:02:25.532Z] 📦 バッチ 5 開始（オフセット: 80）
+[2026-01-15T11:02:25.534Z] ============================================================
+[2026-01-15T11:02:51.032Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 80
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12715: https://drive.google.com/drive/u/0/folders/1ft0-odlVdcAO7VR_IczO6Z38Ks7wKRzk
+[PropertyListingService] Enriched storage_location for AA12715 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9928: https://drive.google.com/drive/u/0/folders/15pv3tK_f2kGrtAeH3mkq2Bk2Uien0r87
+[PropertyListingService] Enriched storage_location for AA9928 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12607: https://drive.google.com/drive/u/0/folders/12ZtXmMblsdA0iynIGTWhYQ8njmry1f3s
+[PropertyListingService] Enriched storage_location for AA12607 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9677: https://drive.google.com/drive/folders/1JXQWfv4Swy2sk2G872iN4GtcLKo8dQH1
+[PropertyListingService] Enriched storage_location for AA9677 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5922: https://drive.google.com/drive/folders/1Hd4se8CuxV1A4QSbARCCTBOtxjyaucC6
+[PropertyListingService] Enriched storage_location for AA5922 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12621: https://drive.google.com/drive/u/0/folders/17sm-gXGd87MRkhmuIFWyDVY3zl4nlU-G
+[PropertyListingService] Enriched storage_location for AA12621 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12420: https://drive.google.com/drive/u/0/folders/1F7EZA4S1GG8AQLDIsQUDYpgK7jotVJts
+[PropertyListingService] Enriched storage_location for AA12420 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9861: https://drive.google.com/drive/u/0/folders/10M_tJt_fo8ZvLknpr9ttbs1AdcimIAnI
+[PropertyListingService] Enriched storage_location for AA9861 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA2472: https://drive.google.com/drive/folders/1IvQys_wTXSBK3BHBGieMGUdCfTY_C1us
+[PropertyListingService] Enriched storage_location for AA2472 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12656: https://drive.google.com/drive/u/0/folders/1YkCniIAgw2UoHP-c6r6OUzhfeiaAJVIu
+[PropertyListingService] Enriched storage_location for AA12656 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA4160: https://drive.google.com/drive/u/0/folders/1EIiUZ87prcu6aualfJKD8-HvRnZVwj0k
+[PropertyListingService] Enriched storage_location for AA4160 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10441: https://drive.google.com/drive/u/0/folders/1Wu7qxDF8en_sxYKbsAmeE7SNezxvkX8a
+[PropertyListingService] Enriched storage_location for AA10441 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12485: https://drive.google.com/drive/folders/1fAoGouFRhUhpOQ-nMOpfzspvoU6WS1dM
+[PropertyListingService] Enriched storage_location for AA12485 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12610: https://drive.google.com/drive/u/0/folders/1OsGp-13DzRGG2ZLLK-pw8Pmo3un947Fq
+[PropertyListingService] Enriched storage_location for AA12610 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA11173: https://drive.google.com/drive/u/0/folders/1sb35tAczMVGQdpBxHfVvWKb-k-MkxZdT
+[PropertyListingService] Enriched storage_location for AA11173 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12426: https://drive.google.com/drive/u/0/folders/1F_yXyWUYdNYiv_fh0FLvOrQRaEffoigX
+[PropertyListingService] Enriched storage_location for AA12426 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12381: https://drive.google.com/drive/u/0/folders/1nGxQqPwZwURZmQZrBTnS4TRTfmyEDg32
+[PropertyListingService] Enriched storage_location for AA12381 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12710: https://drive.google.com/drive/u/0/folders/1lQjayG13m6yel0SlAEsPNNxSzKqWu8NP
+[PropertyListingService] Enriched storage_location for AA12710 from work_tasks
+📊 Found 13 public properties (out of 1291 total, offset: 80)
+
+
+📝 Processing AA9365 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12381 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12485 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10441 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9928 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12715 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA5922 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12420 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12656 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12426 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA11173 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12621 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA4160 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 13
+✅ 成功: 0件
+⏭️ スキップ: 13件
+⚠️ データなし: 0件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T11:02:51.035Z] 
+📊 バッチ 5 結果:
+[2026-01-15T11:02:51.035Z]    ✅ 成功: 0件
+[2026-01-15T11:02:51.036Z]    ⏭️ スキップ: 13件
+[2026-01-15T11:02:51.036Z]    ⚠️ データなし: 0件
+[2026-01-15T11:02:51.037Z]    ❌ 失敗: 0件
+[2026-01-15T11:02:51.037Z]    🔄 クォータエラー: なし
+[2026-01-15T11:02:51.037Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T11:02:51.037Z]    次のバッチ: 6, オフセット: 100
+[2026-01-15T11:12:51.039Z] 
+============================================================
+[2026-01-15T11:12:51.041Z] 📦 バッチ 6 開始（オフセット: 100）
+[2026-01-15T11:12:51.042Z] ============================================================
+[2026-01-15T11:13:26.562Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 100
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12563: https://drive.google.com/drive/u/0/folders/1TRf3XQvQnuV-XZBT5_pH4K6nExd_KlZF
+[PropertyListingService] Enriched storage_location for AA12563 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12544: https://drive.google.com/drive/u/0/folders/1e1bgUEr98bVO8u8zFP9MySu77I4Uo_gS
+[PropertyListingService] Enriched storage_location for AA12544 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12523: https://drive.google.com/drive/u/0/folders/1mT68fqSgjtDTMiXEv6xZl2w_AgTlezH9
+[PropertyListingService] Enriched storage_location for AA12523 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12622: https://drive.google.com/drive/u/0/folders/19fxd5NI5-j9NUf3-FM9_CYUmphPEc3sW
+[PropertyListingService] Enriched storage_location for AA12622 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5936: https://drive.google.com/drive/u/0/folders/1xqynGwoj-1Hhmq87DtDUQkkGnSdcDKiI
+[PropertyListingService] Enriched storage_location for AA5936 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10989: https://drive.google.com/drive/folders/17UMuTJUAb_2gNh9Ubb09VwoXUJX59Sr2
+[PropertyListingService] Enriched storage_location for AA10989 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10595: https://drive.google.com/drive/u/0/folders/1rFZhszDF33gLvz7tG3MMOY7p-2OJihrW
+[PropertyListingService] Enriched storage_location for AA10595 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12569: https://drive.google.com/drive/u/0/folders/1DiHsJRQLZCrYQnjNxjSoW3buBJsS6_0T
+[PropertyListingService] Enriched storage_location for AA12569 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10525: https://drive.google.com/drive/u/0/folders/15sKlVrnCZJwRklKkWPHtMJ4DmMWRbOQm
+[PropertyListingService] Enriched storage_location for AA10525 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12666: https://drive.google.com/drive/u/0/folders/1_ZTXhmZuysP1HflrrYBJ8_d0tsLaLV8u
+[PropertyListingService] Enriched storage_location for AA12666 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9862-2: https://drive.google.com/drive/folders/1y2NGoPUpd6ZP6OGdnKGU-9b3FoYh_-Qs
+[PropertyListingService] Enriched storage_location for AA9862-2 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12540: https://drive.google.com/drive/u/0/folders/1FMl199bOIXjTvDAsTklLjnwd6ihSikrH
+[PropertyListingService] Enriched storage_location for AA12540 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10989-2: https://drive.google.com/drive/u/0/folders/1cOxoSTf35bzsVSMECN1yT9mhsZ09bvGt
+[PropertyListingService] Enriched storage_location for AA10989-2 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9862-1: https://drive.google.com/drive/folders/1y2NGoPUpd6ZP6OGdnKGU-9b3FoYh_-Qs
+[PropertyListingService] Enriched storage_location for AA9862-1 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for BB21: https://drive.google.com/drive/folders/10g4ikBOaB-eLo478wf6OoffSpvO6VIGJ
+[PropertyListingService] Enriched storage_location for BB21 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10500: https://drive.google.com/drive/u/0/folders/163rxpfyiN595LcWtkY6gQW5vo3tLWMMb
+[PropertyListingService] Enriched storage_location for AA10500 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12546: https://drive.google.com/drive/u/0/folders/1G_BF1xIB_slagyrRlYX0wR2kyvXr8RQY
+[PropertyListingService] Enriched storage_location for AA12546 from work_tasks
+📊 Found 18 public properties (out of 1291 total, offset: 100)
+
+
+📝 Processing AA10595 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12666 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12563 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10374 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10374
+   ⚠️ No favorite comment found
+
+📝 Processing AA12622 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12409 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10989-2 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12637 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12544 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA5936 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12546 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12523 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10525 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10989 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10500 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9862-2 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9862-1 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing BB21 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 18
+✅ 成功: 0件
+⏭️ スキップ: 17件
+⚠️ データなし: 1件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T11:13:26.564Z] 
+📊 バッチ 6 結果:
+[2026-01-15T11:13:26.564Z]    ✅ 成功: 0件
+[2026-01-15T11:13:26.564Z]    ⏭️ スキップ: 17件
+[2026-01-15T11:13:26.565Z]    ⚠️ データなし: 1件
+[2026-01-15T11:13:26.565Z]    ❌ 失敗: 0件
+[2026-01-15T11:13:26.566Z]    🔄 クォータエラー: なし
+[2026-01-15T11:13:26.566Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T11:13:26.566Z]    次のバッチ: 7, オフセット: 120
+[2026-01-15T11:23:26.577Z] 
+============================================================
+[2026-01-15T11:23:26.578Z] 📦 バッチ 7 開始（オフセット: 120）
+[2026-01-15T11:23:26.579Z] ============================================================
+[2026-01-15T11:23:56.588Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 120
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10804: https://drive.google.com/drive/folders/1PkfpRzubBeh9lApXFuIbAavic_c3KQK0
+[PropertyListingService] Enriched storage_location for AA10804 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA4347: https://drive.google.com/drive/folders/1NlGjmvWOqzmyfTohzKUrXSME_fr5an2l
+[PropertyListingService] Enriched storage_location for AA4347 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12530: https://drive.google.com/drive/folders/14eBB5TQakUTYX_c1wcX0gY50qVsGqPgx
+[PropertyListingService] Enriched storage_location for AA12530 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA1949: https://drive.google.com/drive/folders/14CmOSTdEnyubV8u6dhaXjsM8eVaTbWVY
+[PropertyListingService] Enriched storage_location for AA1949 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for BB22: https://drive.google.com/drive/folders/11StgZyIQzJIYG5LLzBVNbPOtq-24zDlW
+[PropertyListingService] Enriched storage_location for BB22 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12511: https://drive.google.com/drive/folders/14Ya8PUzvgvsw4j_4M3Pnq9RTBARiY8M0
+[PropertyListingService] Enriched storage_location for AA12511 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA1821: https://drive.google.com/drive/folders/1YVbhVqXn-X0RGJ0M-xQyVvqC5AW6c8Nx
+[PropertyListingService] Enriched storage_location for AA1821 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10976: https://drive.google.com/drive/folders/1DAdymKS4fYZ7mfq3yWfWpnoqj9dWTzu5
+[PropertyListingService] Enriched storage_location for AA10976 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10165: https://drive.google.com/drive/folders/12sNC7eyo8JZ_lLW3kIvI1WMSH865Huw3
+[PropertyListingService] Enriched storage_location for AA10165 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12370: https://drive.google.com/drive/folders/1QThKgL4j4zX9kQh1ZspSQVX7Z5q8FIsB
+[PropertyListingService] Enriched storage_location for AA12370 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5332: https://drive.google.com/drive/folders/1nlEaAsDZR-XSQFD6SjInYVm7oZBZ1Qby
+[PropertyListingService] Enriched storage_location for AA5332 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12539: https://drive.google.com/drive/folders/1VmyJBBvOk56CuFJViZzaY0Cny84BUAd-
+[PropertyListingService] Enriched storage_location for AA12539 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12215: https://drive.google.com/drive/folders/1T0ZLYYc_GnwzA5Sjw-KIV5CEs1izCzNe
+[PropertyListingService] Enriched storage_location for AA12215 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10616: https://drive.google.com/drive/folders/1aOhfjIywVj_73Vx62MfJFAqT6u_0hPg4
+[PropertyListingService] Enriched storage_location for AA10616 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10439: https://drive.google.com/drive/folders/1pbdfLUTM-uIb2p8U4Ugc_jqV-Jc5asML
+[PropertyListingService] Enriched storage_location for AA10439 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10523: https://drive.google.com/drive/folders/1Cv80zVkVXmnC3_7RWqQjKaDlfaZJnfxQ
+[PropertyListingService] Enriched storage_location for AA10523 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10950: https://drive.google.com/drive/folders/1WLTsk1WnA-TOXUGaQCKphVMi8mkTrmHy
+[PropertyListingService] Enriched storage_location for AA10950 from work_tasks
+📊 Found 15 public properties (out of 1291 total, offset: 120)
+
+
+📝 Processing BB22 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12530 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA1949 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12539 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10225 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12580 (店舗付住宅)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA12580, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[FavoriteCommentService] Unsupported property type: other for ec889fcc-e88a-46ae-b385-34f8a271a921
+   ⚠️ No favorite comment found
+
+📝 Processing AA10165 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10976 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA1821 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10950 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10439 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10523 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12215 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12370 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10616 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 15
+✅ 成功: 0件
+⏭️ スキップ: 14件
+⚠️ データなし: 1件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T11:23:56.590Z] 
+📊 バッチ 7 結果:
+[2026-01-15T11:23:56.590Z]    ✅ 成功: 0件
+[2026-01-15T11:23:56.591Z]    ⏭️ スキップ: 14件
+[2026-01-15T11:23:56.591Z]    ⚠️ データなし: 1件
+[2026-01-15T11:23:56.592Z]    ❌ 失敗: 0件
+[2026-01-15T11:23:56.592Z]    🔄 クォータエラー: なし
+[2026-01-15T11:23:56.592Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T11:23:56.593Z]    次のバッチ: 8, オフセット: 140
+[2026-01-15T11:33:56.602Z] 
+============================================================
+[2026-01-15T11:33:56.604Z] 📦 バッチ 8 開始（オフセット: 140）
+[2026-01-15T11:33:56.605Z] ============================================================
+[2026-01-15T11:34:24.896Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 140
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA515: https://drive.google.com/drive/folders/15cSukVChIlqF0TPMVrMu3GUAUWY4dXIY
+[PropertyListingService] Enriched storage_location for AA515 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10502: https://drive.google.com/drive/folders/1dH1Ph_dsmUs0yM3gD83HmmiDiRlfuaBx
+[PropertyListingService] Enriched storage_location for AA10502 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10312: https://drive.google.com/drive/folders/17PXjVJpOYBoi4Ksbvy7AeroKlNqgU2Ng
+[PropertyListingService] Enriched storage_location for AA10312 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5839: https://drive.google.com/drive/folders/1L0Wm4TbzcyhUvboiZ4HrcALEp_cVaPVh?usp=sharing
+[PropertyListingService] Enriched storage_location for AA5839 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10353: https://drive.google.com/drive/u/0/folders/1s37Ppppsi6enRSBp4RMCPvfVcXB9vW0p
+[PropertyListingService] Enriched storage_location for AA10353 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA585: https://drive.google.com/drive/folders/1Ry2DO5Ukwp1C2mqE5TD4-TE5FfCP-R60
+[PropertyListingService] Enriched storage_location for AA585 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10855: https://drive.google.com/drive/u/0/folders/1A9QmY0Nuhv0s_Ybzo_WYRvGiZMUi4R0U
+[PropertyListingService] Enriched storage_location for AA10855 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9743: https://drive.google.com/drive/u/0/folders/1zIdVhba2rVMch69oDE-Eayjk4RV6-aQq
+[PropertyListingService] Enriched storage_location for AA9743 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10955: https://drive.google.com/drive/folders/1SSqRtS5wMnB7A8n4mPh9DyjNe5q3uLRk
+[PropertyListingService] Enriched storage_location for AA10955 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12433: https://drive.google.com/drive/folders/1c1ImiqAWAKwb-qi_LgdP5hNdabaKLa_7
+[PropertyListingService] Enriched storage_location for AA12433 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA1530: https://drive.google.com/drive/folders/1gPiUQRx1Iisqkqp1_0zj2g2V-sk8QTu3
+[PropertyListingService] Enriched storage_location for AA1530 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12356: https://drive.google.com/drive/u/0/folders/1Jk5aiUdYOz_xGgb_ZXtLD3wf7y0Q93wo
+[PropertyListingService] Enriched storage_location for AA12356 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10820: https://drive.google.com/drive/folders/1Ij_zsQ5_wP87taCCeHIBT3Fa6RVcZm30
+[PropertyListingService] Enriched storage_location for AA10820 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12481: https://drive.google.com/drive/u/0/folders/1v3oWPE4f99R1cVAGfUq1DJ-Oyhf0WakA
+[PropertyListingService] Enriched storage_location for AA12481 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12443: https://drive.google.com/drive/folders/1l4TbGfetZAoCeQ8yZ7y9vLSq2GdTQnNV
+[PropertyListingService] Enriched storage_location for AA12443 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10230: https://drive.google.com/drive/u/0/folders/1kV-SAaR1nm_urWfnSJbsoKaL5isTl2Ty
+[PropertyListingService] Enriched storage_location for AA10230 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA6099: https://drive.google.com/drive/u/0/folders/1x7e00fXoKI_VdCASf7ynm-JG8jQurt33
+[PropertyListingService] Enriched storage_location for AA6099 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9050: https://drive.google.com/drive/folders/10wZg3hqUZx3bHli27z_vmKGuBuJ9K8_L
+[PropertyListingService] Enriched storage_location for AA9050 from work_tasks
+📊 Found 12 public properties (out of 1291 total, offset: 140)
+
+
+📝 Processing AA5126 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA1530 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10353 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12433 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10312 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12356 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA6099 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10230 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA515 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10855 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9743 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA585 (店舗付住宅)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA585, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA585: https://drive.google.com/drive/folders/1Ry2DO5Ukwp1C2mqE5TD4-TE5FfCP-R60
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1Ry2DO5Ukwp1C2mqE5TD4-TE5FfCP-R60
+[FavoriteCommentService] Unsupported property type: other for 14214fe1-d492-4aa4-8986-117eb192d5cc
+   ⚠️ No favorite comment found
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 12
+✅ 成功: 0件
+⏭️ スキップ: 11件
+⚠️ データなし: 1件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T11:34:24.898Z] 
+📊 バッチ 8 結果:
+[2026-01-15T11:34:24.898Z]    ✅ 成功: 0件
+[2026-01-15T11:34:24.899Z]    ⏭️ スキップ: 11件
+[2026-01-15T11:34:24.900Z]    ⚠️ データなし: 1件
+[2026-01-15T11:34:24.900Z]    ❌ 失敗: 0件
+[2026-01-15T11:34:24.901Z]    🔄 クォータエラー: なし
+[2026-01-15T11:34:24.901Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T11:34:24.901Z]    次のバッチ: 9, オフセット: 160
+[2026-01-15T14:33:19.721Z] 
+============================================================
+[2026-01-15T14:33:19.759Z] 📦 バッチ 9 開始（オフセット: 160）
+[2026-01-15T14:33:19.781Z] ============================================================
+[2026-01-15T14:34:48.635Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 160
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10109-2: https://drive.google.com/drive/folders/1O2g0IZ-oc7tjWPPoqYGde_gsl5xtxxZD
+[PropertyListingService] Enriched storage_location for AA10109-2 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12375: https://drive.google.com/drive/folders/1FhqRS31yd4uTsGOc1Ek5Kh59zoGN87S9
+[PropertyListingService] Enriched storage_location for AA12375 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12380: https://drive.google.com/drive/u/0/folders/1aLdcviBNotGfULRh0FH1t-GCjeFxLYy3
+[PropertyListingService] Enriched storage_location for AA12380 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10445: https://drive.google.com/drive/folders/1YAwONIzD8WUxBKloQKZvAyZC6ToRPjqL
+[PropertyListingService] Enriched storage_location for AA10445 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10246: https://drive.google.com/drive/folders/1fq-lySFTWiJtksoTBjxR-31AxumeqIDa
+[PropertyListingService] Enriched storage_location for AA10246 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10391: https://drive.google.com/drive/folders/1kPwgHbg-XQCmrIM9X364tt478Ojw1tl0
+[PropertyListingService] Enriched storage_location for AA10391 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10395: https://drive.google.com/drive/folders/1u_aVBBBO2adL1lIiDRswpHQbJ2TuG2Ba
+[PropertyListingService] Enriched storage_location for AA10395 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA498: https://drive.google.com/drive/folders/18tyZpRvI0cqoZV3D0VmvV_Z9_oJBOnLX?usp=drive_link
+[PropertyListingService] Enriched storage_location for AA498 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10528: https://drive.google.com/drive/folders/1fq-lySFTWiJtksoTBjxR-31AxumeqIDa
+[PropertyListingService] Enriched storage_location for AA10528 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10298: https://drive.google.com/drive/folders/19tcxtNYtmvvKUbLXJOfsjDZdWmcRVVFC
+[PropertyListingService] Enriched storage_location for AA10298 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10567: https://drive.google.com/drive/folders/1AVOsfzSIF7GfBsg0VOGLSHyAJi8BmnVs
+[PropertyListingService] Enriched storage_location for AA10567 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA12369: https://drive.google.com/drive/folders/1HW-Sm18SPVWcgixHtxH7KPAtwe1-kkZh
+[PropertyListingService] Enriched storage_location for AA12369 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10790: https://drive.google.com/drive/u/0/folders/1E-q08KBU_HZ99D6ejpvnM-actfbJ77rQ
+[PropertyListingService] Enriched storage_location for AA10790 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10497: https://drive.google.com/drive/folders/1B1PinAECsvu68kemNOjpDxgBYV24ufhp
+[PropertyListingService] Enriched storage_location for AA10497 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5701: https://drive.google.com/drive/folders/1CipjzAt-uTou0qopx1o33haoyUa0JA24
+[PropertyListingService] Enriched storage_location for AA5701 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10527: https://drive.google.com/drive/u/0/folders/1HH_F-wV_UWLHNp2isMS_MWN5T3FDYyEt
+[PropertyListingService] Enriched storage_location for AA10527 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5517: https://drive.google.com/drive/folders/13aRzfMuJ_aEaW6fcWYJldohoWIzcxWqz
+[PropertyListingService] Enriched storage_location for AA5517 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10630: https://drive.google.com/drive/folders/191V8UVA9-t3tXFyLBG9St2gqHhatLKIP
+[PropertyListingService] Enriched storage_location for AA10630 from work_tasks
+📊 Found 9 public properties (out of 1291 total, offset: 160)
+
+
+📝 Processing AA10109-2 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9479 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10790 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA12375 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10527 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10630 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10365 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10365
+   ⚠️ No favorite comment found
+
+📝 Processing AA10246 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA10246, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10246: https://drive.google.com/drive/folders/1fq-lySFTWiJtksoTBjxR-31AxumeqIDa
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1fq-lySFTWiJtksoTBjxR-31AxumeqIDa
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10246
+   ⚠️ No favorite comment found
+
+📝 Processing AA10528 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 9
+✅ 成功: 0件
+⏭️ スキップ: 7件
+⚠️ データなし: 2件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T14:34:48.639Z] 
+📊 バッチ 9 結果:
+[2026-01-15T14:34:48.639Z]    ✅ 成功: 0件
+[2026-01-15T14:34:48.640Z]    ⏭️ スキップ: 7件
+[2026-01-15T14:34:48.640Z]    ⚠️ データなし: 2件
+[2026-01-15T14:34:48.640Z]    ❌ 失敗: 0件
+[2026-01-15T14:34:48.641Z]    🔄 クォータエラー: なし
+[2026-01-15T14:34:48.641Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T14:34:48.641Z]    次のバッチ: 10, オフセット: 180
+[2026-01-15T14:44:48.651Z] 
+============================================================
+[2026-01-15T14:44:48.655Z] 📦 バッチ 10 開始（オフセット: 180）
+[2026-01-15T14:44:48.656Z] ============================================================
+[2026-01-15T14:46:58.973Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 180
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9723: https://drive.google.com/drive/folders/1Mht7-HxXuXOwcjQ8P0L4uBwYEZMMNUV7
+[PropertyListingService] Enriched storage_location for AA9723 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA4056: https://drive.google.com/drive/folders/1lgRj1kaxV4__sYPAbsABH2lGVYFdwg1D
+[PropertyListingService] Enriched storage_location for AA4056 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10493: https://drive.google.com/drive/folders/1MBA_rujV-4FBty_cCugXtryX7yaGC6yv
+[PropertyListingService] Enriched storage_location for AA10493 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5943: https://drive.google.com/drive/folders/1qKMeoaZXBCIabx1xBemEU6ZT8qJC9Ete
+[PropertyListingService] Enriched storage_location for AA5943 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10459: https://drive.google.com/drive/folders/1zFWEojLBTDCgZiJTzQa4HkReCJGpihB5
+[PropertyListingService] Enriched storage_location for AA10459 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA2054: https://drive.google.com/drive/folders/14AnLJDAkKQRE5jzljNJPWFmQ2XEMknjR
+[PropertyListingService] Enriched storage_location for AA2054 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10504: https://drive.google.com/drive/u/0/folders/1FT9WtiF4zuJlgh4tWqpbik_3u_p6o-Te
+[PropertyListingService] Enriched storage_location for AA10504 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9329: https://drive.google.com/drive/folders/1TUyGxQQZuT6zcZ4Pb2RrEr_iLnzbHJ9J
+[PropertyListingService] Enriched storage_location for AA9329 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10422: https://drive.google.com/drive/folders/1iy_us66q7Pn0c4A1UxSP3VRxM5EV7WQU
+[PropertyListingService] Enriched storage_location for AA10422 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9831: https://drive.google.com/drive/folders/1oGD4P42XpLIA6r8ceVVnD66YWw52SXRL
+[PropertyListingService] Enriched storage_location for AA9831 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10424: https://drive.google.com/drive/folders/1TMH1tkdpq_RUrW3vaNVpKrYJs1oRhlo0
+[PropertyListingService] Enriched storage_location for AA10424 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5128: https://drive.google.com/drive/folders/1w9KQ1m9XZ1Btn53MMg0MbPlKt9ng7Qky
+[PropertyListingService] Enriched storage_location for AA5128 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10425: https://drive.google.com/drive/u/0/folders/1GIzFM5r73jmMqCihPRfbBUrImHljvnzf
+[PropertyListingService] Enriched storage_location for AA10425 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9033: https://drive.google.com/drive/folders/1eXiZnKmygulPI5GdGdKY5oXdhbh2xCe8
+[PropertyListingService] Enriched storage_location for AA9033 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10126: https://drive.google.com/drive/folders/1lwAWwsrzpwgB3EjznblF8ZFXlfX3FDJL
+[PropertyListingService] Enriched storage_location for AA10126 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA3554: https://drive.google.com/drive/folders/1rckV35oPZvANCzTvtSHLnHhairXPPtwO
+[PropertyListingService] Enriched storage_location for AA3554 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10458: https://drive.google.com/drive/folders/1xKQm_85Zo2q18Mz9TWbWb4ugl_sK8rns
+[PropertyListingService] Enriched storage_location for AA10458 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10110: https://drive.google.com/drive/folders/10xy0g1NGgtddXqYFbpEbk1qeSw6YDitm
+[PropertyListingService] Enriched storage_location for AA10110 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5181: https://drive.google.com/drive/folders/1niDaWr2IVwjmLo3ZCGLdOsO3xGuDbEp_
+[PropertyListingService] Enriched storage_location for AA5181 from work_tasks
+📊 Found 11 public properties (out of 1291 total, offset: 180)
+
+
+📝 Processing AA10459 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA10459, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10459: https://drive.google.com/drive/folders/1zFWEojLBTDCgZiJTzQa4HkReCJGpihB5
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1zFWEojLBTDCgZiJTzQa4HkReCJGpihB5
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10459
+   ⚠️ No favorite comment found
+
+📝 Processing AA10424 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10458 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9723 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9723, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA9723 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1Mht7-HxXuXOwcjQ8P0L4uBwYEZMMNUV7
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA9723
+   ⚠️ No favorite comment found
+
+📝 Processing AA4056 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA4056, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA4056 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1lgRj1kaxV4__sYPAbsABH2lGVYFdwg1D
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA4056
+   ⚠️ No favorite comment found
+
+📝 Processing AA5128 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA6315 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA6315
+   ⚠️ No favorite comment found
+
+📝 Processing AA10422 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA10422, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA10422 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1iy_us66q7Pn0c4A1UxSP3VRxM5EV7WQU
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10422
+   ⚠️ No favorite comment found
+
+📝 Processing AA10126 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA10126, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA10126 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1lwAWwsrzpwgB3EjznblF8ZFXlfX3FDJL
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10126
+   ⚠️ No favorite comment found
+
+📝 Processing AA9033 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9831 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9831, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA9831 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1oGD4P42XpLIA6r8ceVVnD66YWw52SXRL
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA9831
+   ⚠️ No favorite comment found
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 11
+✅ 成功: 0件
+⏭️ スキップ: 4件
+⚠️ データなし: 7件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T14:46:58.977Z] 
+📊 バッチ 10 結果:
+[2026-01-15T14:46:58.978Z]    ✅ 成功: 0件
+[2026-01-15T14:46:58.979Z]    ⏭️ スキップ: 4件
+[2026-01-15T14:46:58.980Z]    ⚠️ データなし: 7件
+[2026-01-15T14:46:58.981Z]    ❌ 失敗: 0件
+[2026-01-15T14:46:58.982Z]    🔄 クォータエラー: なし
+[2026-01-15T14:46:58.983Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T14:46:58.983Z]    次のバッチ: 11, オフセット: 200
+[2026-01-15T14:56:59.004Z] 
+============================================================
+[2026-01-15T14:56:59.006Z] 📦 バッチ 11 開始（オフセット: 200）
+[2026-01-15T14:56:59.008Z] ============================================================
+[2026-01-15T14:58:17.107Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 200
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9472: https://drive.google.com/drive/folders/1KNSsl1INV14KLr8yarLrSq0vZVEimeiX
+[PropertyListingService] Enriched storage_location for AA9472 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10163: https://drive.google.com/drive/folders/1WPZZ4gnnJnfD1FrmB2N8ZbAoYY0yZTMG
+[PropertyListingService] Enriched storage_location for AA10163 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9926: https://drive.google.com/drive/u/0/folders/1UKu5phEDAiAeSf4HKbmS4AidBk-XmQ24
+[PropertyListingService] Enriched storage_location for AA9926 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10186: https://drive.google.com/drive/folders/1R_LhDlTy9icKyQizyuA2cDTTpPAc3Ez8
+[PropertyListingService] Enriched storage_location for AA10186 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10121: https://drive.google.com/drive/folders/1yviTAW2ZmTNWHPbl-wplkrbQeV-BjqPB
+[PropertyListingService] Enriched storage_location for AA10121 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10216: https://drive.google.com/drive/folders/12tS3m-37Xn02ptebsO_iXy6rBPFJNplP
+[PropertyListingService] Enriched storage_location for AA10216 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10169: https://drive.google.com/drive/folders/1LUIk9AS7UQtgr7EGp4WhSd7zxeEdBjwj
+[PropertyListingService] Enriched storage_location for AA10169 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10272: https://drive.google.com/drive/u/0/folders/1du5OxQD3HzzMSgl9BvF7wqrWlyt0ICYV
+[PropertyListingService] Enriched storage_location for AA10272 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10305: https://drive.google.com/drive/u/0/folders/1cpIJdWEz0vPrvXZOYH2XxLBVmsnDptcE
+[PropertyListingService] Enriched storage_location for AA10305 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10257: https://drive.google.com/drive/folders/1c_1MGL8VJN7Ieuuxp8P2iG5JaXF1ZYLp
+[PropertyListingService] Enriched storage_location for AA10257 from work_tasks
+📊 Found 10 public properties (out of 1291 total, offset: 200)
+
+
+📝 Processing AA10305 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10186 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA10186, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA10186: https://drive.google.com/drive/folders/1R_LhDlTy9icKyQizyuA2cDTTpPAc3Ez8
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/folders/1R_LhDlTy9icKyQizyuA2cDTTpPAc3Ez8
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10186
+   ⚠️ No favorite comment found
+
+📝 Processing AA10105 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10105
+   ⚠️ No favorite comment found
+
+📝 Processing AA10216 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10053 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9926 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9926, fetching from work_tasks
+[PropertyListingService] Found storage_url for AA9926 in cache
+[PropertyListingService] Found storage_url in work_tasks: https://drive.google.com/drive/u/0/folders/1UKu5phEDAiAeSf4HKbmS4AidBk-XmQ24
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA9926
+   ⚠️ No favorite comment found
+
+📝 Processing AA10257 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10109 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA10109
+   ⚠️ No favorite comment found
+
+📝 Processing AA10106 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA10148 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 10
+✅ 成功: 0件
+⏭️ スキップ: 6件
+⚠️ データなし: 4件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T14:58:17.109Z] 
+📊 バッチ 11 結果:
+[2026-01-15T14:58:17.110Z]    ✅ 成功: 0件
+[2026-01-15T14:58:17.110Z]    ⏭️ スキップ: 6件
+[2026-01-15T14:58:17.111Z]    ⚠️ データなし: 4件
+[2026-01-15T14:58:17.111Z]    ❌ 失敗: 0件
+[2026-01-15T14:58:17.111Z]    🔄 クォータエラー: なし
+[2026-01-15T14:58:17.112Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T14:58:17.112Z]    次のバッチ: 12, オフセット: 220
+[2026-01-15T15:08:17.129Z] 
+============================================================
+[2026-01-15T15:08:17.133Z] 📦 バッチ 12 開始（オフセット: 220）
+[2026-01-15T15:08:17.137Z] ============================================================
+[2026-01-15T15:09:09.778Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 220
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9812: https://drive.google.com/drive/folders/1231RumYrAh-DcNIg8T5ST76DBKT7jcxd
+[PropertyListingService] Enriched storage_location for AA9812 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA9313: https://drive.google.com/drive/u/0/folders/1NrWiP8ix0S6okx5KKIRPXjZdbWsQDn3W
+[PropertyListingService] Enriched storage_location for AA9313 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+📊 Found 7 public properties (out of 1291 total, offset: 220)
+
+
+📝 Processing AA10027 (戸建)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9368 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9368, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA9368
+   ⚠️ No favorite comment found
+
+📝 Processing AA9491 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9833 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9477 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9477, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA9477
+   ⚠️ No favorite comment found
+
+📝 Processing AA5030 (土地)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9813 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9813, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9813
+[FavoriteCommentService] No spreadsheet URL for property a8051b87-0f75-4d76-8d2e-e56f199b5a17
+   ⚠️ No favorite comment found
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 7
+✅ 成功: 0件
+⏭️ スキップ: 4件
+⚠️ データなし: 3件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T15:09:09.780Z] 
+📊 バッチ 12 結果:
+[2026-01-15T15:09:09.781Z]    ✅ 成功: 0件
+[2026-01-15T15:09:09.782Z]    ⏭️ スキップ: 4件
+[2026-01-15T15:09:09.782Z]    ⚠️ データなし: 3件
+[2026-01-15T15:09:09.783Z]    ❌ 失敗: 0件
+[2026-01-15T15:09:09.783Z]    🔄 クォータエラー: なし
+[2026-01-15T15:09:09.784Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T15:09:09.784Z]    次のバッチ: 13, オフセット: 240
+[2026-01-15T15:19:09.786Z] 
+============================================================
+[2026-01-15T15:19:09.787Z] 📦 バッチ 13 開始（オフセット: 240）
+[2026-01-15T15:19:09.788Z] ============================================================
+[2026-01-15T15:19:46.580Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 240
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA6109: https://drive.google.com/drive/folders/1ULJWaGJuwkC3J5NAQPg0FrWZmi1InhSJ
+[PropertyListingService] Enriched storage_location for AA6109 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+📊 Found 11 public properties (out of 1291 total, offset: 240)
+
+
+📝 Processing AA9627 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9627, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9627
+[FavoriteCommentService] No spreadsheet URL for property abe6965f-9427-4e74-97af-1c50b12fe792
+   ⚠️ No favorite comment found
+
+📝 Processing AA9645 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9645, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9645
+[FavoriteCommentService] No spreadsheet URL for property 8ddbbf1b-7d67-44f3-bdf8-799febfcdca7
+   ⚠️ No favorite comment found
+
+📝 Processing AA9517 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9517, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9517
+[FavoriteCommentService] No spreadsheet URL for property e6c80269-b41d-42f6-9c33-2b5ebda3fb17
+   ⚠️ No favorite comment found
+
+📝 Processing AA6068 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA6068, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA6068
+[FavoriteCommentService] No spreadsheet URL for property 210b8134-eff7-49a9-af7a-5ef91d8650db
+   ⚠️ No favorite comment found
+
+📝 Processing AA1315 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA1315, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA1315
+[FavoriteCommentService] No spreadsheet URL for property 7f2894af-2532-4648-a2e7-f61efc445542
+   ⚠️ No favorite comment found
+
+📝 Processing AA9589 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9589, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9589
+[FavoriteCommentService] No spreadsheet URL for property e51ce983-6a75-43e9-9a71-645ccdacfb82
+   ⚠️ No favorite comment found
+
+📝 Processing AA6199 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA6199, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA6199
+[FavoriteCommentService] No spreadsheet URL for property db3ec7fa-a1c3-42c6-bed2-5ac4747f2248
+   ⚠️ No favorite comment found
+
+📝 Processing AA9178 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9178, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9178
+[FavoriteCommentService] No spreadsheet URL for property 37eddf8d-aef6-4ac7-9ed2-11aba67a6b01
+   ⚠️ No favorite comment found
+
+📝 Processing AA18 (null)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA18, fetching from work_tasks
+[FavoriteCommentService] Unsupported property type: other for 8a7cf62b-5114-43fe-986b-3dd488a7814d
+   ⚠️ No favorite comment found
+
+📝 Processing AA9547 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9547, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9547
+[FavoriteCommentService] No spreadsheet URL for property 2376be89-c2b7-4abf-a684-46dc627628bf
+   ⚠️ No favorite comment found
+
+📝 Processing AA5596 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA5596, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA5596
+[FavoriteCommentService] No spreadsheet URL for property f5539d55-9d3d-4f43-ad0a-2afd8ebbacac
+   ⚠️ No favorite comment found
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 11
+✅ 成功: 0件
+⏭️ スキップ: 0件
+⚠️ データなし: 11件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T15:19:46.582Z] 
+📊 バッチ 13 結果:
+[2026-01-15T15:19:46.583Z]    ✅ 成功: 0件
+[2026-01-15T15:19:46.583Z]    ⏭️ スキップ: 0件
+[2026-01-15T15:19:46.584Z]    ⚠️ データなし: 11件
+[2026-01-15T15:19:46.584Z]    ❌ 失敗: 0件
+[2026-01-15T15:19:46.585Z]    🔄 クォータエラー: なし
+[2026-01-15T15:19:46.585Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T15:19:46.585Z]    次のバッチ: 14, オフセット: 260
+[2026-01-15T15:29:46.598Z] 
+============================================================
+[2026-01-15T15:29:46.600Z] 📦 バッチ 14 開始（オフセット: 260）
+[2026-01-15T15:29:46.602Z] ============================================================
+[2026-01-15T15:30:30.746Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 260
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA1660: https://drive.google.com/drive/folders/1YwOpKtsZfqM6leqI9T3kfwyX92mflAie
+[PropertyListingService] Enriched storage_location for AA1660 from work_tasks
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Found storage_url for AA5872: https://drive.google.com/drive/folders/1f54dJwXDagOpuW-YbSzpCjR7pWvNNFAG
+[PropertyListingService] Enriched storage_location for AA5872 from work_tasks
+📊 Found 7 public properties (out of 1291 total, offset: 260)
+
+
+📝 Processing AA5633 (マンション)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA5633, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA5633
+[FavoriteCommentService] No spreadsheet URL for property 913e665f-a65e-48ab-b99d-d65d615ccfc9
+   ⚠️ No favorite comment found
+
+📝 Processing AA9288 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9288, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9288
+[FavoriteCommentService] No spreadsheet URL for property fcf28b7c-732f-41dc-99b4-fc9eef8822fa
+   ⚠️ No favorite comment found
+
+📝 Processing AA6381 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+📝 Processing AA9374 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9374, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9374
+[FavoriteCommentService] No spreadsheet URL for property aa16fa6a-eb41-4d86-9a73-7205a47146c5
+   ⚠️ No favorite comment found
+
+📝 Processing AA5469 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA5469, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA5469
+[FavoriteCommentService] No spreadsheet URL for property e87d351c-40de-4466-bbbe-44bb57e815ee
+   ⚠️ No favorite comment found
+
+📝 Processing AA9355 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9355, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA9355
+[FavoriteCommentService] No spreadsheet URL for property 853f59c9-21f5-4793-98b1-c056b356f3a0
+   ⚠️ No favorite comment found
+
+📝 Processing AA5336 (マンション)...
+   ⏭️ Skipped (already has favorite_comment)
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 7
+✅ 成功: 0件
+⏭️ スキップ: 2件
+⚠️ データなし: 5件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T15:30:30.764Z] 
+📊 バッチ 14 結果:
+[2026-01-15T15:30:30.765Z]    ✅ 成功: 0件
+[2026-01-15T15:30:30.766Z]    ⏭️ スキップ: 2件
+[2026-01-15T15:30:30.767Z]    ⚠️ データなし: 5件
+[2026-01-15T15:30:30.767Z]    ❌ 失敗: 0件
+[2026-01-15T15:30:30.768Z]    🔄 クォータエラー: なし
+[2026-01-15T15:30:30.768Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T15:30:30.769Z]    次のバッチ: 15, オフセット: 280
+[2026-01-15T18:37:00.749Z] 
+============================================================
+[2026-01-15T18:37:00.808Z] 📦 バッチ 15 開始（オフセット: 280）
+[2026-01-15T18:37:00.820Z] ============================================================
+[2026-01-15T19:19:17.109Z] 🔍 Raw ENV values: {
+  SUPABASE_URL: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  SUPABASE_ANON_KEY_length: 208,
+  SUPABASE_SERVICE_KEY_length: 219
+}
+🔍 Supabase Config Debug: {
+  url: 'https://krxhrbtlgfjzsseegaqq.supabase.co',
+  hasServiceKey: true,
+  serviceKeyProject: 'supabase',
+  hasAnonKey: true,
+  anonKeyProject: 'supabase'
+}
+✅ Supabase initialized
+🚀 Starting favorite comment sync...
+
+📋 Options:
+   Force: false
+   Dry Run: false
+   Limit: 20
+   Offset: 280
+   Property Number: All
+
+✅ Google Drive Service Account initialized
+✅ Google Drive Service Account initialized
+📦 Fetching public properties...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+📊 Found 4 public properties (out of 1291 total, offset: 280)
+
+
+📝 Processing AA6362　 (null)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA6362　, fetching from work_tasks
+[PropertyListingService] Loading 業務リスト（業務依頼） into cache...
+[PropertyListingService] Loaded 228 entries from 業務リスト（業務依頼）
+[FavoriteCommentService] Unsupported property type: other for 6d9549ea-9c07-4878-868a-4cb00e29d9d6
+   ⚠️ No favorite comment found
+
+📝 Processing AA1120 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA1120, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] No data found for AA1120
+[FavoriteCommentService] No spreadsheet URL for property 9b55a012-495f-40e7-8772-09b392c92f78
+   ⚠️ No favorite comment found
+
+📝 Processing AA5998 (土地)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA5998, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[GyomuListService] Cache refreshed with 327 entries
+[GyomuListService] Found data for AA5998
+   ⚠️ No favorite comment found
+
+📝 Processing AA9136 (戸建)...
+   🔍 Fetching favorite comment from spreadsheet...
+[PropertyListingService] storage_location is empty for AA9136, fetching from work_tasks
+[GyomuListService] Refreshing cache...
+[FavoriteCommentService] No spreadsheet URL for property 7c9fa36d-fc0f-4192-aac9-b13575785a08
+   ⚠️ No favorite comment found
+
+
+============================================================
+📊 SUMMARY REPORT
+============================================================
+Total Processed: 4
+✅ 成功: 0件
+⏭️ スキップ: 0件
+⚠️ データなし: 4件
+❌ 失敗: 0件
+============================================================
+
+✅ Sync complete!
+
+[2026-01-15T19:19:17.114Z] 
+📊 バッチ 15 結果:
+[2026-01-15T19:19:17.115Z]    ✅ 成功: 0件
+[2026-01-15T19:19:17.115Z]    ⏭️ スキップ: 0件
+[2026-01-15T19:19:17.116Z]    ⚠️ データなし: 4件
+[2026-01-15T19:19:17.116Z]    ❌ 失敗: 0件
+[2026-01-15T19:19:17.117Z]    🔄 クォータエラー: なし
+[2026-01-15T19:19:17.117Z] 
+⏳ 10分待機中...（Google Sheets APIクォータ制限対策）
+[2026-01-15T19:19:17.117Z]    次のバッチ: 16, オフセット: 300

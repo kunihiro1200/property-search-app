@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <!-- Yellow pentagonal house shape (5-sided) -->
+  <path d="M 200 30 L 350 150 L 350 450 L 50 450 L 50 150 Z" fill="#FDB913" stroke="#000" stroke-width="8"/>
+  
+  <!-- Black straight roof line -->
+  <line x1="50" y1="150" x2="200" y2="30" stroke="#000" stroke-width="8"/>
+  <line x1="200" y1="30" x2="350" y2="150" stroke="#000" stroke-width="8"/>
+  
+  <!-- Simple, evenly distributed windows (3x2 grid) -->
+  <!-- Top row -->
+  <rect x="90" y="180" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="95" y="185" width="50" height="70" fill="#FDB913"/>
+  
+  <rect x="170" y="180" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="175" y="185" width="50" height="70" fill="#FDB913"/>
+  
+  <rect x="250" y="180" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="255" y="185" width="50" height="70" fill="#FDB913"/>
+  
+  <!-- Bottom row -->
+  <rect x="90" y="290" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="95" y="295" width="50" height="70" fill="#FDB913"/>
+  
+  <rect x="170" y="290" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="175" y="295" width="50" height="70" fill="#FDB913"/>
+  
+  <rect x="250" y="290" width="60" height="80" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="255" y="295" width="50" height="70" fill="#FDB913"/>
+  
+  <!-- Door -->
+  <rect x="170" y="390" width="60" height="60" fill="#000" stroke="#000" stroke-width="3"/>
+  <rect x="175" y="395" width="50" height="50" fill="#FDB913"/>
+  
+  <!-- Text: comfortable TENANT SEARCH -->
+  <text x="200" y="485" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#000">
+    comfortable TENANT SEARCH
+  </text>
+</svg>

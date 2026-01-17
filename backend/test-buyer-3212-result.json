@@ -1,0 +1,15 @@
+{
+  "totalBuyers": 1000,
+  "qualifiedCount": 6,
+  "buyer3212Found": true,
+  "buyer3212Details": {
+    "email": "thio.0426.maru@gmail.com",
+    "filterResults": {
+      "geography": false,
+      "distribution": true,
+      "status": true,
+      "priceRange": false
+    },
+    "isQualified": false
+  }
+}
