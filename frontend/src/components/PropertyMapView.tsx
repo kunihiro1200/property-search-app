@@ -101,8 +101,9 @@ async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: n
     if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
       console.log('🔗 Detected shortened URL, fetching redirect via backend...');
       try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         const response = await fetch(
-          `http://localhost:3000/api/url-redirect/resolve?url=${encodeURIComponent(url)}`
+          `${apiUrl}/api/url-redirect/resolve?url=${encodeURIComponent(url)}`
         );
         
         if (response.ok) {

@@ -54,3 +54,5 @@ coverage/
 
 # Redis
 dump.rdb
+.vercel
+.env*.local

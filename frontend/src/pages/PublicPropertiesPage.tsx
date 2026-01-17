@@ -391,8 +391,9 @@ const PublicPropertiesPage: React.FC = () => {
         params.set('showPublicOnly', 'true');
       }
       
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
-        `http://localhost:3000/api/public/properties?${params.toString()}`
+        `${apiUrl}/api/public/properties?${params.toString()}`
       );
       
       if (!response.ok) {
@@ -503,8 +504,9 @@ const PublicPropertiesPage: React.FC = () => {
         
         console.log(`🔄 fetchAllProperties: Fetching batch ${batchCount} with offset=${offset}, limit=${limit}`);
         
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         const response = await fetch(
-          `http://localhost:3000/api/public/properties?${params.toString()}`
+          `${apiUrl}/api/public/properties?${params.toString()}`
         );
         
         if (!response.ok) {

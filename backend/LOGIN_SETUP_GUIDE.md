@@ -26,9 +26,11 @@
 3. 以下の情報を入力：
 
 ```
-Client ID: 111282429644-7j3br7ehkp57mmfforgit7djsnfaog5k.apps.googleusercontent.com
-Client Secret: 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
+Client ID: <Google Cloud ConsoleのClient IDを入力>
+Client Secret: <Google Cloud ConsoleのClient Secretを入力>
 ```
+
+**注意**: 実際の値は`.env`ファイルまたはGoogle Cloud Consoleから取得してください。
 
 4. **Authorized redirect URIs** に以下を追加：
 ```

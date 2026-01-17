@@ -1,9 +1,16 @@
 const { google } = require('googleapis');
+require('dotenv').config();
 
-const CLIENT_ID = '111282429644-7j3br7ehkp57mmfforgit7djsnfaog5k.apps.googleusercontent.com';
-const CLIENT_SECRET = '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';
-const REDIRECT_URI = 'http://localhost:3000/auth/google/callback';
-const CODE = '4/0Ab32j92k4-XjDTEy9YgrmnvGs7RrXADeqeb3ntxjJdwGN725mieeIaGzXLNwZ1E0KzIn5g';
+const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
+const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+const CODE = process.argv[2]; // コマンドライン引数から取得
+
+if (!CODE) {
+  console.error('❌ エラー: 認証コードを引数として指定してください');
+  console.log('使用方法: node get-refresh-token.js <認証コード>');
+  process.exit(1);
+}
 
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,

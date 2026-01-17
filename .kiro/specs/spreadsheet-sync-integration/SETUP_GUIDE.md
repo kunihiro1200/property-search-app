@@ -397,8 +397,8 @@ ALTER TABLE sellers ALTER COLUMN status DROP NOT NULL;
 4. 「Google」を探してクリック
 5. 以下の設定を行う:
    - **Enable Sign in with Google**: ONにする
-   - **Client ID**: `111282429644-7j3br7ehkp57mmfforgit7djsnfaog5k.apps.googleusercontent.com`
-   - **Client Secret**: `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`
+   - **Client ID**: `<Google Cloud ConsoleのClient IDを入力>`
+   - **Client Secret**: `<Google Cloud ConsoleのClient Secretを入力>`
    - **Callback URL (for OAuth)**: `https://fzcuexscuwhoywcicdqq.supabase.co/auth/v1/callback`（自動管理、編集不要）
 6. **「Save」をクリック**（これを忘れないでください！）
 
@@ -409,7 +409,7 @@ Supabaseの設定を保存したら、Google Cloud Consoleで承認済みリダ�
 1. [Google Cloud Console](https://console.cloud.google.com/)にアクセス
 2. プロジェクトを選択（OAuth Client IDを作成したプロジェクト）
 3. 左メニューから「APIとサービス」→「認証情報」を選択
-4. OAuth 2.0 クライアントIDのリストから、Client ID `111282429644-7j3br7ehkp57mmfforgit7djsnfaog5k.apps.googleusercontent.com` をクリック
+4. OAuth 2.0 クライアントIDのリストから、使用するClient IDをクリック
 5. 「承認済みのリダイレクトURI」セクションで「URIを追加」をクリック
 6. 以下のURIを追加:
    - `https://fzcuexscuwhoywcicdqq.supabase.co/auth/v1/callback`（Supabaseのコールバック）
