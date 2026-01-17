@@ -163,62 +163,75 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 const startServer = async () => {
   await initializeConnections();
   
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    
-    // 強化版自動同期を非同期で実行（サーバー起動をブロックしない）
-    // デフォルトで有効、明示的にfalseの場合のみ無効
-    setTimeout(async () => {
-      try {
-        const { getEnhancedPeriodicSyncManager, isAutoSyncEnabled } = await import('./services/EnhancedAutoSyncService');
-        
-        if (!isAutoSyncEnabled()) {
-          console.log('📊 Auto-sync is disabled (AUTO_SYNC_ENABLED=false)');
-          return;
+  // Vercel環境では app.listen() を呼ばない
+  if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      
+      // 強化版自動同期を非同期で実行（サーバー起動をブロックしない）
+      // デフォルトで有効、明示的にfalseの場合のみ無効
+      setTimeout(async () => {
+        try {
+          const { getEnhancedPeriodicSyncManager, isAutoSyncEnabled } = await import('./services/EnhancedAutoSyncService');
+          
+          if (!isAutoSyncEnabled()) {
+            console.log('📊 Auto-sync is disabled (AUTO_SYNC_ENABLED=false)');
+            return;
+          }
+          
+          const periodicSyncManager = getEnhancedPeriodicSyncManager();
+          await periodicSyncManager.start();
+          console.log(`📊 Enhanced periodic auto-sync enabled (interval: ${periodicSyncManager.getIntervalMinutes()} minutes)`);
+          console.log('   Using full comparison mode - all missing sellers will be detected');
+        } catch (error: any) {
+          console.error('⚠️ Enhanced auto-sync failed (non-blocking):', error.message);
+          console.log('   Will retry in 1 minute...');
         }
-        
-        const periodicSyncManager = getEnhancedPeriodicSyncManager();
-        await periodicSyncManager.start();
-        console.log(`📊 Enhanced periodic auto-sync enabled (interval: ${periodicSyncManager.getIntervalMinutes()} minutes)`);
-        console.log('   Using full comparison mode - all missing sellers will be detected');
-      } catch (error: any) {
-        console.error('⚠️ Enhanced auto-sync failed (non-blocking):', error.message);
-        console.log('   Will retry in 1 minute...');
-      }
-    }, 5000); // 5秒後に実行
+      }, 5000); // 5秒後に実行
 
-    // 録音ファイルクリーンアップワーカーを起動
-    setTimeout(async () => {
-      try {
-        const { getRecordingCleanupWorker } = await import('./jobs/recordingCleanup');
-        const cleanupWorker = getRecordingCleanupWorker();
-        cleanupWorker.start();
-        const config = cleanupWorker.getConfig();
-        console.log(`🧹 Recording cleanup worker started (schedule: ${config.schedule}, retention: ${config.retentionDays} days)`);
-      } catch (error: any) {
-        console.error('⚠️ Recording cleanup worker failed to start (non-blocking):', error.message);
-      }
-    }, 10000); // 10秒後に実行
+      // 録音ファイルクリーンアップワーカーを起動
+      setTimeout(async () => {
+        try {
+          const { getRecordingCleanupWorker } = await import('./jobs/recordingCleanup');
+          const cleanupWorker = getRecordingCleanupWorker();
+          cleanupWorker.start();
+          const config = cleanupWorker.getConfig();
+          console.log(`🧹 Recording cleanup worker started (schedule: ${config.schedule}, retention: ${config.retentionDays} days)`);
+        } catch (error: any) {
+          console.error('⚠️ Recording cleanup worker failed to start (non-blocking):', error.message);
+        }
+      }, 10000); // 10秒後に実行
 
-    // 問い合わせ同期ジョブを無効化（APIエンドポイントから直接転記するため）
-    // setTimeout(async () => {
-    //   try {
-    //     const { getInquirySyncJob } = await import('./jobs/inquirySyncJob');
-    //     const inquirySyncJob = getInquirySyncJob();
-    //     await inquirySyncJob.start(5); // 5分ごとに実行
-    //     console.log('📋 Inquiry sync job started (interval: 5 minutes)');
-    //   } catch (error: any) {
-    //     console.error('⚠️ Inquiry sync job failed to start (non-blocking):', error.message);
-    //   }
-    // }, 15000); // 15秒後に実行
-    console.log('📋 Inquiry sync job disabled (direct sync from API endpoint)');
-  });
+      // 問い合わせ同期ジョブを無効化（APIエンドポイントから直接転記するため）
+      // setTimeout(async () => {
+      //   try {
+      //     const { getInquirySyncJob } = await import('./jobs/inquirySyncJob');
+      //     const inquirySyncJob = getInquirySyncJob();
+      //     await inquirySyncJob.start(5); // 5分ごとに実行
+      //     console.log('📋 Inquiry sync job started (interval: 5 minutes)');
+      //   } catch (error: any) {
+      //     console.error('⚠️ Inquiry sync job failed to start (non-blocking):', error.message);
+      //   }
+      // }, 15000); // 15秒後に実行
+      console.log('📋 Inquiry sync job disabled (direct sync from API endpoint)');
+    });
+  } else {
+    console.log('🚀 Running in Vercel serverless environment');
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'production'}`);
+  }
 };
 
-startServer().catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
+// Vercel環境では初期化のみ実行
+if (process.env.VERCEL === '1') {
+  initializeConnections().catch((error) => {
+    console.error('Failed to initialize connections:', error);
+  });
+} else {
+  startServer().catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
+}
 
 export default app;
