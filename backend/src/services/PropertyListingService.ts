@@ -4,7 +4,6 @@ import { PropertyDistributionAreaCalculator } from './PropertyDistributionAreaCa
 import { CityNameExtractor } from './CityNameExtractor';
 import { PropertyImageService } from './PropertyImageService';
 import { GeocodingService } from './GeocodingService';
-import pLimit from 'p-limit';
 
 export class PropertyListingService {
   private supabase;
@@ -392,6 +391,7 @@ export class PropertyListingService {
       
       // 画像取得：image_url → storage_location
       // 並列処理を5件に制限してパフォーマンスを向上
+      const pLimit = (await import('p-limit')).default;
       const limit5 = pLimit(5);
       
       const propertiesWithImages = await Promise.all(
