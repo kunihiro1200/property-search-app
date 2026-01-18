@@ -1,4 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -49,4 +50,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 
 // Vercel用のハンドラー（重要：これがないとVercelで動作しない）
 // Vercelのサーバーレス関数として動作させるため、Expressアプリをラップ
-export default app;
+export default async (req: VercelRequest, res: VercelResponse) => {
+  // Expressアプリにリクエストを渡す
+  return app(req as any, res as any);
+};
