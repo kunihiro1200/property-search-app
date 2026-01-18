@@ -43,4 +43,8 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   });
 });
 
+// Vercelのサーバーレス関数としてエクスポート
 export default app;
+
+// Vercel用のハンドラー
+module.exports = app;
