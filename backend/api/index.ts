@@ -27,6 +27,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // 公開物件サイト用のルートのみ
 app.use('/api/public', publicPropertiesRoutes);
 app.use('/api/public/inquiries', publicInquiriesRoutes);
@@ -43,8 +47,6 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   });
 });
 
-// Vercelのサーバーレス関数としてエクスポート
+// Vercel用のハンドラー（重要：これがないとVercelで動作しない）
+// Vercelのサーバーレス関数として動作させるため、Expressアプリをラップ
 export default app;
-
-// Vercel用のハンドラー
-module.exports = app;
