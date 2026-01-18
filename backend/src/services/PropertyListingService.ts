@@ -108,22 +108,9 @@ export class PropertyListingService {
       throw new Error(`Failed to fetch property listings: ${error.message}`);
     }
 
-    // storage_locationが空の物件について、work_tasksから取得
-    const enrichedData = await Promise.all(
-      (data || []).map(async (property) => {
-        // storage_locationが空の場合、work_tasksから取得
-        if (!property.storage_location && property.property_number) {
-          const storageUrl = await this.getStorageUrlFromWorkTasks(property.property_number);
-          if (storageUrl) {
-            console.log(`[PropertyListingService] Enriched storage_location for ${property.property_number} from work_tasks`);
-            return { ...property, storage_location: storageUrl };
-          }
-        }
-        return property;
-      })
-    );
-
-    return { data: enrichedData, total: count || 0 };
+    // 軽量化: storage_locationの補完は詳細ページでのみ実行
+    // リスト表示では補完をスキップしてパフォーマンスを向上
+    return { data: data || [], total: count || 0 };
   }
 
   async getByPropertyNumber(propertyNumber: string) {

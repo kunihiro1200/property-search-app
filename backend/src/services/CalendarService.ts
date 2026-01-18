@@ -324,8 +324,8 @@ ${request.notes ? `\n備考: ${request.notes}` : ''}
 
       // アクティビティログを作成
       const { error: logError } = await this.table('activity_logs').insert({
-        seller_id: appointment.seller_id,
-        employee_id: appointment.employee_id,
+        seller_id: appointment.sellerId,
+        employee_id: appointment.employeeId,
         action: 'appointment_deleted',
         details: {
           appointment_id: appointment.id,

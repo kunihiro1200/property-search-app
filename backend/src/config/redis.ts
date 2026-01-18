@@ -19,15 +19,18 @@ class MemoryStore {
     return item.value;
   }
 
-  async setEx(key: string, seconds: number, value: string): Promise<void> {
+  async setEx(key: string, seconds: number, value: string): Promise<string | null> {
     this.store.set(key, {
       value,
       expiresAt: Date.now() + seconds * 1000,
     });
+    return null;
   }
 
-  async del(key: string): Promise<void> {
+  async del(key: string): Promise<number> {
+    const existed = this.store.has(key);
     this.store.delete(key);
+    return existed ? 1 : 0;
   }
 
   async keys(pattern: string): Promise<string[]> {
@@ -84,9 +87,9 @@ export const getRedisClient = () => {
 };
 
 export default {
-  get: async (key: string) => getRedisClient().get(key),
-  setEx: async (key: string, seconds: number, value: string) => 
+  get: async (key: string): Promise<string | null> => getRedisClient().get(key),
+  setEx: async (key: string, seconds: number, value: string): Promise<string | null> => 
     getRedisClient().setEx(key, seconds, value),
-  del: async (key: string) => getRedisClient().del(key),
-  keys: async (pattern: string) => getRedisClient().keys(pattern),
+  del: async (key: string): Promise<number> => getRedisClient().del(key),
+  keys: async (pattern: string): Promise<string[]> => getRedisClient().keys(pattern),
 };

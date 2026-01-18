@@ -53,7 +53,7 @@ export class DuplicateDetectionService {
           inquiry_date,
           seller_number,
           properties (
-            address,
+            property_address,
             property_type
           )
         `)
@@ -86,7 +86,7 @@ export class DuplicateDetectionService {
         },
         propertyInfo: seller.properties?.[0]
           ? {
-              address: seller.properties[0].address,
+              address: seller.properties[0].property_address || seller.properties[0].address,
               propertyType: seller.properties[0].property_type,
             }
           : undefined,
@@ -123,7 +123,7 @@ export class DuplicateDetectionService {
           inquiry_date,
           seller_number,
           properties (
-            address,
+            property_address,
             property_type
           )
         `)
@@ -156,7 +156,7 @@ export class DuplicateDetectionService {
         },
         propertyInfo: seller.properties?.[0]
           ? {
-              address: seller.properties[0].address,
+              address: seller.properties[0].property_address || seller.properties[0].address,
               propertyType: seller.properties[0].property_type,
             }
           : undefined,
@@ -257,7 +257,7 @@ export class DuplicateDetectionService {
           past_owner_name: pastSeller.name,
           past_owner_phone: pastSeller.phone_number,
           past_owner_email: pastSeller.email,
-          past_property_address: pastSeller.properties?.[0]?.address,
+          past_property_address: pastSeller.properties?.[0]?.property_address || pastSeller.properties?.[0]?.address,
           past_property_type: pastSeller.properties?.[0]?.property_type,
           past_inquiry_date: pastSeller.inquiry_date,
         });

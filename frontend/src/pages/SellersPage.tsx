@@ -189,7 +189,11 @@ export default function SellersPage() {
   });
 
   // カテゴリ別の売主数をカウント（ユーティリティ関数を使用）
-  const categoryCounts = getStatusCategoryCounts(sellers);
+  // 注意: sellersは現在のページのデータのみなので、Allカウントはtotalを使用
+  const categoryCounts = {
+    ...getStatusCategoryCounts(sellers),
+    all: total, // ページネーション前の全体件数を使用
+  };
 
   // カテゴリ別にフィルタリング（ユーティリティ関数を使用）
   const getFilteredSellers = () => {
@@ -206,7 +210,7 @@ export default function SellersPage() {
       const params: any = {
         page: page + 1,
         pageSize: rowsPerPage,
-        sortBy: 'created_at',
+        sortBy: 'inquiry_date',
         sortOrder: 'desc',
       };
       

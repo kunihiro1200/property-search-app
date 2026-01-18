@@ -290,7 +290,7 @@ router.get('/:id/duplicates', async (req: Request, res: Response) => {
     
     // 重複を検出（自分自身を除外）
     const { duplicateDetectionService } = await import('../services/DuplicateDetectionService');
-    const duplicates = await duplicateDetectionService.checkDuplicates(
+    const duplicates = await duplicateDetectionService.instance.checkDuplicates(
       seller.phoneNumber,
       seller.email,
       id

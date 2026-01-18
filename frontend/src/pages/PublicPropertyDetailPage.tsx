@@ -40,6 +40,10 @@ const PublicPropertyDetailPage: React.FC = () => {
   const [completeData, setCompleteData] = useState<any>(null);
   const [isLoadingComplete, setIsLoadingComplete] = useState(true);
   
+  // パノラマURLの状態管理
+  const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
+  const [isLoadingPanorama, setIsLoadingPanorama] = useState(true);
+  
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -69,6 +73,31 @@ const PublicPropertyDetailPage: React.FC = () => {
     
     fetchCompleteData();
   }, [id]);
+  
+  // パノラマURLを取得
+  useEffect(() => {
+    if (!property?.property_number) return;
+    
+    const fetchPanoramaUrl = async () => {
+      setIsLoadingPanorama(true);
+      try {
+        const response = await fetch(`/api/public/properties/${property.property_number}/panorama-url`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.panoramaUrl) {
+            setPanoramaUrl(data.panoramaUrl);
+            console.log('Panorama URL loaded:', data.panoramaUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch panorama URL:', error);
+      } finally {
+        setIsLoadingPanorama(false);
+      }
+    };
+    
+    fetchPanoramaUrl();
+  }, [property?.property_number]);
   
   const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
     if (!property) return;
@@ -257,6 +286,38 @@ const PublicPropertyDetailPage: React.FC = () => {
           <Grid container spacing={4}>
             {/* 左カラム: 物件情報 */}
             <Grid item xs={12} md={8}>
+              {/* パノラマビュー（パノラマURLが存在する場合のみ表示） */}
+              {panoramaUrl && (
+                <Paper elevation={2} sx={{ mb: 3, p: 2 }} className="no-print">
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    360°パノラマビュー
+                  </Typography>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '56.25%', // 16:9 アスペクト比
+                      overflow: 'hidden',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <iframe
+                      src={panoramaUrl}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                      }}
+                      allowFullScreen
+                      title="360°パノラマビュー"
+                    />
+                  </Box>
+                </Paper>
+              )}
+
               {/* 物件画像ギャラリー */}
               <Paper elevation={2} sx={{ mb: 3, p: 2 }}>
                 {/* お気に入り文言を「物件画像」見出しの上に配置 */}

@@ -36,14 +36,22 @@ export class PropertySyncHandler {
   /**
    * Sync property data for a seller
    * Creates new property if doesn't exist, updates if exists
+   * 
+   * @param sellerId - 売主ID
+   * @param propertyData - 物件データ
+   * @param propertyNumber - 物件番号（オプショナル）
    */
-  async syncProperty(sellerId: string, propertyData: PropertyData): Promise<SyncResult> {
+  async syncProperty(
+    sellerId: string, 
+    propertyData: PropertyData,
+    propertyNumber?: string
+  ): Promise<SyncResult> {
     try {
       // Find or create property
-      const propertyId = await this.findOrCreateProperty(sellerId);
+      const propertyId = await this.findOrCreateProperty(sellerId, propertyNumber);
 
       // Update property fields
-      await this.updatePropertyFields(propertyId, propertyData);
+      await this.updatePropertyFields(propertyId, propertyData, propertyNumber);
 
       return {
         success: true,
@@ -51,6 +59,7 @@ export class PropertySyncHandler {
         operation: 'update',
       };
     } catch (error: any) {
+      console.error(`❌ Failed to sync property for seller ${sellerId}:`, error.message);
       return {
         success: false,
         error: error.message,
@@ -62,42 +71,46 @@ export class PropertySyncHandler {
    * Find existing property or create new one
    * Returns property ID
    * 
-   * FIXED: Now properly handles multiple properties by using the latest one
-   * and warning about duplicates instead of creating more duplicates.
+   * @param sellerId - 売主ID
+   * @param propertyNumber - 物件番号（オプショナル、現在は使用しない）
    */
-  async findOrCreateProperty(sellerId: string): Promise<string> {
-    // Check if property exists - get ALL properties for this seller
-    const { data: existing, error: findError } = await this.supabase
+  async findOrCreateProperty(sellerId: string, propertyNumber?: string): Promise<string> {
+    // seller_idで検索
+    const { data: existingBySeller, error: findBySellerError } = await this.supabase
       .from('properties')
-      .select('id, created_at, address, land_area, building_area')
+      .select('id, created_at, property_address, land_area, building_area')
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false });
 
-    if (findError) {
-      throw new Error(`Error finding property: ${findError.message}`);
+    if (findBySellerError) {
+      throw new Error(`Error finding property by seller: ${findBySellerError.message}`);
     }
 
     // If multiple properties exist, warn and use the latest one
-    if (existing && existing.length > 1) {
+    if (existingBySeller && existingBySeller.length > 1) {
       console.warn(
-        `⚠️  Seller ${sellerId} has ${existing.length} properties. Using the latest one (${existing[0].id}).`
+        `⚠️  Seller ${sellerId} has ${existingBySeller.length} properties. Using the latest one (${existingBySeller[0].id}).`
       );
       console.warn(`   This indicates a data quality issue that should be cleaned up.`);
     }
 
     // If at least one property exists, return the latest one
-    if (existing && existing.length > 0) {
-      return existing[0].id;
+    if (existingBySeller && existingBySeller.length > 0) {
+      return existingBySeller[0].id;
     }
 
     // Create new property only if none exists
-    // Note: address column has NOT NULL constraint, so we use '未入力' as default
+    // Note: property_address column has NOT NULL constraint, so we use '未入力' as default
+    // Note: property_type column has NOT NULL constraint, so we use 'その他' as default
+    const insertData: any = {
+      seller_id: sellerId,
+      property_address: '未入力',
+      property_type: 'その他',
+    };
+
     const { data: newProperty, error: createError } = await this.supabase
       .from('properties')
-      .insert({
-        seller_id: sellerId,
-        address: '未入力',
-      })
+      .insert(insertData)
       .select('id')
       .single();
 
@@ -112,14 +125,22 @@ export class PropertySyncHandler {
   /**
    * Update property fields with data from spreadsheet
    * Handles numeric conversions and null values
+   * 
+   * @param propertyId - 物件ID
+   * @param data - 物件データ
+   * @param propertyNumber - 物件番号（オプショナル、現在は使用しない）
    */
-  async updatePropertyFields(propertyId: string, data: PropertyData): Promise<void> {
+  async updatePropertyFields(
+    propertyId: string, 
+    data: PropertyData,
+    propertyNumber?: string
+  ): Promise<void> {
     // Prepare update data
     const updateData: any = {};
 
     // Add fields if they exist
     if (data.address !== undefined) {
-      updateData.address = data.address || null;
+      updateData.property_address = data.address || null;
     }
 
     if (data.property_type !== undefined) {
@@ -135,7 +156,7 @@ export class PropertySyncHandler {
     }
 
     if (data.build_year !== undefined) {
-      updateData.build_year = this.parseNumeric(data.build_year);
+      updateData.construction_year = this.parseNumeric(data.build_year);
     }
 
     if (data.structure !== undefined) {

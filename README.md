@@ -111,6 +111,43 @@ npm run dev
 
 フロントエンドは http://localhost:5173 で起動します。
 
+### データ同期
+
+#### 売主リストの同期
+
+スプレッドシートから売主データを同期します：
+
+```bash
+cd backend
+npx ts-node sync-all-sellers-from-sheet.ts
+```
+
+#### 既存売主への物件情報の一括作成
+
+物件情報がない既存売主に対して、物件レコードを一括作成します：
+
+```bash
+cd backend
+npx ts-node create-properties-for-existing-sellers.ts
+```
+
+このスクリプトは以下を実行します：
+- 物件情報がない売主を検出
+- スプレッドシートから物件データを取得
+- 各売主に対して物件レコードを作成
+- 進捗状況と結果を表示
+
+#### エラーログの確認
+
+物件作成エラーは`sync_logs`テーブルに記録されます：
+
+```sql
+SELECT * FROM sync_logs 
+WHERE entity_type = 'property' 
+  AND status = 'failed' 
+ORDER BY timestamp DESC;
+```
+
 ### テスト実行
 
 ```bash

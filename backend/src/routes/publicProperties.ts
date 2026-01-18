@@ -8,6 +8,7 @@ import { FavoriteCommentService } from '../services/FavoriteCommentService';
 import { AthomeDataService } from '../services/AthomeDataService';
 import { InquirySyncService } from '../services/InquirySyncService';
 import { PropertyService } from '../services/PropertyService';
+import { PanoramaUrlService } from '../services/PanoramaUrlService';
 import { createRateLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
@@ -32,6 +33,7 @@ const recommendedCommentService = new RecommendedCommentService();
 const favoriteCommentService = new FavoriteCommentService();
 const athomeDataService = new AthomeDataService();
 const propertyService = new PropertyService();
+const panoramaUrlService = new PanoramaUrlService();
 
 // InquirySyncServiceのインスタンスを作成
 const inquirySyncService = new InquirySyncService({
@@ -1078,6 +1080,39 @@ router.put('/properties/:propertyNumber/storage-url', authenticate, async (req: 
       success: false,
       error: 'Internal server error',
       message: error.message || '格納先URLの更新に失敗しました'
+    });
+  }
+});
+
+// パノラマURL取得
+router.get('/properties/:propertyNumber/panorama-url', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { propertyNumber } = req.params;
+    
+    console.log(`[GET /api/public/properties/${propertyNumber}/panorama-url] Fetching panorama URL`);
+    
+    // パノラマURLを取得
+    const panoramaUrl = await panoramaUrlService.getPanoramaUrl(propertyNumber);
+    
+    if (panoramaUrl) {
+      console.log(`[GET /api/public/properties/${propertyNumber}/panorama-url] Found panorama URL`);
+      res.json({
+        success: true,
+        panoramaUrl,
+      });
+    } else {
+      console.log(`[GET /api/public/properties/${propertyNumber}/panorama-url] No panorama URL found`);
+      res.json({
+        success: true,
+        panoramaUrl: null,
+      });
+    }
+  } catch (error: any) {
+    console.error(`[GET /api/public/properties/:propertyNumber/panorama-url] Error:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message || 'パノラマURLの取得に失敗しました',
     });
   }
 });

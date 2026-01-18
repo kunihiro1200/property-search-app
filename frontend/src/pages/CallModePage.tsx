@@ -2948,6 +2948,7 @@ HP：https://ifoo-oita.com/
                   {editingAppointment ? 'キャンセル' : '編集'}
                 </Button>
               </Box>
+              
               <Paper sx={{ p: 2, mb: 3 }}>
                 {appointmentSuccessMessage && (
                   <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAppointmentSuccessMessage(null)}>
@@ -2992,11 +2993,68 @@ HP：https://ifoo-oita.com/
                             onClick={() => {
                               // Googleカレンダーに飛ぶ
                               const date = seller.visitDate ? new Date(seller.visitDate) : new Date(seller.appointmentDate!);
-                              const dateStr = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                              const title = encodeURIComponent(`訪問査定 - ${seller.name}`);
-                              const details = encodeURIComponent(`売主: ${seller.name}\n住所: ${seller.address}\n電話: ${seller.phoneNumber}`);
-                              const location = encodeURIComponent(seller.address);
-                              window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}&details=${details}&location=${location}`, '_blank');
+                              const startDateStr = date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                              
+                              // 終了時刻を開始時刻の60分後に設定
+                              const endDate = new Date(date.getTime() + 60 * 60 * 1000); // 60分後
+                              const endDateStr = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                              
+                              // タイトル: 【訪問】物件所在地
+                              const propertyAddress = property?.address || seller.address || '物件所在地未設定';
+                              const title = encodeURIComponent(`【訪問】${propertyAddress}`);
+                              
+                              // Google Map URL
+                              const googleMapUrl = property?.googleMapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(propertyAddress)}`;
+                              
+                              // 通話モードページのURL
+                              const callModeUrl = window.location.href;
+                              
+                              // 通話履歴（最新5件）
+                              const recentActivities = activities
+                                .filter(a => a.type === 'call')
+                                .slice(0, 5)
+                                .map(a => `${formatDateTime(a.createdAt)}: ${a.content}`)
+                                .join('\n');
+                              
+                              // 詳細情報（URLはそのまま記載するとGoogleカレンダーでクリック可能なリンクになる）
+                              const details = encodeURIComponent(
+                                `売主名: ${seller.name}\n` +
+                                `住所: ${seller.address}\n` +
+                                `電話: ${seller.phoneNumber}\n` +
+                                `\n` +
+                                `Google Map:\n${googleMapUrl}\n` +
+                                `\n` +
+                                `通話モードページ:\n${callModeUrl}\n` +
+                                `\n` +
+                                `訪問時注意点: ${seller.appointmentNotes || 'なし'}\n` +
+                                `\n` +
+                                `コミュニケーション履歴（通話した内容）:\n${recentActivities || '履歴なし'}`
+                              );
+                              
+                              const location = encodeURIComponent(propertyAddress);
+                              
+                              // 営担のメールアドレスを取得（visitAssigneeを優先）
+                              const assignedToValue = seller.visitAssignee || seller.assignedTo;
+                              console.log('=== カレンダー営担デバッグ ===');
+                              console.log('visitAssignee:', seller.visitAssignee);
+                              console.log('assignedTo:', seller.assignedTo);
+                              console.log('使用する値:', assignedToValue);
+                              
+                              // フルネームまたはイニシャルまたはメールアドレスで検索
+                              const assignedEmployee = employees.find(e => 
+                                e.name === assignedToValue || 
+                                e.initials === assignedToValue || 
+                                e.email === assignedToValue
+                              );
+                              console.log('見つかった社員:', assignedEmployee?.name);
+                              console.log('メールアドレス:', assignedEmployee?.email);
+                              
+                              const assignedEmail = assignedEmployee?.email || '';
+                              
+                              // 営担のカレンダーに直接作成（srcパラメータを使用）
+                              const srcParam = assignedEmail ? `&src=${encodeURIComponent(assignedEmail)}` : '';
+                              
+                              window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateStr}/${endDateStr}&details=${details}&location=${location}${srcParam}`, '_blank');
                             }}
                           >
                             📅 カレンダーで開く
@@ -3004,80 +3062,123 @@ HP：https://ifoo-oita.com/
                         </Box>
                       </Box>
                     )}
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        営担
-                      </Typography>
-                      <Typography variant="body1">
-                        {seller?.assignedTo || seller?.visitAssignee ? (
-                          employees.find(e => (e.initials || e.name || e.email) === (seller.assignedTo || seller.visitAssignee))?.name || (seller.assignedTo || seller.visitAssignee)
-                        ) : '未設定'}
-                      </Typography>
+                    
+                    {/* 訪問情報（2行グリッドレイアウト） */}
+                    {(seller?.visitDate || seller?.visitAssignee || seller?.visitValuationAcquirer || seller?.visitAcquisitionDate) && (
+                      <Box sx={{ mb: 2, p: 2, bgcolor: 'info.lighter', borderRadius: 1 }}>
+                        {/* 1行目: 訪問日 | 営担 */}
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                              訪問日
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                              {seller?.visitDate ? (
+                                new Date(seller.visitDate).toLocaleString('ja-JP', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  weekday: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              ) : '未設定'}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                              営担
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
+                              {seller?.visitAssignee || seller?.assignedTo ? (
+                                employees.find(e => (e.initials || e.name || e.email) === (seller.visitAssignee || seller.assignedTo))?.name || (seller.visitAssignee || seller.assignedTo)
+                              ) : '未設定'}
+                            </Typography>
+                          </Grid>
+                        </Grid>
                         
-                      {/* 訪問統計情報 */}
-                      {visitStats && !loadingVisitStats && (
-                        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                            📊 {visitStats.month} 訪問統計
-                          </Typography>
-                          
-                          {/* 営担ごとの訪問数 */}
-                          {visitStats.statsByEmployee && visitStats.statsByEmployee.length > 0 && (
-                            <Box sx={{ mb: 1 }}>
-                              <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                                ［当月訪問数］
-                                {visitStats.statsByEmployee.map((stat: any, index: number) => (
-                                  <span key={stat.employeeId}>
-                                    {index > 0 && ' '}
-                                    {stat.initials}: {stat.count}件
-                                  </span>
-                                ))}
+                        {/* 2行目: 訪問取得日 | 訪問査定取得者（イニシャル） */}
+                        <Grid container spacing={2}>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                              訪問取得日
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                              {seller?.visitAcquisitionDate ? (
+                                new Date(seller.visitAcquisitionDate).toLocaleDateString('ja-JP', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit'
+                                })
+                              ) : '未設定'}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                              訪問査定取得者
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                              {seller?.visitValuationAcquirer || '未設定'}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </Box>
+                    )}
+                    
+                    {/* 訪問統計情報 */}
+                    {visitStats && !loadingVisitStats && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                          📊 {visitStats.month} 訪問統計
+                        </Typography>
+                        
+                        {/* 営担ごとの訪問数 */}
+                        {visitStats.statsByEmployee && visitStats.statsByEmployee.length > 0 && (
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                              ［当月訪問数］
+                              {visitStats.statsByEmployee.map((stat: any, index: number) => (
+                                <span key={stat.employeeId}>
+                                  {index > 0 && ' '}
+                                  {stat.initials}: {stat.count}件
+                                </span>
+                              ))}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {/* 山本マネージャーの訪問率 */}
+                        {visitStats.yamamotoStats && (
+                          <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontSize: '0.875rem',
+                                fontWeight: 'bold',
+                                color: visitStats.yamamotoStats.rate > 20 ? 'error.main' : 'success.main'
+                              }}
+                            >
+                              山本マネージャー訪問率: {visitStats.yamamotoStats.rate.toFixed(1)}%
+                            </Typography>
+                            {visitStats.yamamotoStats.rate > 20 && (
+                              <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
+                                ⚠️ 目標の20%を超えています
                               </Typography>
-                            </Box>
-                          )}
-                          
-                          {/* 山本マネージャーの訪問率 */}
-                          {visitStats.yamamotoStats && (
-                            <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  fontSize: '0.875rem',
-                                  fontWeight: 'bold',
-                                  color: visitStats.yamamotoStats.rate > 20 ? 'error.main' : 'success.main'
-                                }}
-                              >
-                                山本マネージャー訪問率: {visitStats.yamamotoStats.rate.toFixed(1)}%
-                              </Typography>
-                              {visitStats.yamamotoStats.rate > 20 && (
-                                <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
-                                  ⚠️ 目標の20%を超えています
-                                </Typography>
-                              )}
-                            </Box>
-                          )}
-                        </Box>
-                      )}
-                      
-                      {loadingVisitStats && (
-                        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={16} />
-                          <Typography variant="caption" color="text.secondary">
-                            統計を読み込み中...
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        訪問査定取得者
-                      </Typography>
-                      <Typography variant="body1">
-                        {seller?.visitValuationAcquirer ? (
-                          employees.find(e => (e.initials || e.name || e.email) === seller.visitValuationAcquirer)?.name || seller.visitValuationAcquirer
-                        ) : '未設定'}
-                      </Typography>
-                    </Box>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    
+                    {loadingVisitStats && (
+                      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="caption" color="text.secondary">
+                          統計を読み込み中...
+                        </Typography>
+                      </Box>
+                    )}
+                    
                     {seller?.appointmentNotes && (
                       <Box>
                         <Typography variant="body2" color="text.secondary">

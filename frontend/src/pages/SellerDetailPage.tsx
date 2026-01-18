@@ -1451,8 +1451,63 @@ const SellerDetailPage = () => {
           <CollapsibleSection 
             title="訪問査定予約" 
             count={appointments.length}
-            defaultExpanded={false}
+            defaultExpanded={true}
           >
+            {/* スプレッドシート同期情報 */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                スプレッドシート同期情報
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    訪問取得日
+                  </Typography>
+                  <Typography variant="body1">
+                    {seller?.visitAcquisitionDate 
+                      ? new Date(seller.visitAcquisitionDate).toLocaleDateString('ja-JP', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })
+                      : '未設定'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    訪問日
+                  </Typography>
+                  <Typography variant="body1">
+                    {seller?.visitDate 
+                      ? new Date(seller.visitDate).toLocaleDateString('ja-JP', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })
+                      : '未設定'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    訪問査定取得者
+                  </Typography>
+                  <Typography variant="body1">
+                    {seller?.visitValuationAcquirer || '未設定'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    営担
+                  </Typography>
+                  <Typography variant="body1">
+                    {seller?.visitAssignee || '未設定'}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider sx={{ my: 3 }} />
+
             <Box sx={{ mb: 2 }}>
               <Button
                 variant="contained"

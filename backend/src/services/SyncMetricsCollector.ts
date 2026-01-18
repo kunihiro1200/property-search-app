@@ -225,7 +225,7 @@ property_sync_circuit_breaker_state ${metrics.circuitBreakerState}
     }
 
     // メトリクスを集計
-    const latestMetrics: Record<string, any> = {};
+    const latestMetrics: Record<string, number> = {};
     const errorsByType: Record<string, number> = {
       network: 0,
       validation: 0,

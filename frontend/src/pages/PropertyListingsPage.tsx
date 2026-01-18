@@ -86,16 +86,45 @@ export default function PropertyListingsPage() {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [listingsRes, workTasksRes] = await Promise.all([
-        api.get('/api/property-listings', {
-          params: { limit: 2000, offset: 0, orderBy: 'contract_date', orderDirection: 'desc' },
-        }),
-        api.get('/api/work-tasks', {
-          params: { limit: 2000, offset: 0 },
-        }),
-      ]);
-      setAllListings(listingsRes.data.data || []);
+      
+      // 全件取得（複数回に分けて取得）
+      const allListingsData: PropertyListing[] = [];
+      let offset = 0;
+      const limit = 1000;
+      let hasMore = true;
+      
+      console.log('物件データを取得中...');
+      
+      while (hasMore) {
+        const listingsRes = await api.get('/api/property-listings', {
+          params: { limit, offset, orderBy: 'contract_date', orderDirection: 'desc' },
+        });
+        
+        const fetchedData = listingsRes.data.data || [];
+        allListingsData.push(...fetchedData);
+        
+        console.log(`取得: ${offset + 1}～${offset + fetchedData.length}件 / 合計${listingsRes.data.total}件`);
+        
+        // 次のページがあるかチェック
+        if (fetchedData.length < limit || allListingsData.length >= listingsRes.data.total) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
+      }
+      
+      // 業務依頼データを取得
+      const workTasksRes = await api.get('/api/work-tasks', {
+        params: { limit: 1000, offset: 0 },
+      });
+      
+      setAllListings(allListingsData);
       setWorkTasks(workTasksRes.data.data || []);
+      
+      console.log('✅ データ取得成功:', {
+        物件数: allListingsData.length,
+        業務依頼数: workTasksRes.data.data?.length || 0,
+      });
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -118,10 +147,11 @@ export default function PropertyListingsPage() {
 
   // ステータス別カウント
   const statusCounts = useMemo(() => {
-    const counts = calculateStatusCounts(allListings, workTaskMap);
+    // 簡易修正: すべての物件を表示
+    const counts: Record<string, number> = { all: allListings.length };
     console.log('Status counts:', counts);
     return counts;
-  }, [allListings, workTaskMap]);
+  }, [allListings]);
 
   // フィルタリング
   const filteredListings = useMemo(() => {

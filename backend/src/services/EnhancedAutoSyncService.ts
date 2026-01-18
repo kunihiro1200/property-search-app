@@ -954,6 +954,70 @@ export class EnhancedAutoSyncService {
   }
 
   /**
+   * 反響日を YYYY-MM-DD 形式にフォーマット
+   * 反響年と反響日（月/日）を組み合わせて完全な日付を作成
+   */
+  private formatInquiryDate(inquiryYear: any, inquiryDate: any): string | null {
+    if (!inquiryYear || !inquiryDate) return null;
+    
+    const year = this.parseNumeric(inquiryYear);
+    if (year === null) return null;
+    
+    const dateStr = String(inquiryDate).trim();
+    
+    // MM/DD 形式の場合
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}$/)) {
+      const [month, day] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // M/D 形式の場合
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}$/)) {
+      const [month, day] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // YYYY/MM/DD 形式の場合（年が含まれている）
+    if (dateStr.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/)) {
+      const [y, month, day] = dateStr.split('/');
+      return `${y}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return null;
+  }
+
+  /**
+   * 訪問日を YYYY-MM-DD 形式にフォーマット
+   * YYYY/MM/DD または YYYY-MM-DD 形式の日付を標準化
+   */
+  private formatVisitDate(value: any): string | null {
+    if (!value || value === '') return null;
+    
+    const str = String(value).trim();
+    
+    // YYYY/MM/DD 形式の場合
+    if (str.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/)) {
+      const [year, month, day] = str.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // YYYY-MM-DD 形式の場合
+    if (str.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+      const [year, month, day] = str.split('-');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // MM/DD 形式の場合（現在の年を使用）
+    if (str.match(/^\d{1,2}\/\d{1,2}$/)) {
+      const currentYear = new Date().getFullYear();
+      const [month, day] = str.split('/');
+      return `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return null;
+  }
+
+  /**
    * 単一の売主を更新
    */
   private async updateSingleSeller(sellerNumber: string, row: any): Promise<void> {
@@ -964,7 +1028,16 @@ export class EnhancedAutoSyncService {
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
 
-    // inquiry_date, inquiry_site, inquiry_year カラムは存在しないため削除
+    // 反響関連フィールドを取得
+    const inquiryYear = row['反響年'];
+    const inquiryDate = row['反響日付'];  // 正しいカラム名: 反響日付
+    const inquirySite = row['サイト'];
+
+    // 訪問関連フィールドを取得（正しいカラム名を使用）
+    const visitAcquisitionDate = row['訪問取得日\n年/月/日'];  // 改行文字を含む
+    const visitDate = row['訪問日 Y/M/D'];
+    const visitValuationAcquirer = row['訪問査定取得者'];
+    const visitAssignee = row['営担'];
 
     const updateData: any = {
       name: mappedData.name ? encrypt(mappedData.name) : null,
@@ -976,16 +1049,35 @@ export class EnhancedAutoSyncService {
       updated_at: new Date().toISOString(),
     };
 
+    // 反響関連フィールドを追加
+    if (inquiryYear) {
+      updateData.inquiry_year = this.parseNumeric(inquiryYear);
+    }
+    if (inquiryDate) {
+      updateData.inquiry_date = this.formatInquiryDate(inquiryYear, inquiryDate);
+    }
+    if (inquirySite) {
+      updateData.inquiry_site = String(inquirySite);
+    }
+
+    // 訪問関連フィールドを追加
+    if (visitAcquisitionDate) {
+      updateData.visit_acquisition_date = this.formatVisitDate(visitAcquisitionDate);
+    }
+    if (visitDate) {
+      updateData.visit_date = this.formatVisitDate(visitDate);
+    }
+    if (visitValuationAcquirer) {
+      updateData.visit_valuation_acquirer = String(visitValuationAcquirer);
+    }
+    if (visitAssignee) {
+      updateData.visit_assignee = String(visitAssignee);
+    }
+
     // 契約年月を追加
     const contractYearMonth = row['契約年月 他決は分かった時点'];
     if (contractYearMonth && contractYearMonth !== '') {
       updateData.contract_year_month = this.formatContractYearMonth(contractYearMonth);
-    }
-
-    // 営担を追加
-    const visitAssignee = row['営担'];
-    if (visitAssignee && visitAssignee !== '') {
-      updateData.visit_assignee = String(visitAssignee);
     }
 
     // 査定額を追加（万円→円に変換）
@@ -1047,7 +1139,16 @@ export class EnhancedAutoSyncService {
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
 
-    // inquiry_date, inquiry_site, inquiry_year カラムは存在しないため削除
+    // 反響関連フィールドを取得
+    const inquiryYear = row['反響年'];
+    const inquiryDate = row['反響日付'];  // 正しいカラム名: 反響日付
+    const inquirySite = row['サイト'];
+
+    // 訪問関連フィールドを取得（正しいカラム名を使用）
+    const visitAcquisitionDate = row['訪問取得日\n年/月/日'];  // 改行文字を含む
+    const visitDate = row['訪問日 Y/M/D'];
+    const visitValuationAcquirer = row['訪問査定取得者'];
+    const visitAssignee = row['営担'];
 
     const encryptedData: any = {
       seller_number: sellerNumber,
@@ -1058,6 +1159,37 @@ export class EnhancedAutoSyncService {
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
     };
+
+    // 反響関連フィールドを追加
+    if (inquiryYear) {
+      encryptedData.inquiry_year = this.parseNumeric(inquiryYear);
+    }
+    if (inquiryDate) {
+      encryptedData.inquiry_date = this.formatInquiryDate(inquiryYear, inquiryDate);
+    }
+    if (inquirySite) {
+      encryptedData.inquiry_site = String(inquirySite);
+    }
+
+    // 訪問関連フィールドを追加
+    if (visitAcquisitionDate) {
+      encryptedData.visit_acquisition_date = this.formatVisitDate(visitAcquisitionDate);
+    }
+    if (visitDate) {
+      encryptedData.visit_date = this.formatVisitDate(visitDate);
+    }
+    if (visitValuationAcquirer) {
+      encryptedData.visit_valuation_acquirer = String(visitValuationAcquirer);
+    }
+    if (visitAssignee) {
+      encryptedData.visit_assignee = String(visitAssignee);
+    }
+
+    // 契約年月を追加
+    const contractYearMonth = row['契約年月 他決は分かった時点'];
+    if (contractYearMonth && contractYearMonth !== '') {
+      encryptedData.contract_year_month = this.formatContractYearMonth(contractYearMonth);
+    }
 
     // 査定額を追加（万円→円に変換）
     const val1 = this.parseNumeric(valuation1);
@@ -1081,28 +1213,99 @@ export class EnhancedAutoSyncService {
       throw new Error(upsertError.message);
     }
 
-    // 物件情報を同期
+    // 物件情報を確実に作成
     if (newSeller) {
-      const propertyAddress = row['物件所在地'] || '未入力';
-      let propertyType = row['種別'];
-      if (propertyType) {
-        const typeStr = String(propertyType).trim();
-        const typeMapping: Record<string, string> = {
-          '土': '土地', '戸': '戸建', 'マ': 'マンション', '事': '事業用',
-        };
-        propertyType = typeMapping[typeStr] || typeStr;
+      try {
+        await this.ensurePropertyCreated(newSeller.id, sellerNumber, row);
+      } catch (error: any) {
+        console.error(`❌ Failed to create property for ${sellerNumber}:`, error.message);
+        // 物件作成失敗をログに記録
+        await this.logPropertyCreationError(sellerNumber, error.message);
+        // 物件作成失敗は警告のみ（売主は既に作成済み）
+        // エラーを再スローしない（売主同期は成功とみなす）
       }
+    }
+  }
 
-      await this.propertySyncHandler.syncProperty(newSeller.id, {
-        address: String(propertyAddress),
-        property_type: propertyType ? String(propertyType) : undefined,
-        land_area: this.parseNumeric(row['土（㎡）']) ?? undefined,
-        building_area: this.parseNumeric(row['建（㎡）']) ?? undefined,
-        build_year: this.parseNumeric(row['築年']) ?? undefined,
-        structure: row['構造'] ? String(row['構造']) : undefined,
-        seller_situation: row['状況（売主）'] ? String(row['状況（売主）']) : undefined,
-        floor_plan: row['間取り'] ? String(row['間取り']) : undefined,
-      });
+  /**
+   * 物件情報を確実に作成
+   * 
+   * @param sellerId - 売主ID
+   * @param sellerNumber - 売主番号
+   * @param row - スプレッドシートの行データ
+   */
+  private async ensurePropertyCreated(
+    sellerId: string,
+    sellerNumber: string,
+    row: any
+  ): Promise<void> {
+    const propertyAddress = row['物件所在地'] || '未入力';
+    const propertyNumber = row['物件番号'] ? String(row['物件番号']) : undefined;
+    
+    let propertyType = row['種別'];
+    if (propertyType) {
+      const typeStr = String(propertyType).trim();
+      const typeMapping: Record<string, string> = {
+        '土': '土地',
+        '戸': '戸建て',
+        'マ': 'マンション',
+        '事': '事業用',
+      };
+      propertyType = typeMapping[typeStr] || 'その他';
+    } else {
+      propertyType = 'その他';
+    }
+
+    const propertyData = {
+      address: String(propertyAddress),
+      property_type: propertyType ? String(propertyType) : undefined,
+      land_area: this.parseNumeric(row['土（㎡）']) ?? undefined,
+      building_area: this.parseNumeric(row['建（㎡）']) ?? undefined,
+      build_year: this.parseNumeric(row['築年']) ?? undefined,
+      structure: row['構造'] ? String(row['構造']) : undefined,
+      seller_situation: row['状況（売主）'] ? String(row['状況（売主）']) : undefined,
+      floor_plan: row['間取り'] ? String(row['間取り']) : undefined,
+    };
+
+    const result = await this.propertySyncHandler.syncProperty(
+      sellerId,
+      propertyData,
+      propertyNumber
+    );
+
+    if (!result.success) {
+      throw new Error(`Property sync failed: ${result.error}`);
+    }
+
+    console.log(`✅ ${sellerNumber}: Property created/updated${propertyNumber ? ` (${propertyNumber})` : ''}`);
+  }
+
+  /**
+   * 物件作成エラーをログに記録
+   * 
+   * @param sellerNumber - 売主番号
+   * @param errorMessage - エラーメッセージ
+   */
+  private async logPropertyCreationError(
+    sellerNumber: string,
+    errorMessage: string
+  ): Promise<void> {
+    try {
+      await this.supabase
+        .from('sync_logs')
+        .insert({
+          entity_type: 'property',
+          entity_id: sellerNumber,
+          operation: 'create',
+          status: 'failed',
+          error_message: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+      
+      console.log(`📝 Logged property creation error for ${sellerNumber}`);
+    } catch (error: any) {
+      console.error(`⚠️  Failed to log error for ${sellerNumber}:`, error.message);
+      // ログ記録失敗は無視（メイン処理に影響させない）
     }
   }
 

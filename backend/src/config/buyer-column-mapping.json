@@ -71,7 +71,6 @@
     "住居表示": "display_address",
     "価格": "price",
     "通知送信者": "notification_sender",
-    "通知送信日時": "notification_datetime",
     "●初見": "first_view",
     "予算": "budget",
     "買付外れチャット": "offer_lost_chat",
@@ -188,8 +187,7 @@
     "next_call_date": "date",
     "campaign_date": "date",
     "phone_duplicate_count": "number",
-    "price": "number",
-    "notification_datetime": "datetime"
+    "price": "number"
   },
   "requiredFields": ["buyer_number"]
 }

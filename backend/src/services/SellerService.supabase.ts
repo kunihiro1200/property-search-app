@@ -17,6 +17,62 @@ import { CalendarService } from './CalendarService.supabase';
 import { ExclusionDateCalculator } from './ExclusionDateCalculator';
 import { SyncQueue } from './SyncQueue';
 
+// イニシャルからフルネームへのマッピングキャッシュ
+let initialsToNameCache: Map<string, string> | null = null;
+let cacheLastUpdated: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5分
+
+/**
+ * スタッフのイニシャルからフルネームを取得
+ */
+async function getEmployeeNameByInitials(initials: string | null | undefined): Promise<string | null> {
+  if (!initials) return null;
+
+  // キャッシュの有効期限をチェック
+  const now = Date.now();
+  if (!initialsToNameCache || (now - cacheLastUpdated) > CACHE_DURATION) {
+    // キャッシュを更新
+    await refreshEmployeeCache();
+  }
+
+  return initialsToNameCache?.get(initials) || null;
+}
+
+/**
+ * スタッフ情報のキャッシュを更新
+ */
+async function refreshEmployeeCache(): Promise<void> {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+
+    const { data: employees, error } = await supabase
+      .from('employees')
+      .select('initials, name')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Failed to fetch employees for initials mapping:', error);
+      return;
+    }
+
+    initialsToNameCache = new Map();
+    employees?.forEach((emp: any) => {
+      if (emp.initials && emp.name) {
+        initialsToNameCache!.set(emp.initials, emp.name);
+      }
+    });
+
+    cacheLastUpdated = Date.now();
+    console.log(`✅ Employee initials cache updated: ${initialsToNameCache.size} employees`);
+  } catch (error) {
+    console.error('Error refreshing employee cache:', error);
+  }
+}
+
 export class SellerService extends BaseRepository {
   private syncQueue?: SyncQueue;
 
@@ -139,7 +195,7 @@ export class SellerService extends BaseRepository {
     }
 
     // 復号化して返す
-    const decryptedSeller = this.decryptSeller(seller);
+    const decryptedSeller = await this.decryptSeller(seller);
     
     // キャッシュを無効化（新しいセラーが追加されたのでリストキャッシュをクリア）
     await CacheHelper.delPattern('sellers:list:*');
@@ -195,12 +251,17 @@ export class SellerService extends BaseRepository {
     
     const { data: properties, error: propertyError } = await propertyQuery;
 
-    const decryptedSeller = this.decryptSeller(seller);
+    const decryptedSeller = await this.decryptSeller(seller);
     
     console.log('🔍 Decrypted seller:', {
       id: decryptedSeller.id,
+      sellerNumber: decryptedSeller.sellerNumber,
       name: decryptedSeller.name,
       phoneNumber: decryptedSeller.phoneNumber,
+      visitAcquisitionDate: decryptedSeller.visitAcquisitionDate,
+      visitDate: decryptedSeller.visitDate,
+      visitValuationAcquirer: decryptedSeller.visitValuationAcquirer,
+      visitAssignee: decryptedSeller.visitAssignee,
     });
     
     // 除外日を計算
@@ -291,10 +352,6 @@ export class SellerService extends BaseRepository {
     }
     if ((data as any).visitValuationAcquirer !== undefined) {
       updates.visit_valuation_acquirer = (data as any).visitValuationAcquirer;
-    }
-    // assignedToが更新される場合、visit_assigneeにも保存
-    if (data.assignedTo !== undefined) {
-      updates.visit_assignee = data.assignedTo;
     }
     if (data.fixedAssetTaxRoadPrice !== undefined) {
       updates.fixed_asset_tax_road_price = data.fixedAssetTaxRoadPrice;
@@ -481,7 +538,7 @@ export class SellerService extends BaseRepository {
       });
     }
 
-    const decryptedSeller = this.decryptSeller(seller);
+    const decryptedSeller = await this.decryptSeller(seller);
 
     // キャッシュを無効化
     await CacheHelper.del(CacheHelper.generateKey('seller', sellerId));
@@ -707,8 +764,8 @@ export class SellerService extends BaseRepository {
     }
 
     // 復号化して物件情報を追加
-    const decryptedSellers = (sellers || []).map((seller) => {
-      const decrypted = this.decryptSeller(seller);
+    const decryptedSellers = await Promise.all((sellers || []).map(async (seller) => {
+      const decrypted = await this.decryptSeller(seller);
       
       // 物件情報を追加（配列の場合は最初の要素を使用）
       if (seller.properties) {
@@ -739,7 +796,7 @@ export class SellerService extends BaseRepository {
       }
       
       return decrypted;
-    });
+    }));
 
     // 各売主の最新通話日時を取得（一時的にコメントアウト）
     // const sellersWithCallDate = await Promise.all(
@@ -807,7 +864,7 @@ export class SellerService extends BaseRepository {
 
       if (sellers && sellers.length > 0) {
         console.log(`✅ Found ${sellers.length} sellers by seller_number`);
-        const decryptedSellers = sellers.map(seller => this.decryptSeller(seller));
+        const decryptedSellers = await Promise.all(sellers.map(seller => this.decryptSeller(seller)));
         return decryptedSellers;
       }
     }
@@ -833,7 +890,7 @@ export class SellerService extends BaseRepository {
 
       if (sellers && sellers.length > 0) {
         console.log(`✅ Found ${sellers.length} sellers by seller_number`);
-        const decryptedSellers = sellers.map(seller => this.decryptSeller(seller));
+        const decryptedSellers = await Promise.all(sellers.map(seller => this.decryptSeller(seller)));
         return decryptedSellers;
       }
     }
@@ -867,7 +924,7 @@ export class SellerService extends BaseRepository {
     const decryptedSellers: Seller[] = [];
     for (const seller of sellers) {
       try {
-        const decrypted = this.decryptSeller(seller);
+        const decrypted = await this.decryptSeller(seller);
         decryptedSellers.push(decrypted);
       } catch (error) {
         console.error(`❌ Failed to decrypt seller ${seller.id}:`, error);
@@ -892,8 +949,12 @@ export class SellerService extends BaseRepository {
   /**
    * 売主データを復号化
    */
-  private decryptSeller(seller: any): Seller {
+  private async decryptSeller(seller: any): Promise<Seller> {
     try {
+      // イニシャルをフルネームに変換（非同期処理）
+      const visitAssigneeFullName = await getEmployeeNameByInitials(seller.visit_assignee);
+      const visitValuationAcquirerFullName = await getEmployeeNameByInitials(seller.visit_valuation_acquirer);
+
       const decrypted = {
         id: seller.id,
         name: seller.name ? decrypt(seller.name) : '',
@@ -949,8 +1010,10 @@ export class SellerService extends BaseRepository {
         // Visit appointment fields
         visitDate: seller.visit_date ? new Date(seller.visit_date) : undefined,
         visitTime: seller.visit_time,
-        visitAssignee: seller.visit_assignee,
-        visitValuationAcquirer: seller.visit_valuation_acquirer,
+        visitAcquisitionDate: seller.visit_acquisition_date ? new Date(seller.visit_acquisition_date) : undefined,
+        // イニシャルをフルネームに変換（フォールバック付き）
+        visitAssignee: visitAssigneeFullName || seller.visit_assignee || undefined,
+        visitValuationAcquirer: visitValuationAcquirerFullName || seller.visit_valuation_acquirer || undefined,
         valuationAssignee: seller.valuation_assignee,
         phoneAssignee: seller.phone_assignee,
         // New call mode fields (migration 032)
@@ -1010,7 +1073,7 @@ export class SellerService extends BaseRepository {
     const cacheKey = CacheHelper.generateKey('seller', sellerId);
     await CacheHelper.del(cacheKey);
 
-    return this.decryptSeller(seller);
+    return await this.decryptSeller(seller);
   }
 
   /**
@@ -1038,7 +1101,7 @@ export class SellerService extends BaseRepository {
     const cacheKey = CacheHelper.generateKey('seller', sellerId);
     await CacheHelper.del(cacheKey);
 
-    return this.decryptSeller(seller);
+    return await this.decryptSeller(seller);
   }
 
   /**
@@ -1067,7 +1130,7 @@ export class SellerService extends BaseRepository {
     const cacheKey = CacheHelper.generateKey('seller', sellerId);
     await CacheHelper.del(cacheKey);
 
-    return this.decryptSeller(seller);
+    return await this.decryptSeller(seller);
   }
 
   /**
@@ -1113,7 +1176,6 @@ export class SellerService extends BaseRepository {
     const { data: sellers, error } = await this.table('sellers')
       .select(`
         id,
-        assigned_to,
         visit_assignee,
         visit_date
       `)
@@ -1150,8 +1212,8 @@ export class SellerService extends BaseRepository {
     let totalVisits = 0;
 
     for (const seller of sellers || []) {
-      // visit_assigneeまたはassigned_toを使用（visit_assigneeを優先）
-      const assignee = (seller as any).visit_assignee || (seller as any).assigned_to;
+      // visit_assigneeを使用
+      const assignee = (seller as any).visit_assignee;
       
       if (assignee) {
         // イニシャルまたは名前から従業員情報を取得

@@ -3,49 +3,49 @@ import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 async function checkPropertiesSchema() {
-  console.log('🔍 propertiesテーブルのスキーマを確認\n');
+  console.log('🔍 Checking properties table schema...\n');
 
-  // サンプルデータを1件取得してカラム名を確認
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+
+  // propertiesテーブルから1件取得してカラムを確認
   const { data, error } = await supabase
     .from('properties')
     .select('*')
     .limit(1);
 
   if (error) {
-    console.error('❌ エラー:', error);
+    console.log('❌ Error:', error.message);
     return;
   }
 
   if (!data || data.length === 0) {
-    console.log('⚠️  propertiesテーブルにデータがありません');
-    console.log('   空のINSERTを試してカラム名を確認します...');
+    console.log('⚠️  No data in properties table');
     
-    // 空のINSERTを試してエラーメッセージからカラム名を確認
+    // テーブル構造を確認するために空のINSERTを試みる
     const { error: insertError } = await supabase
       .from('properties')
-      .insert({});
-    
+      .insert({})
+      .select();
+
     if (insertError) {
-      console.log('エラーメッセージ:', insertError.message);
+      console.log('\n📊 Available columns (from error message):');
+      console.log(insertError.message);
     }
     return;
   }
 
-  console.log('✅ 利用可能なカラム:');
+  console.log('📊 Properties table columns:');
   const columns = Object.keys(data[0]);
-  columns.forEach((col, index) => {
-    console.log(`   ${index + 1}. ${col}`);
+  columns.forEach(col => {
+    console.log(`   - ${col}: ${typeof data[0][col]}`);
   });
+
+  console.log('\n✅ Sample data:');
+  console.log(JSON.stringify(data[0], null, 2));
 }
 
-checkPropertiesSchema()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('❌ エラー:', error);
-    process.exit(1);
-  });
+checkPropertiesSchema().catch(console.error);
