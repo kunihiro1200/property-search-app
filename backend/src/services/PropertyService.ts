@@ -267,7 +267,7 @@ export class PropertyService {
     try {
       // キャッシュをチェック
       const cacheKey = `settlement_date:${propertyNumber}`;
-      const cached = await CacheHelper.get(cacheKey);
+      const cached = await CacheHelper.get<string>(cacheKey);
       if (cached !== null) {
         return cached;
       }
@@ -352,7 +352,7 @@ export class PropertyService {
     try {
       // キャッシュをチェック
       const cacheKey = `property_about:${propertyNumber}`;
-      const cached = await CacheHelper.get(cacheKey);
+      const cached = await CacheHelper.get<string>(cacheKey);
       if (cached !== null) {
         return cached;
       }

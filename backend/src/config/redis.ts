@@ -3,8 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Redis互換インターフェース
+interface RedisLike {
+  get(key: string): Promise<string | null>;
+  setEx(key: string, seconds: number, value: string): Promise<string | null>;
+  del(key: string): Promise<number>;
+  keys(pattern: string): Promise<string[]>;
+}
+
 // メモリ内セッションストア（Redisが利用できない場合のフォールバック）
-class MemoryStore {
+class MemoryStore implements RedisLike {
   private store: Map<string, { value: string; expiresAt: number }> = new Map();
 
   async get(key: string): Promise<string | null> {
@@ -40,7 +48,29 @@ class MemoryStore {
   }
 }
 
-let redisClient: RedisClientType | MemoryStore;
+// RedisClientTypeをRedisLikeに適合させるラッパー
+class RedisClientWrapper implements RedisLike {
+  constructor(private client: RedisClientType) {}
+
+  async get(key: string): Promise<string | null> {
+    return this.client.get(key);
+  }
+
+  async setEx(key: string, seconds: number, value: string): Promise<string | null> {
+    await this.client.setEx(key, seconds, value);
+    return null;
+  }
+
+  async del(key: string): Promise<number> {
+    return this.client.del(key);
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    return this.client.keys(pattern);
+  }
+}
+
+let redisClient: RedisLike;
 let isRedisConnected = false;
 
 const initRedis = async () => {
@@ -67,7 +97,7 @@ const initRedis = async () => {
     
     console.log('✅ Redis connected');
     isRedisConnected = true;
-    redisClient = client;
+    redisClient = new RedisClientWrapper(client);
   } catch (error) {
     console.warn('⚠️ Redis not available, using in-memory session store');
     redisClient = new MemoryStore();
@@ -79,7 +109,7 @@ export const connectRedis = async () => {
   await initRedis();
 };
 
-export const getRedisClient = () => {
+export const getRedisClient = (): RedisLike => {
   if (!redisClient) {
     throw new Error('Redis client not initialized. Call connectRedis() first.');
   }
