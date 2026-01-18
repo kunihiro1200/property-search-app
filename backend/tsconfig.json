@@ -24,9 +24,11 @@
     "noFallthroughCasesInSwitch": false,
     "noImplicitThis": false,
     "alwaysStrict": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "noEmitOnError": false
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "api/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "ts-node": {
     "transpileOnly": true,
