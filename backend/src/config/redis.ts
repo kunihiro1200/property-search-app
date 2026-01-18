@@ -53,7 +53,8 @@ class RedisClientWrapper implements RedisLike {
   constructor(private client: RedisClientType) {}
 
   async get(key: string): Promise<string | null> {
-    return this.client.get(key);
+    const result = await this.client.get(key);
+    return result as string | null;
   }
 
   async setEx(key: string, seconds: number, value: string): Promise<string | null> {
@@ -62,11 +63,13 @@ class RedisClientWrapper implements RedisLike {
   }
 
   async del(key: string): Promise<number> {
-    return this.client.del(key);
+    const result = await this.client.del(key);
+    return result as number;
   }
 
   async keys(pattern: string): Promise<string[]> {
-    return this.client.keys(pattern);
+    const result = await this.client.keys(pattern);
+    return result as string[];
   }
 }
 
