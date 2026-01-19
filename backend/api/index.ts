@@ -328,9 +328,9 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     
       const images = imageData.map((img) => ({
         id: img.id,
-        url: `${baseUrl}/api/public/images/proxy/${img.id}`,
-        fullImageUrl: `${baseUrl}/api/public/images/proxy/${img.id}`,
-        thumbnailUrl: `${baseUrl}/api/public/images/proxy/${img.id}?thumbnail=true`,
+        url: `${baseUrl}/api/public/images/${img.id}`,
+        fullImageUrl: `${baseUrl}/api/public/images/${img.id}`,
+        thumbnailUrl: `${baseUrl}/api/public/images/${img.id}/thumbnail`,
         name: img.name,
         isHidden: false
       }));
@@ -362,12 +362,12 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
 });
 
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
-app.get('/api/public/images/proxy/:fileId', async (req, res) => {
+// サムネイル用
+app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
   try {
     const { fileId } = req.params;
-    const thumbnail = req.query.thumbnail === 'true';
     
-    console.log(`🖼️ Proxying image: ${fileId} (thumbnail: ${thumbnail})`);
+    console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
     
     // GoogleDriveServiceを使用して画像データを取得
     const driveService = new GoogleDriveService();
@@ -395,9 +395,58 @@ app.get('/api/public/images/proxy/:fileId', async (req, res) => {
     // 画像データを返す
     res.send(imageData.buffer);
     
-    console.log(`✅ Image proxied successfully: ${fileId}`);
+    console.log(`✅ Thumbnail image proxied successfully: ${fileId}`);
   } catch (error: any) {
-    console.error('❌ Error proxying image:', error);
+    console.error('❌ Error proxying thumbnail image:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to proxy image from Google Drive',
+      details: 'Failed to proxy image from Google Drive'
+    });
+  }
+});
+
+// フル画像用
+app.get('/api/public/images/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    
+    console.log(`🖼️ Proxying full image: ${fileId}`);
+    
+    // GoogleDriveServiceを使用して画像データを取得
+    const driveService = new GoogleDriveService();
+    
+    const imageData = await driveService.getImageData(fileId);
+    
+    if (!imageData) {
+      console.error(`❌ Image not found: ${fileId}`);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Image not found'
+      });
+    }
+    
+    // キャッシュヘッダーとCORSヘッダーを設定（1日間キャッシュ）
+    res.set({
+      'Content-Type': imageData.mimeType,
+      'Content-Length': imageData.size,
+      'Cache-Control': 'public, max-age=86400', // 1日間キャッシュ
+      'Access-Control-Allow-Origin': '*', // CORS対応
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    
+    // 画像データを返す
+    res.send(imageData.buffer);
+    
+    console.log(`✅ Full image proxied successfully: ${fileId}`);
+  } catch (error: any) {
+    console.error('❌ Error proxying full image:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
