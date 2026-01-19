@@ -267,6 +267,85 @@ app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
   }
 });
 
+// 公開物件の画像一覧取得（UUIDまたは物件番号で検索）
+app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) => {
+  try {
+    const { propertyIdentifier } = req.params;
+    console.log(`🔍 Fetching images for: ${propertyIdentifier}`);
+    
+    // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
+    const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
+    
+    // データベースから物件の画像URLを取得
+    let query = supabase
+      .from('property_listings')
+      .select('id, property_number, image_url');
+    
+    if (isUuid) {
+      query = query.eq('id', propertyIdentifier);
+    } else {
+      query = query.eq('property_number', propertyIdentifier);
+    }
+    
+    const { data: property, error } = await query.single();
+
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
+
+    if (!property) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Property not found'
+      });
+    }
+
+    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
+    let images = [];
+    if (property.image_url) {
+      try {
+        // JSON配列としてパースを試みる
+        const parsedImages = JSON.parse(property.image_url);
+        // 各画像URLをオブジェクト形式に変換
+        images = parsedImages.map((url: string, index: number) => ({
+          id: `${property.property_number}-${index}`,
+          url: url,
+          fullImageUrl: url, // フロントエンドが期待するプロパティ名
+          name: `画像${index + 1}`,
+          isHidden: false
+        }));
+      } catch (e) {
+        // パースに失敗した場合は単一の文字列として扱う
+        if (property.image_url.trim()) {
+          images = [{
+            id: `${property.property_number}-0`,
+            url: property.image_url,
+            fullImageUrl: property.image_url, // フロントエンドが期待するプロパティ名
+            name: '画像1',
+            isHidden: false
+          }];
+        }
+      }
+    }
+
+    console.log(`✅ Found ${images.length} images for ${propertyIdentifier} (${property.property_number})`);
+
+    res.json({ 
+      success: true, 
+      images: images,
+      hiddenImages: [] // 公開サイトでは非表示画像なし
+    });
+  } catch (error: any) {
+    console.error('❌ Error fetching property images:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Failed to fetch property images from database'
+    });
+  }
+});
+
 // 公開物件サイト用のルートは後で追加
 // app.use('/api/public', publicPropertiesRoutes);
 // app.use('/api/public/inquiries', publicInquiriesRoutes);
