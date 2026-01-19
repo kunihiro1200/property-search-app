@@ -36,16 +36,15 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 公開物件一覧取得
+// 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (_req, res) => {
   try {
-    console.log('🔍 Fetching public properties from database...');
+    console.log('🔍 Fetching all properties from database...');
     
-    // データベースから公開物件を取得
+    // データベースから全ての物件を取得（atbb_statusでフィルタリングしない）
     const { data: properties, error } = await supabase
       .from('property_listings')
       .select('*')
-      .eq('atbb_status', '公開中')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -53,7 +52,7 @@ app.get('/api/public/properties', async (_req, res) => {
       throw error;
     }
 
-    console.log(`✅ Found ${properties?.length || 0} public properties`);
+    console.log(`✅ Found ${properties?.length || 0} properties`);
 
     res.json({ 
       success: true, 
@@ -70,18 +69,17 @@ app.get('/api/public/properties', async (_req, res) => {
   }
 });
 
-// 公開物件詳細取得
+// 公開物件詳細取得（atbb_statusでフィルタリングしない）
 app.get('/api/public/properties/:propertyNumber', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     console.log(`🔍 Fetching property details for: ${propertyNumber}`);
     
-    // データベースから物件詳細を取得
+    // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
     const { data: property, error } = await supabase
       .from('property_listings')
       .select('*')
       .eq('property_number', propertyNumber)
-      .eq('atbb_status', '公開中')
       .single();
 
     if (error) {
@@ -112,18 +110,17 @@ app.get('/api/public/properties/:propertyNumber', async (req, res) => {
   }
 });
 
-// 公開物件の完全な詳細情報取得（画像含む）
+// 公開物件の完全な詳細情報取得（画像含む、atbb_statusでフィルタリングしない）
 app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     console.log(`🔍 Fetching complete property details for: ${propertyNumber}`);
     
-    // データベースから物件詳細を取得
+    // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
     const { data: property, error } = await supabase
       .from('property_listings')
       .select('*')
       .eq('property_number', propertyNumber)
-      .eq('atbb_status', '公開中')
       .single();
 
     if (error) {
