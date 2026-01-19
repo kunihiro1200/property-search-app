@@ -337,14 +337,19 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
+    // 本番環境では絶対URLを使用（フロントエンドとバックエンドが異なるドメイン）
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://baikyaku-property-site3.vercel.app'
+      : '';
+    
     return driveFiles.map(file => ({
       id: file.id,
       name: file.name,
       // サムネイルURLはプロキシ経由で提供（CORS対策）
       // 注意: Google DriveのファイルIDをそのまま使用
-      thumbnailUrl: `/api/public/images/${file.id}/thumbnail`,
+      thumbnailUrl: `${baseUrl}/api/public/images/${file.id}/thumbnail`,
       // フル画像URLもGoogle Driveから直接取得
-      fullImageUrl: `/api/public/images/${file.id}`,
+      fullImageUrl: `${baseUrl}/api/public/images/${file.id}`,
       mimeType: file.mimeType,
       size: file.size,
       modifiedTime: file.modifiedTime,
@@ -430,9 +435,12 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // キャッシュされた画像のプロキシURLを返す（相対URL）
+      // キャッシュされた画像のプロキシURLを返す（本番環境では絶対URL）
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://baikyaku-property-site3.vercel.app'
+        : '';
       return cachedEntry.images.length > 0 
-        ? [`/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
+        ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
     }
 
@@ -472,9 +480,11 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // 最初の1枚のプロキシURLを返す（Google Drive直接URLは認証が必要なため）
-      // 相対URLを返す（フロントエンドとバックエンドが同じオリジンで動作する前提）
-      return [`/api/public/images/${images[0].id}/thumbnail`];
+      // 最初の1枚のプロキシURLを返す（本番環境では絶対URL）
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://baikyaku-property-site3.vercel.app'
+        : '';
+      return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);
       console.error(`[PropertyImageService] Error details:`, error);
