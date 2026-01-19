@@ -333,10 +333,12 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
 
     // 画像データをフロントエンドが期待する形式に変換
     // プロキシエンドポイントを使用してバックエンド経由で画像を取得
-    // Vercel環境では絶対URLを使用
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+    // 本番環境では固定のVercel URLを使用
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://baikyaku-property-site3.vercel.app'
       : (process.env.API_BASE_URL || 'http://localhost:3000');
+    
+    console.log(`🔗 Using base URL: ${baseUrl}`);
     
     const images = imageData.map((img) => ({
       id: img.id,
