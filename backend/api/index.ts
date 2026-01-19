@@ -150,17 +150,26 @@ app.get('/api/public/properties', async (req, res) => {
 });
 
 // 公開物件詳細取得（atbb_statusでフィルタリングしない）
-app.get('/api/public/properties/:propertyNumber', async (req, res) => {
+app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
   try {
-    const { propertyNumber } = req.params;
-    console.log(`🔍 Fetching property details for: ${propertyNumber}`);
+    const { propertyIdentifier } = req.params;
+    console.log(`🔍 Fetching property details for: ${propertyIdentifier}`);
+    
+    // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
+    const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
     
     // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
-    const { data: property, error } = await supabase
+    let query = supabase
       .from('property_listings')
-      .select('*')
-      .eq('property_number', propertyNumber)
-      .single();
+      .select('*');
+    
+    if (isUuid) {
+      query = query.eq('id', propertyIdentifier);
+    } else {
+      query = query.eq('property_number', propertyIdentifier);
+    }
+    
+    const { data: property, error } = await query.single();
 
     if (error) {
       console.error('❌ Database error:', error);
@@ -209,17 +218,26 @@ app.get('/api/public/properties/:propertyNumber', async (req, res) => {
 });
 
 // 公開物件の完全な詳細情報取得（画像含む、atbb_statusでフィルタリングしない）
-app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
+app.get('/api/public/properties/:propertyIdentifier/complete', async (req, res) => {
   try {
-    const { propertyNumber } = req.params;
-    console.log(`🔍 Fetching complete property details for: ${propertyNumber}`);
+    const { propertyIdentifier } = req.params;
+    console.log(`🔍 Fetching complete property details for: ${propertyIdentifier}`);
+    
+    // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
+    const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
     
     // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
-    const { data: property, error } = await supabase
+    let query = supabase
       .from('property_listings')
-      .select('*')
-      .eq('property_number', propertyNumber)
-      .single();
+      .select('*');
+    
+    if (isUuid) {
+      query = query.eq('id', propertyIdentifier);
+    } else {
+      query = query.eq('property_number', propertyIdentifier);
+    }
+    
+    const { data: property, error } = await query.single();
 
     if (error) {
       console.error('❌ Database error:', error);
