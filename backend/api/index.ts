@@ -108,14 +108,19 @@ app.get('/api/public/properties', async (req, res) => {
 
     console.log(`✅ Found ${properties?.length || 0} properties (total: ${count})`);
 
-    // image_urlをimagesに変換
+    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
     const transformedProperties = properties?.map(property => {
       let images = [];
       if (property.image_url) {
         try {
+          // JSON配列としてパースを試みる
           images = JSON.parse(property.image_url);
         } catch (e) {
-          console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+          // パースに失敗した場合は単一の文字列として扱う
+          // 空文字列でない場合のみ配列に追加
+          if (property.image_url.trim()) {
+            images = [property.image_url];
+          }
         }
       }
       return {
@@ -171,13 +176,18 @@ app.get('/api/public/properties/:propertyNumber', async (req, res) => {
 
     console.log(`✅ Found property: ${propertyNumber}`);
 
-    // image_urlをimagesに変換
+    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
     let images = [];
     if (property.image_url) {
       try {
+        // JSON配列としてパースを試みる
         images = JSON.parse(property.image_url);
       } catch (e) {
-        console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+        // パースに失敗した場合は単一の文字列として扱う
+        // 空文字列でない場合のみ配列に追加
+        if (property.image_url.trim()) {
+          images = [property.image_url];
+        }
       }
     }
 
@@ -225,13 +235,18 @@ app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
 
     console.log(`✅ Found complete property details: ${propertyNumber}`);
 
-    // image_urlをimagesに変換
+    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
     let images = [];
     if (property.image_url) {
       try {
+        // JSON配列としてパースを試みる
         images = JSON.parse(property.image_url);
       } catch (e) {
-        console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+        // パースに失敗した場合は単一の文字列として扱う
+        // 空文字列でない場合のみ配列に追加
+        if (property.image_url.trim()) {
+          images = [property.image_url];
+        }
       }
     }
 
