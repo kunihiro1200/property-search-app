@@ -7,7 +7,12 @@
 /**
  * 市区町村を住所から抽出
  */
-const extractCity = (address: string): string => {
+const extractCity = (address: string | undefined): string => {
+  // addressがundefinedまたは空文字列の場合はデフォルト値を返す
+  if (!address) {
+    return '大分市';
+  }
+  
   // 大分県の市区町村を抽出
   const cityMatch = address.match(/(大分市|別府市|中津市|日田市|佐伯市|臼杵市|津久見市|竹田市|豊後高田市|杵築市|宇佐市|豊後大野市|由布市|国東市|姫島村|日出町|九重町|玖珠町)/);
   return cityMatch ? cityMatch[1] : '大分市';

@@ -343,6 +343,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                     canDelete={false}
                     canHide={false}
                     showHiddenImages={false}
+                    isPublicSite={true}
                   />
                 )}
               </Paper>

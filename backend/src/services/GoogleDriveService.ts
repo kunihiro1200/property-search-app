@@ -879,6 +879,70 @@ export class GoogleDriveService extends BaseRepository {
   }
 
   /**
+   * サブフォルダ内を再帰的に検索して「athome公開」フォルダを探す
+   * @param parentId 親フォルダID
+   * @param isSharedDrive 共有ドライブかどうか
+   * @param depth 現在の深さ（最大3階層まで）
+   * @returns 「athome公開」フォルダのID、見つからない場合はnull
+   */
+  private async searchAthomeFolderRecursively(
+    parentId: string,
+    isSharedDrive: boolean,
+    depth: number = 0
+  ): Promise<string | null> {
+    // 最大3階層まで検索
+    if (depth >= 3) {
+      return null;
+    }
+
+    try {
+      const drive = await this.getDriveClient();
+      
+      // サブフォルダ一覧を取得
+      const queryParams: any = {
+        q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      };
+      
+      if (isSharedDrive && this.parentFolderId) {
+        queryParams.corpora = 'drive';
+        queryParams.driveId = this.parentFolderId;
+      } else {
+        queryParams.corpora = 'user';
+      }
+
+      const response = await drive.files.list(queryParams);
+      const subfolders = response.data.files || [];
+      
+      console.log(`  📂 Found ${subfolders.length} subfolders at depth ${depth}`);
+      
+      // 各サブフォルダで「athome公開」を探す
+      for (const subfolder of subfolders) {
+        console.log(`    - Checking: ${subfolder.name}`);
+        
+        // 「athome公開」フォルダを発見
+        if (subfolder.name?.includes('athome') && subfolder.name?.includes('公開')) {
+          console.log(`    ✅ Found "athome公開" in subfolder: ${subfolder.name}`);
+          return subfolder.id || null;
+        }
+        
+        // さらに深く検索
+        const foundId = await this.searchAthomeFolderRecursively(subfolder.id!, isSharedDrive, depth + 1);
+        if (foundId) {
+          return foundId;
+        }
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error(`Error searching subfolders at depth ${depth}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * 「athome公開」フォルダから画像を取得
    * 
    * 取得ロジック:
@@ -918,12 +982,18 @@ export class GoogleDriveService extends BaseRepository {
         return [];
       }
 
-      // 3. 「athome公開」フォルダを検索
+      // 3. 「athome公開」フォルダを検索（直接の子フォルダ）
       console.log(`🔍 Searching for "athome公開" folder in: ${parentFolderId} (${isSharedDrive ? 'shared drive' : 'my drive'})`);
-      const athomeFolderId = await this.findFolderByName(parentFolderId, 'athome公開', isSharedDrive);
+      let athomeFolderId = await this.findFolderByName(parentFolderId, 'athome公開', isSharedDrive);
+
+      // 4. 直接見つからない場合は、サブフォルダ内を再帰的に検索
+      if (!athomeFolderId) {
+        console.log(`📁 "athome公開" not found directly, searching in subfolders...`);
+        athomeFolderId = await this.searchAthomeFolderRecursively(parentFolderId, isSharedDrive);
+      }
 
       if (!athomeFolderId) {
-        console.log(`❌ "athome公開" folder not found in: ${parentFolderId}`);
+        console.log(`❌ "athome公開" folder not found in: ${parentFolderId} or its subfolders`);
         return [];
       }
 

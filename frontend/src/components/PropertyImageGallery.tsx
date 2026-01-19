@@ -27,12 +27,14 @@ import { usePropertyImages } from '../hooks/usePublicProperties';
 import ImageDeleteButton from './ImageDeleteButton';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import api, { propertyImageApi } from '../services/api';
+import publicApi from '../services/publicApi';
 
 interface PropertyImageGalleryProps {
   propertyId: string;
   canDelete?: boolean;
   canHide?: boolean;  // 非表示機能を有効にするか（管理者モード）
   showHiddenImages?: boolean;  // 非表示画像も表示するか
+  isPublicSite?: boolean;  // 公開サイトかどうか
 }
 
 interface DeleteState {
@@ -48,6 +50,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   canDelete = false,
   canHide = false,
   showHiddenImages = false,
+  isPublicSite = false,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -201,7 +204,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     setDeleteState(prev => ({ ...prev, isDeleting: true }));
 
     try {
-      await api.delete(`/api/public/properties/${propertyId}/images/${deleteState.imageId}`);
+      // 公開サイトではpublicApiを使用、管理サイトではapiを使用
+      const apiClient = isPublicSite ? publicApi : api;
+      await apiClient.delete(`/api/public/properties/${propertyId}/images/${deleteState.imageId}`);
       
       // 成功通知
       setSnackbar({
