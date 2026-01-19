@@ -37,18 +37,31 @@ export class GoogleDriveService extends BaseRepository {
 
   /**
    * サービスアカウント認証を初期化
+   * Vercel環境では環境変数から直接読み込み、ローカル環境ではファイルから読み込む
    */
   private initializeServiceAccount() {
     try {
-      const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
-      const absolutePath = path.resolve(__dirname, '../../', keyPath);
+      let keyFile: any;
       
-      if (!fs.existsSync(absolutePath)) {
-        console.warn('⚠️ Service account key file not found:', absolutePath);
-        return;
+      // 1. 環境変数から直接読み込み（Vercel用）
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.log('📝 Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
+        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      } 
+      // 2. ファイルから読み込み（ローカル環境用）
+      else {
+        const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
+        const absolutePath = path.resolve(__dirname, '../../', keyPath);
+        
+        if (!fs.existsSync(absolutePath)) {
+          console.warn('⚠️ Service account key file not found:', absolutePath);
+          console.warn('⚠️ Set GOOGLE_SERVICE_ACCOUNT_JSON environment variable for Vercel deployment');
+          return;
+        }
+        
+        console.log('📝 Loading service account from file:', absolutePath);
+        keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
       }
-      
-      const keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
       
       this.serviceAccountAuth = new google.auth.GoogleAuth({
         credentials: keyFile,
