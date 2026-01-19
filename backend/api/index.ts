@@ -460,6 +460,41 @@ app.get('/api/public/images/:fileId', async (req, res) => {
   }
 });
 
+// 概算書PDF生成（物件番号で生成）
+app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    
+    console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
+    
+    // PropertyServiceを動的インポート
+    const { PropertyService } = await import('../src/services/PropertyService');
+    const propertyService = new PropertyService();
+    
+    // 概算書PDFを生成
+    const pdfUrl = await propertyService.generateEstimatePdf(propertyNumber);
+    
+    console.log(`[Estimate PDF] Generated PDF URL: ${pdfUrl}`);
+
+    res.json({ 
+      success: true,
+      pdfUrl 
+    });
+  } catch (error: any) {
+    console.error('[Estimate PDF] Error:', error);
+    console.error('[Estimate PDF] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message || '概算書の生成に失敗しました'
+    });
+  }
+});
+
 // 公開物件サイト用のルートは後で追加
 // app.use('/api/public', publicPropertiesRoutes);
 // app.use('/api/public/inquiries', publicInquiriesRoutes);

@@ -429,8 +429,18 @@ export class PropertyService {
       console.log(`[generateEstimatePdf] Starting for property: ${propertyNumber}`);
       
       // サービスアカウント認証
-      const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json');
-      const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      // Vercel環境では環境変数から、ローカル環境ではファイルから読み込む
+      let keyFile;
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        // Vercel環境: 環境変数から直接読み込む
+        console.log(`[generateEstimatePdf] Using GOOGLE_SERVICE_ACCOUNT_JSON from environment`);
+        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      } else {
+        // ローカル環境: ファイルから読み込む
+        console.log(`[generateEstimatePdf] Using service account key file`);
+        const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json');
+        keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      }
       
       const auth = new google.auth.JWT({
         email: keyFile.client_email,
