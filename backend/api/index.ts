@@ -54,10 +54,26 @@ app.get('/api/public/properties', async (_req, res) => {
 
     console.log(`✅ Found ${properties?.length || 0} properties`);
 
+    // image_urlをimagesに変換
+    const transformedProperties = properties?.map(property => {
+      let images = [];
+      if (property.image_url) {
+        try {
+          images = JSON.parse(property.image_url);
+        } catch (e) {
+          console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+        }
+      }
+      return {
+        ...property,
+        images
+      };
+    });
+
     res.json({ 
       success: true, 
-      properties: properties || [],
-      count: properties?.length || 0
+      properties: transformedProperties || [],
+      count: transformedProperties?.length || 0
     });
   } catch (error: any) {
     console.error('❌ Error fetching properties:', error);
@@ -96,9 +112,22 @@ app.get('/api/public/properties/:propertyNumber', async (req, res) => {
 
     console.log(`✅ Found property: ${propertyNumber}`);
 
+    // image_urlをimagesに変換
+    let images = [];
+    if (property.image_url) {
+      try {
+        images = JSON.parse(property.image_url);
+      } catch (e) {
+        console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+      }
+    }
+
     res.json({ 
       success: true, 
-      property
+      property: {
+        ...property,
+        images
+      }
     });
   } catch (error: any) {
     console.error('❌ Error fetching property details:', error);
@@ -137,9 +166,22 @@ app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
 
     console.log(`✅ Found complete property details: ${propertyNumber}`);
 
+    // image_urlをimagesに変換
+    let images = [];
+    if (property.image_url) {
+      try {
+        images = JSON.parse(property.image_url);
+      } catch (e) {
+        console.error(`Failed to parse image_url for ${property.property_number}:`, e);
+      }
+    }
+
     res.json({ 
       success: true, 
-      property
+      property: {
+        ...property,
+        images
+      }
     });
   } catch (error: any) {
     console.error('❌ Error fetching complete property details:', error);

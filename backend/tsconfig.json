@@ -25,7 +25,6 @@
     "noImplicitThis": false,
     "alwaysStrict": false,
     "noPropertyAccessFromIndexSignature": false,
-    "suppressImplicitAnyIndexErrors": true,
     "noEmitOnError": false,
     "isolatedModules": true
   },
