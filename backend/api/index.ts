@@ -5,8 +5,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import publicPropertiesRoutes from '../src/routes/publicProperties';
-import publicInquiriesRoutes from '../src/routes/publicInquiries';
 
 const app = express();
 
@@ -24,20 +22,38 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 公開物件サイト用のルートのみ
-app.use('/api/public', publicPropertiesRoutes);
-app.use('/api/public/inquiries', publicInquiriesRoutes);
+// テスト用の簡単なエンドポイント
+app.get('/api/public/properties', async (_req, res) => {
+  try {
+    res.json({ 
+      success: true, 
+      message: 'API is working!',
+      properties: []
+    });
+  } catch (error: any) {
+    console.error('Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// 公開物件サイト用のルートは後で追加
+// app.use('/api/public', publicPropertiesRoutes);
+// app.use('/api/public/inquiries', publicInquiriesRoutes);
+
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     error: {
