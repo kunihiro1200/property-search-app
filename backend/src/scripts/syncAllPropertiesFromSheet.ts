@@ -9,10 +9,11 @@ async function syncAllProperties() {
   console.log('🚀 Starting property sync from Google Sheets...\n');
   
   // GoogleSheetsClientを初期化
-  const sheetsClient = new GoogleSheetsClient(
-    process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
-    process.env.PROPERTY_LISTING_SHEET_NAME!
-  );
+  const sheetsClient = new GoogleSheetsClient({
+    spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
+    sheetName: process.env.PROPERTY_LISTING_SHEET_NAME || '物件',
+    serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+  });
   
   // 認証
   await sheetsClient.authenticate();
