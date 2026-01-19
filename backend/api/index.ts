@@ -332,11 +332,17 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     );
 
     // 画像データをフロントエンドが期待する形式に変換
+    // プロキシエンドポイントを使用してバックエンド経由で画像を取得
+    // Vercel環境では絶対URLを使用
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : (process.env.API_BASE_URL || 'http://localhost:3000');
+    
     const images = imageData.map((img) => ({
       id: img.id,
-      url: img.fullImageUrl,
-      fullImageUrl: img.fullImageUrl,
-      thumbnailUrl: img.thumbnailUrl,
+      url: `${baseUrl}/api/public/images/proxy/${img.id}`,
+      fullImageUrl: `${baseUrl}/api/public/images/proxy/${img.id}`,
+      thumbnailUrl: `${baseUrl}/api/public/images/proxy/${img.id}?thumbnail=true`,
       name: img.name,
       isHidden: false
     }));
@@ -354,6 +360,48 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
       success: false, 
       error: error.message,
       details: 'Failed to fetch property images from Google Drive'
+    });
+  }
+});
+
+// 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
+app.get('/api/public/images/proxy/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const thumbnail = req.query.thumbnail === 'true';
+    
+    console.log(`🖼️ Proxying image: ${fileId} (thumbnail: ${thumbnail})`);
+    
+    // GoogleDriveServiceを使用して画像データを取得
+    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
+    const driveService = new GoogleDriveService();
+    
+    const imageData = await driveService.getImageData(fileId);
+    
+    if (!imageData) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Image not found'
+      });
+    }
+    
+    // キャッシュヘッダーを設定（1日間キャッシュ）
+    res.set({
+      'Content-Type': imageData.mimeType,
+      'Content-Length': imageData.size,
+      'Cache-Control': 'public, max-age=86400', // 1日間キャッシュ
+    });
+    
+    // 画像データを返す
+    res.send(imageData.buffer);
+    
+    console.log(`✅ Image proxied successfully: ${fileId}`);
+  } catch (error: any) {
+    console.error('❌ Error proxying image:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Failed to proxy image from Google Drive'
     });
   }
 });
