@@ -386,11 +386,14 @@ app.get('/api/public/images/proxy/:fileId', async (req, res) => {
       });
     }
     
-    // キャッシュヘッダーを設定（1日間キャッシュ）
+    // キャッシュヘッダーとCORSヘッダーを設定（1日間キャッシュ）
     res.set({
       'Content-Type': imageData.mimeType,
       'Content-Length': imageData.size,
       'Cache-Control': 'public, max-age=86400', // 1日間キャッシュ
+      'Access-Control-Allow-Origin': '*', // CORS対応
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Content-Type',
     });
     
     // 画像データを返す
