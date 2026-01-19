@@ -769,7 +769,7 @@ export class GoogleDriveService extends BaseRepository {
 
   /**
    * ルートレベルで物件番号のフォルダを検索
-   * 共有ドライブ全体を検索して、物件番号を含むフォルダを探す
+   * まずマイドライブを検索し、見つからなければ共有ドライブも検索する
    * 
    * フォルダ名のパターン:
    * - AA13069_xxx (物件番号で始まる)
@@ -783,24 +783,43 @@ export class GoogleDriveService extends BaseRepository {
     try {
       const drive = await this.getDriveClient();
       
-      console.log(`🔍 Searching for folder containing "${folderName}" in all drives`);
+      // 1. まずマイドライブを検索
+      console.log(`🔍 Searching for folder containing "${folderName}" in My Drive`);
       
-      // 全ドライブを検索（共有ドライブとマイドライブの両方）
-      // corpora: 'allDrives'を使用することで、サブフォルダ内も含めて検索可能
-      const response = await drive.files.list({
+      const myDriveResponse = await drive.files.list({
         q: `name contains '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
         fields: 'files(id, name, parents)',
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-        corpora: 'allDrives',
+        corpora: 'user',
         pageSize: 20,
       });
 
-      const files = response.data.files;
-      if (files && files.length > 0) {
-        console.log(`📋 Found ${files.length} folders containing "${folderName}":`);
+      let files = myDriveResponse.data.files || [];
+      
+      if (files.length > 0) {
+        console.log(`📋 Found ${files.length} folders in My Drive containing "${folderName}":`);
         files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+      } else {
+        // 2. マイドライブで見つからなければ共有ドライブも検索
+        console.log(`📁 Not found in My Drive, searching in Shared Drives...`);
         
+        const sharedDriveResponse = await drive.files.list({
+          q: `name contains '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+          fields: 'files(id, name, parents)',
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true,
+          corpora: 'allDrives',
+          pageSize: 20,
+        });
+        
+        files = sharedDriveResponse.data.files || [];
+        
+        if (files.length > 0) {
+          console.log(`📋 Found ${files.length} folders in Shared Drives containing "${folderName}":`);
+          files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+        }
+      }
+      
+      if (files.length > 0) {
         // 優先順位:
         // 1. 物件番号で始まるフォルダ（例: AA13069_xxx）
         // 2. プレフィックス付きで物件番号を含むフォルダ（例: U_AA13069_xxx）
@@ -830,11 +849,90 @@ export class GoogleDriveService extends BaseRepository {
         }
       }
       
-      console.log(`📁 Folder containing "${folderName}" not found`);
+      console.log(`❌ Folder containing "${folderName}" not found in My Drive or Shared Drives`);
       return null;
     } catch (error: any) {
       console.error('Error searching folder:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * 「athome公開」フォルダから画像を取得
+   * 
+   * 取得ロジック:
+   * 1. storage_locationがあれば、そのフォルダ内の「athome公開」フォルダから画像取得（共有ドライブ）
+   * 2. storage_locationがなければ、業務リストのマイドライブで物件番号を含むフォルダを検索
+   *    - 直接ある場合: 物件番号フォルダ/athome公開
+   *    - サブフォルダ内にある場合: 親フォルダ/物件番号フォルダ/athome公開
+   * 
+   * @param storageLocation storage_locationのURL（オプション）
+   * @param propertyNumber 物件番号
+   * @returns 画像URL配列
+   */
+  async getImagesFromAthomePublicFolder(
+    storageLocation: string | null,
+    propertyNumber: string
+  ): Promise<string[]> {
+    try {
+      let parentFolderId: string | null = null;
+      let isSharedDrive = false;
+
+      // 1. storage_locationがあれば、そこから取得（共有ドライブ）
+      if (storageLocation) {
+        console.log(`📂 Using storage_location (shared drive): ${storageLocation}`);
+        parentFolderId = this.extractFolderIdFromUrl(storageLocation);
+        isSharedDrive = true;
+      }
+
+      // 2. storage_locationがなければ、物件番号で検索（マイドライブ）
+      if (!parentFolderId) {
+        console.log(`🔍 Searching for folder containing property number in My Drive: ${propertyNumber}`);
+        parentFolderId = await this.searchFolderByName(propertyNumber);
+        isSharedDrive = false;
+      }
+
+      if (!parentFolderId) {
+        console.log(`❌ Parent folder not found for property: ${propertyNumber}`);
+        return [];
+      }
+
+      // 3. 「athome公開」フォルダを検索
+      console.log(`🔍 Searching for "athome公開" folder in: ${parentFolderId} (${isSharedDrive ? 'shared drive' : 'my drive'})`);
+      const athomeFolderId = await this.findFolderByNameInDrive(parentFolderId, 'athome公開', isSharedDrive);
+
+      if (!athomeFolderId) {
+        console.log(`❌ "athome公開" folder not found in: ${parentFolderId}`);
+        return [];
+      }
+
+      // 4. 「athome公開」フォルダ内の画像を取得
+      console.log(`📸 Getting images from "athome公開" folder: ${athomeFolderId}`);
+      const images = await this.listImagesWithThumbnailsInDrive(athomeFolderId, isSharedDrive);
+
+      // 5. 画像URLを生成（Google Drive直接表示用）
+      const imageUrls = images.map(img => `https://drive.google.com/uc?export=view&id=${img.id}`);
+
+      console.log(`✅ Found ${imageUrls.length} images in "athome公開" folder`);
+      return imageUrls;
+    } catch (error: any) {
+      console.error('Error getting images from athome public folder:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Google DriveのURLからフォルダIDを抽出
+   * @param url Google DriveのURL
+   * @returns フォルダID、抽出できない場合はnull
+   */
+  private extractFolderIdFromUrl(url: string): string | null {
+    try {
+      // https://drive.google.com/drive/folders/FOLDER_ID 形式
+      const match = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      return match ? match[1] : null;
+    } catch (error) {
+      return null;
     }
   }
 }

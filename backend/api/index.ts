@@ -286,6 +286,7 @@ app.get('/api/public/properties/:propertyIdentifier/complete', async (req, res) 
 });
 
 // 公開物件の画像一覧取得（UUIDまたは物件番号で検索）
+// Google Driveから動的に画像を取得
 app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) => {
   try {
     const { propertyIdentifier } = req.params;
@@ -294,10 +295,10 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
     const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
     
-    // データベースから物件の画像URLを取得
+    // データベースから物件情報を取得（storage_locationとproperty_numberが必要）
     let query = supabase
       .from('property_listings')
-      .select('id, property_number, image_url');
+      .select('id, property_number, storage_location');
     
     if (isUuid) {
       query = query.eq('id', propertyIdentifier);
@@ -319,33 +320,25 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
       });
     }
 
-    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
-    let images = [];
-    if (property.image_url) {
-      try {
-        // JSON配列としてパースを試みる
-        const parsedImages = JSON.parse(property.image_url);
-        // 各画像URLをオブジェクト形式に変換
-        images = parsedImages.map((url: string, index: number) => ({
-          id: `${property.property_number}-${index}`,
-          url: url,
-          fullImageUrl: url, // フロントエンドが期待するプロパティ名
-          name: `画像${index + 1}`,
-          isHidden: false
-        }));
-      } catch (e) {
-        // パースに失敗した場合は単一の文字列として扱う
-        if (property.image_url.trim()) {
-          images = [{
-            id: `${property.property_number}-0`,
-            url: property.image_url,
-            fullImageUrl: property.image_url, // フロントエンドが期待するプロパティ名
-            name: '画像1',
-            isHidden: false
-          }];
-        }
-      }
-    }
+    console.log(`📂 Property found: ${property.property_number}, storage_location: ${property.storage_location || 'なし'}`);
+
+    // GoogleDriveServiceを使用して画像を取得
+    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
+    const driveService = new GoogleDriveService();
+    
+    const imageUrls = await driveService.getImagesFromAthomePublicFolder(
+      property.storage_location,
+      property.property_number
+    );
+
+    // 画像URLをフロントエンドが期待する形式に変換
+    const images = imageUrls.map((url, index) => ({
+      id: `${property.property_number}-${index}`,
+      url: url,
+      fullImageUrl: url, // フロントエンドが期待するプロパティ名
+      name: `画像${index + 1}`,
+      isHidden: false
+    }));
 
     console.log(`✅ Found ${images.length} images for ${propertyIdentifier} (${property.property_number})`);
 
@@ -359,7 +352,7 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     res.status(500).json({ 
       success: false, 
       error: error.message,
-      details: 'Failed to fetch property images from database'
+      details: 'Failed to fetch property images from Google Drive'
     });
   }
 });
