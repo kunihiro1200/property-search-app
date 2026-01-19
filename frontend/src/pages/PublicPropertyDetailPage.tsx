@@ -19,6 +19,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PrintIcon from '@mui/icons-material/Print';
 import { usePublicProperty } from '../hooks/usePublicProperties';
+import publicApi from '../services/publicApi';
 import PublicInquiryForm from '../components/PublicInquiryForm';
 import PropertyImageGallery from '../components/PropertyImageGallery';
 import PublicPropertyHeader from '../components/PublicPropertyHeader';
@@ -28,6 +29,7 @@ import { SEOHead } from '../components/SEOHead';
 import { StructuredData } from '../components/StructuredData';
 import { generatePropertyStructuredData } from '../utils/structuredData';
 import '../styles/print.css';
+
 
 const PublicPropertyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -59,11 +61,9 @@ const PublicPropertyDetailPage: React.FC = () => {
     const fetchCompleteData = async () => {
       setIsLoadingComplete(true);
       try {
-        const response = await fetch(`/api/public/properties/${id}/complete`);
-        if (response.ok) {
-          const data = await response.json();
-          setCompleteData(data);
-        }
+        // publicApiインスタンスを使用（ベースURLが自動的に追加される）
+        const response = await publicApi.get(`/properties/${id}/complete`);
+        setCompleteData(response.data);
       } catch (error) {
         console.error('Failed to fetch complete data:', error);
       } finally {
@@ -81,13 +81,11 @@ const PublicPropertyDetailPage: React.FC = () => {
     const fetchPanoramaUrl = async () => {
       setIsLoadingPanorama(true);
       try {
-        const response = await fetch(`/api/public/properties/${property.property_number}/panorama-url`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.panoramaUrl) {
-            setPanoramaUrl(data.panoramaUrl);
-            console.log('Panorama URL loaded:', data.panoramaUrl);
-          }
+        // publicApiインスタンスを使用
+        const response = await publicApi.get(`/properties/${property.property_number}/panorama-url`);
+        if (response.data.success && response.data.panoramaUrl) {
+          setPanoramaUrl(response.data.panoramaUrl);
+          console.log('Panorama URL loaded:', response.data.panoramaUrl);
         }
       } catch (error) {
         console.error('Failed to fetch panorama URL:', error);
@@ -104,33 +102,24 @@ const PublicPropertyDetailPage: React.FC = () => {
     
     setIsGeneratingPdf(true);
     try {
-      const response = await fetch(
-        `/api/public/properties/${property.property_number}/estimate-pdf`,
-        { method: 'POST' }
-      );
+      // publicApiインスタンスを使用
+      const response = await publicApi.post(`/properties/${property.property_number}/estimate-pdf`);
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (mode === 'preview') {
-          // プレビュー：新しいタブで開く
-          window.open(data.pdfUrl, '_blank');
-        } else {
-          // ダウンロード：ファイルとしてダウンロード
-          const link = document.createElement('a');
-          link.href = data.pdfUrl;
-          link.download = `概算書_${property.property_number}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+      if (mode === 'preview') {
+        // プレビュー：新しいタブで開く
+        window.open(response.data.pdfUrl, '_blank');
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || '概算書の生成に失敗しました');
+        // ダウンロード：ファイルとしてダウンロード
+        const link = document.createElement('a');
+        link.href = response.data.pdfUrl;
+        link.download = `概算書_${property.property_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate estimate PDF:', error);
-      alert('概算書の生成に失敗しました');
+      alert(error.response?.data?.message || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);
     }
