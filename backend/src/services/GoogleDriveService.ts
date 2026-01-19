@@ -46,7 +46,14 @@ export class GoogleDriveService extends BaseRepository {
       // 1. 環境変数から直接読み込み（Vercel用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         console.log('📝 Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
-        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        try {
+          keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
+        } catch (parseError: any) {
+          console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
+          console.error('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
+          throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
+        }
       } 
       // 2. ファイルから読み込み（ローカル環境用）
       else {
@@ -71,6 +78,7 @@ export class GoogleDriveService extends BaseRepository {
       console.log('✅ Google Drive Service Account initialized');
     } catch (error: any) {
       console.error('❌ Failed to initialize service account:', error.message);
+      console.error('Error stack:', error.stack);
     }
   }
 

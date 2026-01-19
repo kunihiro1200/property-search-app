@@ -112,10 +112,16 @@ app.get('/api/public/properties', async (req, res) => {
     });
   } catch (error: any) {
     console.error('❌ Error fetching properties:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
     res.status(500).json({ 
       success: false, 
-      error: error.message,
-      details: 'Failed to fetch properties from database'
+      error: error.message || 'Failed to fetch properties',
+      details: 'Failed to fetch properties from database',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -294,12 +300,13 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     console.log(`📂 Property found: ${property.property_number}, storage_location: ${property.storage_location || 'なし'}`);
 
     // GoogleDriveServiceを使用して画像を取得
-    const driveService = new GoogleDriveService();
-    
-    const imageData = await driveService.getImagesFromAthomePublicFolder(
-      property.storage_location,
-      property.property_number
-    );
+    try {
+      const driveService = new GoogleDriveService();
+      
+      const imageData = await driveService.getImagesFromAthomePublicFolder(
+        property.storage_location,
+        property.property_number
+      );
 
     // 画像データをフロントエンドが期待する形式に変換
     // プロキシエンドポイントを使用してバックエンド経由で画像を取得
@@ -310,22 +317,31 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     
     console.log(`🔗 Using base URL: ${baseUrl}`);
     
-    const images = imageData.map((img) => ({
-      id: img.id,
-      url: `${baseUrl}/api/public/images/proxy/${img.id}`,
-      fullImageUrl: `${baseUrl}/api/public/images/proxy/${img.id}`,
-      thumbnailUrl: `${baseUrl}/api/public/images/proxy/${img.id}?thumbnail=true`,
-      name: img.name,
-      isHidden: false
-    }));
+      const images = imageData.map((img) => ({
+        id: img.id,
+        url: `${baseUrl}/api/public/images/proxy/${img.id}`,
+        fullImageUrl: `${baseUrl}/api/public/images/proxy/${img.id}`,
+        thumbnailUrl: `${baseUrl}/api/public/images/proxy/${img.id}?thumbnail=true`,
+        name: img.name,
+        isHidden: false
+      }));
 
-    console.log(`✅ Found ${images.length} images for ${propertyIdentifier} (${property.property_number})`);
+      console.log(`✅ Found ${images.length} images for ${propertyIdentifier} (${property.property_number})`);
 
-    res.json({ 
-      success: true, 
-      images: images,
-      hiddenImages: [] // 公開サイトでは非表示画像なし
-    });
+      res.json({ 
+        success: true, 
+        images: images,
+        hiddenImages: [] // 公開サイトでは非表示画像なし
+      });
+    } catch (driveError: any) {
+      console.error('❌ Error fetching images from Google Drive:', driveError);
+      // 画像取得に失敗しても空配列を返す（エラーにしない）
+      res.json({ 
+        success: true, 
+        images: [],
+        hiddenImages: []
+      });
+    }
   } catch (error: any) {
     console.error('❌ Error fetching property images:', error);
     res.status(500).json({ 
@@ -350,6 +366,7 @@ app.get('/api/public/images/proxy/:fileId', async (req, res) => {
     const imageData = await driveService.getImageData(fileId);
     
     if (!imageData) {
+      console.error(`❌ Image not found: ${fileId}`);
       return res.status(404).json({ 
         success: false, 
         error: 'Image not found'
@@ -372,9 +389,14 @@ app.get('/api/public/images/proxy/:fileId', async (req, res) => {
     console.log(`✅ Image proxied successfully: ${fileId}`);
   } catch (error: any) {
     console.error('❌ Error proxying image:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
     res.status(500).json({ 
       success: false, 
-      error: error.message,
+      error: error.message || 'Failed to proxy image from Google Drive',
       details: 'Failed to proxy image from Google Drive'
     });
   }
