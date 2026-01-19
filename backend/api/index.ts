@@ -15,6 +15,9 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Google Drive サービスの初期化
+const googleDriveService = new GoogleDriveService();
+
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -139,7 +142,8 @@ app.get('/api/public/properties', async (req, res) => {
         
         return {
           ...property,
-          images
+          image_url: images.length > 0 ? images[0] : null, // フロントエンドが期待するフィールド名
+          images // 詳細画面用に配列も保持
         };
       })
     );
