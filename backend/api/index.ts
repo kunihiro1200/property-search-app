@@ -5,8 +5,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
+
+// Supabase クライアントの初期化
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Middleware
 app.use(helmet());
@@ -33,16 +39,33 @@ app.get('/api/health', (_req, res) => {
 // テスト用の簡単なエンドポイント
 app.get('/api/public/properties', async (_req, res) => {
   try {
+    console.log('🔍 Fetching public properties from database...');
+    
+    // データベースから公開物件を取得
+    const { data: properties, error } = await supabase
+      .from('property_listings')
+      .select('*')
+      .eq('atbb_status', '公開中')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
+
+    console.log(`✅ Found ${properties?.length || 0} public properties`);
+
     res.json({ 
       success: true, 
-      message: 'API is working!',
-      properties: []
+      properties: properties || [],
+      count: properties?.length || 0
     });
   } catch (error: any) {
-    console.error('Error:', error);
+    console.error('❌ Error fetching properties:', error);
     res.status(500).json({ 
       success: false, 
-      error: error.message 
+      error: error.message,
+      details: 'Failed to fetch properties from database'
     });
   }
 });
