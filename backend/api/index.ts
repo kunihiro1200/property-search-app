@@ -36,7 +36,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// テスト用の簡単なエンドポイント
+// 公開物件一覧取得
 app.get('/api/public/properties', async (_req, res) => {
   try {
     console.log('🔍 Fetching public properties from database...');
@@ -66,6 +66,90 @@ app.get('/api/public/properties', async (_req, res) => {
       success: false, 
       error: error.message,
       details: 'Failed to fetch properties from database'
+    });
+  }
+});
+
+// 公開物件詳細取得
+app.get('/api/public/properties/:propertyNumber', async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    console.log(`🔍 Fetching property details for: ${propertyNumber}`);
+    
+    // データベースから物件詳細を取得
+    const { data: property, error } = await supabase
+      .from('property_listings')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .eq('atbb_status', '公開中')
+      .single();
+
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
+
+    if (!property) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Property not found'
+      });
+    }
+
+    console.log(`✅ Found property: ${propertyNumber}`);
+
+    res.json({ 
+      success: true, 
+      property
+    });
+  } catch (error: any) {
+    console.error('❌ Error fetching property details:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Failed to fetch property details from database'
+    });
+  }
+});
+
+// 公開物件の完全な詳細情報取得（画像含む）
+app.get('/api/public/properties/:propertyNumber/complete', async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    console.log(`🔍 Fetching complete property details for: ${propertyNumber}`);
+    
+    // データベースから物件詳細を取得
+    const { data: property, error } = await supabase
+      .from('property_listings')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .eq('atbb_status', '公開中')
+      .single();
+
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
+
+    if (!property) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Property not found'
+      });
+    }
+
+    console.log(`✅ Found complete property details: ${propertyNumber}`);
+
+    res.json({ 
+      success: true, 
+      property
+    });
+  } catch (error: any) {
+    console.error('❌ Error fetching complete property details:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Failed to fetch complete property details from database'
     });
   }
 });
