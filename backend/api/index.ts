@@ -6,7 +6,8 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleDriveService } from '../src/services/GoogleDriveService';
+import { PropertyListingService } from '../src/services/PropertyListingService';
+import { PropertyImageService } from '../src/services/PropertyImageService';
 
 const app = express();
 
@@ -15,8 +16,20 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Google Drive サービスの初期化
-const googleDriveService = new GoogleDriveService();
+// PropertyListingServiceの初期化（ローカル環境と同じ）
+const propertyListingService = new PropertyListingService();
+
+// PropertyImageServiceの設定を環境変数から読み込む
+const folderIdCacheTTLMinutes = parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10);
+const searchTimeoutSeconds = parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10);
+const maxSubfoldersToSearch = parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10);
+
+const propertyImageService = new PropertyImageService(
+  60, // cacheTTLMinutes（画像キャッシュ）
+  folderIdCacheTTLMinutes,
+  searchTimeoutSeconds,
+  maxSubfoldersToSearch
+);
 
 // Middleware
 app.use(helmet());
@@ -59,104 +72,54 @@ app.get('/api/public/properties', async (req, res) => {
     
     console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly });
     
-    // クエリを構築
-    let query = supabase
-      .from('property_listings')
-      .select('*', { count: 'exact' });
-    
-    // フィルター条件を適用
-    if (propertyNumber) {
-      query = query.ilike('property_number', `%${propertyNumber}%`);
+    // 価格範囲のバリデーション
+    let priceFilter: { min?: number; max?: number } | undefined;
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      priceFilter = {};
+      if (minPrice !== undefined) {
+        priceFilter.min = minPrice * 10000; // 万円を円に変換
+      }
+      if (maxPrice !== undefined) {
+        priceFilter.max = maxPrice * 10000; // 万円を円に変換
+      }
     }
     
-    if (location) {
-      query = query.or(`address.ilike.%${location}%,display_address.ilike.%${location}%`);
-    }
-    
+    // 物件タイプフィルター
+    let propertyTypeFilter: string[] | undefined;
     if (types) {
-      const typeArray = types.split(',');
-      query = query.in('property_type', typeArray);
+      propertyTypeFilter = types.split(',');
     }
     
-    if (minPrice !== undefined) {
-      query = query.gte('price', minPrice * 10000); // 万円を円に変換
+    // 築年数範囲のバリデーション
+    let buildingAgeRange: { min?: number; max?: number } | undefined;
+    if (minAge !== undefined || maxAge !== undefined) {
+      buildingAgeRange = {};
+      if (minAge !== undefined) {
+        buildingAgeRange.min = minAge;
+      }
+      if (maxAge !== undefined) {
+        buildingAgeRange.max = maxAge;
+      }
     }
     
-    if (maxPrice !== undefined) {
-      query = query.lte('price', maxPrice * 10000); // 万円を円に変換
-    }
-    
-    if (minAge !== undefined) {
-      query = query.gte('building_age', minAge);
-    }
-    
-    if (maxAge !== undefined) {
-      query = query.lte('building_age', maxAge);
-    }
-    
-    if (showPublicOnly) {
-      query = query.eq('atbb_status', '公開中');
-    }
-    
-    // ページネーションを適用
-    query = query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    // PropertyListingServiceを使用（ローカル環境と同じ）
+    const result = await propertyListingService.getPublicProperties({
+      limit,
+      offset,
+      propertyType: propertyTypeFilter,
+      priceRange: priceFilter,
+      location,
+      propertyNumber,
+      buildingAgeRange,
+      showPublicOnly,
+    });
 
-    const { data: properties, error, count } = await query;
-
-    if (error) {
-      console.error('❌ Database error:', error);
-      throw error;
-    }
-
-    console.log(`✅ Found ${properties?.length || 0} properties (total: ${count})`);
-
-    // 各物件の最初の画像を動的に取得
-    const transformedProperties = await Promise.all(
-      (properties || []).map(async (property) => {
-        let images: string[] = [];
-        
-        try {
-          // Google Driveから画像を取得
-          const propertyImages = await googleDriveService.getImagesFromAthomePublicFolder(
-            property.property_number,
-            property.storage_location
-          );
-          
-          // 最初の1枚のみを使用（一覧表示用）
-          if (propertyImages.length > 0) {
-            const firstImage = propertyImages[0];
-            const baseUrl = process.env.VERCEL_URL 
-              ? `https://${process.env.VERCEL_URL}`
-              : process.env.NODE_ENV === 'production'
-              ? 'https://baikyaku-property-site3.vercel.app'
-              : 'http://localhost:3000';
-            
-            images = [`${baseUrl}/api/public/images/proxy/${firstImage.id}`];
-          }
-        } catch (error) {
-          console.error(`⚠️ Failed to fetch images for ${property.property_number}:`, error);
-          // エラーが発生しても処理を続行（画像なしで表示）
-        }
-        
-        return {
-          ...property,
-          image_url: images.length > 0 ? images[0] : null, // フロントエンドが期待するフィールド名
-          images // 詳細画面用に配列も保持
-        };
-      })
-    );
+    console.log(`✅ Found ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
 
     res.json({ 
       success: true, 
-      properties: transformedProperties || [],
-      pagination: {
-        total: count || 0,
-        page: Math.floor(offset / limit) + 1,
-        limit: limit,
-        totalPages: Math.ceil((count || 0) / limit)
-      }
+      properties: result.properties || [],
+      pagination: result.pagination
     });
   } catch (error: any) {
     console.error('❌ Error fetching properties:', error);
