@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
+import { GoogleDriveService } from '../src/services/GoogleDriveService';
 
 const app = express();
 
@@ -323,7 +324,6 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     console.log(`📂 Property found: ${property.property_number}, storage_location: ${property.storage_location || 'なし'}`);
 
     // GoogleDriveServiceを使用して画像を取得
-    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImagesFromAthomePublicFolder(
@@ -373,7 +373,6 @@ app.get('/api/public/images/proxy/:fileId', async (req, res) => {
     console.log(`🖼️ Proxying image: ${fileId} (thumbnail: ${thumbnail})`);
     
     // GoogleDriveServiceを使用して画像データを取得
-    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
