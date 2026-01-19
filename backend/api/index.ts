@@ -37,22 +37,76 @@ app.get('/api/health', (_req, res) => {
 });
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
-app.get('/api/public/properties', async (_req, res) => {
+app.get('/api/public/properties', async (req, res) => {
   try {
-    console.log('🔍 Fetching all properties from database...');
+    console.log('🔍 Fetching properties from database...');
     
-    // データベースから全ての物件を取得（atbb_statusでフィルタリングしない）
-    const { data: properties, error } = await supabase
+    // クエリパラメータを取得
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const propertyNumber = req.query.propertyNumber as string;
+    const location = req.query.location as string;
+    const types = req.query.types as string;
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+    const minAge = req.query.minAge ? parseInt(req.query.minAge as string) : undefined;
+    const maxAge = req.query.maxAge ? parseInt(req.query.maxAge as string) : undefined;
+    const showPublicOnly = req.query.showPublicOnly === 'true';
+    
+    console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly });
+    
+    // クエリを構築
+    let query = supabase
       .from('property_listings')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' });
+    
+    // フィルター条件を適用
+    if (propertyNumber) {
+      query = query.ilike('property_number', `%${propertyNumber}%`);
+    }
+    
+    if (location) {
+      query = query.or(`address.ilike.%${location}%,display_address.ilike.%${location}%`);
+    }
+    
+    if (types) {
+      const typeArray = types.split(',');
+      query = query.in('property_type', typeArray);
+    }
+    
+    if (minPrice !== undefined) {
+      query = query.gte('price', minPrice * 10000); // 万円を円に変換
+    }
+    
+    if (maxPrice !== undefined) {
+      query = query.lte('price', maxPrice * 10000); // 万円を円に変換
+    }
+    
+    if (minAge !== undefined) {
+      query = query.gte('building_age', minAge);
+    }
+    
+    if (maxAge !== undefined) {
+      query = query.lte('building_age', maxAge);
+    }
+    
+    if (showPublicOnly) {
+      query = query.eq('atbb_status', '公開中');
+    }
+    
+    // ページネーションを適用
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data: properties, error, count } = await query;
 
     if (error) {
       console.error('❌ Database error:', error);
       throw error;
     }
 
-    console.log(`✅ Found ${properties?.length || 0} properties`);
+    console.log(`✅ Found ${properties?.length || 0} properties (total: ${count})`);
 
     // image_urlをimagesに変換
     const transformedProperties = properties?.map(property => {
@@ -73,7 +127,12 @@ app.get('/api/public/properties', async (_req, res) => {
     res.json({ 
       success: true, 
       properties: transformedProperties || [],
-      count: transformedProperties?.length || 0
+      pagination: {
+        total: count || 0,
+        page: Math.floor(offset / limit) + 1,
+        limit: limit,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
     });
   } catch (error: any) {
     console.error('❌ Error fetching properties:', error);

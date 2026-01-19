@@ -22,8 +22,8 @@ import PropertyMapView from '../components/PropertyMapView';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { SEOHead } from '../components/SEOHead';
-import { StructuredData } from '../components/StructuredData';
-import { generatePropertyListStructuredData } from '../utils/structuredData';
+// import { StructuredData } from '../components/StructuredData';
+// import { generatePropertyListStructuredData } from '../utils/structuredData';
 
 
 interface PaginationInfo {
@@ -653,7 +653,7 @@ const PublicPropertiesPage: React.FC = () => {
       />
       
       {/* Structured Data */}
-      <StructuredData data={generatePropertyListStructuredData()} />
+      {/* <StructuredData data={generatePropertyListStructuredData()} /> */}
       
       <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
         {/* ヘッダー */}
