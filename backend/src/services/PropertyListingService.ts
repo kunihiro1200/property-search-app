@@ -390,12 +390,14 @@ export class PropertyListingService {
       }
       
       // 画像取得：image_url → storage_location
-      // 並列処理を5件に制限してパフォーマンスを向上
-      const pLimit = (await import('p-limit')).default;
-      const limit5 = pLimit(5);
+      // 並列処理を5件に制限してパフォーマンスを向上（p-limitを使わない独自実装）
+      const concurrencyLimit = 5;
+      const propertiesWithImages: any[] = [];
       
-      const propertiesWithImages = await Promise.all(
-        (data || []).map((property) => limit5(async () => {
+      for (let i = 0; i < (data || []).length; i += concurrencyLimit) {
+        const batch = (data || []).slice(i, i + concurrencyLimit);
+        const batchResults = await Promise.all(
+          batch.map(async (property) => {
           const googleMapUrl = property.google_map_url || null;
           
           console.log(`[PropertyListingService] Processing ${property.property_number}:`, {
@@ -455,8 +457,10 @@ export class PropertyListingService {
               images: []
             };
           }
-        }))
-      );
+        })
+        );
+        propertiesWithImages.push(...batchResults);
+      }
       
       return { 
         properties: propertiesWithImages, 
