@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/services/PropertyListingService';
 import { PropertyImageService } from '../src/services/PropertyImageService';
+import { GoogleDriveService } from '../src/services/GoogleDriveService';
 
 const app = express();
 
@@ -18,18 +19,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // PropertyListingServiceの初期化（ローカル環境と同じ）
 const propertyListingService = new PropertyListingService();
-
-// PropertyImageServiceの設定を環境変数から読み込む
-const folderIdCacheTTLMinutes = parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10);
-const searchTimeoutSeconds = parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10);
-const maxSubfoldersToSearch = parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10);
-
-const propertyImageService = new PropertyImageService(
-  60, // cacheTTLMinutes（画像キャッシュ）
-  folderIdCacheTTLMinutes,
-  searchTimeoutSeconds,
-  maxSubfoldersToSearch
-);
 
 // Middleware
 app.use(helmet());
