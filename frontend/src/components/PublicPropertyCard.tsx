@@ -128,6 +128,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
           alt={`${property.display_address || property.address}の物件画像`}
           className="property-card-image"
           loading="lazy"
+          crossOrigin="anonymous"
         />
         <Box className="property-card-image-overlay" />
         

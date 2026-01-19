@@ -109,26 +109,40 @@ app.get('/api/public/properties', async (req, res) => {
 
     console.log(`✅ Found ${properties?.length || 0} properties (total: ${count})`);
 
-    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
-    const transformedProperties = properties?.map(property => {
-      let images = [];
-      if (property.image_url) {
+    // 各物件の最初の画像を動的に取得
+    const transformedProperties = await Promise.all(
+      (properties || []).map(async (property) => {
+        let images: string[] = [];
+        
         try {
-          // JSON配列としてパースを試みる
-          images = JSON.parse(property.image_url);
-        } catch (e) {
-          // パースに失敗した場合は単一の文字列として扱う
-          // 空文字列でない場合のみ配列に追加
-          if (property.image_url.trim()) {
-            images = [property.image_url];
+          // Google Driveから画像を取得
+          const propertyImages = await googleDriveService.getImagesFromAthomePublicFolder(
+            property.property_number,
+            property.storage_location
+          );
+          
+          // 最初の1枚のみを使用（一覧表示用）
+          if (propertyImages.length > 0) {
+            const firstImage = propertyImages[0];
+            const baseUrl = process.env.VERCEL_URL 
+              ? `https://${process.env.VERCEL_URL}`
+              : process.env.NODE_ENV === 'production'
+              ? 'https://baikyaku-property-site3.vercel.app'
+              : 'http://localhost:3000';
+            
+            images = [`${baseUrl}/api/public/images/proxy/${firstImage.id}`];
           }
+        } catch (error) {
+          console.error(`⚠️ Failed to fetch images for ${property.property_number}:`, error);
+          // エラーが発生しても処理を続行（画像なしで表示）
         }
-      }
-      return {
-        ...property,
-        images
-      };
-    });
+        
+        return {
+          ...property,
+          images
+        };
+      })
+    );
 
     res.json({ 
       success: true, 
