@@ -516,6 +516,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
                   src={image.fullImageUrl}
                   alt={image.name}
                   loading="lazy"
+                  crossOrigin="anonymous"
                   className="property-gallery-image"
                   style={{
                     width: '100%',
@@ -714,6 +715,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
               component="img"
               src={images[currentIndex].fullImageUrl}
               alt={images[currentIndex].name}
+              crossOrigin="anonymous"
               sx={{
                 maxWidth: '100%',
                 maxHeight: '80vh',
