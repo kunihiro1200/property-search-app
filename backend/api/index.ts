@@ -12,6 +12,15 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 
 const app = express();
 
+// 環境変数のデバッグログ
+console.log('🔍 Environment variables check:', {
+  SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Missing',
+  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? `Set (${process.env.SUPABASE_SERVICE_KEY.length} chars)` : 'Missing',
+  GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? `Set (${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars)` : 'Missing',
+  GOOGLE_SERVICE_ACCOUNT_KEY_PATH: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'Not set',
+  NODE_ENV: process.env.NODE_ENV || 'Not set',
+});
+
 // Supabase クライアントの初期化
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
