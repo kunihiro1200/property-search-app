@@ -183,7 +183,7 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
       });
     }
 
-    console.log(`✅ Found property: ${propertyNumber}`);
+    console.log(`✅ Found property: ${propertyIdentifier} (${property.property_number})`);
 
     // image_urlをimagesに変換（JSON配列または単一文字列に対応）
     let images = [];
@@ -251,7 +251,7 @@ app.get('/api/public/properties/:propertyIdentifier/complete', async (req, res) 
       });
     }
 
-    console.log(`✅ Found complete property details: ${propertyNumber}`);
+    console.log(`✅ Found complete property details: ${propertyIdentifier} (${property.property_number})`);
 
     // image_urlをimagesに変換（JSON配列または単一文字列に対応）
     let images = [];
