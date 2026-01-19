@@ -889,12 +889,12 @@ export class GoogleDriveService extends BaseRepository {
    * 
    * @param storageLocation storage_locationのURL（オプション）
    * @param propertyNumber 物件番号
-   * @returns 画像URL配列
+   * @returns 画像情報配列（id, name, thumbnailUrl, fullImageUrl）
    */
   async getImagesFromAthomePublicFolder(
     storageLocation: string | null,
     propertyNumber: string
-  ): Promise<string[]> {
+  ): Promise<Array<{id: string; name: string; thumbnailUrl: string; fullImageUrl: string}>> {
     try {
       let parentFolderId: string | null = null;
       let isSharedDrive = false;
@@ -931,8 +931,19 @@ export class GoogleDriveService extends BaseRepository {
       console.log(`📸 Getting images from "athome公開" folder: ${athomeFolderId}`);
       const images = await this.listImagesWithThumbnails(athomeFolderId);
 
-      // 5. 画像URLを生成（Google Drive直接表示用）
-      const imageUrls = images.map(img => `https://drive.google.com/uc?export=view&id=${img.id}`);
+      // 5. 画像URLを生成（サムネイルとフルサイズの両方）
+      const imageUrls = images.map(img => {
+        // サムネイルURLがあればそれを使用、なければフルサイズURL
+        const thumbnailUrl = img.thumbnailLink || `https://drive.google.com/thumbnail?id=${img.id}&sz=w400`;
+        const fullImageUrl = `https://drive.google.com/uc?export=view&id=${img.id}`;
+        
+        return {
+          id: img.id,
+          name: img.name,
+          thumbnailUrl,
+          fullImageUrl,
+        };
+      });
 
       console.log(`✅ Found ${imageUrls.length} images in "athome公開" folder`);
       return imageUrls;

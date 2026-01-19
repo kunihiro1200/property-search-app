@@ -77,7 +77,17 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
 
   // 非表示画像を含めて取得するかどうか（管理者モードまたは非表示画像表示モード）
   const includeHidden = canHide || showHiddenImages;
+  
+  // デバッグログ
+  console.log('PropertyImageGallery - propertyId:', propertyId);
+  console.log('PropertyImageGallery - includeHidden:', includeHidden);
+  
   const { data, isLoading, isError, refetch } = usePropertyImages(propertyId, includeHidden);
+  
+  // デバッグログ
+  console.log('PropertyImageGallery - data:', data);
+  console.log('PropertyImageGallery - isLoading:', isLoading);
+  console.log('PropertyImageGallery - isError:', isError);
 
   // APIから取得した非表示画像リストとローカル状態をマージ
   const hiddenImageIds = useMemo(() => {

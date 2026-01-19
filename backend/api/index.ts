@@ -326,17 +326,18 @@ app.get('/api/public/properties/:propertyIdentifier/images', async (req, res) =>
     const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
     const driveService = new GoogleDriveService();
     
-    const imageUrls = await driveService.getImagesFromAthomePublicFolder(
+    const imageData = await driveService.getImagesFromAthomePublicFolder(
       property.storage_location,
       property.property_number
     );
 
-    // 画像URLをフロントエンドが期待する形式に変換
-    const images = imageUrls.map((url, index) => ({
-      id: `${property.property_number}-${index}`,
-      url: url,
-      fullImageUrl: url, // フロントエンドが期待するプロパティ名
-      name: `画像${index + 1}`,
+    // 画像データをフロントエンドが期待する形式に変換
+    const images = imageData.map((img) => ({
+      id: img.id,
+      url: img.fullImageUrl,
+      fullImageUrl: img.fullImageUrl,
+      thumbnailUrl: img.thumbnailUrl,
+      name: img.name,
       isHidden: false
     }));
 

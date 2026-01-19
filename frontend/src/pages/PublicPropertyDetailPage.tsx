@@ -51,6 +51,11 @@ const PublicPropertyDetailPage: React.FC = () => {
 
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
+  // デバッグログ
+  console.log('PublicPropertyDetailPage - id:', id);
+  console.log('PublicPropertyDetailPage - property:', property);
+  console.log('PublicPropertyDetailPage - property.property_number:', property?.property_number);
+
   // 成約済み判定
   const isSold = property ? getBadgeType(property.atbb_status) === 'sold' : false;
 
@@ -332,12 +337,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                   物件画像
                 </Typography>
                 
-                <PropertyImageGallery
-                  propertyId={property.id}
-                  canDelete={false}
-                  canHide={false}
-                  showHiddenImages={false}
-                />
+                {property.property_number && (
+                  <PropertyImageGallery
+                    propertyId={property.property_number}
+                    canDelete={false}
+                    canHide={false}
+                    showHiddenImages={false}
+                  />
+                )}
               </Paper>
 
               {/* 物件基本情報 */}

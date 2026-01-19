@@ -63,8 +63,8 @@ export const usePublicProperty = (
       if (!propertyId) {
         throw new Error('Property ID is required');
       }
-      const response = await publicApi.get<PublicProperty>(`/api/public/properties/${propertyId}`);
-      return response.data;
+      const response = await publicApi.get<{success: boolean; property: PublicProperty}>(`/api/public/properties/${propertyId}`);
+      return response.data.property; // response.data.propertyを返す
     },
     enabled: !!propertyId, // propertyIdが存在する場合のみクエリを実行
     staleTime: 5 * 60 * 1000, // 5分間はキャッシュを使用
