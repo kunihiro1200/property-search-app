@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // 公開API用のaxiosインスタンス（認証不要）
 const publicApi = axios.create({
-  baseURL: `${API_BASE_URL}/api/public`,
+  baseURL: API_BASE_URL, // /api/publicは各エンドポイントで指定
   headers: {
     'Content-Type': 'application/json',
   },
@@ -54,7 +54,7 @@ export default publicApi;
  */
 export const getFavoriteComment = async (propertyId: string) => {
   try {
-    const response = await publicApi.get(`/properties/${propertyId}/favorite-comment`);
+    const response = await publicApi.get(`/api/public/properties/${propertyId}/favorite-comment`);
     return response.data;
   } catch (error) {
     console.error('Error fetching favorite comment:', error);

@@ -42,7 +42,7 @@ export const usePublicProperties = (
       if (filters.limit) params.append('limit', filters.limit.toString());
 
       const response = await publicApi.get<PublicPropertyListResponse>(
-        `/properties?${params.toString()}`
+        `/api/public/properties?${params.toString()}`
       );
       return response.data;
     },
@@ -63,7 +63,7 @@ export const usePublicProperty = (
       if (!propertyId) {
         throw new Error('Property ID is required');
       }
-      const response = await publicApi.get<PublicProperty>(`/properties/${propertyId}`);
+      const response = await publicApi.get<PublicProperty>(`/api/public/properties/${propertyId}`);
       return response.data;
     },
     enabled: !!propertyId, // propertyIdが存在する場合のみクエリを実行
@@ -86,7 +86,7 @@ export const usePropertyImages = (
         throw new Error('Property ID is required');
       }
       const params = includeHidden ? '?includeHidden=true' : '';
-      const response = await publicApi.get<PropertyImagesResult>(`/properties/${propertyId}/images${params}`);
+      const response = await publicApi.get<PropertyImagesResult>(`/api/public/properties/${propertyId}/images${params}`);
       return response.data;
     },
     enabled: !!propertyId,
@@ -101,7 +101,7 @@ export const useSubmitInquiry = () => {
   return useMutation<PropertyInquiryResponse, ApiError, PropertyInquiry>({
     mutationFn: async (inquiry: PropertyInquiry) => {
       const response = await publicApi.post<PropertyInquiryResponse>(
-        '/inquiries',
+        '/api/public/inquiries',
         inquiry
       );
       return response.data;

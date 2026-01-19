@@ -62,7 +62,7 @@ const PublicPropertyDetailPage: React.FC = () => {
       setIsLoadingComplete(true);
       try {
         // publicApiインスタンスを使用（ベースURLが自動的に追加される）
-        const response = await publicApi.get(`/properties/${id}/complete`);
+        const response = await publicApi.get(`/api/public/properties/${id}/complete`);
         setCompleteData(response.data);
       } catch (error) {
         console.error('Failed to fetch complete data:', error);
@@ -82,7 +82,7 @@ const PublicPropertyDetailPage: React.FC = () => {
       setIsLoadingPanorama(true);
       try {
         // publicApiインスタンスを使用
-        const response = await publicApi.get(`/properties/${property.property_number}/panorama-url`);
+        const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
         if (response.data.success && response.data.panoramaUrl) {
           setPanoramaUrl(response.data.panoramaUrl);
           console.log('Panorama URL loaded:', response.data.panoramaUrl);
@@ -103,7 +103,7 @@ const PublicPropertyDetailPage: React.FC = () => {
     setIsGeneratingPdf(true);
     try {
       // publicApiインスタンスを使用
-      const response = await publicApi.post(`/properties/${property.property_number}/estimate-pdf`);
+      const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
       
       if (mode === 'preview') {
         // プレビュー：新しいタブで開く
