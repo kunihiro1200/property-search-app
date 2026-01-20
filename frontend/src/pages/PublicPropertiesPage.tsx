@@ -880,8 +880,25 @@ const PublicPropertiesPage: React.FC = () => {
               )
             ) : (
               <>
+                {/* ローディング表示（ページ遷移中） */}
+                {filterLoading && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    py: 8,
+                    gap: 2
+                  }}>
+                    <CircularProgress size={48} />
+                    <Typography color="text.secondary" variant="h6">
+                      次のページを読み込み中...
+                    </Typography>
+                  </Box>
+                )}
+                
                 {/* 物件グリッド */}
-                <Grid container spacing={3} id="property-grid" ref={propertyGridRef}>
+                <Grid container spacing={3} id="property-grid" ref={propertyGridRef} sx={{ opacity: filterLoading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
                   {properties.map((property, index) => {
                     // 現在のナビゲーション状態を構築
                     const navigationState: Omit<NavigationState, 'scrollPosition'> = {
@@ -938,7 +955,8 @@ const PublicPropertiesPage: React.FC = () => {
                           }
                         }, 100);
                       }}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 1 || filterLoading}
+                      startIcon={filterLoading && currentPage > 1 ? <CircularProgress size={16} /> : undefined}
                     >
                       前へ
                     </Button>
@@ -963,7 +981,8 @@ const PublicPropertiesPage: React.FC = () => {
                           }
                         }, 100);
                       }}
-                      disabled={currentPage === pagination.totalPages}
+                      disabled={currentPage === pagination.totalPages || filterLoading}
+                      endIcon={filterLoading && currentPage < pagination.totalPages ? <CircularProgress size={16} /> : undefined}
                     >
                       次へ
                     </Button>
