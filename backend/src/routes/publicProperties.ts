@@ -35,19 +35,19 @@ const athomeDataService = new AthomeDataService();
 const propertyService = new PropertyService();
 const panoramaUrlService = new PanoramaUrlService();
 
-// InquirySyncServiceのインスタンスを作成
-const inquirySyncService = new InquirySyncService({
-  spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-  sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-  serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-  maxRetries: 3,
-  retryDelayMs: 1000,
-});
+// InquirySyncServiceのインスタンス化をコメントアウト（Vercelでの起動失敗の原因調査）
+// const inquirySyncService = new InquirySyncService({
+//   spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+//   sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+//   serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+//   maxRetries: 3,
+//   retryDelayMs: 1000,
+// });
 
-// 認証を実行
-inquirySyncService.authenticate().catch(error => {
-  console.error('[publicProperties] InquirySyncService認証エラー:', error);
-});
+// 認証は問い合わせ送信時に実行（遅延初期化）
+// inquirySyncService.authenticate().catch(error => {
+//   console.error('[publicProperties] InquirySyncService認証エラー:', error);
+// });
 
 // Rate limiter: 3 requests per hour per IP for inquiries
 const inquiryRateLimiter = createRateLimiter({
@@ -80,6 +80,7 @@ router.get('/properties', async (req: Request, res: Response) => {
       maxAge,
       propertyNumber,
       showPublicOnly, // 公開中のみ表示フィルター
+      withCoordinates, // 座標がある物件のみ取得（地図表示用）
     } = req.query;
 
     // パラメータのバリデーション
@@ -191,6 +192,7 @@ router.get('/properties', async (req: Request, res: Response) => {
       propertyNumber: propertyNumberFilter,
       buildingAgeRange: buildingAgeRange,
       showPublicOnly: showPublicOnly === 'true', // 公開中のみ表示フィルター
+      withCoordinates: withCoordinates === 'true', // 座標がある物件のみ取得（地図表示用）
     });
 
     // フィルタメタデータを含めてレスポンス
@@ -213,6 +215,77 @@ router.get('/properties', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching public properties:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 物件詳細の全データを一度に取得（パフォーマンス最適化）
+// ⚠️ 重要: このルートは /properties/:identifier より前に定義する必要があります
+router.get('/properties/:id/complete', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`[GET /api/public/properties/${id}/complete] Fetching complete property data`);
+    
+    // 物件情報を取得
+    const property = await propertyListingService.getPublicPropertyById(id);
+    
+    if (!property) {
+      res.status(404).json({ message: 'Property not found' });
+      return;
+    }
+    
+    // データベースから追加詳細情報を取得（スキーマキャッシュ問題を回避）
+    console.log(`[Complete API] Fetching complete property details for: ${id}`);
+    console.log(`[Complete API] Property number: ${property.property_number}`);
+    
+    // PropertyDetailsServiceを直接使用
+    const { PropertyDetailsService } = await import('../services/PropertyDetailsService');
+    const propertyDetailsService = new PropertyDetailsService();
+    
+    let dbDetails;
+    try {
+      dbDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
+      console.log(`[Complete API] PropertyDetailsService returned:`, {
+        has_favorite_comment: !!dbDetails.favorite_comment,
+        has_recommended_comments: !!dbDetails.recommended_comments,
+        has_athome_data: !!dbDetails.athome_data,
+        has_property_about: !!dbDetails.property_about
+      });
+    } catch (error: any) {
+      console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
+      dbDetails = {
+        property_number: property.property_number,
+        favorite_comment: null,
+        recommended_comments: null,
+        athome_data: null,
+        property_about: null
+      };
+    }
+    
+    // 決済日を取得（成約済みの場合のみ）
+    let settlementDate = null;
+    const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
+    if (isSold) {
+      try {
+        settlementDate = await propertyService.getSettlementDate(property.property_number);
+      } catch (err) {
+        console.error('[Complete API] Settlement date error:', err);
+      }
+    }
+    
+    // レスポンスを返す（データベースのデータを直接使用）
+    res.json({
+      property,
+      favoriteComment: dbDetails.favorite_comment,
+      recommendedComments: dbDetails.recommended_comments,
+      athomeData: dbDetails.athome_data,
+      settlementDate,
+      propertyAbout: dbDetails.property_about
+    });
+    
+  } catch (error: any) {
+    console.error('[GET /api/public/properties/:id/complete] Error:', error);
+    res.status(500).json({ message: 'Failed to fetch complete property data' });
   }
 });
 
@@ -242,7 +315,7 @@ router.get('/properties/:identifier', async (req: Request, res: Response): Promi
 
     // キャッシュヘッダーを設定（10分間）
     res.set('Cache-Control', 'public, max-age=600');
-    res.json(property);
+    res.json({ success: true, property });
   } catch (error: any) {
     console.error('Error fetching public property:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -298,118 +371,6 @@ router.post('/properties/:propertyNumber/estimate-pdf', async (req: Request, res
       error: 'Internal server error',
       message: error.message || '概算書の生成に失敗しました'
     });
-  }
-});
-
-// 物件詳細の全データを一度に取得（パフォーマンス最適化）
-router.get('/properties/:id/complete', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    
-    console.log(`[GET /api/public/properties/${id}/complete] Fetching complete property data`);
-    
-    // 物件情報を取得
-    const property = await propertyListingService.getPublicPropertyById(id);
-    
-    if (!property) {
-      res.status(404).json({ message: 'Property not found' });
-      return;
-    }
-    
-    // データベースから追加詳細情報を取得（スキーマキャッシュ問題を回避）
-    const dbDetails = await propertyListingService.getPropertyDetails(property.property_number);
-    
-    // データベースに保存されているデータを優先的に使用
-    // データベースにない場合のみスプレッドシートから取得（フォールバック）
-    const [favoriteComment, recommendedComment, athomeData, settlementDate, propertyAbout] = await Promise.all([
-      // お気に入り文言（データベース優先）
-      (async () => {
-        if (dbDetails.favorite_comment) {
-          console.log('[Complete API] Using favorite_comment from database');
-          return { comment: dbDetails.favorite_comment, propertyType: property.property_type };
-        }
-        console.log('[Complete API] Fetching favorite_comment from spreadsheet (fallback)');
-        return favoriteCommentService.getFavoriteComment(id).catch(err => {
-          console.error('[Complete API] Favorite comment error:', err);
-          return { comment: null, propertyType: property.property_type };
-        });
-      })(),
-      
-      // おすすめコメント（データベース優先）
-      (async () => {
-        if (dbDetails.recommended_comments) {
-          console.log('[Complete API] Using recommended_comments from database');
-          return { comments: dbDetails.recommended_comments, propertyType: property.property_type };
-        }
-        console.log('[Complete API] Fetching recommended_comments from spreadsheet (fallback)');
-        return recommendedCommentService.getRecommendedComment(
-          property.property_number,
-          property.property_type,
-          id
-        ).catch(err => {
-          console.error('[Complete API] Recommended comment error:', err);
-          return { comments: [], propertyType: property.property_type };
-        });
-      })(),
-      
-      // Athome情報（データベース優先）
-      (async () => {
-        if (dbDetails.athome_data) {
-          console.log('[Complete API] Using athome_data from database');
-          return { data: dbDetails.athome_data, propertyType: property.property_type, cached: true };
-        }
-        console.log('[Complete API] Fetching athome_data from spreadsheet (fallback)');
-        return athomeDataService.getAthomeData(
-          property.property_number,
-          property.property_type,
-          property.storage_location
-        ).catch(err => {
-          console.error('[Complete API] Athome data error:', err);
-          return { data: [], propertyType: property.property_type, cached: false };
-        });
-      })(),
-      
-      // 決済日（成約済みの場合のみ）
-      (async () => {
-        const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
-        if (!isSold) return null;
-        
-        try {
-          const result = await propertyService.getSettlementDate(property.property_number);
-          return result;
-        } catch (err) {
-          console.error('[Complete API] Settlement date error:', err);
-          return null;
-        }
-      })(),
-      
-      // こちらの物件について（データベース優先）
-      (async () => {
-        if (dbDetails.property_about) {
-          console.log('[Complete API] Using property_about from database');
-          return dbDetails.property_about;
-        }
-        console.log('[Complete API] Fetching property_about from spreadsheet (fallback)');
-        return propertyService.getPropertyAbout(property.property_number).catch(err => {
-          console.error('[Complete API] Property about error:', err);
-          return null;
-        });
-      })()
-    ]);
-    
-    // レスポンスを返す
-    res.json({
-      property,
-      favoriteComment: favoriteComment.comment,
-      recommendedComments: recommendedComment.comments,
-      athomeData: athomeData.data,
-      settlementDate,
-      propertyAbout
-    });
-    
-  } catch (error: any) {
-    console.error('[GET /api/public/properties/:id/complete] Error:', error);
-    res.status(500).json({ message: 'Failed to fetch complete property data' });
   }
 });
 
@@ -613,8 +574,17 @@ router.get('/properties/:id/images', async (req: Request, res: Response): Promis
     const { id } = req.params;
     const { includeHidden = 'false' } = req.query;
 
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(id);
+
     // 物件情報を取得
-    const property = await propertyListingService.getPublicPropertyById(id);
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(id);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(id);
+    }
 
     if (!property) {
       res.status(404).json({ error: 'Property not found' });
@@ -624,7 +594,7 @@ router.get('/properties/:id/images', async (req: Request, res: Response): Promis
     // storage_locationを優先的に使用
     let storageUrl = property.storage_location;
     
-    // storage_locationが空の場合、property_details.athome_dataから取得
+    // storage_locationが空の場合、property.athome_dataから取得
     if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
       // athome_dataの最初の要素がフォルダURL
       storageUrl = property.athome_data[0];
@@ -1113,6 +1083,52 @@ router.get('/properties/:propertyNumber/panorama-url', async (req: Request, res:
       success: false,
       error: 'Internal server error',
       message: error.message || 'パノラマURLの取得に失敗しました',
+    });
+  }
+});
+
+// 環境変数診断エンドポイント（開発用）
+router.get('/debug/env-check', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const envCheck = {
+      supabase_url: !!process.env.SUPABASE_URL,
+      supabase_service_role_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      supabase_service_key: !!process.env.SUPABASE_SERVICE_KEY,
+      node_env: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json(envCheck);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// データベース接続テスト（開発用）
+router.get('/debug/db-test/:propertyNumber', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { propertyNumber } = req.params;
+    const { PropertyDetailsService } = await import('../services/PropertyDetailsService');
+    const service = new PropertyDetailsService();
+    
+    const details = await service.getPropertyDetails(propertyNumber);
+    
+    res.json({
+      success: true,
+      propertyNumber,
+      hasData: {
+        property_about: !!details.property_about,
+        recommended_comments: !!details.recommended_comments,
+        athome_data: !!details.athome_data,
+        favorite_comment: !!details.favorite_comment
+      },
+      details
+    });
+  } catch (error: any) {
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      stack: error.stack
     });
   }
 });

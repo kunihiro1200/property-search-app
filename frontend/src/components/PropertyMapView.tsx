@@ -213,7 +213,6 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -223,74 +222,27 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
     region: 'JP',
   });
 
-  // 物件の座標を取得（データベースから、またはキャッシュから）
+  // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
-    console.log('PropertyMapView: properties count =', properties.length);
-    console.log('PropertyMapView: isLoaded =', isLoaded);
-    
-    if (!isLoaded || properties.length === 0 || isGeocoding) {
-      console.log('PropertyMapView: Skipping - isLoaded:', isLoaded, 'properties.length:', properties.length, 'isGeocoding:', isGeocoding);
+    if (!isLoaded || properties.length === 0) {
       return;
     }
 
-    const fetchCoordinates = async () => {
-      console.log('PropertyMapView: Processing coordinates for', properties.length, 'properties');
-      
-      setIsGeocoding(true);
-      const propertiesWithCoordinates: PropertyWithCoordinates[] = [];
-
-      // データベースに座標がある物件はそのまま使用、ない物件はキャッシュから取得
-      for (const property of properties) {
-        // 既に座標がある場合はそのまま使用
-        if (property.latitude && property.longitude) {
-          propertiesWithCoordinates.push({
-            ...property,
-            lat: property.latitude,
-            lng: property.longitude,
-          });
-          continue;
-        }
-
-        // キャッシュをチェック
-        const cacheKey = `geocode_${property.property_number}`;
-        const cached = localStorage.getItem(cacheKey);
-        
-        if (cached) {
-          try {
-            const coords = JSON.parse(cached);
-            console.log('✅ Using cached coordinates for', property.property_number, coords);
-            propertiesWithCoordinates.push({
-              ...property,
-              lat: coords.lat,
-              lng: coords.lng,
-            });
-          } catch (e) {
-            console.warn('Failed to parse cached coordinates for', property.property_number, e);
-          }
-        } else {
-          console.warn('⚠️ No coordinates found for', property.property_number);
-        }
-      }
-      
-      console.log('PropertyMapView: Properties with coords:', propertiesWithCoordinates.length);
-      
-      // AA10424が含まれているか確認
-      const aa10424 = propertiesWithCoordinates.find(p => p.property_number === 'AA10424');
-      if (aa10424) {
-        console.log('✅ AA10424 is in propertiesWithCoords!', aa10424);
-      } else {
-        console.error('❌ AA10424 is NOT in propertiesWithCoords!');
-      }
-      
-      setPropertiesWithCoords(propertiesWithCoordinates);
-      setIsGeocoding(false);
-    };
-
-    fetchCoordinates();
+    // データベースに座標がある物件のみをフィルタリング（高速化）
+    const propertiesWithCoordinates: PropertyWithCoordinates[] = properties
+      .filter(property => property.latitude && property.longitude)
+      .map(property => ({
+        ...property,
+        lat: property.latitude,
+        lng: property.longitude,
+      }));
+    
+    console.log(`PropertyMapView: ${propertiesWithCoordinates.length}/${properties.length} properties have coordinates`);
+    
+    setPropertiesWithCoords(propertiesWithCoordinates);
   }, [properties, isLoaded]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
-    console.log('PropertyMapView: Map loaded');
     setMap(map);
   }, []);
 
@@ -304,19 +256,8 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   // 座標付き物件が更新されたらマーカーを作成
   useEffect(() => {
     if (!map || propertiesWithCoords.length === 0) {
-      console.log('PropertyMapView: Skipping marker creation - map:', !!map, 'propertiesWithCoords.length:', propertiesWithCoords.length);
       return;
     }
-
-    console.log('PropertyMapView: Creating markers for', propertiesWithCoords.length, 'properties');
-    console.log('PropertyMapView: Map object:', map);
-    console.log('PropertyMapView: Properties with coords:', propertiesWithCoords.map(p => ({
-      number: p.property_number,
-      lat: p.lat,
-      lng: p.lng,
-      atbb_status: p.atbb_status,
-      address: p.display_address || p.address
-    })));
 
     // 既存のマーカーをクリア
     markers.forEach(marker => {
@@ -339,17 +280,11 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
       }
     });
     
-    console.log(`📊 Found ${coordinateGroups.size} unique coordinates`);
-    
     // Step 2: 各グループの物件にマーカーを作成
     coordinateGroups.forEach((group, coordKey) => {
       const [latStr, lngStr] = coordKey.split(',');
       const baseLat = parseFloat(latStr);
       const baseLng = parseFloat(lngStr);
-      
-      if (group.length > 1) {
-        console.log(`📍 Coordinate ${coordKey} has ${group.length} properties:`, group.map(p => p.property_number).join(', '));
-      }
       
       // 物件番号でソート（一貫性のため）
       const sortedGroup = [...group].sort((a, b) => 
@@ -362,12 +297,11 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
         let adjustedLng = baseLng;
         
         if (group.length > 1) {
-          // 円形に配置（0.0001度 ≈ 約10m）
+          // 円形に配置（0.0005度 ≈ 約50m - より見やすく）
           const angle = (index * 360 / group.length) * (Math.PI / 180);
-          const offset = 0.0001;
+          const offset = 0.0005; // 0.0001から0.0005に増加（5倍）
           adjustedLat += offset * Math.cos(angle);
           adjustedLng += offset * Math.sin(angle);
-          console.log(`📍 Adjusting marker for ${property.property_number}: index=${index}/${group.length}, angle=${(angle * 180 / Math.PI).toFixed(1)}°, offset=${offset}`);
         }
         
         bounds.extend({
@@ -379,8 +313,6 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
         const markerColor = getMarkerColor(property.atbb_status);
         const markerScale = 10;
         const zIndex = google.maps.Marker.MAX_ZINDEX + index; // グループ内での順序
-        
-        console.log('🎨 PropertyMapView: Creating marker for', property.property_number, 'with color', markerColor, 'atbb_status:', property.atbb_status, 'at', adjustedLat.toFixed(6), adjustedLng.toFixed(6));
 
         // SVGマーカーを作成（色付き）
         const svgMarker = {
@@ -392,31 +324,24 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
           scale: markerScale,
         };
 
-        try {
-          // マーカーを直接作成（調整された座標を使用）
-          const marker = new google.maps.Marker({
-            position: { lat: adjustedLat, lng: adjustedLng },
-            map: map,
-            title: property.property_number,
-            icon: svgMarker,
-            zIndex: zIndex,
-          });
+        // マーカーを直接作成（調整された座標を使用）
+        const marker = new google.maps.Marker({
+          position: { lat: adjustedLat, lng: adjustedLng },
+          map: map,
+          title: property.property_number,
+          icon: svgMarker,
+          zIndex: zIndex,
+        });
 
-          console.log('✅ Marker created:', marker, 'map:', marker.getMap());
+        // マーカークリックイベント
+        marker.addListener('click', () => {
+          handleMarkerClick(property);
+        });
 
-          // マーカークリックイベント
-          marker.addListener('click', () => {
-            handleMarkerClick(property);
-          });
-
-          newMarkers.push(marker);
-        } catch (error) {
-          console.error('❌ Failed to create marker:', error);
-        }
+        newMarkers.push(marker);
       });
     });
 
-    console.log('✅ PropertyMapView: Created', newMarkers.length, 'markers');
     setMarkers(newMarkers);
 
     // 初期表示は大分市中心に固定（fitBoundsは使わない）
@@ -467,17 +392,6 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (isGeocoding) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }} color="text.secondary">
-          物件の位置情報を読み込み中...
-        </Typography>
       </Box>
     );
   }

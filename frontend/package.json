@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode production --logLevel info",
+    "vercel-build": "vite build --mode production --logLevel info",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",

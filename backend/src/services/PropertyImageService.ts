@@ -337,10 +337,9 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // 本番環境では絶対URLを使用（フロントエンドとバックエンドが異なるドメイン）
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://baikyaku-property-site3.vercel.app'
-      : '';
+    // ✅ Environment Contract準拠: BACKEND_URLを使用（NODE_ENV分岐禁止）
+    // フロントエンドとバックエンドは常に別オリジン（ローカルでも5173と3000）
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
     
     return driveFiles.map(file => ({
       id: file.id,
@@ -435,10 +434,8 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // キャッシュされた画像のプロキシURLを返す（本番環境では絶対URL）
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://baikyaku-property-site3.vercel.app'
-        : '';
+      // ✅ Environment Contract準拠: BACKEND_URLを使用
+      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
@@ -480,10 +477,8 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // 最初の1枚のプロキシURLを返す（本番環境では絶対URL）
-      const baseUrl = process.env.NODE_ENV === 'production'
-        ? 'https://baikyaku-property-site3.vercel.app'
-        : '';
+      // ✅ Environment Contract準拠: BACKEND_URLを使用
+      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);

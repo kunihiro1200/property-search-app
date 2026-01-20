@@ -439,10 +439,9 @@ const PublicPropertiesPage: React.FC = () => {
   };
   
   // 地図表示用に全件取得（フィルター条件は適用）
-  // Supabaseの1000件制限を回避するため、複数回リクエストして全件取得
+  // 座標がある物件のみを取得して高速化
   const fetchAllProperties = async () => {
     try {
-      console.log('🔄 fetchAllProperties: Starting to fetch all properties...');
       setIsLoadingAllProperties(true);
       
       // URLパラメータから検索条件を取得
@@ -459,15 +458,16 @@ const PublicPropertiesPage: React.FC = () => {
       let offset = 0;
       const limit = 1000; // Supabaseの最大制限
       let hasMore = true;
-      let batchCount = 0;
       
       while (hasMore) {
-        batchCount++;
-        
         // クエリパラメータを構築
         const params = new URLSearchParams({
           limit: limit.toString(),
           offset: offset.toString(),
+          // 座標がある物件のみを取得するフラグを追加
+          withCoordinates: 'true',
+          // 画像取得をスキップして高速化
+          skipImages: 'true',
         });
         
         if (propertyNumber) {
@@ -502,8 +502,6 @@ const PublicPropertiesPage: React.FC = () => {
           params.set('showPublicOnly', 'true');
         }
         
-        console.log(`🔄 fetchAllProperties: Fetching batch ${batchCount} with offset=${offset}, limit=${limit}`);
-        
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         const response = await fetch(
           `${apiUrl}/api/public/properties?${params.toString()}`
@@ -516,28 +514,22 @@ const PublicPropertiesPage: React.FC = () => {
         const data = await response.json();
         const fetchedProperties = data.properties || [];
         
-        console.log(`📊 fetchAllProperties: Batch ${batchCount} received ${fetchedProperties.length} properties`);
-        
         allFetchedProperties.push(...fetchedProperties);
         
         // 取得した件数がlimit未満の場合、これ以上データがない
         if (fetchedProperties.length < limit) {
           hasMore = false;
-          console.log(`✅ fetchAllProperties: All properties fetched (batch ${batchCount} was the last)`);
         } else {
           // 次のバッチへ
           offset += limit;
-          console.log(`🔄 fetchAllProperties: Moving to batch ${batchCount + 1}, new offset=${offset}`);
         }
         
         // 安全装置：10回以上ループしたら停止（10,000件以上）
         if (offset >= 10000) {
           hasMore = false;
-          console.warn('⚠️ fetchAllProperties: Stopped at 10,000 properties (safety limit)');
+          console.warn('⚠️ Stopped at 10,000 properties (safety limit)');
         }
       }
-      
-      console.log(`✅ fetchAllProperties: Total ${allFetchedProperties.length} properties fetched in ${batchCount} batches`);
       
       setAllProperties(allFetchedProperties);
     } catch (err: any) {

@@ -28,6 +28,7 @@ import { getBadgeType } from '../utils/propertyStatusUtils';
 import { SEOHead } from '../components/SEOHead';
 import { StructuredData } from '../components/StructuredData';
 import { generatePropertyStructuredData } from '../utils/structuredData';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import '../styles/print.css';
 
 
@@ -37,6 +38,15 @@ const PublicPropertyDetailPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ判定（600px未満）
+  
+  // Google Maps API読み込み
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const { isLoaded: isMapLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    language: 'ja',
+    region: 'JP',
+  });
   
   // 全データの状態管理
   const [completeData, setCompleteData] = useState<any>(null);
@@ -67,17 +77,22 @@ const PublicPropertyDetailPage: React.FC = () => {
       setIsLoadingComplete(true);
       try {
         // publicApiインスタンスを使用（ベースURLが自動的に追加される）
+        console.log(`[publicProperty:"${property?.property_number || id}"] Fetching complete data from: /api/public/properties/${id}/complete`);
         const response = await publicApi.get(`/api/public/properties/${id}/complete`);
+        console.log(`[publicProperty:"${property?.property_number || id}"] Complete data response:`, response.data);
+        console.log(`[publicProperty:"${property?.property_number || id}"] favoriteComment:`, response.data?.favoriteComment);
+        console.log(`[publicProperty:"${property?.property_number || id}"] recommendedComments:`, response.data?.recommendedComments);
+        console.log(`[publicProperty:"${property?.property_number || id}"] athomeData:`, response.data?.athomeData);
         setCompleteData(response.data);
       } catch (error) {
-        console.error('Failed to fetch complete data:', error);
+        console.error(`[publicProperty:"${property?.property_number || id}"] Failed to fetch complete data:`, error);
       } finally {
         setIsLoadingComplete(false);
       }
     };
     
     fetchCompleteData();
-  }, [id]);
+  }, [id, property?.property_number]);
   
   // パノラマURLを取得
   useEffect(() => {
@@ -470,6 +485,55 @@ const PublicPropertyDetailPage: React.FC = () => {
                   >
                     Google Mapで見る
                   </Button>
+                </>
+              )}
+
+              {/* 地図表示（座標がある場合） */}
+              {property.latitude && property.longitude && isMapLoaded && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    地図
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '400px',
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <GoogleMap
+                      mapContainerStyle={{ width: '100%', height: '100%' }}
+                      center={{
+                        lat: property.latitude,
+                        lng: property.longitude,
+                      }}
+                      zoom={15}
+                      options={{
+                        zoomControl: true,
+                        streetViewControl: false,
+                        mapTypeControl: false,
+                        fullscreenControl: true,
+                      }}
+                    >
+                      {/* マーカー表示 */}
+                      <Marker
+                        position={{
+                          lat: property.latitude,
+                          lng: property.longitude,
+                        }}
+                        icon={{
+                          path: window.google.maps.SymbolPath.CIRCLE,
+                          fillColor: '#FFC107',
+                          fillOpacity: 1,
+                          strokeColor: '#fff',
+                          strokeWeight: 2,
+                          scale: 10,
+                        }}
+                      />
+                    </GoogleMap>
+                  </Box>
                 </>
               )}
             </Paper>

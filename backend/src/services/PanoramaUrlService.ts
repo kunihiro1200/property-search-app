@@ -116,17 +116,42 @@ export class PanoramaUrlService {
       
       await sheetsClient.authenticate();
       
-      // N1セルを読み取り
+      // N1セルを読み取り（複数のシート名パターンを試す）
       const sheets = google.sheets({ version: 'v4', auth: sheetsClient['auth'] });
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: 'athome!N1',
-      });
       
-      const value = response.data.values?.[0]?.[0];
+      // シート名のパターン（末尾スペースを含む）
+      // 実際のシート名は "athome " のように末尾にスペースがある場合が多い
+      const sheetNamePatterns = [
+        'athome ',    // 末尾スペース1つ
+        'athome  ',   // 末尾スペース2つ
+        'athome',     // スペースなし
+        'Athome ',
+        'Athome  ',
+        'Athome',
+        'ATHOME ',
+        'ATHOME  ',
+        'ATHOME',
+        'at home ',
+        'At Home ',
+      ];
       
-      if (value && typeof value === 'string' && value.trim()) {
-        return value.trim();
+      for (const sheetName of sheetNamePatterns) {
+        try {
+          const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${sheetName}!N1`,
+          });
+          
+          const value = response.data.values?.[0]?.[0];
+          
+          if (value && typeof value === 'string' && value.trim()) {
+            console.log(`[PanoramaUrlService] Found panorama URL in sheet "${sheetName}"`);
+            return value.trim();
+          }
+        } catch (error: any) {
+          // このシート名では見つからなかったので次を試す
+          continue;
+        }
       }
       
       return null;

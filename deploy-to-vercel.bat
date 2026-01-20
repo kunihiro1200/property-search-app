@@ -1,5 +1,7 @@
 @echo off
-echo Deploying to Vercel directly from local...
+echo Deploying frontend to Vercel...
+echo.
+echo Project: property-site-frontend
 echo.
 cd frontend
 npx vercel --prod

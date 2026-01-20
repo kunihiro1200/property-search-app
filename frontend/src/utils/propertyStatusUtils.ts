@@ -83,3 +83,36 @@ export const BADGE_CONFIG: Record<Exclude<BadgeType, 'none'>, BadgeConfig> = {
     color: 'rgba(33, 150, 243, 0.9)', // 青色（一覧画面と同じ）
   },
 };
+
+/**
+ * 物件がクリック可能かどうかを判定する
+ * 
+ * @param atbbStatus - 物件のatbb_status値
+ * @returns クリック可能な場合はtrue、そうでない場合はfalse
+ * 
+ * @example
+ * isPropertyClickable('専任・公開中') // => true
+ * isPropertyClickable('一般・公開中') // => true
+ * isPropertyClickable('非公開（配信メールのみ）') // => true
+ * isPropertyClickable('公開前') // => false
+ * isPropertyClickable('非公開案件') // => false
+ */
+export function isPropertyClickable(atbbStatus: string | null | undefined): boolean {
+  // null、undefined、空文字列の場合はクリック不可
+  if (!atbbStatus) {
+    return false;
+  }
+
+  // 「公開中」を含む場合はクリック可能
+  if (atbbStatus.includes('公開中')) {
+    return true;
+  }
+
+  // 「非公開（配信メールのみ）」の場合はクリック可能
+  if (atbbStatus.includes('非公開') && atbbStatus.includes('配信メール')) {
+    return true;
+  }
+
+  // その他の場合はクリック不可
+  return false;
+}

@@ -42,18 +42,24 @@ export class GoogleSheetsClient {
   }
 
   /**
-   * 認証を実行（サービスアカウントを優先、OAuth 2.0はフォールバック）
+   * 認証を実行（Environment Contract準拠）
+   * 優先順位: GOOGLE_SERVICE_ACCOUNT_JSON > serviceAccountKeyPath > OAuth 2.0
    */
   async authenticate(): Promise<void> {
     try {
-      // サービスアカウント認証を優先（JSONファイルまたは環境変数）
-      if (this.config.serviceAccountKeyPath) {
+      // 1. 環境変数からJSON読み込み（Vercel環境用）
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        await this.authenticateWithServiceAccountJson();
+      }
+      // 2. JSONファイルから読み込み（ローカル環境用）
+      else if (this.config.serviceAccountKeyPath) {
         await this.authenticateWithServiceAccountFile();
       }
+      // 3. 個別の環境変数から読み込み
       else if (this.config.serviceAccountEmail && this.config.privateKey) {
         await this.authenticateWithServiceAccount();
       } 
-      // OAuth 2.0認証（フォールバック）
+      // 4. OAuth 2.0認証（フォールバック）
       else if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
         await this.authenticateWithOAuth();
       } 
@@ -84,9 +90,38 @@ export class GoogleSheetsClient {
   }
 
   /**
+   * サービスアカウント認証を実行（環境変数のJSONから）
+   * Environment Contract準拠: Vercel環境用
+   */
+  private async authenticateWithServiceAccountJson(): Promise<void> {
+    console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_JSON');
+    
+    const keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
+    
+    // private_keyの改行を復元（Environment Contract準拠）
+    if (keyFile.private_key) {
+      keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+    }
+
+    this.auth = new google.auth.JWT({
+      email: keyFile.client_email,
+      key: keyFile.private_key,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    await this.auth.authorize();
+    this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+    
+    console.log('[GoogleSheetsClient] Authentication successful');
+  }
+
+  /**
    * サービスアカウント認証を実行（JSONファイルから）
+   * Environment Contract準拠: ローカル環境用
    */
   private async authenticateWithServiceAccountFile(): Promise<void> {
+    console.log('[GoogleSheetsClient] Authenticating with service account file');
+    
     const fs = require('fs');
     const path = require('path');
     
@@ -106,6 +141,8 @@ export class GoogleSheetsClient {
 
     await this.auth.authorize();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+    
+    console.log('[GoogleSheetsClient] Authentication successful');
   }
 
   /**

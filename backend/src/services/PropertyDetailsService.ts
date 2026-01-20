@@ -14,7 +14,12 @@ export class PropertyDetailsService {
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    // SUPABASE_SERVICE_ROLE_KEY または SUPABASE_SERVICE_KEY を使用
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY!;
+    
+    console.log(`[PropertyDetailsService] Initializing with URL: ${supabaseUrl}`);
+    console.log(`[PropertyDetailsService] Service key exists: ${!!supabaseKey}`);
+    console.log(`[PropertyDetailsService] Using key from: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : 'SUPABASE_SERVICE_KEY'}`);
     
     this.supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
@@ -29,16 +34,27 @@ export class PropertyDetailsService {
    */
   async getPropertyDetails(propertyNumber: string): Promise<PropertyDetails> {
     try {
+      console.log(`[PropertyDetailsService] Fetching details for ${propertyNumber}`);
+      console.log(`[PropertyDetailsService] Supabase URL: ${process.env.SUPABASE_URL}`);
+      console.log(`[PropertyDetailsService] Service role key exists: ${!!process.env.SUPABASE_SERVICE_ROLE_KEY}`);
+      
       const { data, error } = await this.supabase
         .from('property_details')
         .select('property_number, property_about, recommended_comments, athome_data, favorite_comment')
         .eq('property_number', propertyNumber)
         .single();
       
+      console.log(`[PropertyDetailsService] Query result for ${propertyNumber}:`, {
+        hasData: !!data,
+        hasError: !!error,
+        errorCode: error?.code,
+        errorMessage: error?.message
+      });
+      
       if (error) {
         if (error.code === 'PGRST116') {
           // データが見つからない場合
-          console.log(`[PropertyDetailsService] No details found for ${propertyNumber}`);
+          console.log(`[PropertyDetailsService] No details found for ${propertyNumber} (PGRST116)`);
           return {
             property_number: propertyNumber,
             property_about: null,
@@ -47,8 +63,18 @@ export class PropertyDetailsService {
             favorite_comment: null
           };
         }
+        console.error(`[PropertyDetailsService] Error fetching details for ${propertyNumber}:`, error);
         throw error;
       }
+      
+      console.log(`[PropertyDetailsService] Found details for ${propertyNumber}:`, {
+        has_property_about: !!data.property_about,
+        has_recommended_comments: !!data.recommended_comments,
+        recommended_comments_length: Array.isArray(data.recommended_comments) ? data.recommended_comments.length : 0,
+        has_athome_data: !!data.athome_data,
+        athome_data_length: Array.isArray(data.athome_data) ? data.athome_data.length : 0,
+        has_favorite_comment: !!data.favorite_comment
+      });
       
       return {
         property_number: data.property_number,
@@ -58,7 +84,7 @@ export class PropertyDetailsService {
         favorite_comment: data.favorite_comment || null
       };
     } catch (error: any) {
-      console.error(`[PropertyDetailsService] Error in getPropertyDetails:`, error);
+      console.error(`[PropertyDetailsService] Error in getPropertyDetails for ${propertyNumber}:`, error);
       return {
         property_number: propertyNumber,
         property_about: null,

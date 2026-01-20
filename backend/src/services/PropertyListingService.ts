@@ -274,6 +274,8 @@ export class PropertyListingService {
     propertyNumber?: string;  // NEW: 物件番号フィルター（部分一致）
     buildingAgeRange?: { min?: number; max?: number };  // NEW: 築年数フィルター
     showPublicOnly?: boolean;  // NEW: 公開中のみ表示フィルター
+    withCoordinates?: boolean;  // NEW: 座標がある物件のみ取得
+    skipImages?: boolean;  // NEW: 画像取得をスキップ（地図ビュー用）
   } = {}) {
     const {
       limit = 20,
@@ -285,6 +287,8 @@ export class PropertyListingService {
       propertyNumber,  // NEW
       buildingAgeRange,  // NEW
       showPublicOnly = false,  // NEW
+      withCoordinates = false,  // NEW
+      skipImages = false,  // NEW
     } = options;
 
     try {
@@ -292,7 +296,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -350,6 +354,15 @@ export class PropertyListingService {
           .ilike('atbb_status', '%公開中%');
       }
       
+      // NEW: 座標がある物件のみ取得（地図表示用）
+      if (withCoordinates) {
+        console.log('[PropertyListingService] Applying withCoordinates filter');
+        // 座標がnullでない物件のみを取得
+        query = query
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
+      }
+      
       // NEW: 築年数フィルター
       // 築年数範囲を建築年月範囲に変換してフィルタリング
       if (buildingAgeRange) {
@@ -390,76 +403,95 @@ export class PropertyListingService {
       }
       
       // 画像取得：image_url → storage_location
-      // 並列処理を5件に制限してパフォーマンスを向上（p-limitを使わない独自実装）
-      const concurrencyLimit = 5;
+      // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
       const propertiesWithImages: any[] = [];
       
-      for (let i = 0; i < (data || []).length; i += concurrencyLimit) {
-        const batch = (data || []).slice(i, i + concurrencyLimit);
-        const batchResults = await Promise.all(
-          batch.map(async (property) => {
-          const googleMapUrl = property.google_map_url || null;
-          
-          console.log(`[PropertyListingService] Processing ${property.property_number}:`, {
-            has_image_url: !!property.image_url,
-            has_storage_location: !!property.storage_location,
-            storage_location: property.storage_location
+      if (skipImages) {
+        // 画像取得をスキップ（地図ビュー用）
+        console.log('[PropertyListingService] Skipping image fetching (skipImages=true)');
+        for (const property of data || []) {
+          propertiesWithImages.push({
+            ...property,
+            property_type: this.convertPropertyTypeToEnglish(property.property_type),
+            atbb_status: property.atbb_status,
+            badge_type: this.getBadgeType(property.atbb_status),
+            is_clickable: this.isPropertyClickable(property.atbb_status),
+            google_map_url: property.google_map_url || null,
+            images: []
           });
-          
-          try {
-            let images: string[] = [];
-            let storageLocation = property.storage_location;
+        }
+      } else {
+        // 通常の画像取得処理（リストビュー用）
+        // 並列処理を5件に制限してパフォーマンスを向上（p-limitを使わない独自実装）
+        const concurrencyLimit = 5;
+        
+        for (let i = 0; i < (data || []).length; i += concurrencyLimit) {
+          const batch = (data || []).slice(i, i + concurrencyLimit);
+          const batchResults = await Promise.all(
+            batch.map(async (property) => {
+            const googleMapUrl = property.google_map_url || null;
             
-            // storage_locationが空の場合、業務リストから取得
-            if (!storageLocation && property.property_number) {
-              console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
-              storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
-              if (storageLocation) {
-                console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
+            console.log(`[PropertyListingService] Processing ${property.property_number}:`, {
+              has_image_url: !!property.image_url,
+              has_storage_location: !!property.storage_location,
+              storage_location: property.storage_location
+            });
+            
+            try {
+              let images: string[] = [];
+              let storageLocation = property.storage_location;
+              
+              // storage_locationが空の場合、業務リストから取得
+              if (!storageLocation && property.property_number) {
+                console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
+                storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
+                if (storageLocation) {
+                  console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
+                }
               }
+              
+              // 1. image_urlがある場合はそれを使用
+              if (property.image_url) {
+                console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
+                images = [property.image_url];
+              }
+              // 2. storage_locationがある場合はGoogle Driveから取得
+              else if (storageLocation) {
+                console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
+                images = await this.propertyImageService.getFirstImage(
+                  property.id,
+                  storageLocation
+                );
+                console.log(`[PropertyListingService] Got ${images.length} images for ${property.property_number}`);
+              } else {
+                console.log(`[PropertyListingService] No image source for ${property.property_number}`);
+              }
+              
+              return {
+                ...property,
+                property_type: this.convertPropertyTypeToEnglish(property.property_type),
+                atbb_status: property.atbb_status,
+                badge_type: this.getBadgeType(property.atbb_status),
+                is_clickable: this.isPropertyClickable(property.atbb_status),
+                google_map_url: googleMapUrl,
+                images: images.length > 0 ? images : []
+              };
+            } catch (error: any) {
+              console.error(`[PropertyListingService] Failed to fetch image for ${property.property_number}:`, error.message);
+              return {
+                ...property,
+                property_type: this.convertPropertyTypeToEnglish(property.property_type),
+                atbb_status: property.atbb_status,
+                badge_type: this.getBadgeType(property.atbb_status),
+                is_clickable: this.isPropertyClickable(property.atbb_status),
+                google_map_url: googleMapUrl,
+                images: []
+              };
             }
-            
-            // 1. image_urlがある場合はそれを使用
-            if (property.image_url) {
-              console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
-              images = [property.image_url];
-            }
-            // 2. storage_locationがある場合はGoogle Driveから取得
-            else if (storageLocation) {
-              console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
-              images = await this.propertyImageService.getFirstImage(
-                property.id,
-                storageLocation
-              );
-              console.log(`[PropertyListingService] Got ${images.length} images for ${property.property_number}`);
-            } else {
-              console.log(`[PropertyListingService] No image source for ${property.property_number}`);
-            }
-            
-            return {
-              ...property,
-              property_type: this.convertPropertyTypeToEnglish(property.property_type),
-              atbb_status: property.atbb_status,
-              badge_type: this.getBadgeType(property.atbb_status),
-              is_clickable: this.isPropertyClickable(property.atbb_status),
-              google_map_url: googleMapUrl,
-              images: images.length > 0 ? images : []
-            };
-          } catch (error: any) {
-            console.error(`[PropertyListingService] Failed to fetch image for ${property.property_number}:`, error.message);
-            return {
-              ...property,
-              property_type: this.convertPropertyTypeToEnglish(property.property_type),
-              atbb_status: property.atbb_status,
-              badge_type: this.getBadgeType(property.atbb_status),
-              is_clickable: this.isPropertyClickable(property.atbb_status),
-              google_map_url: googleMapUrl,
-              images: []
-            };
-          }
-        })
-        );
-        propertiesWithImages.push(...batchResults);
+          })
+          );
+          propertiesWithImages.push(...batchResults);
+        }
       }
       
       return { 
@@ -486,7 +518,7 @@ export class PropertyListingService {
       // 新しいカラムを除外してSELECT（スキーマキャッシュ問題を回避）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, atbb_status, special_notes, storage_location, created_at, updated_at');
+        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at');
       
       // UUIDまたはproperty_numberで検索
       if (isUUID) {
@@ -565,7 +597,7 @@ export class PropertyListingService {
       // 新しいカラムを除外してSELECT（スキーマキャッシュ問題を回避）
       const { data, error } = await this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, atbb_status, special_notes, storage_location, created_at, updated_at')
+        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
         .eq('property_number', propertyNumber)
         .single();
       
@@ -593,16 +625,21 @@ export class PropertyListingService {
         }
       }
       
+      // property_detailsテーブルから追加データを取得
+      const { PropertyDetailsService } = await import('./PropertyDetailsService');
+      const propertyDetailsService = new PropertyDetailsService();
+      const details = await propertyDetailsService.getPropertyDetails(propertyNumber);
+      
       // 物件タイプを英語に変換してフロントエンドに返す
       return {
         ...data,
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
-        // 新しいカラムは別途取得（スキーマキャッシュ問題を回避）
-        property_about: null,
-        recommended_comments: null,
-        athome_data: null,
-        favorite_comment: null
+        // property_detailsテーブルからのデータを含める
+        property_about: details.property_about,
+        recommended_comments: details.recommended_comments,
+        athome_data: details.athome_data,
+        favorite_comment: details.favorite_comment
       };
     } catch (error: any) {
       console.error('Error in getPublicPropertyByNumber:', error);

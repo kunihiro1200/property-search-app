@@ -5,7 +5,7 @@ import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { PROPERTY_FEATURE_ICONS } from '../utils/propertyIcons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
-import { getBadgeType, BADGE_CONFIG } from '../utils/propertyStatusUtils';
+import { getBadgeType, BADGE_CONFIG, isPropertyClickable } from '../utils/propertyStatusUtils';
 import './PublicPropertyCard.css';
 
 interface PublicPropertyCardProps {
