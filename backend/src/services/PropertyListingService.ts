@@ -422,8 +422,8 @@ export class PropertyListingService {
         }
       } else {
         // 通常の画像取得処理（リストビュー用）
-        // 並列処理を5件に制限してパフォーマンスを向上（p-limitを使わない独自実装）
-        const concurrencyLimit = 5;
+        // 全件を並列処理して高速化（ローカル環境と同じ動作）
+        const concurrencyLimit = 20; // 5から20に変更
         
         for (let i = 0; i < (data || []).length; i += concurrencyLimit) {
           const batch = (data || []).slice(i, i + concurrencyLimit);
