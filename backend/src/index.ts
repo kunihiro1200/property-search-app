@@ -118,7 +118,9 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+// 認証ルート（ローカルと本番の両方に対応）
 app.use('/auth', authSupabaseRoutes);
+app.use('/api/auth', authSupabaseRoutes);  // 本番環境用
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/sellers', sellersManagementRoutes);
 app.use('/properties', propertyRoutes);
