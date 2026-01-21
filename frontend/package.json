@@ -1,6 +1,6 @@
 {
   "name": "seller-list-management-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "不動産売主リスト管理システム - フロントエンド",
   "private": true,
   "engines": {
