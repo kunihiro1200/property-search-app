@@ -798,25 +798,34 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
     // Get client IP address
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
-    // 物件情報を取得（Supabase Clientを直接使用）
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: property, error: propertyError } = await supabase
-      .from('property_listings')
-      .select('property_number, site_display, athome_public_folder_id')
-      .eq('id', propertyId)
-      .single();
+    let property = null;
+    let propertyNumber = null;
     
-    if (propertyError || !property) {
-      res.status(404).json({
-        success: false,
-        message: '指定された物件が見つかりません'
-      });
-      return;
+    // 物件IDが指定されている場合のみ物件情報を取得
+    if (propertyId) {
+      // 物件情報を取得（Supabase Clientを直接使用）
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY!
+      );
+
+      const { data: propertyData, error: propertyError } = await supabase
+        .from('property_listings')
+        .select('property_number, site_display, athome_public_folder_id')
+        .eq('id', propertyId)
+        .single();
+      
+      if (propertyError || !propertyData) {
+        res.status(404).json({
+          success: false,
+          message: '指定された物件が見つかりません'
+        });
+        return;
+      }
+      
+      property = propertyData;
+      propertyNumber = propertyData.property_number;
     }
 
     // 直接買主リストに転記（property_inquiriesテーブルをバイパス）
@@ -835,8 +844,10 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
 
       // フィールドマッピング
       const normalizedPhone = phone.replace(/[^0-9]/g, ''); // 数字のみ抽出
-      const inquirySource = property.site_display === 'サイト表示' ? 'サイト' : 
-                           property.athome_public_folder_id ? 'アットホーム' : 'その他';
+      const inquirySource = property 
+        ? (property.site_display === 'サイト表示' ? 'サイト' : 
+           property.athome_public_folder_id ? 'アットホーム' : 'その他')
+        : 'サイト'; // 物件IDがない場合はデフォルトで「サイト」
 
       const rowData = {
         '買主番号': buyerNumber.toString(),
@@ -845,7 +856,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
         '電話番号': normalizedPhone,
         'メールアドレス': email,
         '問合せ元': inquirySource,
-        '物件番号': property.property_number,
+        '物件番号': propertyNumber || '', // 物件番号がない場合は空文字
       };
 
       // スプレッドシートに直接追加
@@ -853,7 +864,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
 
       console.log('Inquiry synced to buyer sheet:', {
         buyerNumber,
-        propertyNumber: property.property_number,
+        propertyNumber: propertyNumber || '(none)',
         customerName: name
       });
 
