@@ -235,50 +235,105 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     console.log(`[Complete API] Found property: ${property.property_number}`);
     
-    // PropertyDetailsServiceを動的インポート
-    const { PropertyDetailsService } = await import('../src/services/PropertyDetailsService');
-    const propertyDetailsService = new PropertyDetailsService();
+    // property_detailsテーブルから直接取得（動的インポートを使用しない）
+    let dbDetails = {
+      property_number: property.property_number,
+      favorite_comment: null,
+      recommended_comments: null,
+      athome_data: null,
+      property_about: null
+    };
     
-    let dbDetails;
     try {
-      dbDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-      console.log(`[Complete API] PropertyDetailsService returned:`, {
-        has_favorite_comment: !!dbDetails.favorite_comment,
-        has_recommended_comments: !!dbDetails.recommended_comments,
-        has_athome_data: !!dbDetails.athome_data,
-        has_property_about: !!dbDetails.property_about
-      });
+      const { data, error } = await supabase
+        .from('property_details')
+        .select('property_number, property_about, recommended_comments, athome_data, favorite_comment')
+        .eq('property_number', property.property_number)
+        .single();
+      
+      if (!error && data) {
+        dbDetails = {
+          property_number: data.property_number,
+          property_about: data.property_about || null,
+          recommended_comments: data.recommended_comments || null,
+          athome_data: data.athome_data || null,
+          favorite_comment: data.favorite_comment || null
+        };
+        console.log(`[Complete API] Found property_details:`, {
+          has_favorite_comment: !!dbDetails.favorite_comment,
+          has_recommended_comments: !!dbDetails.recommended_comments,
+          has_athome_data: !!dbDetails.athome_data,
+          has_property_about: !!dbDetails.property_about
+        });
+      } else if (error && error.code !== 'PGRST116') {
+        console.error(`[Complete API] Error fetching property_details:`, error);
+      }
     } catch (error: any) {
-      console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
-      dbDetails = {
-        property_number: property.property_number,
-        favorite_comment: null,
-        recommended_comments: null,
-        athome_data: null,
-        property_about: null
-      };
+      console.error(`[Complete API] Error querying property_details:`, error);
     }
     
-    // 決済日を取得（成約済みの場合のみ）
+    // 決済日を取得（成約済みの場合のみ）- sellersテーブルから直接取得
     let settlementDate = null;
     const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
     if (isSold) {
       try {
-        const { PropertyService } = await import('../src/services/PropertyService');
-        const propertyService = new PropertyService();
-        settlementDate = await propertyService.getSettlementDate(property.property_number);
+        const { data, error } = await supabase
+          .from('sellers')
+          .select('settlement_date')
+          .eq('property_number', property.property_number)
+          .single();
+        
+        if (!error && data && data.settlement_date) {
+          settlementDate = data.settlement_date;
+          console.log(`[Complete API] Found settlement_date: ${settlementDate}`);
+        }
       } catch (err) {
         console.error('[Complete API] Settlement date error:', err);
       }
     }
     
-    // パノラマURLを取得
+    // パノラマURLを取得 - 業務リストスプレッドシートから直接取得
     let panoramaUrl = null;
     try {
-      const { PanoramaUrlService } = await import('../src/services/PanoramaUrlService');
-      const panoramaUrlService = new PanoramaUrlService();
-      panoramaUrl = await panoramaUrlService.getPanoramaUrl(property.property_number);
-      console.log(`[Complete API] Panorama URL: ${panoramaUrl || '(not found)'}`);
+      // 業務リストスプレッドシートから取得（動的インポート使用）
+      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+      const gyomuListClient = new GoogleSheetsClient({
+        spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g',
+        sheetName: '業務依頼',
+        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      });
+      
+      await gyomuListClient.authenticate();
+      
+      // 物件番号で検索
+      const rows = await gyomuListClient.readAll();
+      const propertyRow = rows.find(row => row['物件番号'] === property.property_number);
+      
+      if (propertyRow && propertyRow['スプシURL']) {
+        const spreadsheetUrl = propertyRow['スプシURL'] as string;
+        
+        // スプレッドシートIDを抽出
+        const spreadsheetIdMatch = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (spreadsheetIdMatch) {
+          const spreadsheetId = spreadsheetIdMatch[1];
+          
+          // 個別物件スプレッドシートの「athome」シートから取得
+          const athomeClient = new GoogleSheetsClient({
+            spreadsheetId,
+            sheetName: 'athome',
+            serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+          });
+          
+          await athomeClient.authenticate();
+          
+          // パノラマURLを取得（B2セル）
+          const athomeData = await athomeClient.readAll();
+          if (athomeData.length > 0 && athomeData[0]['パノラマURL']) {
+            panoramaUrl = athomeData[0]['パノラマURL'] as string;
+            console.log(`[Complete API] Found panorama URL: ${panoramaUrl}`);
+          }
+        }
+      }
     } catch (err) {
       console.error('[Complete API] Panorama URL error:', err);
     }
