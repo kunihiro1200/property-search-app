@@ -9,28 +9,28 @@
       }
     },
     {
-      "src": "backend/api/index.ts",
+      "src": "frontend/api/index.ts",
       "use": "@vercel/node"
     }
   ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/backend/api/index.ts"
+      "destination": "/api/index.ts"
     }
   ],
   "routes": [
     {
       "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/$1"
+      "dest": "/dist/assets/$1"
     },
     {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "dest": "/dist/index.html"
     }
   ],
-  "outputDirectory": "frontend/dist"
+  "outputDirectory": "dist"
 }
