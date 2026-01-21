@@ -94,7 +94,10 @@ const initializeConnections = async () => {
 };
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+}));
 app.use(cors({
   origin: [
     'http://localhost:5173', 
@@ -105,8 +108,9 @@ app.use(cors({
     'https://baikyaku-property-site3.vercel.app', // 本番環境バックエンド
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 app.use(compression());
 app.use(morgan('dev'));
@@ -120,7 +124,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/auth', authSupabaseRoutes);
+app.use('/api/auth', authSupabaseRoutes);
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/sellers', sellersManagementRoutes);
 app.use('/properties', propertyRoutes);
