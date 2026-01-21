@@ -88,19 +88,20 @@ router.get('/properties', async (req: Request, res: Response) => {
     const parsedOffset = parseInt(offset as string, 10);
 
     // 価格範囲のバリデーション
+    // フロントエンドから送られてくる価格は「万円」単位なので、「円」単位に変換（10000倍）
     let priceFilter: { min?: number; max?: number } | undefined;
     if (minPrice || maxPrice) {
       priceFilter = {};
       if (minPrice) {
         const min = parseInt(minPrice as string, 10);
         if (!isNaN(min) && min >= 0) {
-          priceFilter.min = min;
+          priceFilter.min = min * 10000; // 万円 → 円に変換
         }
       }
       if (maxPrice) {
         const max = parseInt(maxPrice as string, 10);
         if (!isNaN(max) && max >= 0) {
-          priceFilter.max = max;
+          priceFilter.max = max * 10000; // 万円 → 円に変換
         }
       }
     }
@@ -226,7 +227,7 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
     
     console.log(`[GET /api/public/properties/${id}/complete] Fetching complete property data`);
     
-    // 物件情報を取得
+    // 物件情報を取得（property_detailsテーブルのデータも含まれる）
     const property = await propertyListingService.getPublicPropertyById(id);
     
     if (!property) {
@@ -234,33 +235,11 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
       return;
     }
     
-    // データベースから追加詳細情報を取得（スキーマキャッシュ問題を回避）
-    console.log(`[Complete API] Fetching complete property details for: ${id}`);
-    console.log(`[Complete API] Property number: ${property.property_number}`);
-    
-    // PropertyDetailsServiceを直接使用
-    const { PropertyDetailsService } = await import('../services/PropertyDetailsService');
-    const propertyDetailsService = new PropertyDetailsService();
-    
-    let dbDetails;
-    try {
-      dbDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-      console.log(`[Complete API] PropertyDetailsService returned:`, {
-        has_favorite_comment: !!dbDetails.favorite_comment,
-        has_recommended_comments: !!dbDetails.recommended_comments,
-        has_athome_data: !!dbDetails.athome_data,
-        has_property_about: !!dbDetails.property_about
-      });
-    } catch (error: any) {
-      console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
-      dbDetails = {
-        property_number: property.property_number,
-        favorite_comment: null,
-        recommended_comments: null,
-        athome_data: null,
-        property_about: null
-      };
-    }
+    console.log(`[Complete API] Property data retrieved for: ${property.property_number}`);
+    console.log(`[Complete API] Has favorite_comment: ${!!property.favorite_comment}`);
+    console.log(`[Complete API] Has recommended_comments: ${!!property.recommended_comments}`);
+    console.log(`[Complete API] Has athome_data: ${!!property.athome_data}`);
+    console.log(`[Complete API] Has property_about: ${!!property.property_about}`);
     
     // 決済日を取得（成約済みの場合のみ）
     let settlementDate = null;
@@ -273,14 +252,16 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
       }
     }
     
-    // レスポンスを返す（データベースのデータを直接使用）
+    // レスポンスを返す（getPublicPropertyByIdが既に取得したデータを使用）
+    // キャッシュヘッダーを設定（5分間）
+    res.set('Cache-Control', 'public, max-age=300');
     res.json({
       property,
-      favoriteComment: dbDetails.favorite_comment,
-      recommendedComments: dbDetails.recommended_comments,
-      athomeData: dbDetails.athome_data,
+      favoriteComment: property.favorite_comment,
+      recommendedComments: property.recommended_comments,
+      athomeData: property.athome_data,
       settlementDate,
-      propertyAbout: dbDetails.property_about
+      propertyAbout: property.property_about
     });
     
   } catch (error: any) {

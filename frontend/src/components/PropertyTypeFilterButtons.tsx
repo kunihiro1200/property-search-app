@@ -1,15 +1,15 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
 
-// 物件タイプの型定義
-export type PropertyType = 'detached_house' | 'apartment' | 'land' | 'income';
+// 物件タイプの型定義（日本語に変更）
+export type PropertyType = '戸建' | 'マンション' | '土地' | '収益物件';
 
-// 物件タイプのラベルマッピング
+// 物件タイプのラベルマッピング（日本語をそのまま使用）
 export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
-  detached_house: '戸建て',
-  apartment: 'マンション',
-  land: '土地',
-  income: '収益物件',
+  '戸建': '戸建て',
+  'マンション': 'マンション',
+  '土地': '土地',
+  '収益物件': '収益物件',
 };
 
 interface PropertyTypeFilterButtonsProps {
@@ -23,7 +23,7 @@ export const PropertyTypeFilterButtons: React.FC<PropertyTypeFilterButtonsProps>
   onTypeToggle,
   disabled = false,
 }) => {
-  const propertyTypes: PropertyType[] = ['detached_house', 'apartment', 'land', 'income'];
+  const propertyTypes: PropertyType[] = ['戸建', 'マンション', '土地', '収益物件'];
 
   return (
     <Box>

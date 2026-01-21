@@ -171,7 +171,7 @@ export class GoogleSheetsClient {
   /**
    * ヘッダー行を取得（キャッシュ付き）
    */
-  private async getHeaders(): Promise<string[]> {
+  async getHeaders(): Promise<string[]> {
     if (this.headerCache) {
       return this.headerCache;
     }
@@ -419,6 +419,14 @@ export class GoogleSheetsClient {
    */
   clearHeaderCache(): void {
     this.headerCache = null;
+  }
+
+  /**
+   * 認証オブジェクトを取得
+   */
+  getAuth(): JWT | any {
+    this.ensureAuthenticated();
+    return this.auth;
   }
 
   /**

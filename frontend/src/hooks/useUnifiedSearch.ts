@@ -47,7 +47,7 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
       clearTimeout(debounceTimer);
     }
 
-    // 検索クエリが空の場合は即座にクリア
+    // 検索クエリが空の場合は検索パラメータのみクリア（フィルターは保持）
     if (!searchQuery.trim()) {
       setSearchType(null);
       updateURLParams('', null);
@@ -98,7 +98,7 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
   const updateURLParams = useCallback((value: string, type: SearchQueryType | null) => {
     const newParams = new URLSearchParams(searchParams);
 
-    // 既存の検索パラメータをクリア
+    // 既存の検索パラメータをクリア（検索関連のみ）
     newParams.delete('propertyNumber');
     newParams.delete('location');
 
@@ -111,9 +111,10 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
       }
     }
 
-    // ページ番号をリセット
+    // ページ番号をリセット（検索時は1ページ目に戻る）
     newParams.delete('page');
 
+    // 既存のフィルター（types, minPrice, maxPrice, minAge, maxAge, showPublicOnly）は保持される
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 

@@ -553,37 +553,21 @@ export class PropertyListingService {
         }
       }
       
-      // property_detailsテーブルから追加詳細情報を取得
-      let propertyDetails = {
-        property_about: null,
-        recommended_comments: null,
-        athome_data: null,
-        favorite_comment: null
-      };
-      
-      if (data.property_number) {
-        const { data: detailsData, error: detailsError } = await this.supabase
-          .from('property_details')
-          .select('property_about, recommended_comments, athome_data, favorite_comment')
-          .eq('property_number', data.property_number)
-          .single();
-        
-        if (!detailsError && detailsData) {
-          propertyDetails = {
-            property_about: detailsData.property_about,
-            recommended_comments: detailsData.recommended_comments,
-            athome_data: detailsData.athome_data,
-            favorite_comment: detailsData.favorite_comment
-          };
-        }
-      }
+      // property_detailsテーブルから追加データを取得
+      const { PropertyDetailsService } = await import('./PropertyDetailsService');
+      const propertyDetailsService = new PropertyDetailsService();
+      const details = await propertyDetailsService.getPropertyDetails(data.property_number);
       
       // 物件タイプを英語に変換してフロントエンドに返す
       return {
         ...data,
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
-        ...propertyDetails
+        // property_detailsテーブルからのデータを含める
+        property_about: details.property_about,
+        recommended_comments: details.recommended_comments,
+        athome_data: details.athome_data,
+        favorite_comment: details.favorite_comment
       };
     } catch (error: any) {
       console.error('Error in getPublicPropertyById:', error);
