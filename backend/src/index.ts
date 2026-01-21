@@ -98,15 +98,30 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
 }));
+
+// CORS設定を強化
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:5174', 
+  'http://localhost:5175',
+  'http://localhost:3000',
+  'https://property-site-frontend-kappa.vercel.app',
+  'https://baikyaku-property-site3.vercel.app',
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    'http://localhost:3000',  // バックエンド自身も追加
-    'https://property-site-frontend-kappa.vercel.app', // 本番環境フロントエンド
-    'https://baikyaku-property-site3.vercel.app', // 本番環境バックエンド
-  ],
+  origin: function (origin, callback) {
+    // originがundefinedの場合（同一オリジンリクエスト）は許可
+    if (!origin) return callback(null, true);
+    
+    // 許可されたオリジンの場合は許可
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn('⚠️ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
@@ -117,6 +132,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' })); // 画像付きメール対応のため制限を増やす
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(activityLogger);
+
+// OPTIONSリクエスト（プリフライト）を明示的に処理
+app.options('*', cors());
 
 // Health check
 app.get('/health', (req, res) => {
