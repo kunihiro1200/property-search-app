@@ -7,8 +7,6 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/services/PropertyListingService';
-import { PropertyImageService } from '../src/services/PropertyImageService';
-import { GoogleDriveService } from '../src/services/GoogleDriveService';
 // import publicPropertiesRoutes from '../src/routes/publicProperties'; // Vercelでエラーになるためコメントアウト
 
 const app = express();
@@ -355,7 +353,8 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       });
     }
 
-    // PropertyImageServiceを使用して画像を取得
+    // PropertyImageServiceを動的インポートして使用
+    const { PropertyImageService } = await import('../src/services/PropertyImageService');
     const propertyImageService = new PropertyImageService(
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
@@ -408,7 +407,8 @@ app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
     
     console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
+    // GoogleDriveServiceを動的インポートして使用
+    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
@@ -457,7 +457,8 @@ app.get('/api/public/images/:fileId', async (req, res) => {
     
     console.log(`🖼️ Proxying full image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
+    // GoogleDriveServiceを動的インポートして使用
+    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
