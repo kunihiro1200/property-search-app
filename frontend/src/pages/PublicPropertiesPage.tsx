@@ -53,24 +53,6 @@ const PublicPropertiesPage: React.FC = () => {
     viewModeParam === 'map' ? 'map' : 'list'
   );
   
-  // URLパラメータのview変更を監視してviewModeを更新
-  useEffect(() => {
-    console.log('🔍 [PublicPropertiesPage] viewModeParam changed:', viewModeParam);
-    console.log('🔍 [PublicPropertiesPage] current URL:', window.location.href);
-    console.log('🔍 [PublicPropertiesPage] searchParams:', searchParams.toString());
-    console.log('🔍 [PublicPropertiesPage] current viewMode:', viewMode);
-    
-    if (viewModeParam === 'map') {
-      console.log('✅ [PublicPropertiesPage] Setting viewMode to map');
-      setViewMode('map');
-    } else {
-      console.log('✅ [PublicPropertiesPage] Setting viewMode to list');
-      setViewMode('list');
-    }
-    
-    console.log('🔍 [PublicPropertiesPage] viewMode after update:', viewMode);
-  }, [viewModeParam]);
-  
   // 物件タイプフィルター状態
   const [selectedTypes, setSelectedTypes] = useState<PropertyType[]>([]);
   
@@ -273,56 +255,53 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 物件タイプフィルターの変更をURLに反映
   useEffect(() => {
-    // 新しいURLパラメータを構築
-    const newSearchParams = new URLSearchParams(searchParams);
-    
     if (selectedTypes.length > 0) {
-      newSearchParams.set('types', selectedTypes.join(','));
+      searchParams.set('types', selectedTypes.join(','));
     } else {
-      newSearchParams.delete('types');
+      searchParams.delete('types');
     }
     
     // 価格フィルターをURLに反映
     if (minPrice) {
-      newSearchParams.set('minPrice', minPrice);
+      searchParams.set('minPrice', minPrice);
     } else {
-      newSearchParams.delete('minPrice');
+      searchParams.delete('minPrice');
     }
     
     if (maxPrice) {
-      newSearchParams.set('maxPrice', maxPrice);
+      searchParams.set('maxPrice', maxPrice);
     } else {
-      newSearchParams.delete('maxPrice');
+      searchParams.delete('maxPrice');
     }
     
     // 築年数フィルターをURLに反映
     if (minAge) {
-      newSearchParams.set('minAge', minAge);
+      searchParams.set('minAge', minAge);
     } else {
-      newSearchParams.delete('minAge');
+      searchParams.delete('minAge');
     }
     
     if (maxAge) {
-      newSearchParams.set('maxAge', maxAge);
+      searchParams.set('maxAge', maxAge);
     } else {
-      newSearchParams.delete('maxAge');
+      searchParams.delete('maxAge');
     }
     
     // 公開中のみ表示フィルターをURLに反映
     if (showPublicOnly) {
-      newSearchParams.set('showPublicOnly', 'true');
+      searchParams.set('showPublicOnly', 'true');
     } else {
-      newSearchParams.delete('showPublicOnly');
+      searchParams.delete('showPublicOnly');
     }
     
     // 表示モードをURLに反映
     if (viewMode === 'map') {
-      newSearchParams.set('view', 'map');
+      searchParams.set('view', 'map');
     } else {
-      newSearchParams.delete('view');
+      searchParams.delete('view');
     }
     
-    setSearchParams(newSearchParams, { replace: true });
+    setSearchParams(searchParams, { replace: true });
   }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
   useEffect(() => {

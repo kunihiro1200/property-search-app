@@ -120,20 +120,20 @@ export class FavoriteCommentService {
    * 物件タイプからセル位置を取得
    * 
    * @param propertyType 物件タイプ
-   * @returns セル位置（例: B61）またはnull
+   * @returns セル位置（例: B53）またはnull
    */
   private getCellPosition(propertyType: string): string | null {
     // 物件タイプとセル位置のマッピング（日本語と英語の両方に対応）
     const cellMap: Record<string, string> = {
       // 日本語
-      '土地': 'B61',
+      '土地': 'B53',
       '戸建て': 'B142',
       '戸建': 'B142',
-      'マンション': 'B139',
+      'マンション': 'B150',
       // 英語（データベースに保存されている形式）
-      'land': 'B61',
+      'land': 'B53',
       'detached_house': 'B142',
-      'apartment': 'B139',
+      'apartment': 'B150',
     };
 
     return cellMap[propertyType] || null;

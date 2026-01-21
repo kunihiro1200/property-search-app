@@ -119,20 +119,19 @@ export class PanoramaUrlService {
       // N1セルを読み取り（複数のシート名パターンを試す）
       const sheets = google.sheets({ version: 'v4', auth: sheetsClient['auth'] });
       
-      // シート名のパターン（スペースなしを優先）
+      // シート名のパターン（末尾スペースを含む）
+      // 実際のシート名は "athome " のように末尾にスペースがある場合が多い
       const sheetNamePatterns = [
-        'athome',     // スペースなし（優先）
         'athome ',    // 末尾スペース1つ
         'athome  ',   // 末尾スペース2つ
-        'Athome',
+        'athome',     // スペースなし
         'Athome ',
         'Athome  ',
-        'ATHOME',
+        'Athome',
         'ATHOME ',
         'ATHOME  ',
-        'at home',
+        'ATHOME',
         'at home ',
-        'At Home',
         'At Home ',
       ];
       
@@ -151,7 +150,6 @@ export class PanoramaUrlService {
           }
         } catch (error: any) {
           // このシート名では見つからなかったので次を試す
-          console.log(`[PanoramaUrlService] Sheet "${sheetName}" not found, trying next pattern...`);
           continue;
         }
       }

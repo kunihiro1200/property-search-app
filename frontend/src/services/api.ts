@@ -1,12 +1,6 @@
 import axios from 'axios';
 
-// 🔧 デバッグ用: 環境変数を確認
-console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('🔍 import.meta.env:', import.meta.env);
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-console.log('🔍 API_BASE_URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,

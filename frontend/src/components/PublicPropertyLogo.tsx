@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './PublicPropertyLogo.css';
 
 const PublicPropertyLogo: React.FC = () => {
+  const navigate = useNavigate();
+
   const handleClick = () => {
-    // いふうのホームページに遷移
-    window.open('https://ifoo-oita.com/', '_blank', 'noopener,noreferrer');
+    navigate('/public/properties');
   };
 
   return (
@@ -18,7 +20,7 @@ const PublicPropertyLogo: React.FC = () => {
           handleClick();
         }
       }}
-      aria-label="いふうのホームページを開く"
+      aria-label="ホームページに戻る"
     >
       <img 
         src="/comfortable-tenant-search-logo.png" 

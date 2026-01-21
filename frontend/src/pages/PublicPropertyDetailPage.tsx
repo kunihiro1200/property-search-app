@@ -69,78 +69,51 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 成約済み判定
   const isSold = property ? getBadgeType(property.atbb_status) === 'sold' : false;
 
-  // 全データを一度に取得（バックグラウンドで非同期取得）
+  // 全データを一度に取得
   useEffect(() => {
     if (!id) return;
     
-    // 即座にローディング完了にして、基本情報を表示
-    setIsLoadingComplete(false);
-    
     const fetchCompleteData = async () => {
+      setIsLoadingComplete(true);
       try {
-        // publicApiインスタンスを使用（タイムアウトを60秒に設定）
+        // publicApiインスタンスを使用（ベースURLが自動的に追加される）
         console.log(`[publicProperty:"${property?.property_number || id}"] Fetching complete data from: /api/public/properties/${id}/complete`);
-        const response = await publicApi.get(`/api/public/properties/${id}/complete`, {
-          timeout: 60000 // 60秒タイムアウト
-        });
+        const response = await publicApi.get(`/api/public/properties/${id}/complete`);
         console.log(`[publicProperty:"${property?.property_number || id}"] Complete data response:`, response.data);
         console.log(`[publicProperty:"${property?.property_number || id}"] favoriteComment:`, response.data?.favoriteComment);
         console.log(`[publicProperty:"${property?.property_number || id}"] recommendedComments:`, response.data?.recommendedComments);
         console.log(`[publicProperty:"${property?.property_number || id}"] athomeData:`, response.data?.athomeData);
         setCompleteData(response.data);
-        console.log(`[publicProperty:"${property?.property_number || id}"] ✅ completeData state updated`);
-      } catch (error: any) {
+      } catch (error) {
         console.error(`[publicProperty:"${property?.property_number || id}"] Failed to fetch complete data:`, error);
-        // タイムアウトまたはエラーの場合、空のデータをセット
-        if (error.code === 'ECONNABORTED') {
-          console.warn(`[publicProperty:"${property?.property_number || id}"] Request timeout (60s) - displaying without additional data`);
-        }
-        setCompleteData({
-          property: null,
-          favoriteComment: null,
-          recommendedComments: null,
-          athomeData: null,
-          settlementDate: null,
-          propertyAbout: null
-        });
+      } finally {
+        setIsLoadingComplete(false);
       }
     };
     
-    // バックグラウンドで取得（表示をブロックしない）
     fetchCompleteData();
   }, [id, property?.property_number]);
-
-  // completeDataが更新されたときのログ
-  useEffect(() => {
-    console.log('[Render Check] completeData:', completeData);
-    console.log('[Render Check] recommendedComments:', completeData?.recommendedComments);
-    console.log('[Render Check] recommendedComments.length:', completeData?.recommendedComments?.length);
-    console.log('[Render Check] 表示条件:', !!completeData?.recommendedComments && completeData.recommendedComments.length > 0);
-  }, [completeData]);
   
-  // パノラマURLを取得（バックグラウンドで非同期取得）
+  // パノラマURLを取得
   useEffect(() => {
     if (!property?.property_number) return;
     
-    // 即座にローディング完了にする
-    setIsLoadingPanorama(false);
-    
     const fetchPanoramaUrl = async () => {
+      setIsLoadingPanorama(true);
       try {
         // publicApiインスタンスを使用
-        const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`, {
-          timeout: 30000 // 30秒タイムアウト
-        });
+        const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
         if (response.data.success && response.data.panoramaUrl) {
           setPanoramaUrl(response.data.panoramaUrl);
           console.log('Panorama URL loaded:', response.data.panoramaUrl);
         }
       } catch (error) {
         console.error('Failed to fetch panorama URL:', error);
+      } finally {
+        setIsLoadingPanorama(false);
       }
     };
     
-    // バックグラウンドで取得（表示をブロックしない）
     fetchPanoramaUrl();
   }, [property?.property_number]);
   
@@ -173,28 +146,8 @@ const PublicPropertyDetailPage: React.FC = () => {
   };
 
   const handleBackClick = () => {
-    // URLパラメータから view=map を確認
-    const searchParams = new URLSearchParams(window.location.search);
-    const viewParam = searchParams.get('view');
-    
-    console.log('🔙 [handleBackClick] START');
-    console.log('🔙 [handleBackClick] current URL:', window.location.href);
-    console.log('🔙 [handleBackClick] window.location.search:', window.location.search);
-    console.log('🔙 [handleBackClick] viewParam:', viewParam);
-    console.log('🔙 [handleBackClick] viewParam === "map":', viewParam === 'map');
-    
-    if (viewParam === 'map') {
-      // 地図から来た場合は、地図ビューに戻る
-      const targetUrl = '/public/properties?view=map';
-      console.log('✅ [handleBackClick] Navigating to map view:', targetUrl);
-      navigate(targetUrl);
-    } else {
-      // それ以外の場合は、ブラウザの戻るボタンと同じ動作（location.stateを保持）
-      console.log('✅ [handleBackClick] Navigating back with navigate(-1)');
-      navigate(-1);
-    }
-    
-    console.log('🔙 [handleBackClick] END');
+    // ブラウザの戻るボタンと同じ動作（location.stateを保持）
+    navigate(-1);
   };
 
   // 印刷ボタンのハンドラー
@@ -518,6 +471,23 @@ const PublicPropertyDetailPage: React.FC = () => {
                 </>
               )}
 
+              {/* Google Map（「地図」見出しなし） */}
+              {property.google_map_url && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Button
+                    variant="outlined"
+                    startIcon={<LocationOnIcon />}
+                    href={property.google_map_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    fullWidth
+                  >
+                    Google Mapで見る
+                  </Button>
+                </>
+              )}
+
               {/* 地図表示（座標がある場合） */}
               {property.latitude && property.longitude && isMapLoaded && (
                 <>
@@ -555,16 +525,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                         }}
                         icon={{
                           path: window.google.maps.SymbolPath.CIRCLE,
-                          fillColor: (() => {
-                            const badgeType = getBadgeType(property.atbb_status);
-                            switch (badgeType) {
-                              case 'none': return '#2196F3'; // 青（販売中）
-                              case 'pre_release': return '#ff9800'; // オレンジ（公開前）
-                              case 'email_only': return '#f44336'; // 赤（非公開）
-                              case 'sold': return '#9e9e9e'; // グレー（成約済み）
-                              default: return '#2196F3'; // デフォルト青
-                            }
-                          })(),
+                          fillColor: '#FFC107',
                           fillOpacity: 1,
                           strokeColor: '#fff',
                           strokeWeight: 2,

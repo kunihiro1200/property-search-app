@@ -192,4 +192,14 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   );
 };
 
+// ヘルパー関数
+function isPropertyClickable(atbbStatus: string | null | undefined): boolean {
+  if (!atbbStatus) return false;
+  // Only "公開中", "公開前", and "非公開（配信メールのみ）" are clickable
+  // "非公開案件" is NOT clickable
+  return atbbStatus.includes('公開中') || 
+         atbbStatus.includes('公開前') || 
+         atbbStatus.includes('非公開（配信メールのみ）');
+}
+
 export default PublicPropertyCard;
