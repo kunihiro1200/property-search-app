@@ -652,7 +652,7 @@ const PublicPropertyDetailPage: React.FC = () => {
               
               {isGeneratingPdf && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-                  概算書を生成しています。1分ほどお待ちください...
+                  概算書を生成しています。少々お待ちください...
                 </Typography>
               )}
             </Paper>
