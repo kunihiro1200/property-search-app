@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/services/PropertyListingService';
 import { PropertyImageService } from '../src/services/PropertyImageService';
 import { GoogleDriveService } from '../src/services/GoogleDriveService';
-// import publicPropertiesRoutes from '../src/routes/publicProperties';
+import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
 
@@ -62,7 +62,7 @@ app.get('/api/test/routes', (_req, res) => {
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes);
+app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {

@@ -35,19 +35,19 @@ const athomeDataService = new AthomeDataService();
 const propertyService = new PropertyService();
 const panoramaUrlService = new PanoramaUrlService();
 
-// InquirySyncServiceのインスタンス化をコメントアウト（Vercelでの起動失敗の原因調査）
-// const inquirySyncService = new InquirySyncService({
-//   spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-//   sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-//   serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-//   maxRetries: 3,
-//   retryDelayMs: 1000,
-// });
+// InquirySyncServiceのインスタンス化
+const inquirySyncService = new InquirySyncService({
+  spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+  sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+  serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+  maxRetries: 3,
+  retryDelayMs: 1000,
+});
 
 // 認証は問い合わせ送信時に実行（遅延初期化）
-// inquirySyncService.authenticate().catch(error => {
-//   console.error('[publicProperties] InquirySyncService認証エラー:', error);
-// });
+inquirySyncService.authenticate().catch(error => {
+  console.error('[publicProperties] InquirySyncService認証エラー:', error);
+});
 
 // Rate limiter: 3 requests per hour per IP for inquiries
 const inquiryRateLimiter = createRateLimiter({
