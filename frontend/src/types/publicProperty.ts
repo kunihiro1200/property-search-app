@@ -74,7 +74,7 @@ export interface PublicPropertyFilters {
 }
 
 export interface PropertyInquiry {
-  property_id: string;
+  property_id?: string; // オプショナルに変更
   name: string;
   email: string;
   phone: string;

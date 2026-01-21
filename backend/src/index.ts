@@ -100,7 +100,9 @@ app.use(cors({
     'http://localhost:5173', 
     'http://localhost:5174', 
     'http://localhost:5175',
-    'http://localhost:3000'  // バックエンド自身も追加
+    'http://localhost:3000',  // バックエンド自身も追加
+    'https://property-site-frontend-kappa.vercel.app', // 本番環境フロントエンド
+    'https://baikyaku-property-site3.vercel.app', // 本番環境バックエンド
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

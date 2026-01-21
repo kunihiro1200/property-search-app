@@ -100,9 +100,18 @@ export const usePropertyImages = (
 export const useSubmitInquiry = () => {
   return useMutation<PropertyInquiryResponse, ApiError, PropertyInquiry>({
     mutationFn: async (inquiry: PropertyInquiry) => {
+      // property_id を propertyId に変換
+      const requestBody = {
+        name: inquiry.name,
+        email: inquiry.email,
+        phone: inquiry.phone,
+        message: inquiry.message,
+        ...(inquiry.property_id && { propertyId: inquiry.property_id }),
+      };
+      
       const response = await publicApi.post<PropertyInquiryResponse>(
         '/api/public/inquiries',
-        inquiry
+        requestBody
       );
       return response.data;
     },
