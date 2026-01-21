@@ -20,16 +20,24 @@
 
 .search-input {
   flex: 1;
-  border: none;
+  border: 2px solid #e5e7eb; /* 境界線を追加 */
   outline: none;
   font-size: 1rem;
   padding: 0.75rem 1rem;
-  background: transparent;
+  background: white; /* 明示的に白背景 */
   color: var(--text-primary, #1a1a1a);
+  border-radius: 8px; /* 角丸を追加 */
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #FFC107; /* フォーカス時は黄色 */
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1); /* フォーカスリング */
 }
 
 .search-input::placeholder {
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-secondary, #9ca3af); /* プレースホルダーを少し濃く */
+  font-weight: 400;
 }
 
 .search-button {

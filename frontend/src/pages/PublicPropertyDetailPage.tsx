@@ -294,41 +294,18 @@ const PublicPropertyDetailPage: React.FC = () => {
 
           <Grid container spacing={4}>
             {/* 左カラム: 物件情報 */}
-            <Grid item xs={12} md={8}>
-              {/* パノラマビュー（パノラマURLが存在する場合のみ表示） */}
-              {panoramaUrl && (
-                <Paper elevation={2} sx={{ mb: 3, p: 2 }} className="no-print">
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    360°パノラマビュー
-                  </Typography>
-                  <Box
-                    sx={{
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '56.25%', // 16:9 アスペクト比
-                      overflow: 'hidden',
-                      borderRadius: 1,
-                    }}
-                  >
-                    <iframe
-                      src={panoramaUrl}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        border: 'none',
-                      }}
-                      allowFullScreen
-                      title="360°パノラマビュー"
-                    />
-                  </Box>
-                </Paper>
-              )}
-
-              {/* 物件画像ギャラリー */}
-              <Paper elevation={2} sx={{ mb: 3, p: 2 }}>
+            <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
+              {/* スマホ: 画像ギャラリーを先に表示、デスクトップ: パノラマを先に表示 */}
+              
+              {/* 物件画像ギャラリー（スマホでは最初に表示） */}
+              <Paper 
+                elevation={2} 
+                sx={{ 
+                  mb: 3, 
+                  p: 2,
+                  order: { xs: 1, md: 2 } // スマホは1番目、デスクトップは2番目
+                }}
+              >
                 {/* お気に入り文言を「物件画像」見出しの上に配置 */}
                 {completeData?.favoriteComment && (
                   <Box sx={{ marginBottom: '20px' }} className="favorite-comment-container">
@@ -362,6 +339,46 @@ const PublicPropertyDetailPage: React.FC = () => {
                   />
                 )}
               </Paper>
+
+              {/* パノラマビュー（パノラマURLが存在する場合のみ表示、スマホでは画像の後に表示） */}
+              {panoramaUrl && (
+                <Paper 
+                  elevation={2} 
+                  sx={{ 
+                    mb: 3, 
+                    p: 2,
+                    order: { xs: 2, md: 1 } // スマホは2番目、デスクトップは1番目
+                  }} 
+                  className="no-print"
+                >
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    360°パノラマビュー
+                  </Typography>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: { xs: '75%', sm: '56.25%' }, // スマホは4:3、デスクトップは16:9
+                      overflow: 'hidden',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <iframe
+                      src={panoramaUrl}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                      }}
+                      allowFullScreen
+                      title="360°パノラマビュー"
+                    />
+                  </Box>
+                </Paper>
+              )}
 
               {/* 物件基本情報 */}
               <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
@@ -525,7 +542,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                         }}
                         icon={{
                           path: window.google.maps.SymbolPath.CIRCLE,
-                          fillColor: '#FFC107',
+                          fillColor: (() => {
+                            // バッジの色に合わせてマーカーの色を決定
+                            const badgeType = getBadgeType(property.atbb_status);
+                            if (badgeType === 'pre_publish') return '#ff9800'; // オレンジ（公開前情報）
+                            if (badgeType === 'private') return '#f44336'; // 赤（非公開物件）
+                            if (badgeType === 'sold') return '#9e9e9e'; // グレー（成約済み）
+                            return '#2196F3'; // 青（販売中物件）
+                          })(),
                           fillOpacity: 1,
                           strokeColor: '#fff',
                           strokeWeight: 2,
@@ -587,9 +611,9 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments.map((row: string[], rowIndex: number) => (
-                    <Typography key={rowIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                      {row.join(' ')}
+                  {completeData.recommendedComments.map((comment: string, commentIndex: number) => (
+                    <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                      {comment}
                     </Typography>
                   ))}
                 </Box>
