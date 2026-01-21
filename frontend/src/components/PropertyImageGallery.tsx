@@ -513,7 +513,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
                   />
                 )}
                 <img
-                  src={image.fullImageUrl}
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/public/images/${image.id}`}
                   alt={image.name}
                   loading="lazy"
                   crossOrigin="anonymous"

@@ -12,7 +12,7 @@ export interface SearchQuery {
 
 /**
  * 検索クエリが物件番号形式かどうかを判定
- * 物件番号は AA, BB, CC で始まる文字列
+ * 物件番号は AA, BB, CC, DD, EE などのアルファベット2文字で始まる文字列
  * 
  * @param query - 検索クエリ文字列
  * @returns 物件番号形式の場合 true
@@ -24,8 +24,9 @@ export function isPropertyNumber(query: string): boolean {
 
   const trimmedQuery = query.trim().toUpperCase();
   
-  // AA, BB, CC で始まるかチェック
-  return /^(AA|BB|CC)/.test(trimmedQuery);
+  // アルファベット2文字で始まり、その後に数字が続くパターンをチェック
+  // 例: AA123, BB456, CC789, DD012, EE2 など
+  return /^[A-Z]{2}\d*$/.test(trimmedQuery);
 }
 
 /**

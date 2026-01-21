@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
 import { Box, Typography, Button, CircularProgress, Paper, Chip } from '@mui/material';
 import { PublicProperty } from '../types/publicProperty';
-import { mapAtbbStatusToDisplayStatus, StatusType } from '../utils/atbbStatusDisplayMapper';
 
 interface PropertyMapViewProps {
   properties: PublicProperty[];
@@ -26,7 +26,7 @@ const defaultCenter = {
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-// バッジ設定（StatusBadgeと同じ）
+// バッジ設定（badge_typeベース）
 interface BadgeConfig {
   label: string;
   color: string;
@@ -34,55 +34,49 @@ interface BadgeConfig {
   markerColor: string; // マーカーの色
 }
 
-const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
-  pre_publish: {
+const BADGE_CONFIGS: Record<string, BadgeConfig> = {
+  'none': {
+    label: '',
+    color: '',
+    backgroundColor: '',
+    markerColor: '#2196F3', // 青（販売中）
+  },
+  'pre_release': {
     label: '公開前情報',
     color: '#fff',
     backgroundColor: '#ff9800', // オレンジ
     markerColor: '#ff9800', // オレンジマーカー
   },
-  private: {
+  'email_only': {
     label: '非公開物件',
     color: '#fff',
     backgroundColor: '#f44336', // 赤
     markerColor: '#f44336', // 赤マーカー
   },
-  sold: {
+  'sold': {
     label: '成約済み',
     color: '#fff',
     backgroundColor: '#9e9e9e', // グレー
     markerColor: '#9e9e9e', // グレーマーカー
   },
-  other: {
-    label: '',
-    color: '',
-    backgroundColor: '',
-    markerColor: '#2196F3', // デフォルト青
-  },
 };
 
-// マーカーの色を取得
-const getMarkerColor = (atbbStatus: string): string => {
-  if (!atbbStatus || atbbStatus === '') {
-    return '#2196F3'; // デフォルト青
+// マーカーの色を取得（badge_typeを使用）
+const getMarkerColor = (badgeType: string | undefined): string => {
+  if (!badgeType || badgeType === 'none') {
+    return '#2196F3'; // デフォルト青（販売中）
   }
   
-  const result = mapAtbbStatusToDisplayStatus(atbbStatus);
-  return BADGE_CONFIGS[result.statusType].markerColor;
+  return BADGE_CONFIGS[badgeType]?.markerColor || '#2196F3';
 };
 
-// バッジ設定を取得
-const getBadgeConfig = (atbbStatus: string): BadgeConfig | null => {
-  if (!atbbStatus || atbbStatus === '') {
+// バッジ設定を取得（badge_typeを使用）
+const getBadgeConfig = (badgeType: string | undefined): BadgeConfig | null => {
+  if (!badgeType || badgeType === 'none') {
     return null;
   }
   
-  const result = mapAtbbStatusToDisplayStatus(atbbStatus);
-  if (result.statusType === 'other') {
-    return null;
-  }
-  
-  return BADGE_CONFIGS[result.statusType];
+  return BADGE_CONFIGS[badgeType] || null;
 };
 
 /**
@@ -210,6 +204,7 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
  * 物件を地図上に表示するコンポーネント
  */
 const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
+  const navigate = useNavigate();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
@@ -309,8 +304,8 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
           lng: adjustedLng,
         });
 
-        // マーカーの色を取得
-        const markerColor = getMarkerColor(property.atbb_status);
+        // マーカーの色を取得（badge_typeを使用）
+        const markerColor = getMarkerColor(property.badge_type);
         const markerScale = 10;
         const zIndex = google.maps.Marker.MAX_ZINDEX + index; // グループ内での順序
 
@@ -357,8 +352,13 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   };
 
   const handlePropertyClick = (propertyId: string) => {
-    // 新しいタブで物件詳細ページを開く
-    window.open(`/public/properties/${propertyId}`, '_blank', 'noopener,noreferrer');
+    // 同じタブ内で詳細ページに遷移（view=mapパラメータを追加）
+    const targetUrl = `/public/properties/${propertyId}?view=map`;
+    console.log('🗺️ [PropertyMapView] handlePropertyClick - propertyId:', propertyId);
+    console.log('🗺️ [PropertyMapView] handlePropertyClick - targetUrl:', targetUrl);
+    console.log('🗺️ [PropertyMapView] handlePropertyClick - current URL:', window.location.href);
+    navigate(targetUrl);
+    console.log('🗺️ [PropertyMapView] handlePropertyClick - navigate called');
   };
 
   // 価格をフォーマット
@@ -493,9 +493,9 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
             onCloseClick={handleInfoWindowClose}
           >
             <Box sx={{ maxWidth: 250 }}>
-              {/* バッジ表示 */}
+              {/* バッジ表示（badge_typeを使用） */}
               {(() => {
-                const badgeConfig = getBadgeConfig(selectedProperty.atbb_status);
+                const badgeConfig = getBadgeConfig(selectedProperty.badge_type);
                 return badgeConfig ? (
                   <Chip
                     label={badgeConfig.label}

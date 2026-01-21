@@ -338,10 +338,10 @@ export class PropertyListingService {
       // NEW: 物件番号フィルター（完全一致、大文字小文字を区別しない）
       if (propertyNumber) {
         // 入力をサニタイズ（トリムのみ、Supabaseが自動的にエスケープ）
-        const sanitizedNumber = propertyNumber.trim();
+        const sanitizedNumber = propertyNumber.trim().toUpperCase();
         if (sanitizedNumber) {
-          // 完全一致検索（大文字小文字を区別しない）
-          query = query.ilike('property_number', sanitizedNumber);
+          // 完全一致検索（eq使用、大文字に統一）
+          query = query.eq('property_number', sanitizedNumber);
         }
       }
       
@@ -702,11 +702,14 @@ export class PropertyListingService {
 
   // バッジタイプ判定メソッド
   private getBadgeType(atbbStatus: string | null): string {
-    if (!atbbStatus) return 'sold';
+    // 空欄（null、空文字列）の場合は'sold'（成約済み、グレーマーカー）
+    if (!atbbStatus || atbbStatus === '') return 'sold';
+    // "ステータスなし"の場合も'sold'（成約済み、グレーマーカー）
+    if (atbbStatus === 'ステータスなし') return 'sold';
     if (atbbStatus.includes('公開中')) return 'none';
     if (atbbStatus.includes('公開前')) return 'pre_release';
     if (atbbStatus.includes('非公開（配信メールのみ）')) return 'email_only';
-    // "非公開案件" and all other cases return 'sold'
+    // "非公開案件"、"成約済み" and all other cases return 'sold'
     return 'sold';
   }
 

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ローカル認証診断</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 ローカル認証診断ツール</h1>
+        
+        <div class="test-section">
+            <h2>1. 環境変数チェック</h2>
+            <div id="env-check"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. バックエンド接続テスト</h2>
+            <button onclick="testBackend()">バックエンドをテスト</button>
+            <div id="backend-test"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Supabase設定チェック</h2>
+            <div id="supabase-check"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. ローカルストレージ確認</h2>
+            <button onclick="checkLocalStorage()">ローカルストレージを確認</button>
+            <button onclick="clearLocalStorage()">ローカルストレージをクリア</button>
+            <div id="storage-check"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. 推奨アクション</h2>
+            <div id="recommendations"></div>
+        </div>
+    </div>
+
+    <script>
+        // 環境変数チェック
+        function checkEnvironment() {
+            const envDiv = document.getElementById('env-check');
+            const apiUrl = 'http://localhost:3000'; // ハードコード（Viteの環境変数は使えない）
+            const supabaseUrl = 'https://krxhrbtlgfjzsseegaqq.supabase.co';
+            
+            let html = '<div class="result info">';
+            html += '<strong>現在の設定:</strong><br>';
+            html += `API URL: <span class="code">${apiUrl}</span><br>`;
+            html += `Supabase URL: <span class="code">${supabaseUrl}</span><br>`;
+            html += `現在のURL: <span class="code">${window.location.origin}</span>`;
+            html += '</div>';
+            
+            if (window.location.origin === 'http://localhost:5174') {
+                html += '<div class="result success">✅ 正しいローカル環境で実行中</div>';
+            } else {
+                html += '<div class="result error">❌ 予期しないURLで実行中</div>';
+            }
+            
+            envDiv.innerHTML = html;
+        }
+
+        // バックエンド接続テスト
+        async function testBackend() {
+            const testDiv = document.getElementById('backend-test');
+            testDiv.innerHTML = '<div class="result info">テスト中...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    testDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ バックエンド接続成功<br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    testDiv.innerHTML = `
+                        <div class="result error">
+                            ❌ バックエンド接続失敗<br>
+                            ステータス: ${response.status}<br>
+                            ${response.statusText}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                testDiv.innerHTML = `
+                    <div class="result error">
+                        ❌ バックエンドに接続できません<br>
+                        エラー: ${error.message}<br>
+                        <br>
+                        <strong>確認事項:</strong><br>
+                        1. バックエンドが起動しているか確認<br>
+                        2. <span class="code">cd backend && npm run dev</span> を実行<br>
+                        3. <span class="code">http://localhost:3000</span> にアクセスできるか確認
+                    </div>
+                `;
+            }
+        }
+
+        // Supabase設定チェック
+        function checkSupabase() {
+            const supabaseDiv = document.getElementById('supabase-check');
+            const redirectUrl = `${window.location.origin}/auth/callback`;
+            
+            let html = '<div class="result info">';
+            html += '<strong>Supabase設定:</strong><br>';
+            html += `リダイレクトURL: <span class="code">${redirectUrl}</span><br><br>';
+            html += '<strong>⚠️ 重要:</strong> Supabaseダッシュボードで以下のURLを許可する必要があります:<br>';
+            html += '<pre>http://localhost:5174/auth/callback\nhttp://localhost:5173/auth/callback</pre>';
+            html += '<br>';
+            html += '<strong>設定方法:</strong><br>';
+            html += '1. <a href="https://supabase.com/dashboard" target="_blank">Supabaseダッシュボード</a>にログイン<br>';
+            html += '2. プロジェクト（krxhrbtlgfjzsseegaqq）を選択<br>';
+            html += '3. Authentication → URL Configuration<br>';
+            html += '4. "Redirect URLs"に上記URLを追加<br>';
+            html += '5. 保存';
+            html += '</div>';
+            
+            supabaseDiv.innerHTML = html;
+        }
+
+        // ローカルストレージ確認
+        function checkLocalStorage() {
+            const storageDiv = document.getElementById('storage-check');
+            const sessionToken = localStorage.getItem('session_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+            
+            let html = '<div class="result info">';
+            html += '<strong>ローカルストレージの内容:</strong><br>';
+            html += `session_token: ${sessionToken ? '存在する（長さ: ' + sessionToken.length + '）' : '❌ なし'}<br>`;
+            html += `refresh_token: ${refreshToken ? '存在する（長さ: ' + refreshToken.length + '）' : '❌ なし'}`;
+            html += '</div>';
+            
+            if (sessionToken || refreshToken) {
+                html += '<div class="result error">⚠️ 古いトークンが残っています。クリアすることをお勧めします。</div>';
+            } else {
+                html += '<div class="result success">✅ ローカルストレージはクリーンです</div>';
+            }
+            
+            storageDiv.innerHTML = html;
+        }
+
+        // ローカルストレージクリア
+        function clearLocalStorage() {
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('refresh_token');
+            sessionStorage.clear();
+            
+            const storageDiv = document.getElementById('storage-check');
+            storageDiv.innerHTML = '<div class="result success">✅ ローカルストレージをクリアしました</div>';
+            
+            setTimeout(() => {
+                checkLocalStorage();
+            }, 1000);
+        }
+
+        // 推奨アクション
+        function showRecommendations() {
+            const recDiv = document.getElementById('recommendations');
+            
+            let html = '<div class="result info">';
+            html += '<strong>📋 推奨される手順:</strong><br><br>';
+            html += '<ol style="margin: 0; padding-left: 20px;">';
+            html += '<li><strong>SupabaseダッシュボードでリダイレクトURLを追加</strong><br>';
+            html += '   → <span class="code">http://localhost:5174/auth/callback</span> を許可<br><br></li>';
+            html += '<li><strong>ローカルストレージをクリア</strong><br>';
+            html += '   → 上の「ローカルストレージをクリア」ボタンをクリック<br><br></li>';
+            html += '<li><strong>ブラウザのキャッシュをクリア</strong><br>';
+            html += '   → <span class="code">Ctrl + Shift + Delete</span> → 全期間 → すべて削除<br><br></li>';
+            html += '<li><strong>ブラウザを完全に閉じて再起動</strong><br><br></li>';
+            html += '<li><strong>新しいウィンドウで再度アクセス</strong><br>';
+            html += '   → <a href="http://localhost:5174/login" target="_blank">http://localhost:5174/login</a><br><br></li>';
+            html += '<li><strong>または、シークレットモードで試す</strong><br>';
+            html += '   → <span class="code">Ctrl + Shift + N</span> (Chrome/Edge) または <span class="code">Ctrl + Shift + P</span> (Firefox)</li>';
+            html += '</ol>';
+            html += '</div>';
+            
+            recDiv.innerHTML = html;
+        }
+
+        // 初期化
+        window.onload = function() {
+            checkEnvironment();
+            checkSupabase();
+            checkLocalStorage();
+            showRecommendations();
+        };
+    </script>
+</body>
+</html>

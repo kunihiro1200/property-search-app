@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>環境変数チェック</title>
+</head>
+<body>
+    <h1>環境変数チェック</h1>
+    <p>このページを開いて、ブラウザのコンソール（F12）を確認してください。</p>
+    <pre id="result"></pre>
+    
+    <script type="module">
+        // Viteの環境変数をチェック
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        const result = {
+            'VITE_API_URL': apiUrl || '❌ 未設定',
+            'VITE_SUPABASE_URL': supabaseUrl || '❌ 未設定',
+            'VITE_SUPABASE_ANON_KEY': supabaseKey ? '✅ 設定済み' : '❌ 未設定',
+            'import.meta.env': import.meta.env
+        };
+        
+        console.log('🔍 環境変数チェック:', result);
+        document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+        
+        // API_BASE_URLを確認
+        const expectedUrl = 'http://localhost:3000';
+        if (apiUrl === expectedUrl) {
+            console.log('✅ VITE_API_URL is correct:', apiUrl);
+        } else {
+            console.error('❌ VITE_API_URL is incorrect!');
+            console.error('Expected:', expectedUrl);
+            console.error('Actual:', apiUrl);
+        }
+    </script>
+</body>
+</html>
