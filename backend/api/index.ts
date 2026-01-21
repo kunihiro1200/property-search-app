@@ -140,35 +140,90 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
   }
 });
 
-// 画像一覧取得（image_urlから）
+// Google Drive APIヘルパー関数
+async function getGoogleDriveAuth() {
+  const { google } = await import('googleapis');
+  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '{}');
+  
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  });
+  
+  return auth;
+}
+
+async function listImagesFromDriveFolder(folderUrl: string) {
+  const { google } = await import('googleapis');
+  
+  // フォルダIDを抽出
+  const folderIdMatch = folderUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (!folderIdMatch) {
+    throw new Error('Invalid folder URL');
+  }
+  const folderId = folderIdMatch[1];
+  
+  const auth = await getGoogleDriveAuth();
+  const drive = google.drive({ version: 'v3', auth });
+  
+  // フォルダ内の画像ファイルを取得
+  const response = await drive.files.list({
+    q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType = 'application/pdf') and trashed = false`,
+    fields: 'files(id, name, mimeType, webViewLink, thumbnailLink)',
+    orderBy: 'name',
+  });
+  
+  const files = response.data.files || [];
+  
+  return files.map(file => ({
+    id: file.id!,
+    name: file.name!,
+    mimeType: file.mimeType!,
+    url: `https://drive.google.com/file/d/${file.id}/view`,
+    thumbnailUrl: file.thumbnailLink || null,
+  }));
+}
+
+// 画像一覧取得（storage_locationから）
 app.get('/api/public/properties/:id/images', async (req, res) => {
   try {
     const { id } = req.params;
+    const { includeHidden = 'false' } = req.query;
     const isUuid = id.length === 36 && id.includes('-');
     
-    let query = supabase.from('property_listings').select('image_url, hidden_images');
+    let query = supabase.from('property_listings').select('storage_location, hidden_images, athome_data');
     query = isUuid ? query.eq('id', id) : query.eq('property_number', id);
     
     const { data: property, error } = await query.single();
     if (error) throw error;
     if (!property) return res.status(404).json({ success: false, error: 'Not found' });
 
-    // image_urlをパース
-    let images = [];
-    if (property.image_url) {
-      try {
-        images = JSON.parse(property.image_url);
-      } catch (e) {
-        if (property.image_url.trim()) {
-          images = [property.image_url];
-        }
-      }
+    // storage_locationを優先、なければathome_dataから取得
+    let storageUrl = property.storage_location;
+    if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
+      storageUrl = property.athome_data[0];
     }
+
+    if (!storageUrl) {
+      return res.json({
+        success: true,
+        images: [],
+        totalCount: 0,
+        visibleCount: 0,
+        hiddenCount: 0,
+      });
+    }
+
+    // Google Driveから画像を取得
+    const images = await listImagesFromDriveFolder(storageUrl);
 
     // 非表示画像をフィルタリング
     const hiddenImages = property.hidden_images || [];
-    const visibleImages = images.filter((img: any) => !hiddenImages.includes(img.id));
+    const visibleImages = includeHidden === 'true' 
+      ? images 
+      : images.filter(img => !hiddenImages.includes(img.id));
 
+    res.set('Cache-Control', 'public, max-age=3600');
     res.json({
       success: true,
       images: visibleImages,
@@ -177,6 +232,75 @@ app.get('/api/public/properties/:id/images', async (req, res) => {
       hiddenCount: hiddenImages.length,
     });
   } catch (error: any) {
+    console.error('Error fetching images:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 画像プロキシ（Google Driveから画像データを取得）
+app.get('/api/public/images/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { google } = await import('googleapis');
+    
+    const auth = await getGoogleDriveAuth();
+    const drive = google.drive({ version: 'v3', auth });
+    
+    // ファイルのメタデータを取得
+    const metadata = await drive.files.get({
+      fileId,
+      fields: 'mimeType, size',
+    });
+    
+    // ファイルデータを取得
+    const response = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+    
+    res.set({
+      'Content-Type': metadata.data.mimeType || 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
+      'Access-Control-Allow-Origin': '*',
+    });
+    
+    res.send(Buffer.from(response.data as ArrayBuffer));
+  } catch (error: any) {
+    console.error('Error proxying image:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 画像サムネイルプロキシ
+app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { google } = await import('googleapis');
+    
+    const auth = await getGoogleDriveAuth();
+    const drive = google.drive({ version: 'v3', auth });
+    
+    // ファイルのメタデータを取得
+    const metadata = await drive.files.get({
+      fileId,
+      fields: 'mimeType, size',
+    });
+    
+    // ファイルデータを取得（サムネイルも同じデータを使用）
+    const response = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+    
+    res.set({
+      'Content-Type': metadata.data.mimeType || 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
+      'Access-Control-Allow-Origin': '*',
+    });
+    
+    res.send(Buffer.from(response.data as ArrayBuffer));
+  } catch (error: any) {
+    console.error('Error proxying thumbnail:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
