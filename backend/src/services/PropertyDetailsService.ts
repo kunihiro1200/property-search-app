@@ -53,14 +53,41 @@ export class PropertyDetailsService {
       
       if (error) {
         if (error.code === 'PGRST116') {
-          // データが見つからない場合
-          console.log(`[PropertyDetailsService] No details found for ${propertyNumber} (PGRST116)`);
+          // 複数行が存在する場合 - 最初の行を取得
+          console.log(`[PropertyDetailsService] Multiple rows found for ${propertyNumber}, fetching first row`);
+          const { data: multipleData, error: multipleError } = await this.supabase
+            .from('property_details')
+            .select('property_number, property_about, recommended_comments, athome_data, favorite_comment')
+            .eq('property_number', propertyNumber)
+            .limit(1);
+          
+          if (multipleError || !multipleData || multipleData.length === 0) {
+            console.error(`[PropertyDetailsService] Error fetching multiple rows for ${propertyNumber}:`, multipleError);
+            return {
+              property_number: propertyNumber,
+              property_about: null,
+              recommended_comments: null,
+              athome_data: null,
+              favorite_comment: null
+            };
+          }
+          
+          const firstRow = multipleData[0];
+          console.log(`[PropertyDetailsService] Found details for ${propertyNumber} (first row):`, {
+            has_property_about: !!firstRow.property_about,
+            has_recommended_comments: !!firstRow.recommended_comments,
+            recommended_comments_length: Array.isArray(firstRow.recommended_comments) ? firstRow.recommended_comments.length : 0,
+            has_athome_data: !!firstRow.athome_data,
+            athome_data_length: Array.isArray(firstRow.athome_data) ? firstRow.athome_data.length : 0,
+            has_favorite_comment: !!firstRow.favorite_comment
+          });
+          
           return {
-            property_number: propertyNumber,
-            property_about: null,
-            recommended_comments: null,
-            athome_data: null,
-            favorite_comment: null
+            property_number: firstRow.property_number,
+            property_about: firstRow.property_about || null,
+            recommended_comments: firstRow.recommended_comments || null,
+            athome_data: firstRow.athome_data || null,
+            favorite_comment: firstRow.favorite_comment || null
           };
         }
         console.error(`[PropertyDetailsService] Error fetching details for ${propertyNumber}:`, error);
