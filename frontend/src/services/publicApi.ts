@@ -6,6 +6,13 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (
   import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''
 );
 
+// デバッグ用ログ
+console.log('🔍 [publicApi] Environment:', {
+  MODE: import.meta.env.MODE,
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  API_BASE_URL: API_BASE_URL
+});
+
 // 公開API用のaxiosインスタンス（認証不要）
 const publicApi = axios.create({
   baseURL: API_BASE_URL, // /api/publicは各エンドポイントで指定
