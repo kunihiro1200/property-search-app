@@ -93,7 +93,7 @@ const PublicPropertyDetailPage: React.FC = () => {
     };
     
     fetchCompleteData();
-  }, [id, property?.property_number]);
+  }, [id]); // idのみに依存（property?.property_numberを削除して無限ループを防ぐ）
   
   // パノラマURLを取得
   useEffect(() => {
