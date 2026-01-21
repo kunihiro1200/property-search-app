@@ -297,13 +297,13 @@ const PublicPropertyDetailPage: React.FC = () => {
             <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
               {/* スマホ: 画像ギャラリーを先に表示、デスクトップ: パノラマを先に表示 */}
               
-              {/* 物件画像ギャラリー（スマホでは最初に表示） */}
+              {/* 物件画像ギャラリー */}
               <Paper 
                 elevation={2} 
                 sx={{ 
                   mb: 3, 
                   p: 2,
-                  order: { xs: 1, md: 2 } // スマホは1番目、デスクトップは2番目
+                  order: 1 // 常に1番目
                 }}
               >
                 {/* お気に入り文言を「物件画像」見出しの上に配置 */}
@@ -340,14 +340,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                 )}
               </Paper>
 
-              {/* パノラマビュー（パノラマURLが存在する場合のみ表示、スマホでは画像の後に表示） */}
+              {/* パノラマビュー（パノラマURLが存在する場合のみ表示） */}
               {panoramaUrl && (
                 <Paper 
                   elevation={2} 
                   sx={{ 
                     mb: 3, 
                     p: 2,
-                    order: { xs: 2, md: 1 } // スマホは2番目、デスクトップは1番目
+                    order: 5 // パノラマは5番目（地図の後）
                   }} 
                   className="no-print"
                 >
@@ -381,7 +381,7 @@ const PublicPropertyDetailPage: React.FC = () => {
               )}
 
               {/* 物件基本情報 */}
-              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 2 }}> {/* 2番目 */}
               {/* 物件タイプ */}
               <Box sx={{ mb: 2 }}>
                 <Chip
@@ -564,7 +564,7 @@ const PublicPropertyDetailPage: React.FC = () => {
 
             {/* 成約済み物件の場合: 成約情報を表示 */}
             {isSold && (
-              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 3 }}> {/* 3番目（おすすめポイントと同じ位置） */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   成約情報
                 </Typography>
@@ -605,6 +605,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   mb: 3,
                   backgroundColor: '#FFF9E6',
                   borderLeft: '4px solid #FFC107',
+                  order: 3, // 3番目
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#F57C00' }}>
@@ -622,7 +623,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             
             {/* 「こちらの物件について」セクション（見出しなし） */}
             {completeData?.propertyAbout && (
-              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 4 }}> {/* 4番目 */}
                 <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                   {completeData.propertyAbout}
                 </Typography>
@@ -630,7 +631,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             )}
             
             {/* 「概算書」セクション（印刷時は非表示） */}
-            <Paper elevation={2} sx={{ p: 3, mb: 3 }} className="no-print">
+            <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }} className="no-print"> {/* 6番目 */}
               <Typography variant="h6" sx={{ mb: 2 }}>
                 概算書
               </Typography>
