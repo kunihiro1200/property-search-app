@@ -35,19 +35,22 @@ const athomeDataService = new AthomeDataService();
 const propertyService = new PropertyService();
 const panoramaUrlService = new PanoramaUrlService();
 
-// InquirySyncServiceのインスタンス化
-const inquirySyncService = new InquirySyncService({
-  spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-  sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-  serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-  maxRetries: 3,
-  retryDelayMs: 1000,
-});
+// InquirySyncServiceのインスタンス化（遅延初期化）
+let inquirySyncService: InquirySyncService | null = null;
 
-// 認証は問い合わせ送信時に実行（遅延初期化）
-inquirySyncService.authenticate().catch(error => {
-  console.error('[publicProperties] InquirySyncService認証エラー:', error);
-});
+// InquirySyncServiceを取得（必要な時だけ初期化）
+const getInquirySyncService = () => {
+  if (!inquirySyncService) {
+    inquirySyncService = new InquirySyncService({
+      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      maxRetries: 3,
+      retryDelayMs: 1000,
+    });
+  }
+  return inquirySyncService;
+};
 
 // Rate limiter: 20 requests per hour per IP for inquiries (テスト用に緩和)
 const inquiryRateLimiter = createRateLimiter({
@@ -830,8 +833,12 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
 
     // 直接買主リストに転記（property_inquiriesテーブルをバイパス）
     try {
+      // InquirySyncServiceを取得（必要な時だけ初期化）
+      const syncService = getInquirySyncService();
+      await syncService.authenticate();
+      
       // 買主番号を採番
-      const allRows = await inquirySyncService['sheetsClient'].readAll();
+      const allRows = await syncService['sheetsClient'].readAll();
       const columnEValues = allRows
         .map(row => row['買主番号'])
         .filter(value => value !== null && value !== undefined)
@@ -860,7 +867,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
       };
 
       // スプレッドシートに直接追加
-      await inquirySyncService['sheetsClient'].appendRow(rowData);
+      await syncService['sheetsClient'].appendRow(rowData);
 
       console.log('Inquiry synced to buyer sheet:', {
         buyerNumber,
