@@ -725,40 +725,40 @@ const PublicPropertiesPage: React.FC = () => {
             >
               <Box sx={{ flex: { xs: 'none', sm: 1 } }}> {/* スマホはflex無効 */}
                 <UnifiedSearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onSearch={handleSearch}
-                placeholder="所在地で検索"
-              />
-              {searchType && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {searchType === 'property_number' ? '物件番号で検索中' : '所在地で検索中'}
-                </Typography>
-              )}
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSearch={handleSearch}
+                  placeholder="所在地で検索"
+                />
+                {searchType && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {searchType === 'property_number' ? '物件番号で検索中' : '所在地で検索中'}
+                  </Typography>
+                )}
+              </Box>
+              <Button
+                variant="outlined"
+                startIcon={<LocationOnIcon />}
+                sx={{
+                  height: '56px',
+                  minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
+                  width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
+                  borderColor: '#4CAF50',
+                  color: '#4CAF50',
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    borderColor: '#45A049',
+                    backgroundColor: '#F1F8F4',
+                  },
+                }}
+                onClick={() => {
+                  setViewMode('map');
+                  setShouldScrollToMap(true); // スクロールフラグを立てる
+                }}
+              >
+                地図で検索
+              </Button>
             </Box>
-            <Button
-              variant="outlined"
-              startIcon={<LocationOnIcon />}
-              sx={{
-                height: '56px',
-                minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
-                width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
-                borderColor: '#4CAF50',
-                color: '#4CAF50',
-                fontWeight: 'bold',
-                '&:hover': {
-                  borderColor: '#45A049',
-                  backgroundColor: '#F1F8F4',
-                },
-              }}
-              onClick={() => {
-                setViewMode('map');
-                setShouldScrollToMap(true); // スクロールフラグを立てる
-              }}
-            >
-              地図で検索
-            </Button>
-          </Box>
         </Container>
       </Paper>
 
