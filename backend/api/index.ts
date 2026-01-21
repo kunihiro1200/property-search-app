@@ -60,6 +60,11 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// OPTIONSリクエスト（プリフライト）を処理
+app.options('*', (_req, res) => {
+  res.status(200).end();
+});
+
 // テスト用：publicPropertiesRoutesが読み込めているか確認
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
