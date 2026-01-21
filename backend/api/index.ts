@@ -1,4 +1,4 @@
-// 公開物件サイト専用のエントリーポイント
+// Vercel用のエントリーポイント（公開物件サイト + 認証機能）
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -10,6 +10,7 @@ import { PropertyListingService } from '../src/services/PropertyListingService';
 import { PropertyImageService } from '../src/services/PropertyImageService';
 import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
+import authRoutes from '../src/routes/auth.supabase';
 
 const app = express();
 
@@ -33,10 +34,17 @@ const propertyListingService = new PropertyListingService();
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: '*', // 公開サイトなので全てのオリジンを許可
-  credentials: false,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:3000',
+    'https://property-site-frontend-kappa.vercel.app',
+    'https://baikyaku-property-site3.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(compression());
 app.use(morgan('dev'));
@@ -61,7 +69,11 @@ app.get('/api/test/routes', (_req, res) => {
   });
 });
 
-// ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
+// ⚠️ 重要: 認証ルートを登録（ログイン機能）
+app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
+
+// ⚠️ 重要: publicPropertiesRoutes を登録（より具体的なルートを優先）
 app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
