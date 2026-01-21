@@ -99,7 +99,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
+    <Paper elevation={2} sx={{ p: 3 }} className="public-inquiry-form">
       <Typography variant="h6" sx={{ mb: 2 }}>
         この物件についてお問い合わせ
       </Typography>

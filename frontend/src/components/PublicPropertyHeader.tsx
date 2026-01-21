@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Box } from '@mui/material';
+import { Button, Box, useMediaQuery, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
 import PublicPropertyLogo from './PublicPropertyLogo';
 import { getBadgeType, BADGE_CONFIG } from '../utils/propertyStatusUtils';
 import './PublicPropertyHeader.css';
@@ -10,14 +12,18 @@ interface PublicPropertyHeaderProps {
   showBackButton?: boolean;
   atbbStatus?: string | null;
   navigationState?: any; // NavigationState型
+  showInquiryButton?: boolean; // お問合せボタンを表示するか
 }
 
 const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({ 
   showBackButton = false,
   atbbStatus,
-  navigationState
+  navigationState,
+  showInquiryButton = false,
 }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const badgeType = getBadgeType(atbbStatus);
 
   const handleBackClick = () => {
@@ -32,6 +38,19 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
       // stateがない場合は通常の戻る
       navigate('/public/properties');
     }
+  };
+
+  const handleInquiryClick = () => {
+    // お問合せフォームまでスムーズにスクロール
+    const inquiryForm = document.querySelector('.public-inquiry-form');
+    if (inquiryForm) {
+      inquiryForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handlePhoneClick = () => {
+    // 電話をかける
+    window.location.href = 'tel:0975332022';
   };
 
   const renderBadge = () => {
@@ -80,13 +99,66 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
                 backgroundColor: '#FFC107',
                 color: '#000',
                 border: '1px solid #000',
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
                 '&:hover': {
                   backgroundColor: '#FFB300',
                   borderColor: '#000',
                 },
+                '& .MuiButton-startIcon': {
+                  marginRight: '4px',
+                },
               }}
             >
-              物件一覧
+              {isMobile ? '一覧' : '物件一覧'}
+            </Button>
+          )}
+          {/* スマホ版のみお問合せボタンを表示 */}
+          {isMobile && showInquiryButton && (
+            <Button
+              startIcon={<EmailIcon />}
+              onClick={handleInquiryClick}
+              sx={{ 
+                backgroundColor: '#4CAF50',
+                color: '#fff',
+                border: '1px solid #000',
+                ml: showBackButton ? 1 : 0,
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+                '&:hover': {
+                  backgroundColor: '#45a049',
+                  borderColor: '#000',
+                },
+                '& .MuiButton-startIcon': {
+                  marginRight: '4px',
+                },
+              }}
+            >
+              お問合せ
+            </Button>
+          )}
+          {/* スマホ版のみTELボタンを表示 */}
+          {isMobile && showInquiryButton && (
+            <Button
+              startIcon={<PhoneIcon />}
+              onClick={handlePhoneClick}
+              sx={{ 
+                backgroundColor: '#2196F3',
+                color: '#fff',
+                border: '1px solid #000',
+                ml: 1,
+                minWidth: 'auto',
+                whiteSpace: 'nowrap',
+                '&:hover': {
+                  backgroundColor: '#1976D2',
+                  borderColor: '#000',
+                },
+                '& .MuiButton-startIcon': {
+                  marginRight: '4px',
+                },
+              }}
+            >
+              TEL
             </Button>
           )}
         </div>

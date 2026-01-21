@@ -806,20 +806,13 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
     
     // 物件IDが指定されている場合のみ物件情報を取得
     if (propertyId) {
-      // 物件情報を取得（Supabase Clientを直接使用）
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY!
-      );
-
-      const { data: propertyData, error: propertyError } = await supabase
-        .from('property_listings')
-        .select('property_number, site_display, athome_public_folder_id')
-        .eq('id', propertyId)
-        .single();
+      console.log(`[Inquiry] Fetching property with ID: ${propertyId}`);
       
-      if (propertyError || !propertyData) {
+      // PropertyListingServiceを使用して物件情報を取得
+      const propertyData = await propertyListingService.getPublicPropertyById(propertyId);
+      
+      if (!propertyData) {
+        console.error(`[Inquiry] Property not found: ${propertyId}`);
         res.status(404).json({
           success: false,
           message: '指定された物件が見つかりません'
@@ -827,18 +820,30 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
         return;
       }
       
-      property = propertyData;
+      console.log(`[Inquiry] Property found: ${propertyData.property_number}`);
+      property = {
+        property_number: propertyData.property_number,
+        site_display: propertyData.site_display,
+        athome_public_folder_id: propertyData.athome_public_folder_id
+      };
       propertyNumber = propertyData.property_number;
     }
 
     // 直接買主リストに転記（property_inquiriesテーブルをバイパス）
     try {
+      console.log('[Inquiry] Starting sync to buyer sheet...');
+      
       // InquirySyncServiceを取得（必要な時だけ初期化）
       const syncService = getInquirySyncService();
+      console.log('[Inquiry] InquirySyncService obtained');
+      
       await syncService.authenticate();
+      console.log('[Inquiry] Authentication successful');
       
       // 買主番号を採番
       const allRows = await syncService['sheetsClient'].readAll();
+      console.log(`[Inquiry] Read ${allRows.length} rows from sheet`);
+      
       const columnEValues = allRows
         .map(row => row['買主番号'])
         .filter(value => value !== null && value !== undefined)
@@ -848,26 +853,30 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
         ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
         : 0;
       const buyerNumber = maxNumber + 1;
+      console.log(`[Inquiry] Generated buyer number: ${buyerNumber}`);
 
-      // フィールドマッピング
+      // フィールドマッピング（正しいカラム名を使用）
       const normalizedPhone = phone.replace(/[^0-9]/g, ''); // 数字のみ抽出
-      const inquirySource = property 
-        ? (property.site_display === 'サイト表示' ? 'サイト' : 
-           property.athome_public_folder_id ? 'アットホーム' : 'その他')
-        : 'サイト'; // 物件IDがない場合はデフォルトで「サイト」
+      
+      // 問合せ元の判定: 公開物件サイトからの問い合わせは「いふう独自サイト」
+      const inquirySource = 'いふう独自サイト';
 
       const rowData = {
         '買主番号': buyerNumber.toString(),
-        '氏名・会社名': name,
-        '問合時ヒアリング': message,
-        '電話番号': normalizedPhone,
-        'メールアドレス': email,
-        '問合せ元': inquirySource,
+        '●氏名・会社名': name,
+        '●問合時ヒアリング': message,
+        '●電話番号\n（ハイフン不要）': normalizedPhone,
+        '●メアド': email,
+        '●問合せ元': inquirySource,
         '物件番号': propertyNumber || '', // 物件番号がない場合は空文字
+        '【問合メール】電話対応': '未', // CS列に「未」を設定
       };
+      
+      console.log('[Inquiry] Row data prepared:', JSON.stringify(rowData, null, 2));
 
       // スプレッドシートに直接追加
       await syncService['sheetsClient'].appendRow(rowData);
+      console.log('[Inquiry] Row appended successfully');
 
       console.log('Inquiry synced to buyer sheet:', {
         buyerNumber,
@@ -878,6 +887,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
     } catch (syncError) {
       // 転記エラーはログに記録するが、ユーザーには成功を返す
       console.error('Failed to sync inquiry to buyer sheet:', syncError);
+      console.error('Error stack:', (syncError as Error).stack);
     }
 
     res.status(201).json({ 

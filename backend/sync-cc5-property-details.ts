@@ -37,23 +37,31 @@ async function syncCC5PropertyDetails() {
     // 2. お気に入り文言を取得（物件リストスプレッドシートから）
     console.log('\n⭐ Step 2: Fetching favorite comment from 物件リスト...');
     const favoriteCommentService = new FavoriteCommentService();
-    const favoriteComment = await favoriteCommentService.getFavoriteCommentFromSpreadsheet(propertyNumber);
+    const favoriteCommentResult = await favoriteCommentService.getFavoriteComment(propertyNumber);
+    const favoriteComment = favoriteCommentResult.comment || null;
     console.log('Favorite comment:', favoriteComment || 'なし');
     
     // 3. おすすめコメントを取得（個別物件スプレッドシートのathomeシートから）
     console.log('\n💬 Step 3: Fetching recommended comments from athome sheet...');
     const recommendedCommentService = new RecommendedCommentService();
-    const recommendedComments = await recommendedCommentService.getRecommendedCommentsFromSpreadsheet(
+    const recommendedCommentsResult = await recommendedCommentService.getRecommendedComment(
       propertyNumber,
-      spreadsheetUrl
+      'マンション' // CC5はマンション
     );
+    
+    // 2次元配列を1次元配列に変換
+    let recommendedComments: string[] | null = null;
+    if (recommendedCommentsResult.comments && recommendedCommentsResult.comments.length > 0) {
+      recommendedComments = recommendedCommentsResult.comments.map(row => row.join(' '));
+    }
     console.log('Recommended comments count:', recommendedComments?.length || 0);
     
     // 4. パノラマURLを取得（個別物件スプレッドシートのathomeシートから）
     console.log('\n🌐 Step 4: Fetching panorama URL from athome sheet...');
     const athomeDataService = new AthomeDataService();
-    const athomeData = await athomeDataService.getAthomeDataFromSpreadsheet(propertyNumber, spreadsheetUrl);
-    console.log('Panorama URL:', athomeData.panoramaUrl || 'なし');
+    const athomeDataResult = await athomeDataService.getAthomeData(propertyNumber);
+    const panoramaUrl = athomeDataResult.panoramaUrl || null;
+    console.log('Panorama URL:', panoramaUrl || 'なし');
     
     // 5. こちらの物件について を取得（物件リストスプレッドシートから）
     console.log('\n📝 Step 5: Fetching property_about from 物件リスト...');
@@ -73,11 +81,10 @@ async function syncCC5PropertyDetails() {
     console.log('\n💾 Step 6: Updating property_details table...');
     const propertyDetailsService = new PropertyDetailsService();
     
-    await propertyDetailsService.upsertPropertyDetails({
-      property_number: propertyNumber,
+    await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
       favorite_comment: favoriteComment,
       recommended_comments: recommendedComments,
-      athome_data: athomeData.panoramaUrl ? { panoramaUrl: athomeData.panoramaUrl } : null,
+      athome_data: panoramaUrl ? { panoramaUrl: panoramaUrl } : null,
       property_about: propertyAbout
     });
     

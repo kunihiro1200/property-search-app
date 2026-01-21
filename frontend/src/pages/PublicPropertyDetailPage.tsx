@@ -265,6 +265,7 @@ const PublicPropertyDetailPage: React.FC = () => {
         showBackButton={true}
         atbbStatus={property?.atbb_status}
         navigationState={location.state}
+        showInquiryButton={!isSold}
       />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">

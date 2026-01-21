@@ -1,12 +1,13 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMediaQuery, useTheme } from '@mui/material';
 import './PublicPropertyLogo.css';
 
 const PublicPropertyLogo: React.FC = () => {
-  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleClick = () => {
-    navigate('/public/properties');
+    window.open('https://ifoo-oita.com/', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -20,14 +21,14 @@ const PublicPropertyLogo: React.FC = () => {
           handleClick();
         }
       }}
-      aria-label="ホームページに戻る"
+      aria-label="株式会社いふうのウェブサイトを開く"
     >
       <img 
         src="/comfortable-tenant-search-logo.png" 
         alt="comfortable TENANT SEARCH" 
         className="logo-image"
       />
-      <span className="company-name">株式会社いふう</span>
+      {!isMobile && <span className="company-name">株式会社いふう</span>}
     </div>
   );
 };
