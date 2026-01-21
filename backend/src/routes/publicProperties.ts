@@ -49,10 +49,10 @@ inquirySyncService.authenticate().catch(error => {
   console.error('[publicProperties] InquirySyncService認証エラー:', error);
 });
 
-// Rate limiter: 3 requests per hour per IP for inquiries
+// Rate limiter: 10 requests per hour per IP for inquiries (テスト用に緩和)
 const inquiryRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 3
+  maxRequests: 10
 });
 
 // Inquiry validation schema
