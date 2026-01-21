@@ -49,6 +49,27 @@ app.options('*', (_req, res) => {
   res.status(200).end();
 });
 
+// 認証ルート（動的インポート）
+app.use('/auth', async (req, res, next) => {
+  try {
+    const { default: authRoutes } = await import('../src/routes/auth.supabase');
+    authRoutes(req, res, next);
+  } catch (error) {
+    console.error('Auth route error:', error);
+    next(error);
+  }
+});
+
+app.use('/api/auth', async (req, res, next) => {
+  try {
+    const { default: authRoutes } = await import('../src/routes/auth.supabase');
+    authRoutes(req, res, next);
+  } catch (error) {
+    console.error('Auth route error:', error);
+    next(error);
+  }
+});
+
 // 公開物件ルートを登録
 app.use('/api/public', publicPropertiesRoutes);
 
