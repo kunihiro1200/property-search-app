@@ -1,4 +1,4 @@
-// Vercel用のエントリーポイント（公開物件サイト + 全機能）
+// Vercel用のエントリーポイント（公開物件サイト + 認証機能）
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -8,6 +8,14 @@ import morgan from 'morgan';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
+
+// 認証ルートを条件付きでインポート
+let authRoutes: any = null;
+try {
+  authRoutes = require('../src/routes/auth.supabase').default;
+} catch (error) {
+  console.error('Failed to load auth routes:', error);
+}
 
 // Supabase クライアントの初期化（ヘルスチェック用）
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -49,26 +57,14 @@ app.options('*', (_req, res) => {
   res.status(200).end();
 });
 
-// 認証ルート（動的インポート）
-app.use('/auth', async (req, res, next) => {
-  try {
-    const { default: authRoutes } = await import('../src/routes/auth.supabase');
-    authRoutes(req, res, next);
-  } catch (error) {
-    console.error('Auth route error:', error);
-    next(error);
-  }
-});
-
-app.use('/api/auth', async (req, res, next) => {
-  try {
-    const { default: authRoutes } = await import('../src/routes/auth.supabase');
-    authRoutes(req, res, next);
-  } catch (error) {
-    console.error('Auth route error:', error);
-    next(error);
-  }
-});
+// 認証ルート（条件付き）
+if (authRoutes) {
+  app.use('/auth', authRoutes);
+  app.use('/api/auth', authRoutes);
+  console.log('✅ Auth routes loaded');
+} else {
+  console.warn('⚠️ Auth routes not available');
+}
 
 // 公開物件ルートを登録
 app.use('/api/public', publicPropertiesRoutes);
