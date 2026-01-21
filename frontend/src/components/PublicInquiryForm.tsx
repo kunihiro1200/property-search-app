@@ -67,6 +67,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
         onSuccess();
       }
     } catch (error) {
+      console.error('Inquiry submission error:', error);
       const apiError = error as ApiError;
       
       // レート制限エラーの場合
@@ -83,7 +84,16 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
           );
         }
       } else {
-        setSubmitError(apiError.message || 'お問い合わせの送信に失敗しました');
+        // エラーの詳細をログに出力
+        console.error('API Error details:', {
+          status: apiError.status,
+          message: apiError.message,
+          details: apiError.details,
+        });
+        setSubmitError(
+          apiError.message || 
+          'お問い合わせの送信に失敗しました。入力内容をご確認の上、再度お試しください。'
+        );
       }
     }
   };

@@ -268,7 +268,7 @@ const PublicPropertyDetailPage: React.FC = () => {
       />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">
-          {/* 印刷ボタン（右上に固定） */}
+          {/* 印刷ボタン（右上に固定、スマホでは非表示） */}
           <Box
             className="no-print"
             sx={{
@@ -276,6 +276,7 @@ const PublicPropertyDetailPage: React.FC = () => {
               top: 120,
               right: 16,
               zIndex: 1000,
+              display: { xs: 'none', sm: 'block' }, // スマホでは非表示
             }}
           >
             <IconButton
@@ -639,38 +640,20 @@ const PublicPropertyDetailPage: React.FC = () => {
                 概算書
               </Typography>
               
-              {/* PC: 概算書ボタン1つのみ */}
-              {!isMobile && (
-                <Button
-                  variant="contained"
-                  onClick={() => handleGenerateEstimatePdf('preview')}
-                  disabled={isGeneratingPdf}
-                  fullWidth
-                >
-                  {isGeneratingPdf ? '生成中...' : '概算書'}
-                </Button>
-              )}
+              {/* 概算書ボタン（PC・スマホ共通） */}
+              <Button
+                variant="contained"
+                onClick={() => handleGenerateEstimatePdf('preview')}
+                disabled={isGeneratingPdf}
+                fullWidth
+              >
+                {isGeneratingPdf ? '生成中...' : '概算書を表示'}
+              </Button>
               
-              {/* スマホ: プレビューとダウンロードの2つのボタン */}
-              {isMobile && (
-                <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-                  <Button
-                    variant="contained"
-                    onClick={() => handleGenerateEstimatePdf('preview')}
-                    disabled={isGeneratingPdf}
-                    fullWidth
-                  >
-                    {isGeneratingPdf ? '生成中...' : 'プレビュー'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleGenerateEstimatePdf('download')}
-                    disabled={isGeneratingPdf}
-                    fullWidth
-                  >
-                    ダウンロード
-                  </Button>
-                </Box>
+              {isGeneratingPdf && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                  概算書を生成しています。1分ほどお待ちください...
+                </Typography>
               )}
             </Paper>
 
