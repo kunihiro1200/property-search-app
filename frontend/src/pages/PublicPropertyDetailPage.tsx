@@ -295,7 +295,26 @@ const PublicPropertyDetailPage: React.FC = () => {
           <Grid container spacing={4}>
             {/* 左カラム: 物件情報 */}
             <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
-              {/* スマホ: 画像ギャラリーを先に表示、デスクトップ: パノラマを先に表示 */}
+              
+              {/* お気に入り文言（単独で最初に表示） */}
+              {completeData?.favoriteComment && (
+                <Box sx={{ mb: 3, order: 1 }} className="favorite-comment-container">
+                  <Box className="favorite-comment-bubble" sx={{
+                    background: '#FFF9E6',
+                    border: '2px solid #FFC107',
+                    borderRadius: '8px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    boxShadow: 2,
+                  }}>
+                    <Box component="span" className="favorite-comment-icon" sx={{ mr: 1.5, fontSize: '24px' }}>⭐</Box>
+                    <Box component="span" className="favorite-comment-content" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                      {completeData.favoriteComment}
+                    </Box>
+                  </Box>
+                </Box>
+              )}
               
               {/* 物件画像ギャラリー */}
               <Paper 
@@ -303,28 +322,9 @@ const PublicPropertyDetailPage: React.FC = () => {
                 sx={{ 
                   mb: 3, 
                   p: 2,
-                  order: 1 // 常に1番目
+                  order: 2 // 2番目
                 }}
               >
-                {/* お気に入り文言を「物件画像」見出しの上に配置 */}
-                {completeData?.favoriteComment && (
-                  <Box sx={{ marginBottom: '20px' }} className="favorite-comment-container">
-                    <Box className="favorite-comment-bubble" sx={{
-                      background: '#FFF9E6',
-                      border: '2px solid #FFC107',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      <Box component="span" className="favorite-comment-icon" sx={{ mr: 1, fontSize: '20px' }}>⭐</Box>
-                      <Box component="span" className="favorite-comment-content" sx={{ fontWeight: 'bold' }}>
-                        {completeData.favoriteComment}
-                      </Box>
-                    </Box>
-                  </Box>
-                )}
-                
                 <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
                   物件画像
                 </Typography>
@@ -347,7 +347,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   sx={{ 
                     mb: 3, 
                     p: 2,
-                    order: 5 // パノラマは5番目（地図の後）
+                    order: 3 // 3番目
                   }} 
                   className="no-print"
                 >
@@ -381,7 +381,7 @@ const PublicPropertyDetailPage: React.FC = () => {
               )}
 
               {/* 物件基本情報 */}
-              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 2 }}> {/* 2番目 */}
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 4 }}> {/* 4番目 */}
               {/* 物件タイプ */}
               <Box sx={{ mb: 2 }}>
                 <Chip
@@ -488,10 +488,17 @@ const PublicPropertyDetailPage: React.FC = () => {
                 </>
               )}
 
-              {/* Google Map（「地図」見出しなし） */}
-              {property.google_map_url && (
-                <>
-                  <Divider sx={{ my: 3 }} />
+            </Paper>
+
+            {/* 地図セクション（独立したPaper） */}
+            {(property.google_map_url || (property.latitude && property.longitude && isMapLoaded)) && (
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}> {/* 5番目 */}
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  地図
+                </Typography>
+                
+                {/* Google Mapボタン */}
+                {property.google_map_url && (
                   <Button
                     variant="outlined"
                     startIcon={<LocationOnIcon />}
@@ -499,19 +506,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     fullWidth
+                    sx={{ mb: property.latitude && property.longitude && isMapLoaded ? 2 : 0 }}
                   >
                     Google Mapで見る
                   </Button>
-                </>
-              )}
+                )}
 
-              {/* 地図表示（座標がある場合） */}
-              {property.latitude && property.longitude && isMapLoaded && (
-                <>
-                  <Divider sx={{ my: 3 }} />
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    地図
-                  </Typography>
+                {/* 地図表示（座標がある場合） */}
+                {property.latitude && property.longitude && isMapLoaded && (
                   <Box
                     sx={{
                       width: '100%',
@@ -558,13 +560,13 @@ const PublicPropertyDetailPage: React.FC = () => {
                       />
                     </GoogleMap>
                   </Box>
-                </>
-              )}
-            </Paper>
+                )}
+              </Paper>
+            )}
 
             {/* 成約済み物件の場合: 成約情報を表示 */}
             {isSold && (
-              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 3 }}> {/* 3番目（おすすめポイントと同じ位置） */}
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }}> {/* 6番目 */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   成約情報
                 </Typography>
@@ -605,7 +607,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   mb: 3,
                   backgroundColor: '#FFF9E6',
                   borderLeft: '4px solid #FFC107',
-                  order: 3, // 3番目
+                  order: 6, // 6番目
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#F57C00' }}>
@@ -623,7 +625,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             
             {/* 「こちらの物件について」セクション（見出しなし） */}
             {completeData?.propertyAbout && (
-              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 4 }}> {/* 4番目 */}
+              <Paper elevation={2} sx={{ p: 3, mb: 3, order: 7 }}> {/* 7番目 */}
                 <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                   {completeData.propertyAbout}
                 </Typography>
@@ -631,7 +633,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             )}
             
             {/* 「概算書」セクション（印刷時は非表示） */}
-            <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }} className="no-print"> {/* 6番目 */}
+            <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print"> {/* 8番目 */}
               <Typography variant="h6" sx={{ mb: 2 }}>
                 概算書
               </Typography>
