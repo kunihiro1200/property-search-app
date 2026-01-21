@@ -56,11 +56,10 @@ app.get('/api/public/properties', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
     
-    // Supabaseから直接取得（最小実装）
+    // Supabaseから直接取得（atbb_statusでフィルタリングしない）
     const { data: properties, error, count } = await supabase
       .from('property_listings')
       .select('*', { count: 'exact' })
-      .eq('atbb_status', '公開中')
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false });
 
