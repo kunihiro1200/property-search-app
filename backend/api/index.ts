@@ -10,7 +10,8 @@ import { PropertyListingService } from '../src/services/PropertyListingService';
 import { PropertyImageService } from '../src/services/PropertyImageService';
 import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
-import authRoutes from '../src/routes/auth.supabase';
+// 一時的にコメントアウト：認証ルートのインポートがVercelでエラーを起こしている可能性
+// import authRoutes from '../src/routes/auth.supabase';
 
 const app = express();
 
@@ -74,9 +75,9 @@ app.get('/api/test/routes', (_req, res) => {
   });
 });
 
-// ⚠️ 重要: 認証ルートを登録（ログイン機能）
-app.use('/auth', authRoutes);
-app.use('/api/auth', authRoutes);
+// ⚠️ 一時的にコメントアウト：認証ルートのインポートがVercelでエラーを起こしている可能性
+// app.use('/auth', authRoutes);
+// app.use('/api/auth', authRoutes);
 
 // ⚠️ 重要: publicPropertiesRoutes を登録（より具体的なルートを優先）
 app.use('/api/public', publicPropertiesRoutes);
