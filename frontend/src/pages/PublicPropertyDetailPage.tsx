@@ -298,50 +298,52 @@ const PublicPropertyDetailPage: React.FC = () => {
               {/* スマホ: 画像ギャラリーを先に表示、デスクトップ: パノラマを先に表示 */}
               
               {/* 物件画像ギャラリー（スマホでは最初に表示） */}
-              <Paper 
-                elevation={2} 
-                sx={{ 
-                  mb: 3, 
-                  p: 2,
-                  order: { xs: 1, md: 2 } // スマホは1番目、デスクトップは2番目
-                }}
-              >
-                {/* お気に入り文言を「物件画像」見出しの上に配置 */}
-                {completeData?.favoriteComment && (
-                  <Box sx={{ marginBottom: '20px' }} className="favorite-comment-container">
-                    <Box className="favorite-comment-bubble" sx={{
-                      background: '#FFF9E6',
-                      border: '2px solid #FFC107',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      <Box component="span" className="favorite-comment-icon" sx={{ mr: 1, fontSize: '20px' }}>⭐</Box>
-                      <Box component="span" className="favorite-comment-content" sx={{ fontWeight: 'bold' }}>
-                        {completeData.favoriteComment}
+              {property && (
+                <Paper 
+                  elevation={2} 
+                  sx={{ 
+                    mb: 3, 
+                    p: 2,
+                    order: { xs: 1, md: 2 } // スマホは1番目、デスクトップは2番目
+                  }}
+                >
+                  {/* お気に入り文言を「物件画像」見出しの上に配置 */}
+                  {completeData?.favoriteComment && (
+                    <Box sx={{ marginBottom: '20px' }} className="favorite-comment-container">
+                      <Box className="favorite-comment-bubble" sx={{
+                        background: '#FFF9E6',
+                        border: '2px solid #FFC107',
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        <Box component="span" className="favorite-comment-icon" sx={{ mr: 1, fontSize: '20px' }}>⭐</Box>
+                        <Box component="span" className="favorite-comment-content" sx={{ fontWeight: 'bold' }}>
+                          {completeData.favoriteComment}
+                        </Box>
                       </Box>
                     </Box>
-                  </Box>
-                )}
-                
-                <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
-                  物件画像
-                </Typography>
-                
-                {property.property_number && (
-                  <PropertyImageGallery
-                    propertyId={property.property_number}
-                    canDelete={false}
-                    canHide={false}
-                    showHiddenImages={false}
-                    isPublicSite={true}
-                  />
-                )}
-              </Paper>
+                  )}
+                  
+                  <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
+                    物件画像
+                  </Typography>
+                  
+                  {property.property_number && (
+                    <PropertyImageGallery
+                      propertyId={property.property_number}
+                      canDelete={false}
+                      canHide={false}
+                      showHiddenImages={false}
+                      isPublicSite={true}
+                    />
+                  )}
+                </Paper>
+              )}
 
               {/* パノラマビュー（パノラマURLが存在する場合のみ表示、スマホでは画像の後に表示） */}
-              {panoramaUrl && (
+              {panoramaUrl && property && (
                 <Paper 
                   elevation={2} 
                   sx={{ 
