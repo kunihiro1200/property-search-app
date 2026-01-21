@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Vercelでは同じドメインにデプロイされているため、相対パスを使用
+// ローカル開発時のみ localhost:3000 を使用
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''
+);
 
 // 公開API用のaxiosインスタンス（認証不要）
 const publicApi = axios.create({
