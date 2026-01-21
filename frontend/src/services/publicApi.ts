@@ -6,11 +6,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (
   import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''
 );
 
-// デバッグ用ログ
+// デバッグ用ログ（本番環境でも表示）
 console.log('🔍 [publicApi] Environment:', {
   MODE: import.meta.env.MODE,
   VITE_API_URL: import.meta.env.VITE_API_URL,
-  API_BASE_URL: API_BASE_URL
+  API_BASE_URL: API_BASE_URL,
+  timestamp: new Date().toISOString()
 });
 
 // 公開API用のaxiosインスタンス（認証不要）
