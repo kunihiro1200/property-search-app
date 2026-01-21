@@ -7,7 +7,9 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/services/PropertyListingService';
-// import publicPropertiesRoutes from '../src/routes/publicProperties'; // Vercelでエラーになるためコメントアウト
+import { PropertyImageService } from '../src/services/PropertyImageService';
+import { GoogleDriveService } from '../src/services/GoogleDriveService';
+// import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
 
@@ -54,13 +56,13 @@ app.get('/api/health', (_req, res) => {
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'publicPropertiesRoutes commented out for Vercel compatibility',
+    message: 'publicPropertiesRoutes commented out for testing',
     timestamp: new Date().toISOString() 
   });
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes); // Vercelでエラーになるためコメントアウト
+// app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
@@ -238,7 +240,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     // PropertyDetailsServiceを動的インポート
     const { PropertyDetailsService } = await import('../src/services/PropertyDetailsService');
     const propertyDetailsService = new PropertyDetailsService();
-    
+
     let dbDetails;
     try {
       dbDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
@@ -258,7 +260,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
         property_about: null
       };
     }
-    
+
     // 決済日を取得（成約済みの場合のみ）
     let settlementDate = null;
     const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
@@ -271,7 +273,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
         console.error('[Complete API] Settlement date error:', err);
       }
     }
-    
+
     // パノラマURLを取得
     let panoramaUrl = null;
     try {
@@ -282,7 +284,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     } catch (err) {
       console.error('[Complete API] Panorama URL error:', err);
     }
-    
+
     // レスポンスを返す
     res.json({
       property,
@@ -353,8 +355,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       });
     }
 
-    // PropertyImageServiceを動的インポートして使用
-    const { PropertyImageService } = await import('../src/services/PropertyImageService');
+    // PropertyImageServiceを使用して画像を取得
     const propertyImageService = new PropertyImageService(
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
@@ -407,8 +408,7 @@ app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
     
     console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
     
-    // GoogleDriveServiceを動的インポートして使用
-    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
+    // GoogleDriveServiceを使用して画像データを取得
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
@@ -457,8 +457,7 @@ app.get('/api/public/images/:fileId', async (req, res) => {
     
     console.log(`🖼️ Proxying full image: ${fileId}`);
     
-    // GoogleDriveServiceを動的インポートして使用
-    const { GoogleDriveService } = await import('../src/services/GoogleDriveService');
+    // GoogleDriveServiceを使用して画像データを取得
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
