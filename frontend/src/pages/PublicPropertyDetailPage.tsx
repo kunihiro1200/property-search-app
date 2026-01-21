@@ -82,6 +82,7 @@ const PublicPropertyDetailPage: React.FC = () => {
         console.log(`[publicProperty:"${property?.property_number || id}"] Complete data response:`, response.data);
         console.log(`[publicProperty:"${property?.property_number || id}"] favoriteComment:`, response.data?.favoriteComment);
         console.log(`[publicProperty:"${property?.property_number || id}"] recommendedComments:`, response.data?.recommendedComments);
+        console.log(`[publicProperty:"${property?.property_number || id}"] propertyAbout:`, response.data?.propertyAbout);
         console.log(`[publicProperty:"${property?.property_number || id}"] athomeData:`, response.data?.athomeData);
         setCompleteData(response.data);
       } catch (error) {
@@ -614,9 +615,9 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments.map((comment: string, commentIndex: number) => (
+                  {completeData.recommendedComments.map((comment: string | string[], commentIndex: number) => (
                     <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                      {comment}
+                      {Array.isArray(comment) ? comment.join(' ') : comment}
                     </Typography>
                   ))}
                 </Box>
