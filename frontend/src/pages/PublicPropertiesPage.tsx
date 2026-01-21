@@ -76,13 +76,23 @@ const PublicPropertiesPage: React.FC = () => {
   // 物件グリッドへの参照
   const propertyGridRef = useRef<HTMLDivElement>(null);
   
+  // 地図ビューへの参照
+  const mapViewRef = useRef<HTMLDivElement>(null);
+  
   // 検索実行フラグ
   const [shouldScrollToGrid, setShouldScrollToGrid] = useState(false);
   
+  // 地図ビューへのスクロールフラグ
+  const [shouldScrollToMap, setShouldScrollToMap] = useState(false);
+  
   // 検索実行後に物件グリッドまでスクロール
   const handleSearch = () => {
-    originalHandleSearch();
-    setShouldScrollToGrid(true); // スクロールフラグを立てる
+    // 検索クエリがある場合のみ、検索を実行
+    if (searchQuery.trim()) {
+      originalHandleSearch();
+    }
+    // 検索クエリが空でも、物件グリッドまでスクロール（フィルター結果を表示）
+    setShouldScrollToGrid(true);
   };
   
   // データ取得完了後にスクロール
@@ -101,6 +111,22 @@ const PublicPropertiesPage: React.FC = () => {
     }
   }, [shouldScrollToGrid, initialLoading, filterLoading, properties]);
   
+  // 地図ビューへのスクロール
+  useEffect(() => {
+    if (shouldScrollToMap && viewMode === 'map' && !isLoadingAllProperties && mapViewRef.current) {
+      // 少し遅延してからスクロール（レンダリング完了を待つ）
+      const timer = setTimeout(() => {
+        mapViewRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+        setShouldScrollToMap(false); // フラグをリセット
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldScrollToMap, viewMode, isLoadingAllProperties]);
+  
   // 詳細画面から戻ってきた時の状態復元フラグ
   const hasRestoredState = useRef(false);
   
@@ -111,6 +137,7 @@ const PublicPropertiesPage: React.FC = () => {
   const savedNavigationState = useRef<NavigationState | null>(null);
 
   // fetchPropertiesのトリガー
+  // searchParamsから直接取得（依存配列に含める）
   const propertyNumberParam = searchParams.get('propertyNumber');
   const locationParam = searchParams.get('location');
   const typesParam = searchParams.get('types');
@@ -228,11 +255,31 @@ const PublicPropertiesPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [properties, location.state, location.key]); // propertiesを依存配列に追加
-  // URLパラメータから物件タイプフィルターを復元
+  // URLパラメータから物件タイプフィルターを復元（初回マウント時のみ）
   useEffect(() => {
     if (typesParam) {
-      const types = typesParam.split(',') as PropertyType[];
+      // 英語から日本語に変換するマッピング
+      const typeMapping: Record<string, PropertyType> = {
+        'apartment': 'マンション',
+        'detached_house': '戸建',
+        'land': '土地',
+        'income': '収益物件'
+      };
+      
+      const types = typesParam.split(',').map(type => {
+        // 英語の場合は日本語に変換、それ以外はそのまま
+        return typeMapping[type] || type;
+      }) as PropertyType[];
+      
       setSelectedTypes(types);
+      
+      // 英語のパラメータがあった場合、日本語に変換してURLを更新
+      const hasEnglishTypes = typesParam.split(',').some(type => type in typeMapping);
+      if (hasEnglishTypes) {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('types', types.join(','));
+        setSearchParams(newParams, { replace: true });
+      }
     }
     
     // 価格と築年数のパラメータも復元
@@ -251,57 +298,59 @@ const PublicPropertiesPage: React.FC = () => {
     if (showPublicOnlyParam === 'true') {
       setShowPublicOnly(true);
     }
-  }, [typesParam]);
+  }, []); // 初回マウント時のみ実行
   
   // 物件タイプフィルターの変更をURLに反映
   useEffect(() => {
+    const newParams = new URLSearchParams(searchParams);
+    
     if (selectedTypes.length > 0) {
-      searchParams.set('types', selectedTypes.join(','));
+      newParams.set('types', selectedTypes.join(','));
     } else {
-      searchParams.delete('types');
+      newParams.delete('types');
     }
     
     // 価格フィルターをURLに反映
     if (minPrice) {
-      searchParams.set('minPrice', minPrice);
+      newParams.set('minPrice', minPrice);
     } else {
-      searchParams.delete('minPrice');
+      newParams.delete('minPrice');
     }
     
     if (maxPrice) {
-      searchParams.set('maxPrice', maxPrice);
+      newParams.set('maxPrice', maxPrice);
     } else {
-      searchParams.delete('maxPrice');
+      newParams.delete('maxPrice');
     }
     
     // 築年数フィルターをURLに反映
     if (minAge) {
-      searchParams.set('minAge', minAge);
+      newParams.set('minAge', minAge);
     } else {
-      searchParams.delete('minAge');
+      newParams.delete('minAge');
     }
     
     if (maxAge) {
-      searchParams.set('maxAge', maxAge);
+      newParams.set('maxAge', maxAge);
     } else {
-      searchParams.delete('maxAge');
+      newParams.delete('maxAge');
     }
     
     // 公開中のみ表示フィルターをURLに反映
     if (showPublicOnly) {
-      searchParams.set('showPublicOnly', 'true');
+      newParams.set('showPublicOnly', 'true');
     } else {
-      searchParams.delete('showPublicOnly');
+      newParams.delete('showPublicOnly');
     }
     
     // 表示モードをURLに反映
     if (viewMode === 'map') {
-      searchParams.set('view', 'map');
+      newParams.set('view', 'map');
     } else {
-      searchParams.delete('view');
+      newParams.delete('view');
     }
     
-    setSearchParams(searchParams, { replace: true });
+    setSearchParams(newParams, { replace: true });
   }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
   useEffect(() => {
@@ -311,7 +360,7 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     fetchProperties();
-  }, [currentPage, propertyNumberParam, locationParam, typesParam, minPrice, maxPrice, minAge, maxAge, showPublicOnly, isStateRestored]);
+  }, [currentPage, searchParams, isStateRestored]);
   
   // 全件取得は初回とフィルター変更時のみ（currentPageは除外）
   useEffect(() => {
@@ -321,13 +370,17 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     fetchAllProperties();
-  }, [propertyNumberParam, locationParam, typesParam, minPrice, maxPrice, minAge, maxAge, showPublicOnly, isStateRestored]);
+  }, [searchParams, isStateRestored]);
   
   // viewModeが変更されたときも全件取得
   useEffect(() => {
     if (viewMode === 'map' && allProperties.length === 0) {
       console.log('🗺️ Map view activated, fetching all properties...');
       fetchAllProperties();
+    } else if (viewMode === 'list') {
+      // リスト表示に戻ったときは、物件データを再取得
+      console.log('📋 List view activated, fetching properties...');
+      fetchProperties();
     }
   }, [viewMode]);
 
@@ -661,8 +714,16 @@ const PublicPropertiesPage: React.FC = () => {
             </Typography>
             
             {/* 検索バー */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              <Box sx={{ flex: 1 }}>
+            <Box 
+              sx={{ 
+                mt: 2, 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' }, // スマホは縦並び、タブレット以上は横並び
+                gap: 2, 
+                alignItems: { xs: 'stretch', sm: 'flex-start' } // スマホは幅いっぱい、タブレット以上は左寄せ
+              }}
+            >
+              <Box sx={{ flex: { xs: 'none', sm: 1 } }}> {/* スマホはflex無効 */}
                 <UnifiedSearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
@@ -680,7 +741,8 @@ const PublicPropertiesPage: React.FC = () => {
               startIcon={<LocationOnIcon />}
               sx={{
                 height: '56px',
-                minWidth: '140px',
+                minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
+                width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
                 borderColor: '#4CAF50',
                 color: '#4CAF50',
                 fontWeight: 'bold',
@@ -689,7 +751,10 @@ const PublicPropertiesPage: React.FC = () => {
                   backgroundColor: '#F1F8F4',
                 },
               }}
-              onClick={() => setViewMode('map')}
+              onClick={() => {
+                setViewMode('map');
+                setShouldScrollToMap(true); // スクロールフラグを立てる
+              }}
             >
               地図で検索
             </Button>
@@ -868,16 +933,18 @@ const PublicPropertiesPage: React.FC = () => {
 
             {/* 地図表示 */}
             {viewMode === 'map' ? (
-              isLoadingAllProperties ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
-                  <CircularProgress />
-                  <Typography sx={{ mt: 2 }} color="text.secondary">
-                    全物件データを取得中...
-                  </Typography>
-                </Box>
-              ) : (
-                <PropertyMapView properties={allProperties} />
-              )
+              <Box ref={mapViewRef}>
+                {isLoadingAllProperties ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
+                    <CircularProgress />
+                    <Typography sx={{ mt: 2 }} color="text.secondary">
+                      全物件データを取得中...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <PropertyMapView properties={allProperties} />
+                )}
+              </Box>
             ) : (
               <>
                 {/* ローディング表示（ページ遷移中） */}

@@ -57,14 +57,14 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
     label: '',
     color: '',
     backgroundColor: '',
-    markerColor: '#2196F3', // デフォルト青
+    markerColor: '#2196F3', // 水色（販売中物件）
   },
 };
 
 // マーカーの色を取得
 const getMarkerColor = (atbbStatus: string): string => {
-  if (!atbbStatus || atbbStatus === '') {
-    return '#2196F3'; // デフォルト青
+  if (!atbbStatus || atbbStatus === '' || atbbStatus === '公開中') {
+    return '#2196F3'; // 青（販売中物件）
   }
   
   const result = mapAtbbStatusToDisplayStatus(atbbStatus);
@@ -220,6 +220,9 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     language: 'ja',
     region: 'JP',
+    onError: (error) => {
+      console.error('❌ Google Maps API読み込みエラー:', error);
+    },
   });
 
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
@@ -379,11 +382,34 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   };
 
   if (loadError) {
+    console.error('❌ Google Maps読み込みエラー詳細:', loadError);
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="error">
-          地図の読み込みに失敗しました。Google Maps APIキーを確認してください。
+        <Typography color="error" variant="h6" gutterBottom>
+          地図の読み込みに失敗しました
         </Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          以下の原因が考えられます：
+        </Typography>
+        <Box sx={{ textAlign: 'left', maxWidth: 600, mx: 'auto' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            • Google Maps APIキーが設定されていない、または無効です
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            • Maps JavaScript APIが有効になっていません
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            • 請求アカウントが設定されていません
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            • APIキーのリファラー制限により、このドメインからのアクセスが拒否されています
+          </Typography>
+        </Box>
+        {!GOOGLE_MAPS_API_KEY && (
+          <Typography color="error" sx={{ mt: 2, fontWeight: 'bold' }}>
+            ⚠️ Google Maps APIキーが設定されていません
+          </Typography>
+        )}
       </Box>
     );
   }
@@ -413,6 +439,19 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
         <Typography variant="body2" fontWeight="bold" color="text.secondary">
           マーカーの色:
         </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box
+            sx={{
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              backgroundColor: '#2196F3',
+              border: '2px solid #fff',
+              boxShadow: 1,
+            }}
+          />
+          <Typography variant="body2">販売中物件</Typography>
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box
             sx={{
@@ -451,19 +490,6 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
             }}
           />
           <Typography variant="body2">成約済み</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box
-            sx={{
-              width: 16,
-              height: 16,
-              borderRadius: '50%',
-              backgroundColor: '#2196F3',
-              border: '2px solid #fff',
-              boxShadow: 1,
-            }}
-          />
-          <Typography variant="body2">販売中物件</Typography>
         </Box>
       </Paper>
 
