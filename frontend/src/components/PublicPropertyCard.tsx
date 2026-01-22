@@ -1,13 +1,11 @@
 import React from 'react';
-import { Card, CardContent, Box, Typography, Chip, CircularProgress } from '@mui/material';
+import { Card, CardContent, Box, Typography, Chip } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { PROPERTY_FEATURE_ICONS } from '../utils/propertyIcons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
 import { getBadgeType, BADGE_CONFIG, isPropertyClickable } from '../utils/propertyStatusUtils';
-import { useImageLoader } from '../hooks/useImageLoader';
-import { PLACEHOLDER_IMAGE_BASE64 } from '../utils/placeholderImage';
 import './PublicPropertyCard.css';
 
 interface PublicPropertyCardProps {
@@ -101,21 +99,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
 
   const thumbnailUrl = property.images && property.images.length > 0
     ? property.images[0]
-    : PLACEHOLDER_IMAGE_BASE64;
-  
-  // カスタムフックを使用して画像読み込みを管理
-  const { imageSrc, isLoading, hasError } = useImageLoader({
-    src: thumbnailUrl,
-    fallbackSrc: PLACEHOLDER_IMAGE_BASE64,
-    onError: (error) => {
-      console.error('[Property Image Error]', {
-        propertyNumber: property.property_number,
-        url: thumbnailUrl,
-        error,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
+    : '/placeholder-property.jpg';
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 
@@ -139,61 +123,13 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       }}
     >
       <Box className="property-card-image-container">
-        {/* ローディングインジケーター */}
-        {isLoading && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1
-            }}
-          >
-            <CircularProgress size={40} sx={{ color: '#FFC107' }} />
-          </Box>
-        )}
-        
         <img
-          src={imageSrc}
+          src={thumbnailUrl}
           alt={`${property.display_address || property.address}の物件画像`}
           className="property-card-image"
           loading="lazy"
-          decoding="async"
           crossOrigin="anonymous"
-          style={{
-            opacity: isLoading ? 0 : 1,
-            transition: 'opacity 0.3s ease-in-out'
-          }}
         />
-        
-        {/* エラー表示 */}
-        {hasError && (
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 8,
-              left: 8,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              color: 'white',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '11px',
-              zIndex: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5
-            }}
-          >
-            ⚠️ 画像を読み込めませんでした
-          </Box>
-        )}
-        
         <Box className="property-card-image-overlay" />
         
         {/* バッジを表示 */}

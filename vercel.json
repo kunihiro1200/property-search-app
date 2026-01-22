@@ -27,34 +27,5 @@
       "dest": "/frontend/index.html"
     }
   ],
-  "outputDirectory": "frontend/dist",
-  "headers": [
-    {
-      "source": "/comfortable-tenant-search-logo.png",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/comfortable-tenant-search-logo.svg",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*\\.(png|jpg|jpeg|gif|svg|webp))",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
-    }
-  ]
+  "outputDirectory": "frontend/dist"
 }
