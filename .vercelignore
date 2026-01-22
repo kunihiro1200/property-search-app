@@ -1,13 +1,60 @@
-backend/src
-backend/scripts
-backend/migrations
-backend/supabase
-backend/logs
-backend/*.ts
-backend/*.js
-backend/*.json
-!backend/api
-*.md
+# Dependencies
+node_modules
+frontend/node_modules
+backend/node_modules
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+frontend/.env
+backend/.env
+
+# Build outputs (will be rebuilt by Vercel)
+frontend/dist
+backend/dist
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__
+**/test
+**/tests
+
+# Development files
+.vscode
+.idea
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
 .git
 .gitignore
-node_modules
+
+# Documentation
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# Scripts and utilities (not needed for production)
+backend/check-*.ts
+backend/diagnose-*.ts
+backend/test-*.ts
+backend/verify-*.ts
+backend/sync-*.ts
+backend/fix-*.ts
+backend/*.bat
+backend/*.sh
