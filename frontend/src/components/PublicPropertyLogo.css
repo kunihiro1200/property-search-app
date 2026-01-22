@@ -23,6 +23,13 @@
   height: 60px;
   width: auto;
   display: block;
+  /* 画像読み込み中のちらつきを防ぐ */
+  min-width: 150px;
+}
+
+.logo-fallback {
+  /* フォールバック画像用のスタイル */
+  opacity: 1 !important;
 }
 
 .company-name {
@@ -36,6 +43,7 @@
 @media (max-width: 960px) {
   .logo-image {
     height: 50px;
+    min-width: 120px;
   }
   
   .company-name {
@@ -46,6 +54,7 @@
 @media (max-width: 600px) {
   .logo-image {
     height: 40px;
+    min-width: 100px;
   }
   
   .company-name {
