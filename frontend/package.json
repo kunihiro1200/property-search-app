@@ -4,7 +4,7 @@
   "description": "不動産売主リスト管理システム - フロントエンド",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   },
   "scripts": {
     "dev": "vite",
