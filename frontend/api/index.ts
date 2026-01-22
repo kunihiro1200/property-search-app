@@ -9,6 +9,9 @@ import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/backend/services/PropertyListingService';
 import { PropertyImageService } from '../src/backend/services/PropertyImageService';
 import { GoogleDriveService } from '../src/backend/services/GoogleDriveService';
+import { PropertyDetailsService } from '../src/backend/services/PropertyDetailsService';
+import { PropertyService } from '../src/backend/services/PropertyService';
+import { PanoramaUrlService } from '../src/backend/services/PanoramaUrlService';
 // import publicPropertiesRoutes from '../src/backend/routes/publicProperties';
 
 const app = express();
@@ -237,8 +240,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     console.log(`[Complete API] Found property: ${property.property_number}`);
     
-    // PropertyDetailsServiceを動的インポート
-    const { PropertyDetailsService } = await import('../src/backend/services/PropertyDetailsService');
+    // PropertyDetailsServiceを使用
     const propertyDetailsService = new PropertyDetailsService();
 
     let dbDetails;
@@ -266,7 +268,6 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
     if (isSold) {
       try {
-        const { PropertyService } = await import('../src/backend/services/PropertyService');
         const propertyService = new PropertyService();
         settlementDate = await propertyService.getSettlementDate(property.property_number);
       } catch (err) {
@@ -277,7 +278,6 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     // パノラマURLを取得
     let panoramaUrl = null;
     try {
-      const { PanoramaUrlService } = await import('../src/backend/services/PanoramaUrlService');
       const panoramaUrlService = new PanoramaUrlService();
       panoramaUrl = await panoramaUrlService.getPanoramaUrl(property.property_number);
       console.log(`[Complete API] Panorama URL: ${panoramaUrl || '(not found)'}`);
@@ -506,8 +506,7 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
     
     console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
     
-    // PropertyServiceを動的インポート
-    const { PropertyService } = await import('../src/backend/services/PropertyService');
+    // PropertyServiceを使用
     const propertyService = new PropertyService();
     
     // 概算書PDFを生成
@@ -541,8 +540,7 @@ app.get('/api/public/properties/:propertyNumber/panorama-url', async (req, res) 
     
     console.log(`[Panorama URL] Fetching for property: ${propertyNumber}`);
     
-    // PanoramaUrlServiceを動的インポート
-    const { PanoramaUrlService } = await import('../src/backend/services/PanoramaUrlService');
+    // PanoramaUrlServiceを使用
     const panoramaUrlService = new PanoramaUrlService();
     
     // パノラマURLを取得
