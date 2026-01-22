@@ -18,49 +18,40 @@
 ## 現在の状況（2026年1月22日 最新）
 
 ### デプロイメント状況
-- ✅ 最新デプロイメント（e8924c1）は成功
-- ✅ サーバーレス関数`/api/index`が生成されている（3.8 MB, Node.js 20.x）
-- ❌ **APIエンドポイントが404 NOT_FOUNDを返す**
-- ❌ TypeScriptエラーが3件存在（ビルドは完了するが警告あり）
+- ✅ 最新デプロイメント（e736d19）をプッシュ
+- ⏳ Vercelで自動デプロイ中（1-2分待機）
+- 🔧 修正内容:
+  1. `vercel.json`を`api/index.ts`を使用するように変更（`backend/api/index.ts`から変更）
+  2. `frontend/api/index.ts`の最後の行を`export default`に変更（`module.exports`から変更）
 
-### 確認したURL
-- テストURL: `https://property-site-frontend-kappa.vercel.app/api/public/properties/complete?propertyNumber=CC24`
-- 結果: 404 NOT_FOUND
+### vercel.json設定（最新）
+```json
+{
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index"
+    }
+  ]
+}
+```
 
-### TypeScriptエラー（修正中）
-1. ✅ **修正完了**: `PropertyService.ts(488,59)` - `number | null`が`number`に割り当てられない
-   - 修正内容: sheetIdのnullチェックを追加
-2. ✅ **修正完了**: `publicProperties.ts(826,36)` - `site_display`プロパティが存在しない
-   - 修正内容: 不要なプロパティを削除
-3. ✅ **修正完了**: `publicProperties.ts(827,47)` - `athome_public_folder_id`プロパティが存在しない
-   - 修正内容: 不要なプロパティを削除
-
-### vercel.json設定
-- ✅ **修正完了**: `rewrites`設定を追加
-  ```json
-  {
-    "functions": {
-      "api/index.ts": {
-        "memory": 1024,
-        "maxDuration": 10
-      }
-    },
-    "rewrites": [
-      {
-        "source": "/api/:path*",
-        "destination": "/api/index"
-      }
-    ]
-  }
-  ```
+### frontend/api/index.ts（最新）
+- ✅ インポートパス: `../src/backend/services/*`
+- ✅ エクスポート形式: `export default`（ES Module形式）
+- ✅ `frontend/src/backend`ディレクトリが存在
 
 ### 次のステップ
-1. ✅ TypeScriptエラーを修正（完了）
-2. ✅ `vercel.json`に`rewrites`を追加（完了）
-3. ⏳ コミット＆プッシュ
-4. ⏳ Vercelで再デプロイ
-5. ⏳ APIエンドポイントをテスト
-6. ⏳ CC24画像表示を確認
+1. ⏳ デプロイ完了を待つ（1-2分）
+2. ⏳ シークレットモードでAPIエンドポイントをテスト: `https://property-site-frontend-kappa.vercel.app/api/public/properties/complete?propertyNumber=CC24`
+3. ⏳ Runtime Logsを確認
+4. ⏳ CC24画像表示を確認
 
 ## 実施した対応
 
@@ -141,8 +132,8 @@
 10. **62d97fd**: `frontend/.env.production`の`VITE_API_URL`を更新
 11. **e869af5**: `frontend/package.json`にバックエンドの依存関係をマージ
 12. **b7119af**: `backend/src`を`frontend/src/backend`にコピー、インポートパスを修正
-
-すべてのコミットは正常にデプロイされましたが、まだHTMLが返されています。
+13. **12e297c**: `vercel.json`を`backend/api/index.ts`を使用するように変更（失敗）
+14. **e736d19**: `vercel.json`を`api/index.ts`に戻し、`export default`に変更（最新）
 
 ## 重要な発見
 
