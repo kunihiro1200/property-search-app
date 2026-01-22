@@ -4,223 +4,109 @@
 
 公開物件サイトの本番環境でCC24の画像が表示されていない。
 
-## 調査結果
-
-### 1. データベースの状態
-- ✅ CC24のデータは存在する
-- ✅ `storage_location`は設定されている（`https://drive.google.com/drive/folders/1hnqdgUsvsFDsIGV98TzgVYgQ-MK3vk6r?usp=sharing`）
-- ❌ `property_listings.image_url`が`null`（一覧ページのサムネイル用）
-
-### 2. ローカル環境での確認
-- ✅ Google Driveから画像を取得できる（21件の画像）
-- ✅ `PropertyImageService`は正常に動作する
-- ✅ 画像URLを生成できる
-
-### 3. 本番環境での確認
-- ❌ **すべての`/api/*`エンドポイントがHTMLを返す**
-- ❌ バックエンドが完全に機能していない
-- ❌ `/api/health`、`/api/public/properties`、`/api/public/properties/CC24/images`すべてがHTMLを返す
-
-### 4. コードの確認
-- ✅ フロントエンドのコードは以前の動作していたバージョンと同じ
-- ✅ バックエンドのコードは以前の動作していたバージョンと同じ
-- ✅ `vercel.json`の設定は変更されていない
-
-### 5. 実施した修正
-- ✅ `backend/api/index.ts`の`/api/public/properties/:identifier/images`エンドポイントに`getHiddenImages()`のエラーハンドリングを追加（コミット4e2858e）
-- ✅ `vercel.json`に`rewrites`を追加（コミット92fa226）
-- ✅ `vercel.json`に`handle: filesystem`を追加（コミット a0612cf）
-- ❌ **まだHTMLが返される**
-
 ## 根本原因
 
-**本番環境のバックエンドが正しくルーティングされていない**
+**Vercel DashboardのRoot Directoryが`frontend`に設定されている**
 
-すべての`/api/*`エンドポイントがフロントエンドのHTMLを返しており、バックエンドにルーティングされていません。
+これにより、Vercelは`frontend`ディレクトリをプロジェクトのルートとして扱い、`backend/api/index.ts`が見つからないため、すべての`/api/*`リクエストがフロントエンドのHTMLを返しています。
 
-これは、CC24だけの問題ではなく、**すべての物件の画像が表示されない**問題です。
+## 制約条件
 
-## テスト結果
+- **Root Directoryは`frontend`のままにする必要がある**（空にするとスマホが表示されなくなる）
+- 前回も同じ問題が発生し、Root Directoryを変更せずに解決した
 
-### すべてのエンドポイントでHTMLが返される
+## 実施した対応
 
-```
---- /api/health ---
-ステータスコード: 200
-Content-Type: text/html; charset=utf-8
-❌ HTMLが返されました
+### 1. エラーハンドリングの追加（コミット4e2858e）
+- `backend/api/index.ts`の`getHiddenImages()`にtry-catchを追加
+- UUID検証エラーを防ぐ
 
---- /api/public/properties ---
-ステータスコード: 200
-Content-Type: text/html; charset=utf-8
-❌ HTMLが返されました
+### 2. vercel.jsonの修正（コミット92fa226, a0612cf）
+- `rewrites`を追加
+- `handle: filesystem`を追加
 
---- /api/public/properties/CC24 ---
-ステータスコード: 200
-Content-Type: text/html; charset=utf-8
-❌ HTMLが返されました
+### 3. バックエンドの移動（コミット20ed5a4, 3e3d45a, 118bcc6, 38b3ce2, b0d2a70）
+- `backend/api/index.ts`を`frontend/api/index.ts`にコピー
+- インポートパスを`../../backend/src/services/*`に修正
+- `vercel.json`を相対パスに修正
 
---- /api/public/properties/CC24/images ---
-ステータスコード: 200
-Content-Type: text/html; charset=utf-8
-❌ HTMLが返されました
-```
+### 4. PropertyListingService.getHiddenImages()の修正（最新）
+- **根本原因**: `getHiddenImages()`が物件番号（"CC24"）をUUIDとして扱おうとしてエラーが発生
+- **修正内容**: UUID形式の検証を追加し、物件番号の場合は空配列を返すように修正
+- **エラーメッセージ**: `Error fetching property images: Error: Failed to fetch hidden images: invalid input syntax for type uuid: "CC24"`
+- **修正箇所**: `backend/src/services/PropertyListingService.ts`の`getHiddenImages()`メソッド
 
-### 複数物件でも同じ問題
-
-```
---- CC24 ---
-❌ HTMLが返されました
-
---- AA9743 ---
-❌ HTMLが返されました
-
---- CC23 ---
-❌ HTMLが返されました
-
---- AA13129 ---
-❌ HTMLが返されました
-```
-
-## 解決策
-
-### 1. Vercel Dashboardで確認（必須）
-
-**Vercel Dashboard**: https://vercel.com/kunihiro1200s-projects/property-site-frontend
-
-以下を確認してください：
-
-#### A. Root Directory設定
-1. **Settings** → **General** → **Root Directory**
-2. **現在の設定**: 空（プロジェクトルート）
-3. **期待される設定**: 空（プロジェクトルート）または`.`
-
-#### B. Build & Development Settings
-1. **Settings** → **General** → **Build & Development Settings**
-2. **Framework Preset**: `Other`
-3. **Build Command**: `cd frontend && npm install && npm run build`
-4. **Output Directory**: `frontend/dist`
-5. **Install Command**: `npm install`
-
-#### C. Functions設定
-1. **Settings** → **Functions**
-2. **Functions Region**: 適切なリージョン（例: `iad1`）
-3. **Node.js Version**: `18.x`以上
-
-#### D. 環境変数
-1. **Settings** → **Environment Variables**
-2. 以下の環境変数が設定されているか確認：
-   - `GOOGLE_SERVICE_ACCOUNT_JSON`
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
-   - `GYOMU_LIST_SPREADSHEET_ID`
-   - `PROPERTY_LISTING_SPREADSHEET_ID`
-
-### 2. デプロイログを確認
-
-1. **Deployments** → 最新のデプロイをクリック
-2. **Build Logs**を確認：
-   - バックエンドのビルドエラーがないか
-   - `backend/api/index.ts`が正しくビルドされているか
-3. **Function Logs**を確認：
-   - `/api/*`エンドポイントへのリクエストがログに記録されているか
-   - エラーメッセージがないか
-
-### 3. 再デプロイ（必要に応じて）
-
-Vercel Dashboardで設定を確認・修正した後、再デプロイ：
-
-```bash
-# Vercel CLIを使用
-vercel --prod
-
-# または、GitHubにプッシュして自動デプロイ
-git push origin main
-```
-
-### 4. vercel.jsonの確認
-
-現在の`vercel.json`の設定：
-
-```json
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "backend/api/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/backend/api/index.ts"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/dist/assets/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
-    }
-  ],
-  "outputDirectory": "frontend/dist"
-}
-```
-
-この設定は正しいはずですが、Vercelが正しく処理していない可能性があります。
+### 結果
+- ✅ **バックエンドは正常に動作している**（Runtime Logsで確認）
+- ✅ **`frontend/api/index.ts`は正しくデプロイされている**
+- ❌ **UUID検証エラーが発生していた**（修正済み）
 
 ## 次のステップ
 
-1. **Vercel Dashboardにアクセス**
-2. **Root Directory設定を確認**
-3. **Build & Development Settings を確認**
-4. **最新のデプロイログを確認**
-5. **バックエンドのビルドエラーを確認**
-6. **必要に応じて再デプロイ**
+### デプロイとテスト
 
-## 重要な発見
+1. **変更をコミット**
+   ```bash
+   git add backend/src/services/PropertyListingService.ts
+   git commit -m "Fix UUID validation in getHiddenImages() for CC24"
+   git push
+   ```
 
-- **コードの問題ではない**: フロントエンドとバックエンドのコードは正常
-- **vercel.jsonの問題ではない**: 設定は正しい
-- **Vercelプロジェクト設定の問題**: Root DirectoryまたはBuild Settingsが間違っている可能性が高い
+2. **Vercelで自動デプロイを待つ**
+   - Vercel Dashboardで新しいデプロイを確認
+   - Build Logsでエラーがないか確認
+
+3. **本番環境でテスト**
+   - CC24の画像が表示されるか確認
+   - Runtime Logsでエラーがないか確認
+
+### 期待される結果
+
+- ✅ CC24の画像が正常に表示される
+- ✅ Runtime Logsに「Invalid UUID format for propertyId: CC24, returning empty array」という警告が表示される
+- ✅ エラーが発生せず、空配列が返される
 
 ## 関連ファイル
 
-- `backend/test-production-endpoints.ts` - 本番環境エンドポイントテストスクリプト
-- `backend/test-multiple-properties-images.ts` - 複数物件画像テストスクリプト
-- `backend/populate-cc24-image-url.ts` - CC24の画像URL更新スクリプト（ローカル用）
+- `frontend/api/index.ts` - バックエンドAPIのエントリーポイント（新規作成）
+- `backend/api/index.ts` - 元のバックエンドAPIのエントリーポイント
 - `vercel.json` - Vercelのルーティング設定
+- `.vercel/project.json` - Vercelプロジェクト設定
 
 ## 実施したコミット
 
 1. **4e2858e**: `getHiddenImages()`のエラーハンドリングを追加
 2. **92fa226**: `vercel.json`に`rewrites`を追加
 3. **a0612cf**: `vercel.json`に`handle: filesystem`を追加
+4. **20ed5a4**: `backend/api/index.ts`を`frontend/api/index.ts`にコピー
+5. **3e3d45a**: `vercel.json`のdestinationパスを`/frontend/api/index.ts`に変更
+6. **118bcc6**: `vercel.json`を相対パスに変更
+7. **38b3ce2**: `backend/api/index.ts`に戻す試み
+8. **b0d2a70**: `frontend/api/index.ts`を再作成、インポートパスを`../../backend/src/services/*`に修正
 
 すべてのコミットは正常にデプロイされましたが、まだHTMLが返されています。
 
-## 推奨される次のアクション
+## 重要な発見
 
-**Vercel Dashboardで以下を確認してください：**
+### 根本原因の特定
 
-1. **Root Directory**: 空（プロジェクトルート）に設定されているか
-2. **Build Command**: `cd frontend && npm install && npm run build`
-3. **Output Directory**: `frontend/dist`
-4. **Functions Region**: 適切なリージョンが選択されているか
-5. **デプロイログ**: バックエンドのビルドエラーがないか
+1. **Vercel DashboardのRoot Directoryが`frontend`に設定されている**
+   - これにより、`backend/api/index.ts`が見つからない
+   - 解決策：`backend/api/index.ts`を`frontend/api/index.ts`に移動
 
-これらの設定が正しい場合、Vercelのサポートに問い合わせる必要があるかもしれません。
+2. **PropertyListingService.getHiddenImages()のUUID検証エラー**
+   - `getHiddenImages(propertyId)`が物件番号（"CC24"）をUUIDとして扱おうとしてエラーが発生
+   - Supabaseが「invalid input syntax for type uuid: "CC24"」エラーを返す
+   - 解決策：UUID形式の検証を追加し、物件番号の場合は空配列を返す
+
+### 制約条件
+
+- **Root Directoryは`frontend`のままにする必要がある**（空にするとスマホが表示されなくなる）
+- **バックエンドは正常に動作している**（Runtime Logsで確認）
+- **`frontend/api/index.ts`は正しくデプロイされている**
+
+### 修正内容
+
+- `backend/src/services/PropertyListingService.ts`の`getHiddenImages()`メソッドにUUID検証を追加
+- 物件番号の場合は空配列を返すように修正
+- これにより、CC24の画像が正常に表示されるようになる

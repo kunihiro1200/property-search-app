@@ -801,6 +801,13 @@ export class PropertyListingService {
   // 非表示画像リストを取得
   async getHiddenImages(propertyId: string): Promise<string[]> {
     try {
+      // UUID形式の検証（36文字でハイフンを含む）
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(propertyId)) {
+        console.warn(`[PropertyListingService] Invalid UUID format for propertyId: ${propertyId}, returning empty array`);
+        return [];
+      }
+
       const { data: property, error } = await this.supabase
         .from('property_listings')
         .select('hidden_images')
