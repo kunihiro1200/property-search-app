@@ -3,6 +3,10 @@
     "api/index.ts": {
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/test-simple.ts": {
+      "memory": 512,
+      "maxDuration": 5
     }
   },
   "rewrites": [

@@ -24,13 +24,23 @@ console.log('🔍 Environment variables check:', {
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
-// Supabase クライアントの初期化
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Supabase クライアントの初期化（遅延初期化）
+let supabase: any = null;
+let propertyListingService: any = null;
 
-// PropertyListingServiceの初期化（ローカル環境と同じ）
-const propertyListingService = new PropertyListingService();
+function initializeServices() {
+  if (!supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  
+  if (!propertyListingService) {
+    propertyListingService = new PropertyListingService();
+  }
+  
+  return { supabase, propertyListingService };
+}
 
 // Middleware
 app.use(helmet());
@@ -66,6 +76,8 @@ app.get('/api/test/routes', (_req, res) => {
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
   try {
+    const { propertyListingService } = initializeServices();
+    
     console.log('🔍 Fetching properties from database...');
     
     // クエリパラメータを取得
