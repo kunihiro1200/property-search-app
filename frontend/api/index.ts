@@ -12,7 +12,6 @@ import { GoogleDriveService } from '../src/backend/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/backend/services/PropertyDetailsService';
 import { PropertyService } from '../src/backend/services/PropertyService';
 import { PanoramaUrlService } from '../src/backend/services/PanoramaUrlService';
-import publicPropertiesRoutes from '../src/backend/routes/publicProperties';
 
 const app = express();
 
@@ -55,17 +54,14 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// テスト用：publicPropertiesRoutesが読み込めているか確認
+// テスト用エンドポイント
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'publicPropertiesRoutes commented out for testing',
+    message: 'API is working',
     timestamp: new Date().toISOString() 
   });
 });
-
-// ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
