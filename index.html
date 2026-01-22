@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件情報検索フォーム</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>物件情報検索</h1>
+        
+        <form id="propertyForm">
+            <div class="instruction-text">
+                <p>物件番号入力くださいませ↑↑</p>
+                <p>（物件番号はATBBの会員間メッセージに記載があります）</p>
+                <p>AA,BB,CCから始まる物件番号です（例：AA12345）</p>
+                <p>半角でご入力ください。</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="propertyNumber">物件番号</label>
+                <input 
+                    type="text" 
+                    id="propertyNumber" 
+                    name="propertyNumber" 
+                    placeholder="例: AA12345"
+                    autocomplete="off"
+                >
+                <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>データを取得中...</span>
+                </div>
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="propertyLocation">物件所在地</label>
+                <input 
+                    type="text" 
+                    id="propertyLocation" 
+                    name="propertyLocation" 
+                    readonly
+                    placeholder="物件番号を入力すると自動表示されます"
+                >
+            </div>
+            
+            <div class="form-group">
+                <label for="propertyContent">内容</label>
+                <div 
+                    id="propertyContent" 
+                    class="property-content-display"
+                    data-placeholder="物件番号を入力すると自動表示されます"
+                ></div>
+            </div>
+            
+            <div class="form-group">
+                <button 
+                    type="button" 
+                    id="openGoogleFormBtn" 
+                    class="google-form-btn"
+                    disabled
+                >
+                    Googleフォームを開く
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="APIClient.js"></script>
+    <script src="PropertyForm.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
