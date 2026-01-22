@@ -1,5 +1,12 @@
-backend
-backend/**
+backend/src
+backend/scripts
+backend/migrations
+backend/supabase
+backend/logs
+backend/*.ts
+backend/*.js
+backend/*.json
+!backend/api
 *.md
 .git
 .gitignore
