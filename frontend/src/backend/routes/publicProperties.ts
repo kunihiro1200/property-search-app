@@ -822,9 +822,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
       
       console.log(`[Inquiry] Property found: ${propertyData.property_number}`);
       property = {
-        property_number: propertyData.property_number,
-        site_display: propertyData.site_display,
-        athome_public_folder_id: propertyData.athome_public_folder_id
+        property_number: propertyData.property_number
       };
       propertyNumber = propertyData.property_number;
     }

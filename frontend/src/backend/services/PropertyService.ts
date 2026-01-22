@@ -482,6 +482,11 @@ export class PropertyService {
       }
       
       const sheetId = sheet.properties.sheetId;
+      
+      if (sheetId === null || sheetId === undefined) {
+        throw new Error(`Sheet ID not found for sheet "${sheetName}"`);
+      }
+      
       console.log(`[generateEstimatePdf] Sheet ID: ${sheetId}`);
       
       // PDFをエクスポート（特定のシートのみ）

@@ -15,6 +15,53 @@
 - **Root Directoryは`frontend`のままにする必要がある**（空にするとスマホが表示されなくなる）
 - 前回も同じ問題が発生し、Root Directoryを変更せずに解決した
 
+## 現在の状況（2026年1月22日 最新）
+
+### デプロイメント状況
+- ✅ 最新デプロイメント（e8924c1）は成功
+- ✅ サーバーレス関数`/api/index`が生成されている（3.8 MB, Node.js 20.x）
+- ❌ **APIエンドポイントが404 NOT_FOUNDを返す**
+- ❌ TypeScriptエラーが3件存在（ビルドは完了するが警告あり）
+
+### 確認したURL
+- テストURL: `https://property-site-frontend-kappa.vercel.app/api/public/properties/complete?propertyNumber=CC24`
+- 結果: 404 NOT_FOUND
+
+### TypeScriptエラー（修正中）
+1. ✅ **修正完了**: `PropertyService.ts(488,59)` - `number | null`が`number`に割り当てられない
+   - 修正内容: sheetIdのnullチェックを追加
+2. ✅ **修正完了**: `publicProperties.ts(826,36)` - `site_display`プロパティが存在しない
+   - 修正内容: 不要なプロパティを削除
+3. ✅ **修正完了**: `publicProperties.ts(827,47)` - `athome_public_folder_id`プロパティが存在しない
+   - 修正内容: 不要なプロパティを削除
+
+### vercel.json設定
+- ✅ **修正完了**: `rewrites`設定を追加
+  ```json
+  {
+    "functions": {
+      "api/index.ts": {
+        "memory": 1024,
+        "maxDuration": 10
+      }
+    },
+    "rewrites": [
+      {
+        "source": "/api/:path*",
+        "destination": "/api/index"
+      }
+    ]
+  }
+  ```
+
+### 次のステップ
+1. ✅ TypeScriptエラーを修正（完了）
+2. ✅ `vercel.json`に`rewrites`を追加（完了）
+3. ⏳ コミット＆プッシュ
+4. ⏳ Vercelで再デプロイ
+5. ⏳ APIエンドポイントをテスト
+6. ⏳ CC24画像表示を確認
+
 ## 実施した対応
 
 ### 1. エラーハンドリングの追加（コミット4e2858e）
@@ -57,6 +104,16 @@
 - **影響**: なし（データベースは変更していない、URLのみ変更）
 - **再デプロイ**: 必要（環境変数変更後）
 
+### 4. backend/srcをfrontend/src/backendにコピー（コミットb7119af）
+- **問題**: Vercelのビルド時に`backend`ディレクトリが見えず、TypeScriptエラーが発生
+- **解決策**: `backend/src`を`frontend/src/backend`にコピー
+- **変更内容**:
+  - `backend/src`の全ファイルを`frontend/src/backend`にコピー（341ファイル）
+  - `frontend/api/index.ts`のインポートパスを`../src/backend/services/*`に修正
+  - `frontend/tsconfig.json`の`include`に`api`を追加
+- **理由**: Root Directory=`frontend`のため、`backend`ディレクトリがVercelから見えない
+- **影響**: なし（データベースは変更していない、コードのみ）
+
 ### 期待される結果
 
 - ✅ 物件一覧が表示される
@@ -80,6 +137,10 @@
 6. **118bcc6**: `vercel.json`を相対パスに変更
 7. **38b3ce2**: `backend/api/index.ts`に戻す試み
 8. **b0d2a70**: `frontend/api/index.ts`を再作成、インポートパスを`../../backend/src/services/*`に修正
+9. **0907510**: `PropertyListingService.getHiddenImages()`にUUID検証を追加
+10. **62d97fd**: `frontend/.env.production`の`VITE_API_URL`を更新
+11. **e869af5**: `frontend/package.json`にバックエンドの依存関係をマージ
+12. **b7119af**: `backend/src`を`frontend/src/backend`にコピー、インポートパスを修正
 
 すべてのコミットは正常にデプロイされましたが、まだHTMLが返されています。
 
