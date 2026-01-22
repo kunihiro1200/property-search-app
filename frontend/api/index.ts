@@ -6,13 +6,13 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
-import { PropertyListingService } from '../../backend/src/services/PropertyListingService';
-import { PropertyImageService } from '../../backend/src/services/PropertyImageService';
-import { GoogleDriveService } from '../../backend/src/services/GoogleDriveService';
-import { PropertyDetailsService } from '../../backend/src/services/PropertyDetailsService';
-import { PropertyService } from '../../backend/src/services/PropertyService';
-import { PanoramaUrlService } from '../../backend/src/services/PanoramaUrlService';
-import publicPropertiesRoutes from '../../backend/src/routes/publicProperties';
+import { PropertyListingService } from '../src/backend/services/PropertyListingService';
+import { PropertyImageService } from '../src/backend/services/PropertyImageService';
+import { GoogleDriveService } from '../src/backend/services/GoogleDriveService';
+import { PropertyDetailsService } from '../src/backend/services/PropertyDetailsService';
+import { PropertyService } from '../src/backend/services/PropertyService';
+import { PanoramaUrlService } from '../src/backend/services/PanoramaUrlService';
+import publicPropertiesRoutes from '../src/backend/routes/publicProperties';
 
 const app = express();
 
