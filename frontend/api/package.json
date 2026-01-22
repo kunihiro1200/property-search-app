@@ -1,6 +1,7 @@
 {
   "name": "property-site-api",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.ts",
   "dependencies": {
     "@vercel/node": "^5.5.23",
