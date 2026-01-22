@@ -227,6 +227,54 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
+## GitHub Pagesデプロイ
+
+このプロジェクトは GitHub Pages でホスティングされています。
+
+### 重要な注意事項
+
+**⚠️ `.nojekyll`ファイルを削除しないでください**
+
+`docs/.nojekyll`ファイルは、GitHub PagesでJekyllの処理を無効化するために必要です。
+このファイルがないと、Markdownファイル内のJavaScriptコード（`{{ }}`）がJekyllのLiquidテンプレートとして誤認識され、デプロイが失敗します。
+
+### デプロイ確認
+
+デプロイ後は必ず以下を確認してください：
+
+1. **GitHub Actions**: https://github.com/kunihiro1200/property-search-app/actions
+   - 最新のワークフローが成功（✓）しているか確認
+   - 失敗（×）している場合は、エラーログを確認
+
+2. **本番サイト**: https://kunihiro1200.github.io/property-search-app/
+   - サイトが正常に表示されるか確認
+
+### トラブルシューティング
+
+#### 404エラーが発生した場合
+
+1. `docs`フォルダのファイルがコミットされているか確認：
+   ```bash
+   git status
+   git add docs/
+   git commit -m "Update docs folder"
+   git push
+   ```
+
+2. `.nojekyll`ファイルが存在するか確認：
+   ```bash
+   ls docs/.nojekyll
+   # なければ作成
+   touch docs/.nojekyll
+   git add docs/.nojekyll
+   git commit -m "Add .nojekyll"
+   git push
+   ```
+
+3. GitHub Settings → Pages で設定を確認：
+   - Branch: `main`
+   - Folder: `/docs`
+
 ## ライセンス
 
 MIT
