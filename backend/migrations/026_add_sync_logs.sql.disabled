@@ -1,0 +1,85 @@
+-- Migration 026: Add sync logs and error logs tables
+-- Purpose: Track spreadsheet sync operations and errors for property_listings and buyers
+
+-- Create sync_logs table (汎用設計: 物件リストと買主リストの同期に対応)
+CREATE TABLE IF NOT EXISTS sync_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sync_type VARCHAR(50) NOT NULL CHECK (sync_type IN ('migration', 'create', 'update', 'delete', 'manual', 'batch')),
+  entity_type VARCHAR(50) NOT NULL CHECK (entity_type IN ('property_listing', 'buyer', 'seller')),
+  entity_id UUID,
+  status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'in_progress', 'success', 'failed')),
+  error_message TEXT,
+  rows_affected INTEGER DEFAULT 0,
+  started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE,
+  duration_ms INTEGER,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create error_logs table (汎用設計)
+CREATE TABLE IF NOT EXISTS error_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  error_type VARCHAR(50) NOT NULL CHECK (error_type IN ('network', 'validation', 'rate_limit', 'auth', 'conflict', 'unknown')),
+  error_message TEXT NOT NULL,
+  stack_trace TEXT,
+  entity_type VARCHAR(50) CHECK (entity_type IN ('property_listing', 'buyer', 'seller')),
+  entity_id UUID,
+  operation VARCHAR(50),
+  retry_count INTEGER DEFAULT 0,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add synced_to_sheet_at columns to property_listings and buyers tables if not exists
+DO $$ 
+BEGIN
+  -- property_listings table
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'property_listings' AND column_name = 'synced_to_sheet_at'
+  ) THEN
+    ALTER TABLE property_listings ADD COLUMN synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+  
+  -- buyers table
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'buyers' AND column_name = 'synced_to_sheet_at'
+  ) THEN
+    ALTER TABLE buyers ADD COLUMN synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+  
+  -- sellers table (既存の互換性のため)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'sellers' AND column_name = 'synced_to_sheet_at'
+  ) THEN
+    ALTER TABLE sellers ADD COLUMN synced_to_sheet_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+END $$;
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_sync_logs_entity_type ON sync_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_entity_id ON sync_logs(entity_id);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_sync_type ON sync_logs(sync_type);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_status ON sync_logs(status);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_started_at ON sync_logs(started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_error_logs_entity_type ON error_logs(entity_type);
+CREATE INDEX IF NOT EXISTS idx_error_logs_entity_id ON error_logs(entity_id);
+CREATE INDEX IF NOT EXISTS idx_error_logs_error_type ON error_logs(error_type);
+CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_property_listings_synced_to_sheet_at ON property_listings(synced_to_sheet_at);
+CREATE INDEX IF NOT EXISTS idx_buyers_synced_to_sheet_at ON buyers(synced_to_sheet_at);
+CREATE INDEX IF NOT EXISTS idx_sellers_synced_to_sheet_at ON sellers(synced_to_sheet_at);
+
+-- Add comments
+COMMENT ON TABLE sync_logs IS 'Tracks all spreadsheet sync operations for property_listings, buyers, and sellers';
+COMMENT ON TABLE error_logs IS 'Tracks all sync-related errors';
+COMMENT ON COLUMN sync_logs.entity_type IS 'Type of entity being synced: property_listing, buyer, or seller';
+COMMENT ON COLUMN sync_logs.entity_id IS 'UUID of the entity being synced';
+COMMENT ON COLUMN property_listings.synced_to_sheet_at IS 'Last time this property listing was synced to spreadsheet';
+COMMENT ON COLUMN buyers.synced_to_sheet_at IS 'Last time this buyer was synced to spreadsheet';
+COMMENT ON COLUMN sellers.synced_to_sheet_at IS 'Last time this seller was synced to spreadsheet';

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>フィルターボタン詳細診断</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2563eb; }
+    h2 { color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+    .success { color: #059669; font-weight: bold; }
+    .error { color: #dc2626; font-weight: bold; }
+    .warning { color: #d97706; font-weight: bold; }
+    .code {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #2563eb; }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f1f5f9;
+      border-left: 4px solid #3b82f6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 物件タイプフィルターボタン 詳細診断</h1>
+  
+  <div class="section">
+    <h2>1. コンポーネントの存在確認</h2>
+    <button onclick="checkComponentExists()">コンポーネントを確認</button>
+    <div id="component-result" class="result"></div>
+  </div>
+
+  <div class="section">
+    <h2>2. DOM要素の確認</h2>
+    <button onclick="checkDOMElements()">DOM要素を確認</button>
+    <div id="dom-result" class="result"></div>
+  </div>
+
+  <div class="section">
+    <h2>3. CSS スタイルの確認</h2>
+    <button onclick="checkStyles()">スタイルを確認</button>
+    <div id="style-result" class="result"></div>
+  </div>
+
+  <div class="section">
+    <h2>4. React DevTools 確認</h2>
+    <p>React DevTools がインストールされている場合:</p>
+    <ol>
+      <li>F12 で開発者ツールを開く</li>
+      <li>「Components」タブを選択</li>
+      <li>「PropertyTypeFilterButtons」を検索</li>
+      <li>props を確認: selectedTypes, onTypeToggle, disabled</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>5. ブラウザキャッシュのクリア</h2>
+    <button onclick="clearCacheAndReload()">キャッシュをクリアして再読み込み</button>
+    <p><strong>または手動で:</strong></p>
+    <ol>
+      <li>Ctrl + Shift + Delete (Windows) / Cmd + Shift + Delete (Mac)</li>
+      <li>「キャッシュされた画像とファイル」を選択</li>
+      <li>「データを削除」をクリック</li>
+      <li>ページを再読み込み (Ctrl + F5 / Cmd + Shift + R)</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>6. 診断コマンド（コンソールで実行）</h2>
+    <div class="code">
+// 1. PropertyTypeFilterButtons コンポーネントを探す
+document.querySelectorAll('[class*="PropertyType"]').length
+
+// 2. ボタン要素を探す
+document.querySelectorAll('button[aria-label*="絞り込む"]').length
+
+// 3. 「物件を絞り込む」セクションを探す
+document.querySelector('div:has(> div.text-lg.font-semibold)')
+
+// 4. すべてのボタンを表示
+Array.from(document.querySelectorAll('button')).map(b => ({
+  text: b.textContent,
+  classes: b.className,
+  visible: b.offsetParent !== null
+}))
+    </div>
+  </div>
+
+  <script>
+    function checkComponentExists() {
+      const result = document.getElementById('component-result');
+      
+      // PropertyTypeFilterButtons の親要素を探す
+      const filterSection = document.evaluate(
+        "//div[contains(text(), '物件タイプ')]",
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      ).singleNodeValue;
+      
+      if (filterSection) {
+        result.innerHTML = '<span class="success">✅ 「物件タイプ」セクションが見つかりました</span>';
+        
+        // ボタンを探す
+        const buttons = filterSection.parentElement?.querySelectorAll('button');
+        if (buttons && buttons.length > 0) {
+          result.innerHTML += `<br><span class="success">✅ ボタンが ${buttons.length} 個見つかりました</span>`;
+          result.innerHTML += '<br><br><strong>ボタンの内容:</strong><ul>';
+          buttons.forEach(btn => {
+            result.innerHTML += `<li>${btn.textContent} (表示: ${btn.offsetParent !== null ? '○' : '×'})</li>`;
+          });
+          result.innerHTML += '</ul>';
+        } else {
+          result.innerHTML += '<br><span class="error">❌ ボタンが見つかりません</span>';
+        }
+      } else {
+        result.innerHTML = '<span class="error">❌ 「物件タイプ」セクションが見つかりません</span>';
+        result.innerHTML += '<br><span class="warning">⚠️ ページが正しく読み込まれていない可能性があります</span>';
+      }
+    }
+
+    function checkDOMElements() {
+      const result = document.getElementById('dom-result');
+      let html = '';
+      
+      // すべてのボタンを確認
+      const allButtons = document.querySelectorAll('button');
+      html += `<p>ページ内の全ボタン数: ${allButtons.length}</p>`;
+      
+      // aria-label でフィルターボタンを探す
+      const filterButtons = document.querySelectorAll('button[aria-label*="絞り込む"]');
+      html += `<p>フィルターボタン数: ${filterButtons.length}</p>`;
+      
+      // 「物件を絞り込む」セクションを探す
+      const filterSections = Array.from(document.querySelectorAll('div')).filter(
+        div => div.textContent?.includes('物件を絞り込む')
+      );
+      html += `<p>「物件を絞り込む」セクション数: ${filterSections.length}</p>`;
+      
+      if (filterSections.length > 0) {
+        html += '<br><strong>セクションの内容:</strong><br>';
+        filterSections.forEach((section, i) => {
+          html += `<p>セクション ${i + 1}:<br>`;
+          html += `子要素数: ${section.children.length}<br>`;
+          html += `テキスト: ${section.textContent?.substring(0, 100)}...</p>`;
+        });
+      }
+      
+      result.innerHTML = html;
+    }
+
+    function checkStyles() {
+      const result = document.getElementById('style-result');
+      let html = '';
+      
+      // 「物件タイプ」のテキストを持つ要素を探す
+      const typeLabels = Array.from(document.querySelectorAll('div')).filter(
+        div => div.textContent?.trim() === '物件タイプ'
+      );
+      
+      if (typeLabels.length > 0) {
+        html += '<span class="success">✅ 「物件タイプ」ラベルが見つかりました</span><br><br>';
+        
+        typeLabels.forEach((label, i) => {
+          const parent = label.parentElement;
+          if (parent) {
+            const computed = window.getComputedStyle(parent);
+            html += `<strong>親要素 ${i + 1} のスタイル:</strong><br>`;
+            html += `display: ${computed.display}<br>`;
+            html += `visibility: ${computed.visibility}<br>`;
+            html += `opacity: ${computed.opacity}<br>`;
+            html += `height: ${computed.height}<br>`;
+            html += `overflow: ${computed.overflow}<br><br>`;
+          }
+        });
+      } else {
+        html += '<span class="error">❌ 「物件タイプ」ラベルが見つかりません</span>';
+      }
+      
+      result.innerHTML = html;
+    }
+
+    function clearCacheAndReload() {
+      if (confirm('ブラウザキャッシュをクリアしてページを再読み込みしますか？')) {
+        // Service Worker をクリア
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(registrations => {
+            registrations.forEach(registration => registration.unregister());
+          });
+        }
+        
+        // キャッシュをクリア
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            names.forEach(name => caches.delete(name));
+          });
+        }
+        
+        // ハードリロード
+        window.location.reload(true);
+      }
+    }
+
+    // ページ読み込み時に自動診断
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('=== 自動診断開始 ===');
+        checkComponentExists();
+        checkDOMElements();
+        checkStyles();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

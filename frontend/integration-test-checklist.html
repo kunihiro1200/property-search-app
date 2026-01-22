@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統合テストチェックリスト</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        h1 { font-size: 32px; margin-bottom: 10px; }
+        .subtitle { opacity: 0.9; font-size: 16px; }
+        .progress-section {
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            width: 0%;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .content {
+            padding: 40px;
+        }
+        .test-category {
+            margin-bottom: 40px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .category-icon {
+            font-size: 24px;
+        }
+        .category-title {
+            font-size: 24px;
+            color: #333;
+        }
+        .test-item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .test-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .test-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .test-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .test-status {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-pending { background: #ff9800; color: white; }
+        .status-pass { background: #4caf50; color: white; }
+        .status-fail { background: #f44336; color: white; }
+        .test-details {
+            margin-left: 39px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .test-url {
+            display: inline-block;
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            color: #1976d2;
+            text-decoration: none;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .test-url:hover {
+            background: #bbdefb;
+        }
+        .quick-actions {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .action-btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 統合テストチェックリスト</h1>
+            <div class="subtitle">問合せ履歴チェックボックスGmail送信機能</div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalTests">20</div>
+                    <div class="stat-label">総テスト数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="passedTests">0</div>
+                    <div class="stat-label">✅ 成功</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="failedTests">0</div>
+                    <div class="stat-label">❌ 失敗</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingTests">20</div>
+                    <div class="stat-label">⏳ 未実施</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- 基本動作 -->
+            <div class="test-category">
+                <div class="category-header">
+                    <span class="category-icon">📋</span>
+                    <h2 class="category-title">基本動作の確認 (TC1-TC4)</h2>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc1">
+                        <div class="test-title">TC1: チェックボックス選択の基本動作</div>
+                        <span class="test-status status-pending" id="status-tc1">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> 買主詳細ページを開く → 1つのチェックボックスをクリック<br>
+                        <strong>期待:</strong> チェック状態、「1件選択中」表示、ボタン有効化<br>
+                        <a href="http://localhost:5175/buyers/6648" target="_blank" class="test-url">
+                            🔗 テストページを開く
+                        </a>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc2">
+                        <div class="test-title">TC2: 複数物件の選択</div>
+                        <span class="test-status status-pending" id="status-tc2">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> 3つのチェックボックスをクリック<br>
+                        <strong>期待:</strong> 3つチェック状態、「3件選択中」表示
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc3">
+                        <div class="test-title">TC3: 選択解除</div>
+                        <span class="test-status status-pending" id="status-tc3">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> 2つ選択 → 1つ解除<br>
+                        <strong>期待:</strong> 「1件選択中」に更新
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc4">
+                        <div class="test-title">TC4: 全選択解除</div>
+                        <span class="test-status status-pending" id="status-tc4">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> すべて解除<br>
+                        <strong>期待:</strong> ボタン無効化、選択数表示消える
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gmail送信フロー -->
+            <div class="test-category">
+                <div class="category-header">
+                    <span class="category-icon">📧</span>
+                    <h2 class="category-title">Gmail送信フローの確認 (TC6-TC12)</h2>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc6">
+                        <div class="test-title">TC6: Gmail送信（1件選択）</div>
+                        <span class="test-status status-pending" id="status-tc6">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> 1件選択 → Gmail送信ボタンクリック<br>
+                        <strong>期待:</strong> テンプレート選択モーダル表示
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc7">
+                        <div class="test-title">TC7: Gmail送信（複数件選択）</div>
+                        <span class="test-status status-pending" id="status-tc7">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> 3件選択 → Gmail送信ボタンクリック<br>
+                        <strong>期待:</strong> テンプレート選択モーダル表示
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc8">
+                        <div class="test-title">TC8: テンプレート選択</div>
+                        <span class="test-status status-pending" id="status-tc8">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>手順:</strong> テンプレート選択<br>
+                        <strong>期待:</strong> メール作成モーダル表示、複数物件情報表示
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc9">
+                        <div class="test-title">TC9: メール本文確認（1件）</div>
+                        <span class="test-status status-pending" id="status-tc9">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> 物件情報が正しくフォーマットされている
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc10">
+                        <div class="test-title">TC10: メール本文確認（複数件）</div>
+                        <span class="test-status status-pending" id="status-tc10">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> 複数物件情報がすべて含まれる
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc11">
+                        <div class="test-title">TC11: メール送信キャンセル</div>
+                        <span class="test-status status-pending" id="status-tc11">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> モーダル閉じる、選択状態保持
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc12">
+                        <div class="test-title">TC12: メール送信成功</div>
+                        <span class="test-status status-pending" id="status-tc12">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> 送信成功、モーダル閉じる、選択クリア
+                    </div>
+                </div>
+            </div>
+
+            <!-- エラーハンドリング -->
+            <div class="test-category">
+                <div class="category-header">
+                    <span class="category-icon">⚠️</span>
+                    <h2 class="category-title">エラーハンドリング (TC13-TC14)</h2>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc13">
+                        <div class="test-title">TC13: 物件データ取得失敗</div>
+                        <span class="test-status status-pending" id="status-tc13">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> エラーメッセージ表示
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc14">
+                        <div class="test-title">TC14: API通信エラー</div>
+                        <span class="test-status status-pending" id="status-tc14">未実施</span>
+                    </div>
+                    <div class="test-details">
+                        <strong>期待:</strong> 通信エラーメッセージ表示
+                    </div>
+                </div>
+            </div>
+
+            <!-- 互換性 -->
+            <div class="test-category">
+                <div class="category-header">
+                    <span class="category-icon">🔄</span>
+                    <h2 class="category-title">互換性の確認 (TC15-TC20)</h2>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc15">
+                        <div class="test-title">TC15: テンプレート選択互換性</div>
+                        <span class="test-status status-pending" id="status-tc15">未実施</span>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc16">
+                        <div class="test-title">TC16: 送信者選択互換性</div>
+                        <span class="test-status status-pending" id="status-tc16">未実施</span>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc17">
+                        <div class="test-title">TC17: レスポンシブデザイン</div>
+                        <span class="test-status status-pending" id="status-tc17">未実施</span>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc18">
+                        <div class="test-title">TC18: パフォーマンス</div>
+                        <span class="test-status status-pending" id="status-tc18">未実施</span>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc19">
+                        <div class="test-title">TC19: ブラウザ互換性</div>
+                        <span class="test-status status-pending" id="status-tc19">未実施</span>
+                    </div>
+                </div>
+
+                <div class="test-item">
+                    <div class="test-header">
+                        <input type="checkbox" class="test-checkbox" data-test="tc20">
+                        <div class="test-title">TC20: アクセシビリティ</div>
+                        <span class="test-status status-pending" id="status-tc20">未実施</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <button class="action-btn btn-primary" onclick="window.open('http://localhost:5175/buyers/6648', '_blank')">
+            🚀 テストページを開く
+        </button>
+        <button class="action-btn btn-success" onclick="generateReport()">
+            📊 レポート生成
+        </button>
+    </div>
+
+    <script>
+        const checkboxes = document.querySelectorAll('.test-checkbox');
+        const totalTests = 20;
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const testId = this.dataset.test;
+                const statusEl = document.getElementById(`status-${testId}`);
+                
+                if (this.checked) {
+                    statusEl.textContent = '✅ Pass';
+                    statusEl.className = 'test-status status-pass';
+                } else {
+                    statusEl.textContent = '未実施';
+                    statusEl.className = 'test-status status-pending';
+                }
+                
+                updateStats();
+            });
+        });
+        
+        function updateStats() {
+            const checked = document.querySelectorAll('.test-checkbox:checked').length;
+            const pending = totalTests - checked;
+            const progress = (checked / totalTests) * 100;
+            
+            document.getElementById('passedTests').textContent = checked;
+            document.getElementById('pendingTests').textContent = pending;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        function generateReport() {
+            const checked = document.querySelectorAll('.test-checkbox:checked').length;
+            const progress = ((checked / totalTests) * 100).toFixed(1);
+            
+            alert(`テスト進捗レポート\n\n` +
+                  `総テスト数: ${totalTests}\n` +
+                  `完了: ${checked}\n` +
+                  `未実施: ${totalTests - checked}\n` +
+                  `進捗率: ${progress}%\n\n` +
+                  `${checked === totalTests ? '🎉 すべてのテストが完了しました！' : '⏳ テストを続けてください'}`);
+        }
+    </script>
+</body>
+</html>

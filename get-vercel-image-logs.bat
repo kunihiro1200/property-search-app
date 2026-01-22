@@ -1,0 +1,3 @@
+@echo off
+echo Fetching Vercel logs for image API...
+vercel logs https://baikyaku-property-site3.vercel.app --follow

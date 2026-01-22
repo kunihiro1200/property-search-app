@@ -1,0 +1,59 @@
+.public-property-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: transform 200ms ease-out;
+  user-select: none;
+  outline: none;
+}
+
+.public-property-logo:hover {
+  transform: scale(1.02);
+}
+
+.public-property-logo:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.logo-image {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
+.company-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000000;
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .logo-image {
+    height: 50px;
+  }
+  
+  .company-name {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .logo-image {
+    height: 40px;
+  }
+  
+  .company-name {
+    font-size: 16px;
+  }
+  
+  .public-property-logo {
+    gap: 12px;
+  }
+}
+

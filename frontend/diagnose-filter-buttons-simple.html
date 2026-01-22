@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フィルターボタン診断 - シンプル版</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #1a73e8;
+            padding-bottom: 8px;
+        }
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 8px 8px 8px 0;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #1557b0;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .step {
+            background: #e8f4f8;
+            padding: 12px;
+            border-left: 4px solid #1a73e8;
+            margin: 12px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 物件タイプフィルターボタン診断ツール</h1>
+    
+    <div class="card">
+        <h2>📍 ステップ1: 現在のページを確認</h2>
+        <p>まず、<code>http://localhost:5173/public/properties</code> を開いてください。</p>
+        <p>このページを開いたまま、以下のボタンをクリックして診断を実行してください。</p>
+    </div>
+
+    <div class="card">
+        <h2>🔎 ステップ2: DOM要素の確認</h2>
+        <button class="btn" onclick="checkDOMElements()">DOM要素を確認</button>
+        <div id="dom-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>🎨 ステップ3: CSS表示状態の確認</h2>
+        <button class="btn" onclick="checkCSSVisibility()">CSS表示状態を確認</button>
+        <div id="css-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>⚛️ ステップ4: React要素の確認</h2>
+        <button class="btn" onclick="checkReactElements()">React要素を確認</button>
+        <div id="react-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>📦 ステップ5: 総合診断</h2>
+        <button class="btn" onclick="runFullDiagnostics()">すべての診断を実行</button>
+        <div id="full-result"></div>
+    </div>
+
+    <script>
+        function checkDOMElements() {
+            const resultDiv = document.getElementById('dom-result');
+            let html = '<div class="result info">';
+            
+            try {
+                // 物件タイプフィルターボタンを探す
+                const buttons = document.querySelectorAll('button[aria-label*="絞り込む"]');
+                html += `✅ フィルターボタンの数: ${buttons.length}個\n\n`;
+                
+                if (buttons.length > 0) {
+                    html += '見つかったボタン:\n';
+                    buttons.forEach((btn, index) => {
+                        html += `  ${index + 1}. ${btn.getAttribute('aria-label')}\n`;
+                        html += `     テキスト: ${btn.textContent}\n`;
+                        html += `     表示: ${window.getComputedStyle(btn).display}\n`;
+                        html += `     可視性: ${window.getComputedStyle(btn).visibility}\n\n`;
+                    });
+                    resultDiv.innerHTML = html.replace('info', 'success') + '</div>';
+                } else {
+                    // 「物件タイプ」というテキストを探す
+                    const typeLabel = Array.from(document.querySelectorAll('div')).find(
+                        div => div.textContent.trim() === '物件タイプ'
+                    );
+                    
+                    if (typeLabel) {
+                        html += '⚠️ 「物件タイプ」ラベルは見つかりましたが、ボタンが見つかりません\n';
+                        html += `ラベルの親要素: ${typeLabel.parentElement?.className}\n`;
+                        resultDiv.innerHTML = html.replace('info', 'warning') + '</div>';
+                    } else {
+                        html += '❌ 「物件タイプ」セクション自体が見つかりません\n';
+                        html += '\n考えられる原因:\n';
+                        html += '1. コンポーネントがレンダリングされていない\n';
+                        html += '2. ブラウザキャッシュの問題\n';
+                        html += '3. JavaScriptエラーが発生している\n';
+                        resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+                    }
+                }
+            } catch (error) {
+                html += `❌ エラー: ${error.message}\n`;
+                resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+            }
+        }
+
+        function checkCSSVisibility() {
+            const resultDiv = document.getElementById('css-result');
+            let html = '<div class="result info">';
+            
+            try {
+                // 「物件を絞り込む」セクションを探す
+                const filterSection = Array.from(document.querySelectorAll('div')).find(
+                    div => div.textContent.includes('物件を絞り込む')
+                );
+                
+                if (filterSection) {
+                    const styles = window.getComputedStyle(filterSection);
+                    html += '✅ 「物件を絞り込む」セクションが見つかりました\n\n';
+                    html += 'CSS状態:\n';
+                    html += `  display: ${styles.display}\n`;
+                    html += `  visibility: ${styles.visibility}\n`;
+                    html += `  opacity: ${styles.opacity}\n`;
+                    html += `  position: ${styles.position}\n`;
+                    html += `  z-index: ${styles.zIndex}\n`;
+                    html += `  width: ${styles.width}\n`;
+                    html += `  height: ${styles.height}\n`;
+                    
+                    if (styles.display === 'none' || styles.visibility === 'hidden' || styles.opacity === '0') {
+                        html += '\n⚠️ このセクションは非表示になっています！\n';
+                        resultDiv.innerHTML = html.replace('info', 'warning') + '</div>';
+                    } else {
+                        resultDiv.innerHTML = html.replace('info', 'success') + '</div>';
+                    }
+                } else {
+                    html += '❌ 「物件を絞り込む」セクションが見つかりません\n';
+                    resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+                }
+            } catch (error) {
+                html += `❌ エラー: ${error.message}\n`;
+                resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+            }
+        }
+
+        function checkReactElements() {
+            const resultDiv = document.getElementById('react-result');
+            let html = '<div class="result info">';
+            
+            try {
+                // React DevToolsがインストールされているか確認
+                if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+                    html += '✅ React DevToolsが検出されました\n\n';
+                    html += 'React要素の確認:\n';
+                    
+                    // Reactルート要素を探す
+                    const rootElement = document.getElementById('root');
+                    if (rootElement && rootElement._reactRootContainer) {
+                        html += '  ✅ Reactルート要素が見つかりました\n';
+                    } else if (rootElement) {
+                        html += '  ⚠️ ルート要素は存在しますが、Reactがマウントされていない可能性があります\n';
+                    }
+                    
+                    // PropertyTypeFilterButtonsコンポーネントの痕跡を探す
+                    const allDivs = document.querySelectorAll('div');
+                    let foundComponent = false;
+                    allDivs.forEach(div => {
+                        if (div.className && div.className.includes('space-y-3')) {
+                            foundComponent = true;
+                            html += '  ✅ PropertyTypeFilterButtonsのスタイルクラスが見つかりました\n';
+                        }
+                    });
+                    
+                    if (!foundComponent) {
+                        html += '  ❌ PropertyTypeFilterButtonsコンポーネントの痕跡が見つかりません\n';
+                    }
+                    
+                    resultDiv.innerHTML = html.replace('info', foundComponent ? 'success' : 'warning') + '</div>';
+                } else {
+                    html += '⚠️ React DevToolsがインストールされていません\n\n';
+                    html += 'インストール方法:\n';
+                    html += 'Chrome: https://chrome.google.com/webstore/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi\n';
+                    html += 'Firefox: https://addons.mozilla.org/firefox/addon/react-devtools/\n';
+                    resultDiv.innerHTML = html.replace('info', 'warning') + '</div>';
+                }
+            } catch (error) {
+                html += `❌ エラー: ${error.message}\n`;
+                resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+            }
+        }
+
+        function runFullDiagnostics() {
+            const resultDiv = document.getElementById('full-result');
+            let html = '<div class="result info">';
+            html += '🔍 総合診断を実行中...\n\n';
+            
+            try {
+                // 1. ページURL確認
+                html += '1️⃣ ページURL:\n';
+                html += `   ${window.location.href}\n\n`;
+                
+                // 2. ボタン数確認
+                const buttons = document.querySelectorAll('button[aria-label*="絞り込む"]');
+                html += `2️⃣ フィルターボタン数: ${buttons.length}個\n\n`;
+                
+                // 3. 「物件タイプ」ラベル確認
+                const typeLabel = Array.from(document.querySelectorAll('div')).find(
+                    div => div.textContent.trim() === '物件タイプ'
+                );
+                html += `3️⃣ 「物件タイプ」ラベル: ${typeLabel ? '✅ 存在' : '❌ 不在'}\n\n`;
+                
+                // 4. 「物件を絞り込む」セクション確認
+                const filterSection = Array.from(document.querySelectorAll('div')).find(
+                    div => div.textContent.includes('物件を絞り込む')
+                );
+                html += `4️⃣ 「物件を絞り込む」セクション: ${filterSection ? '✅ 存在' : '❌ 不在'}\n\n`;
+                
+                // 5. コンソールエラー確認
+                html += '5️⃣ コンソールエラー確認:\n';
+                html += '   F12を押して「Console」タブを確認してください\n';
+                html += '   赤いエラーメッセージがある場合は報告してください\n\n';
+                
+                // 6. 診断結果
+                html += '📊 診断結果:\n';
+                if (buttons.length === 4) {
+                    html += '   ✅ すべて正常です！ボタンは正しく表示されています\n';
+                    resultDiv.innerHTML = html.replace('info', 'success') + '</div>';
+                } else if (typeLabel && buttons.length === 0) {
+                    html += '   ⚠️ ラベルは存在しますが、ボタンが表示されていません\n';
+                    html += '   → CSSの問題またはJavaScriptエラーの可能性があります\n';
+                    resultDiv.innerHTML = html.replace('info', 'warning') + '</div>';
+                } else if (!typeLabel && !filterSection) {
+                    html += '   ❌ コンポーネント全体が表示されていません\n';
+                    html += '   → ブラウザキャッシュをクリアしてください\n';
+                    html += '   → フロントエンドサーバーを再起動してください\n';
+                    resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+                } else {
+                    html += '   ⚠️ 部分的な問題が検出されました\n';
+                    html += '   → 詳細は上記の個別診断を確認してください\n';
+                    resultDiv.innerHTML = html.replace('info', 'warning') + '</div>';
+                }
+            } catch (error) {
+                html += `❌ エラー: ${error.message}\n`;
+                resultDiv.innerHTML = html.replace('info', 'error') + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>公開物件コメント表示診断</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #2196F3;
+      padding-bottom: 10px;
+    }
+    
+    .input-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    button {
+      background-color: #2196F3;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    button:hover {
+      background-color: #1976D2;
+    }
+    
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .results {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .result-item {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+    }
+    
+    .result-header {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .status-success {
+      color: #4CAF50;
+    }
+    
+    .status-error {
+      color: #f44336;
+    }
+    
+    .status-warning {
+      color: #FF9800;
+    }
+    
+    .detail-row {
+      display: flex;
+      margin: 8px 0;
+      padding: 8px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+    }
+    
+    .detail-label {
+      font-weight: bold;
+      min-width: 150px;
+      color: #666;
+    }
+    
+    .detail-value {
+      flex: 1;
+      color: #333;
+    }
+    
+    .comment-content {
+      background-color: #FFF9E6;
+      padding: 10px;
+      border-left: 4px solid #FFC107;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    
+    .error-message {
+      background-color: #ffebee;
+      color: #c62828;
+      padding: 10px;
+      border-left: 4px solid #f44336;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    
+    .summary {
+      background-color: #e3f2fd;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 4px solid #2196F3;
+    }
+    
+    .summary-item {
+      margin: 5px 0;
+    }
+    
+    .recommendations {
+      background-color: #fff3e0;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+      border-left: 4px solid #FF9800;
+    }
+    
+    .recommendations h3 {
+      margin-top: 0;
+      color: #E65100;
+    }
+    
+    .recommendations ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .recommendations li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 公開物件コメント表示診断</h1>
+  
+  <div class="input-section">
+    <div class="input-group">
+      <label for="apiBaseUrl">API Base URL:</label>
+      <input type="text" id="apiBaseUrl" value="http://localhost:3000/api/public" placeholder="http://localhost:3000/api/public">
+    </div>
+    
+    <div class="input-group">
+      <label for="propertyIds">物件ID（カンマ区切りで複数指定可）:</label>
+      <input type="text" id="propertyIds" placeholder="uuid1, uuid2, uuid3">
+    </div>
+    
+    <button id="diagnoseBtn" onclick="runDiagnosis()">診断開始</button>
+  </div>
+  
+  <div id="results"></div>
+  
+  <script>
+    async function runDiagnosis() {
+      const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+      const propertyIdsInput = document.getElementById('propertyIds').value.trim();
+      const resultsDiv = document.getElementById('results');
+      const diagnoseBtn = document.getElementById('diagnoseBtn');
+      
+      if (!propertyIdsInput) {
+        alert('物件IDを入力してください');
+        return;
+      }
+      
+      const propertyIds = propertyIdsInput.split(',').map(id => id.trim()).filter(id => id);
+      
+      if (propertyIds.length === 0) {
+        alert('有効な物件IDを入力してください');
+        return;
+      }
+      
+      // ボタンを無効化
+      diagnoseBtn.disabled = true;
+      resultsDiv.innerHTML = '<div class="loading">診断中...</div>';
+      
+      try {
+        const results = [];
+        
+        for (const propertyId of propertyIds) {
+          const result = await diagnoseProperty(apiBaseUrl, propertyId);
+          results.push(result);
+        }
+        
+        displayResults(results);
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="error-message">エラーが発生しました: ${error.message}</div>`;
+      } finally {
+        diagnoseBtn.disabled = false;
+      }
+    }
+    
+    async function diagnoseProperty(apiBaseUrl, propertyId) {
+      const result = {
+        propertyId,
+        favoriteComment: null,
+        recommendedComment: null,
+        diagnostic: null,
+        errors: []
+      };
+      
+      try {
+        // 診断エンドポイントを呼び出し
+        const diagnosticResponse = await fetch(`${apiBaseUrl}/properties/${propertyId}/comments-diagnostic`);
+        if (diagnosticResponse.ok) {
+          result.diagnostic = await diagnosticResponse.json();
+        } else {
+          result.errors.push(`診断エンドポイントエラー: ${diagnosticResponse.status}`);
+        }
+      } catch (error) {
+        result.errors.push(`診断エンドポイント接続エラー: ${error.message}`);
+      }
+      
+      try {
+        // お気に入り文言を取得
+        const favoriteResponse = await fetch(`${apiBaseUrl}/properties/${propertyId}/favorite-comment`);
+        if (favoriteResponse.ok) {
+          result.favoriteComment = await favoriteResponse.json();
+        } else {
+          result.errors.push(`お気に入り文言APIエラー: ${favoriteResponse.status}`);
+        }
+      } catch (error) {
+        result.errors.push(`お気に入り文言API接続エラー: ${error.message}`);
+      }
+      
+      try {
+        // アピールポイントを取得
+        const recommendedResponse = await fetch(`${apiBaseUrl}/properties/${propertyId}/recommended-comment`);
+        if (recommendedResponse.ok) {
+          result.recommendedComment = await recommendedResponse.json();
+        } else {
+          result.errors.push(`アピールポイントAPIエラー: ${recommendedResponse.status}`);
+        }
+      } catch (error) {
+        result.errors.push(`アピールポイントAPI接続エラー: ${error.message}`);
+      }
+      
+      return result;
+    }
+    
+    function displayResults(results) {
+      const resultsDiv = document.getElementById('results');
+      
+      // サマリーを作成
+      const summary = createSummary(results);
+      
+      // 各物件の結果を表示
+      let html = '<div class="results">';
+      html += summary;
+      
+      results.forEach(result => {
+        html += createResultHTML(result);
+      });
+      
+      // 推奨事項を追加
+      html += createRecommendations(results);
+      
+      html += '</div>';
+      
+      resultsDiv.innerHTML = html;
+    }
+    
+    function createSummary(results) {
+      const total = results.length;
+      const favoriteSuccess = results.filter(r => r.favoriteComment && r.favoriteComment.comment).length;
+      const recommendedSuccess = results.filter(r => r.recommendedComment && r.recommendedComment.comments && r.recommendedComment.comments.length > 0).length;
+      const errors = results.filter(r => r.errors.length > 0).length;
+      
+      return `
+        <div class="summary">
+          <h3>📊 診断サマリー</h3>
+          <div class="summary-item">総物件数: ${total}</div>
+          <div class="summary-item">お気に入り文言データあり: ${favoriteSuccess}/${total}</div>
+          <div class="summary-item">アピールポイントデータあり: ${recommendedSuccess}/${total}</div>
+          <div class="summary-item ${errors > 0 ? 'status-error' : 'status-success'}">エラー: ${errors}/${total}</div>
+        </div>
+      `;
+    }
+    
+    function createResultHTML(result) {
+      let html = '<div class="result-item">';
+      html += `<div class="result-header">物件ID: ${result.propertyId}</div>`;
+      
+      // エラーがある場合
+      if (result.errors.length > 0) {
+        html += '<div class="error-message">';
+        html += '<strong>⚠️ エラー:</strong><br>';
+        result.errors.forEach(error => {
+          html += `• ${error}<br>`;
+        });
+        html += '</div>';
+      }
+      
+      // 診断情報
+      if (result.diagnostic) {
+        html += '<h4>診断情報</h4>';
+        html += `<div class="detail-row"><div class="detail-label">物件番号:</div><div class="detail-value">${result.diagnostic.propertyNumber}</div></div>`;
+        html += `<div class="detail-row"><div class="detail-label">物件タイプ:</div><div class="detail-value">${result.diagnostic.propertyType}</div></div>`;
+        html += `<div class="detail-row"><div class="detail-label">スプレッドシートURL:</div><div class="detail-value">${result.diagnostic.spreadsheetUrl || 'なし'}</div></div>`;
+        html += `<div class="detail-row"><div class="detail-label">総レスポンスタイム:</div><div class="detail-value">${result.diagnostic.totalResponseTime}ms</div></div>`;
+      }
+      
+      // お気に入り文言
+      html += '<h4>お気に入り文言</h4>';
+      if (result.favoriteComment) {
+        const hasComment = result.favoriteComment.comment;
+        html += `<div class="detail-row"><div class="detail-label">ステータス:</div><div class="detail-value ${hasComment ? 'status-success' : 'status-warning'}">${hasComment ? '✅ データあり' : '⚠️ データなし'}</div></div>`;
+        
+        if (result.diagnostic) {
+          html += `<div class="detail-row"><div class="detail-label">セル位置:</div><div class="detail-value">${result.diagnostic.favoriteComment.cellPosition || 'なし'}</div></div>`;
+          html += `<div class="detail-row"><div class="detail-label">レスポンスタイム:</div><div class="detail-value">${result.diagnostic.favoriteComment.responseTime}ms</div></div>`;
+        }
+        
+        if (hasComment) {
+          html += `<div class="comment-content">"${result.favoriteComment.comment}"</div>`;
+        }
+      } else {
+        html += '<div class="status-error">❌ 取得失敗</div>';
+      }
+      
+      // アピールポイント
+      html += '<h4>アピールポイント</h4>';
+      if (result.recommendedComment) {
+        const hasComments = result.recommendedComment.comments && result.recommendedComment.comments.length > 0;
+        html += `<div class="detail-row"><div class="detail-label">ステータス:</div><div class="detail-value ${hasComments ? 'status-success' : 'status-warning'}">${hasComments ? '✅ データあり' : '⚠️ データなし'}</div></div>`;
+        
+        if (result.diagnostic) {
+          html += `<div class="detail-row"><div class="detail-label">セル範囲:</div><div class="detail-value">${result.diagnostic.recommendedComment.cellRange || 'なし'}</div></div>`;
+          html += `<div class="detail-row"><div class="detail-label">行数:</div><div class="detail-value">${result.diagnostic.recommendedComment.rowCount}</div></div>`;
+          html += `<div class="detail-row"><div class="detail-label">総セル数:</div><div class="detail-value">${result.diagnostic.recommendedComment.totalCells}</div></div>`;
+          html += `<div class="detail-row"><div class="detail-label">レスポンスタイム:</div><div class="detail-value">${result.diagnostic.recommendedComment.responseTime}ms</div></div>`;
+        }
+        
+        if (hasComments) {
+          html += '<div class="comment-content">';
+          result.recommendedComment.comments.forEach((row, index) => {
+            html += `${index + 1}. ${row.join(' ')}<br>`;
+          });
+          html += '</div>';
+        }
+      } else {
+        html += '<div class="status-error">❌ 取得失敗</div>';
+      }
+      
+      html += '</div>';
+      return html;
+    }
+    
+    function createRecommendations(results) {
+      const recommendations = [];
+      
+      // エラーがある場合
+      const hasErrors = results.some(r => r.errors.length > 0);
+      if (hasErrors) {
+        recommendations.push('バックエンドログを確認してエラーの詳細を調査してください');
+        recommendations.push('APIエンドポイントが正しく動作しているか確認してください');
+      }
+      
+      // データがない物件がある場合
+      const noFavoriteComment = results.filter(r => r.favoriteComment && !r.favoriteComment.comment).length;
+      const noRecommendedComment = results.filter(r => r.recommendedComment && (!r.recommendedComment.comments || r.recommendedComment.comments.length === 0)).length;
+      
+      if (noFavoriteComment > 0 || noRecommendedComment > 0) {
+        recommendations.push('スプレッドシートの該当セル/セル範囲にデータが入力されているか確認してください');
+        recommendations.push('物件タイプが正しく設定されているか確認してください');
+        recommendations.push('スプレッドシートURLが正しく設定されているか確認してください');
+      }
+      
+      // レスポンスタイムが遅い場合
+      const slowResponses = results.filter(r => r.diagnostic && r.diagnostic.totalResponseTime > 2000);
+      if (slowResponses.length > 0) {
+        recommendations.push('⚠️ レスポンスタイムが遅い物件があります（> 2秒）');
+        recommendations.push('Redisキャッシュが正しく動作しているか確認してください');
+        recommendations.push('Google Sheets APIのレート制限に達していないか確認してください');
+      }
+      
+      if (recommendations.length === 0) {
+        return '<div class="recommendations"><h3>✅ すべて正常です</h3><p>問題は検出されませんでした。</p></div>';
+      }
+      
+      let html = '<div class="recommendations">';
+      html += '<h3>💡 推奨事項</h3>';
+      html += '<ul>';
+      recommendations.forEach(rec => {
+        html += `<li>${rec}</li>`;
+      });
+      html += '</ul>';
+      html += '</div>';
+      
+      return html;
+    }
+  </script>
+</body>
+</html>
+

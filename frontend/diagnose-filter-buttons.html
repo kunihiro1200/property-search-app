@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フィルターボタン診断</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        .warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        .info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+        .checklist li:before {
+            content: "☐ ";
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .checklist li.checked:before {
+            content: "✓ ";
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 物件タイプフィルターボタン診断ツール</h1>
+    
+    <div class="card">
+        <h2>1. サーバー接続テスト</h2>
+        <button onclick="testServerConnection()">サーバー接続を確認</button>
+        <div id="server-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>2. ページアクセステスト</h2>
+        <button onclick="testPageAccess()">ページにアクセス</button>
+        <div id="page-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>3. コンポーネント読み込みテスト</h2>
+        <button onclick="testComponentLoad()">コンポーネントを確認</button>
+        <div id="component-status"></div>
+    </div>
+
+    <div class="card">
+        <h2>4. ブラウザキャッシュクリア手順</h2>
+        <div class="info">
+            <strong>重要:</strong> 以下の手順でブラウザキャッシュをクリアしてください
+        </div>
+        <ul class="checklist">
+            <li id="step1">開発者ツールを開く（F12キー）</li>
+            <li id="step2">Networkタブを開く</li>
+            <li id="step3">"Disable cache"にチェックを入れる</li>
+            <li id="step4">ページをリロード（Ctrl + Shift + R）</li>
+        </ul>
+        <button onclick="markStepsComplete()">手順を完了しました</button>
+    </div>
+
+    <div class="card">
+        <h2>5. 実際のページで確認</h2>
+        <button onclick="openActualPage()">物件一覧ページを開く</button>
+        <div class="warning" style="margin-top: 10px;">
+            <strong>確認事項:</strong>
+            <ul>
+                <li>「物件を絞り込む」セクションが表示されているか</li>
+                <li>「物件タイプ」というラベルが表示されているか</li>
+                <li>4つのボタン（戸建て、マンション、土地、収益物件）が表示されているか</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>6. 診断結果</h2>
+        <div id="final-result"></div>
+    </div>
+
+    <script>
+        let testResults = {
+            server: false,
+            page: false,
+            component: false,
+            cache: false
+        };
+
+        async function testServerConnection() {
+            const statusDiv = document.getElementById('server-status');
+            statusDiv.innerHTML = '<div class="info">テスト中...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:5173/');
+                if (response.ok) {
+                    testResults.server = true;
+                    statusDiv.innerHTML = '<div class="success">✓ サーバーは正常に動作しています</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="error">✗ サーバーからエラーレスポンスが返されました</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">✗ サーバーに接続できません<br><code>${error.message}</code></div>`;
+            }
+            updateFinalResult();
+        }
+
+        async function testPageAccess() {
+            const statusDiv = document.getElementById('page-status');
+            statusDiv.innerHTML = '<div class="info">テスト中...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:5173/public/properties');
+                if (response.ok) {
+                    testResults.page = true;
+                    const text = await response.text();
+                    const hasRoot = text.includes('id="root"');
+                    if (hasRoot) {
+                        statusDiv.innerHTML = '<div class="success">✓ ページは正常にアクセスできます</div>';
+                    } else {
+                        statusDiv.innerHTML = '<div class="warning">⚠ ページにアクセスできますが、Reactアプリが正しく読み込まれていない可能性があります</div>';
+                    }
+                } else {
+                    statusDiv.innerHTML = '<div class="error">✗ ページにアクセスできません（404エラー）</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">✗ ページアクセスエラー<br><code>${error.message}</code></div>`;
+            }
+            updateFinalResult();
+        }
+
+        async function testComponentLoad() {
+            const statusDiv = document.getElementById('component-status');
+            statusDiv.innerHTML = '<div class="info">テスト中...</div>';
+            
+            try {
+                // PropertyTypeFilterButtons.tsxファイルが存在するか確認
+                const response = await fetch('http://localhost:5173/src/components/PropertyTypeFilterButtons.tsx');
+                if (response.ok) {
+                    testResults.component = true;
+                    statusDiv.innerHTML = `
+                        <div class="success">✓ PropertyTypeFilterButtonsコンポーネントファイルが存在します</div>
+                        <div class="info" style="margin-top: 10px;">
+                            <strong>次のステップ:</strong> 実際のページでコンポーネントが表示されるか確認してください
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = '<div class="error">✗ コンポーネントファイルが見つかりません</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">✗ コンポーネント確認エラー<br><code>${error.message}</code></div>`;
+            }
+            updateFinalResult();
+        }
+
+        function markStepsComplete() {
+            testResults.cache = true;
+            document.querySelectorAll('.checklist li').forEach(li => {
+                li.classList.add('checked');
+            });
+            updateFinalResult();
+        }
+
+        function openActualPage() {
+            window.open('http://localhost:5173/public/properties', '_blank');
+        }
+
+        function updateFinalResult() {
+            const resultDiv = document.getElementById('final-result');
+            const allPassed = Object.values(testResults).every(v => v);
+            
+            if (allPassed) {
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✓ すべてのテストに合格しました！</h3>
+                        <p>物件一覧ページでフィルターボタンが表示されるはずです。</p>
+                        <p><strong>次のステップ:</strong></p>
+                        <ol>
+                            <li>「物件一覧ページを開く」ボタンをクリック</li>
+                            <li>「物件を絞り込む」セクションを探す</li>
+                            <li>4つのボタンが表示されているか確認</li>
+                        </ol>
+                    </div>
+                `;
+            } else {
+                const failedTests = Object.entries(testResults)
+                    .filter(([_, passed]) => !passed)
+                    .map(([test, _]) => test);
+                
+                resultDiv.innerHTML = `
+                    <div class="warning">
+                        <h3>⚠ 一部のテストが未完了です</h3>
+                        <p>未完了のテスト: ${failedTests.join(', ')}</p>
+                        <p>上記のテストボタンをクリックして診断を完了してください。</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 初期状態を表示
+        updateFinalResult();
+    </script>
+</body>
+</html>

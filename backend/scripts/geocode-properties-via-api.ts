@@ -1,0 +1,155 @@
+import axios from 'axios';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!;
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyD2igeXY-E_MWtJwMYpiv6CYpEiLJuDeYE';
+
+interface Property {
+  id: string;
+  property_number: string;
+  address: string;
+  display_address?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+/**
+ * Google Geocoding APIを使用して住所から座標を取得
+ */
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+      params: {
+        address: address,
+        key: GOOGLE_MAPS_API_KEY,
+        language: 'ja',
+        region: 'jp',
+      },
+    });
+
+    if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const location = response.data.results[0].geometry.location;
+      return {
+        lat: location.lat,
+        lng: location.lng,
+      };
+    } else {
+      console.warn(`  ⚠️ 座標取得失敗: ${address} (ステータス: ${response.data.status})`);
+      return null;
+    }
+  } catch (error: any) {
+    console.error(`  ❌ APIエラー: ${address}`, error.message);
+    return null;
+  }
+}
+
+/**
+ * 物件の座標を更新
+ */
+async function updatePropertyCoordinates(
+  propertyId: string,
+  lat: number,
+  lng: number
+): Promise<void> {
+  await axios.patch(
+    `${SUPABASE_URL}/rest/v1/property_listings?id=eq.${propertyId}`,
+    {
+      latitude: lat,
+      longitude: lng,
+    },
+    {
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+    }
+  );
+}
+
+/**
+ * メイン処理
+ */
+async function geocodeAllProperties() {
+  try {
+    console.log('🗺️ 物件の座標取得を開始します...\n');
+
+    // 座標が未設定の物件を取得
+    const response = await axios.get<Property[]>(
+      `${SUPABASE_URL}/rest/v1/property_listings`,
+      {
+        params: {
+          select: 'id,property_number,address,display_address,latitude,longitude',
+          or: '(latitude.is.null,longitude.is.null)',
+          address: 'not.is.null',
+          order: 'property_number',
+          limit: 100,
+        },
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        },
+      }
+    );
+
+    const properties = response.data;
+    console.log(`📍 対象物件数: ${properties.length}件\n`);
+
+    if (properties.length === 0) {
+      console.log('✅ すべての物件に座標が設定されています！');
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < properties.length; i++) {
+      const property = properties[i];
+      const address = property.display_address || property.address;
+
+      console.log(`[${i + 1}/${properties.length}] ${property.property_number}: ${address}`);
+
+      // 座標を取得
+      const coordinates = await geocodeAddress(address);
+
+      if (coordinates) {
+        // データベースを更新
+        await updatePropertyCoordinates(property.id, coordinates.lat, coordinates.lng);
+        console.log(`  ✅ 座標取得成功: (${coordinates.lat}, ${coordinates.lng})`);
+        successCount++;
+      } else {
+        console.log(`  ❌ 座標取得失敗`);
+        failCount++;
+      }
+
+      // APIレート制限対策（1秒あたり50リクエストまで）
+      if (i < properties.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log('\n📊 処理結果:');
+    console.log(`  ✅ 成功: ${successCount}件`);
+    console.log(`  ❌ 失敗: ${failCount}件`);
+    console.log(`  📍 合計: ${properties.length}件\n`);
+
+    if (successCount > 0) {
+      console.log('🎉 座標の取得が完了しました！');
+      console.log('🗺️ 次のステップ: バックエンドAPIで座標を返すように修正します\n');
+    }
+
+  } catch (error: any) {
+    console.error('❌ エラーが発生しました:', error.message);
+    if (error.response) {
+      console.error('レスポンス:', error.response.data);
+    }
+    throw error;
+  }
+}
+
+// スクリプト実行
+geocodeAllProperties().catch(console.error);
