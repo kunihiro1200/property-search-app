@@ -4,9 +4,7 @@
   "installCommand": "npm install",
   "framework": "vite",
   "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3.0.0"
-    }
+    "api/**/*.ts": {}
   },
   "rewrites": [
     {
