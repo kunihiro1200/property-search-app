@@ -4,7 +4,7 @@
   "installCommand": "cd frontend && npm install",
   "framework": null,
   "functions": {
-    "frontend/api/index.ts": {
+    "api/index.ts": {
       "memory": 1024,
       "maxDuration": 10
     }
@@ -12,7 +12,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/frontend/api/index"
+      "destination": "/api/index"
     },
     {
       "source": "/(.*)",
