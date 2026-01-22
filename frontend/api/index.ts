@@ -9,9 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../src/backend/services/PropertyListingService';
 import { PropertyImageService } from '../src/backend/services/PropertyImageService';
 import { GoogleDriveService } from '../src/backend/services/GoogleDriveService';
-import { PropertyDetailsService } from '../src/backend/services/PropertyDetailsService';
-import { PropertyService } from '../src/backend/services/PropertyService';
-import { PanoramaUrlService } from '../src/backend/services/PanoramaUrlService';
+// import publicPropertiesRoutes from '../src/backend/routes/publicProperties';
 
 const app = express();
 
@@ -24,23 +22,13 @@ console.log('🔍 Environment variables check:', {
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
-// Supabase クライアントの初期化（遅延初期化）
-let supabase: any = null;
-let propertyListingService: any = null;
+// Supabase クライアントの初期化
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-function initializeServices() {
-  if (!supabase) {
-    const supabaseUrl = process.env.SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
-  }
-  
-  if (!propertyListingService) {
-    propertyListingService = new PropertyListingService();
-  }
-  
-  return { supabase, propertyListingService };
-}
+// PropertyListingServiceの初期化（ローカル環境と同じ）
+const propertyListingService = new PropertyListingService();
 
 // Middleware
 app.use(helmet());
@@ -64,20 +52,21 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// テスト用エンドポイント
+// テスト用：publicPropertiesRoutesが読み込めているか確認
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'API is working',
+    message: 'publicPropertiesRoutes commented out for testing',
     timestamp: new Date().toISOString() 
   });
 });
 
+// ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
+// app.use('/api/public', publicPropertiesRoutes);
+
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
   try {
-    const { propertyListingService } = initializeServices();
-    
     console.log('🔍 Fetching properties from database...');
     
     // クエリパラメータを取得
@@ -248,7 +237,8 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     console.log(`[Complete API] Found property: ${property.property_number}`);
     
-    // PropertyDetailsServiceを使用（静的インポート）
+    // PropertyDetailsServiceを動的インポート
+    const { PropertyDetailsService } = await import('../src/services/PropertyDetailsService');
     const propertyDetailsService = new PropertyDetailsService();
 
     let dbDetails;
@@ -276,6 +266,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
     if (isSold) {
       try {
+        const { PropertyService } = await import('../src/services/PropertyService');
         const propertyService = new PropertyService();
         settlementDate = await propertyService.getSettlementDate(property.property_number);
       } catch (err) {
@@ -286,6 +277,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     // パノラマURLを取得
     let panoramaUrl = null;
     try {
+      const { PanoramaUrlService } = await import('../src/services/PanoramaUrlService');
       const panoramaUrlService = new PanoramaUrlService();
       panoramaUrl = await panoramaUrlService.getPanoramaUrl(property.property_number);
       console.log(`[Complete API] Panorama URL: ${panoramaUrl || '(not found)'}`);
@@ -373,15 +365,8 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
-    // 非表示画像リストを取得（エラーが発生しても続行）
-    let hiddenImages: string[] = [];
-    try {
-      hiddenImages = await propertyListingService.getHiddenImages(property.id);
-    } catch (error: any) {
-      console.warn(`[Images API] Failed to fetch hidden images, continuing without filtering:`, error.message);
-      // エラーが発生しても空配列として続行
-      hiddenImages = [];
-    }
+    // 非表示画像リストを取得
+    const hiddenImages = await propertyListingService.getHiddenImages(property.id);
 
     // includeHiddenがfalseの場合、非表示画像をフィルタリング
     let filteredImages = result.images;
@@ -521,7 +506,8 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
     
     console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
     
-    // PropertyServiceを使用（静的インポート）
+    // PropertyServiceを動的インポート
+    const { PropertyService } = await import('../src/services/PropertyService');
     const propertyService = new PropertyService();
     
     // 概算書PDFを生成
@@ -555,7 +541,8 @@ app.get('/api/public/properties/:propertyNumber/panorama-url', async (req, res) 
     
     console.log(`[Panorama URL] Fetching for property: ${propertyNumber}`);
     
-    // PanoramaUrlServiceを使用（静的インポート）
+    // PanoramaUrlServiceを動的インポート
+    const { PanoramaUrlService } = await import('../src/services/PanoramaUrlService');
     const panoramaUrlService = new PanoramaUrlService();
     
     // パノラマURLを取得
@@ -592,12 +579,11 @@ app.get('/api/public/properties/:propertyNumber/panorama-url', async (req, res) 
 // 環境変数チェックエンドポイント（デバッグ用）
 app.get('/api/check-env', (_req, res) => {
   const envCheck = {
-    SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Missing',
-    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? `Set (${process.env.SUPABASE_SERVICE_KEY.length} chars)` : 'Missing',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? `Set (${process.env.SUPABASE_SERVICE_ROLE_KEY.length} chars)` : 'Missing',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? `Set (${process.env.SUPABASE_ANON_KEY.length} chars)` : 'Missing',
-    GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? `Set (${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars)` : 'Missing',
-    NODE_ENV: process.env.NODE_ENV || 'Not set',
+    SUPABASE_URL: process.env.SUPABASE_URL ? '✅ 設定済み' : '❌ 未設定',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ 設定済み' : '❌ 未設定',
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? '✅ 設定済み' : '❌ 未設定',
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ 設定済み' : '❌ 未設定',
+    NODE_ENV: process.env.NODE_ENV || '未設定',
   };
 
   res.status(200).json({
