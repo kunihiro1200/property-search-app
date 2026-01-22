@@ -41,30 +41,27 @@
 - ✅ **`frontend/api/index.ts`は正しくデプロイされている**
 - ❌ **UUID検証エラーが発生していた**（修正済み）
 
-## 次のステップ
+## 実施した修正（完了）
 
-### デプロイとテスト
+### 1. PropertyListingService.getHiddenImages()の修正（コミット0907510）
+- UUID形式の検証を追加
+- 物件番号の場合は空配列を返すように修正
 
-1. **変更をコミット**
-   ```bash
-   git add backend/src/services/PropertyListingService.ts
-   git commit -m "Fix UUID validation in getHiddenImages() for CC24"
-   git push
-   ```
+### 2. frontend/.env.productionの修正（コミット62d97fd）
+- `VITE_API_URL`を`https://baikyaku-property-site3.vercel.app`から`https://property-site-frontend-kappa.vercel.app`に変更
 
-2. **Vercelで自動デプロイを待つ**
-   - Vercel Dashboardで新しいデプロイを確認
-   - Build Logsでエラーがないか確認
-
-3. **本番環境でテスト**
-   - CC24の画像が表示されるか確認
-   - Runtime Logsでエラーがないか確認
+### 3. Vercel環境変数の更新（2026年1月22日）
+- **プロジェクト**: `property-site-frontend`
+- **変更内容**: `VITE_API_URL`を`https://property-site-frontend-kappa.vercel.app`に変更
+- **理由**: 古いバックエンド（`baikyaku-property-site3`）が壊れたため
+- **影響**: なし（データベースは変更していない、URLのみ変更）
+- **再デプロイ**: 必要（環境変数変更後）
 
 ### 期待される結果
 
+- ✅ 物件一覧が表示される
 - ✅ CC24の画像が正常に表示される
-- ✅ Runtime Logsに「Invalid UUID format for propertyId: CC24, returning empty array」という警告が表示される
-- ✅ エラーが発生せず、空配列が返される
+- ✅ ログインとデータは全て保持される（データベースは変更していない）
 
 ## 関連ファイル
 
