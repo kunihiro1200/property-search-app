@@ -337,11 +337,21 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ 本番環境では固定URLを使用
-    // 優先順位: BACKEND_URL > 本番環境固定URL > VERCEL_URL > localhost
-    const baseUrl = process.env.BACKEND_URL 
-      || 'https://property-site-frontend-kappa.vercel.app'
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    // ✅ 本番環境では固定URLを使用（localhostは絶対に使用しない）
+    let baseUrl: string;
+    if (process.env.BACKEND_URL) {
+      baseUrl = process.env.BACKEND_URL;
+    } else if (process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    } else if (process.env.NODE_ENV === 'production') {
+      // 本番環境では固定URLを使用
+      baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+    } else {
+      // ローカル環境のみlocalhostを使用
+      baseUrl = 'http://localhost:3000';
+    }
+    
+    console.log(`[PropertyImageService] Using baseUrl: ${baseUrl}`);
     
     return driveFiles.map(file => ({
       id: file.id,
@@ -436,10 +446,17 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ 本番環境では固定URLを使用
-      const baseUrl = process.env.BACKEND_URL 
-        || 'https://property-site-frontend-kappa.vercel.app'
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      // ✅ 本番環境では固定URLを使用（localhostは絶対に使用しない）
+      let baseUrl: string;
+      if (process.env.BACKEND_URL) {
+        baseUrl = process.env.BACKEND_URL;
+      } else if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NODE_ENV === 'production') {
+        baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+      } else {
+        baseUrl = 'http://localhost:3000';
+      }
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
@@ -481,10 +498,17 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ 本番環境では固定URLを使用
-      const baseUrl = process.env.BACKEND_URL 
-        || 'https://property-site-frontend-kappa.vercel.app'
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      // ✅ 本番環境では固定URLを使用（localhostは絶対に使用しない）
+      let baseUrl: string;
+      if (process.env.BACKEND_URL) {
+        baseUrl = process.env.BACKEND_URL;
+      } else if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NODE_ENV === 'production') {
+        baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+      } else {
+        baseUrl = 'http://localhost:3000';
+      }
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);
