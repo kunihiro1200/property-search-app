@@ -618,101 +618,28 @@ app.post('/api/public/inquiries', async (req, res) => {
       }
     }
     
-    // 直接スプレッドシートに書き込む
-    try {
-      console.log('[Inquiry API] Syncing to Google Sheets...');
-      
-      // Google Sheets認証
-      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
-      
-      // Vercel環境：環境変数から一時ファイルを作成
-      let keyPath = './google-service-account.json';
-      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON && !require('fs').existsSync(keyPath)) {
-        const fs = require('fs');
-        const tmpPath = '/tmp/google-service-account.json';
-        fs.writeFileSync(tmpPath, process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-        keyPath = tmpPath;
-        console.log('[Inquiry API] Created temporary service account file');
-      }
-      
-      const sheetsClient = new GoogleSheetsClient({
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-        serviceAccountKeyPath: keyPath,
-      });
-      
-      await sheetsClient.authenticate();
-      console.log('[Inquiry API] Google Sheets authenticated');
-      
-      // 最大買主番号を取得
-      const { data: latestInquiry } = await supabase
-        .from('property_inquiries')
-        .select('buyer_number')
-        .not('buyer_number', 'is', null)
-        .order('buyer_number', { ascending: false })
-        .limit(1)
-        .single();
-      
-      const nextBuyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
-      
-      // 電話番号を正規化
-      const normalizedPhone = phone.replace(/[^0-9]/g, '');
-      
-      // 現在時刻をJST（日本時間）で取得
-      const now = new Date();
-      const jstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-      const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
-      
-      // スプレッドシートに追加
-      const rowData = {
-        '買主番号': nextBuyerNumber.toString(),
-        '作成日時': jstDateString,
-        '●氏名・会社名': name,
-        '●問合時ヒアリング': message,
-        '●電話番号\n（ハイフン不要）': normalizedPhone,
-        '●メアド': email,
-        '●問合せ元': 'いふう独自サイト',
-        '物件番号': propertyNumber || '',
-        '【問合メール】電話対応': '未',
-      };
-      
-      await sheetsClient.appendRow(rowData);
-      console.log('[Inquiry API] Synced to Google Sheets with buyer number:', nextBuyerNumber);
-      
-      // データベースに保存（バックアップ用）
-      await supabase
-        .from('property_inquiries')
-        .insert({
-          property_id: propertyId || null,
-          property_number: propertyNumber || null,
-          name,
-          email,
-          phone,
-          message,
-          sheet_sync_status: 'synced',
-          buyer_number: nextBuyerNumber,
-          created_at: now.toISOString()
-        });
-      
-      console.log('[Inquiry API] Saved to database as backup');
-      
-    } catch (syncError: any) {
-      console.error('[Inquiry API] Sync error:', syncError);
-      // スプレッドシート同期に失敗してもユーザーには成功を返す
-      // データベースにfailed状態で保存
-      await supabase
-        .from('property_inquiries')
-        .insert({
-          property_id: propertyId || null,
-          property_number: propertyNumber || null,
-          name,
-          email,
-          phone,
-          message,
-          sheet_sync_status: 'failed',
-          created_at: new Date().toISOString()
-        });
+    // データベースに保存（pending状態）
+    const { data: savedInquiry, error: saveError } = await supabase
+      .from('property_inquiries')
+      .insert({
+        property_id: propertyId || null,
+        property_number: propertyNumber || null,
+        name,
+        email,
+        phone,
+        message,
+        sheet_sync_status: 'pending', // Cron Jobが同期する
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (saveError) {
+      console.error('[Inquiry API] Database save error:', saveError);
+      throw saveError;
     }
+    
+    console.log('[Inquiry API] Saved to database with status: pending');
     
     // ユーザーに即座に成功を返す
     res.status(201).json({
