@@ -1,4 +1,4 @@
-// 公開物件サイト専用のエントリーポイント
+// 公開物件サイト専用のエントリーポインチE
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -16,7 +16,7 @@ import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
 
-// 環境変数のデバッグログ
+// 環墁E��数のチE��チE��ログ
 console.log('🔍 Environment variables check:', {
   SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Missing',
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? `Set (${process.env.SUPABASE_SERVICE_KEY.length} chars)` : 'Missing',
@@ -25,12 +25,12 @@ console.log('🔍 Environment variables check:', {
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
-// Supabase クライアントの初期化
+// Supabase クライアント�E初期匁E
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// PropertyListingServiceの初期化（ローカル環境と同じ）
+// PropertyListingServiceの初期化（ローカル環墁E��同じ�E�E
 const propertyListingService = new PropertyListingService();
 
 // Middleware
@@ -55,7 +55,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// テスト用：publicPropertiesRoutesが読み込めているか確認
+// チE��ト用�E�publicPropertiesRoutesが読み込めてぁE��か確誁E
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
     status: 'ok', 
@@ -64,15 +64,15 @@ app.get('/api/test/routes', (_req, res) => {
   });
 });
 
-// ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes); // 一時的にコメントアウト（ルートの重複を回避）
+// ⚠�E�E重要E publicPropertiesRoutes を�Eに登録�E�より�E体的なルートを優先！E
+// app.use('/api/public', publicPropertiesRoutes); // 一時的にコメントアウト（ルート�E重褁E��回避�E�E
 
-// 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
+// 公開物件一覧取得（�Eての物件を取得、atbb_statusはバッジ表示用�E�E
 app.get('/api/public/properties', async (req, res) => {
   try {
     console.log('🔍 Fetching properties from database...');
     
-    // クエリパラメータを取得
+    // クエリパラメータを取征E
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = parseInt(req.query.offset as string) || 0;
     const propertyNumber = req.query.propertyNumber as string;
@@ -83,20 +83,20 @@ app.get('/api/public/properties', async (req, res) => {
     const minAge = req.query.minAge ? parseInt(req.query.minAge as string) : undefined;
     const maxAge = req.query.maxAge ? parseInt(req.query.maxAge as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
-    const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
-    const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
+    const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取征E
+    const skipImages = req.query.skipImages === 'true'; // 画像取得をスキチE�E�E�地図ビュー用�E�E
     
     console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages });
     
-    // 価格範囲のバリデーション
+    // 価格篁E��のバリチE�Eション
     let priceFilter: { min?: number; max?: number } | undefined;
     if (minPrice !== undefined || maxPrice !== undefined) {
       priceFilter = {};
       if (minPrice !== undefined) {
-        priceFilter.min = minPrice * 10000; // 万円を円に変換
+        priceFilter.min = minPrice * 10000; // 丁E�Eを�Eに変換
       }
       if (maxPrice !== undefined) {
-        priceFilter.max = maxPrice * 10000; // 万円を円に変換
+        priceFilter.max = maxPrice * 10000; // 丁E�Eを�Eに変換
       }
     }
     
@@ -106,7 +106,7 @@ app.get('/api/public/properties', async (req, res) => {
       propertyTypeFilter = types.split(',');
     }
     
-    // 築年数範囲のバリデーション
+    // 築年数篁E��のバリチE�Eション
     let buildingAgeRange: { min?: number; max?: number } | undefined;
     if (minAge !== undefined || maxAge !== undefined) {
       buildingAgeRange = {};
@@ -118,7 +118,7 @@ app.get('/api/public/properties', async (req, res) => {
       }
     }
     
-    // PropertyListingServiceを使用（ローカル環境と同じ）
+    // PropertyListingServiceを使用�E�ローカル環墁E��同じ�E�E
     const result = await propertyListingService.getPublicProperties({
       limit,
       offset,
@@ -128,11 +128,11 @@ app.get('/api/public/properties', async (req, res) => {
       propertyNumber,
       buildingAgeRange,
       showPublicOnly,
-      withCoordinates, // 座標がある物件のみ取得
-      skipImages, // 画像取得をスキップ（地図ビュー用）
+      withCoordinates, // 座標がある物件のみ取征E
+      skipImages, // 画像取得をスキチE�E�E�地図ビュー用�E�E
     });
 
-    console.log(`✅ Found ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
+    console.log(`✁EFound ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
 
     res.json({ 
       success: true, 
@@ -140,7 +140,7 @@ app.get('/api/public/properties', async (req, res) => {
       pagination: result.pagination
     });
   } catch (error: any) {
-    console.error('❌ Error fetching properties:', error);
+    console.error('❁EError fetching properties:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
@@ -155,16 +155,16 @@ app.get('/api/public/properties', async (req, res) => {
   }
 });
 
-// 公開物件詳細取得（atbb_statusでフィルタリングしない）
+// 公開物件詳細取得！Etbb_statusでフィルタリングしなぁE��E
 app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
   try {
     const { propertyIdentifier } = req.params;
     console.log(`🔍 Fetching property details for: ${propertyIdentifier}`);
     
-    // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
+    // UUIDか物件番号かを判定！EUIDは36斁E���Eハイフン付き形式！E
     const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
     
-    // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
+    // チE�Eタベ�Eスから物件詳細を取得！Etbb_statusでフィルタリングしなぁE��E
     let query = supabase
       .from('property_listings')
       .select('*');
@@ -178,7 +178,7 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
     const { data: property, error } = await query.single();
 
     if (error) {
-      console.error('❌ Database error:', error);
+      console.error('❁EDatabase error:', error);
       throw error;
     }
 
@@ -189,17 +189,17 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
       });
     }
 
-    console.log(`✅ Found property: ${propertyIdentifier} (${property.property_number})`);
+    console.log(`✁EFound property: ${propertyIdentifier} (${property.property_number})`);
 
-    // image_urlをimagesに変換（JSON配列または単一文字列に対応）
+    // image_urlをimagesに変換�E�ESON配�Eまた�E単一斁E���Eに対応！E
     let images = [];
     if (property.image_url) {
       try {
-        // JSON配列としてパースを試みる
+        // JSON配�Eとしてパ�Eスを試みめE
         images = JSON.parse(property.image_url);
       } catch (e) {
-        // パースに失敗した場合は単一の文字列として扱う
-        // 空文字列でない場合のみ配列に追加
+        // パ�Eスに失敗した場合�E単一の斁E���Eとして扱ぁE
+        // 空斁E���EでなぁE��合�Eみ配�Eに追加
         if (property.image_url.trim()) {
           images = [property.image_url];
         }
@@ -214,7 +214,7 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
       }
     });
   } catch (error: any) {
-    console.error('❌ Error fetching property details:', error);
+    console.error('❁EError fetching property details:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -223,14 +223,14 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
   }
 });
 
-// 公開物件の完全な詳細情報取得（物件番号またはUUIDで取得）
+// 公開物件の完�Eな詳細惁E��取得（物件番号また�EUUIDで取得！E
 app.get('/api/public/properties/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
     
     console.log(`[Complete API] Fetching complete data for: ${id}`);
     
-    // 物件情報を取得
+    // 物件惁E��を取征E
     const property = await propertyListingService.getPublicPropertyById(id);
     
     if (!property) {
@@ -240,7 +240,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     console.log(`[Complete API] Found property: ${property.property_number}`);
     
-    // PropertyDetailsServiceを使用（静的インポート）
+    // PropertyDetailsServiceを使用�E�静皁E��ンポ�Eト！E
     const propertyDetailsService = new PropertyDetailsService();
 
     let dbDetails;
@@ -263,9 +263,9 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       };
     }
 
-    // 決済日を取得（成約済みの場合のみ）
+    // 決済日を取得（�E紁E��みの場合�Eみ�E�E
     let settlementDate = null;
-    const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
+    const isSold = property.atbb_status === '成紁E��み' || property.atbb_status === 'sold';
     if (isSold) {
       try {
         const propertyService = new PropertyService();
@@ -275,7 +275,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       }
     }
 
-    // パノラマURLを取得
+    // パノラマURLを取征E
     let panoramaUrl = null;
     try {
       const panoramaUrlService = new PanoramaUrlService();
@@ -310,19 +310,19 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
   }
 });
 
-// 物件番号ベースの画像一覧取得エンドポイント（publicPropertiesRoutesの代替）
+// 物件番号ベ�Eスの画像一覧取得エンド�Eイント！EublicPropertiesRoutesの代替�E�E
 app.get('/api/public/properties/:identifier/images', async (req, res) => {
   try {
     const { identifier } = req.params;
     const { includeHidden = 'false' } = req.query;
     
-    console.log(`🖼️ Fetching images for: ${identifier}`);
+    console.log(`🖼�E�EFetching images for: ${identifier}`);
 
-    // UUIDの形式かどうかをチェック
+    // UUIDの形式かどぁE��をチェチE��
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const isUUID = uuidRegex.test(identifier);
 
-    // 物件情報を取得
+    // 物件惁E��を取征E
     let property;
     if (isUUID) {
       property = await propertyListingService.getPublicPropertyById(identifier);
@@ -331,31 +331,31 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
     }
 
     if (!property) {
-      console.error(`❌ Property not found: ${identifier}`);
+      console.error(`❁EProperty not found: ${identifier}`);
       return res.status(404).json({ error: 'Property not found' });
     }
 
-    console.log(`✅ Found property: ${property.property_number} (${property.id})`);
+    console.log(`✁EFound property: ${property.property_number} (${property.id})`);
 
     // storage_locationを優先的に使用
     let storageUrl = property.storage_location;
     
-    // storage_locationが空の場合、property.athome_dataから取得
+    // storage_locationが空の場合、property.athome_dataから取征E
     if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
-      // athome_dataの最初の要素がフォルダURL
+      // athome_dataの最初�E要素がフォルダURL
       storageUrl = property.athome_data[0];
       console.log(`[Images API] Using athome_data as storage_url: ${storageUrl}`);
     }
 
     if (!storageUrl) {
-      console.error(`❌ No storage URL found for property: ${identifier}`);
+      console.error(`❁ENo storage URL found for property: ${identifier}`);
       return res.status(404).json({ 
         error: 'Storage URL not found',
-        message: '画像の格納先URLが設定されていません'
+        message: '画像�E格納�EURLが設定されてぁE��せん'
       });
     }
 
-    // PropertyImageServiceを使用して画像を取得
+    // PropertyImageServiceを使用して画像を取征E
     const propertyImageService = new PropertyImageService(
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
@@ -365,18 +365,18 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
-    // 非表示画像リストを取得
+    // 非表示画像リストを取征E
     const hiddenImages = await propertyListingService.getHiddenImages(property.id);
 
-    // includeHiddenがfalseの場合、非表示画像をフィルタリング
+    // includeHiddenがfalseの場合、E��表示画像をフィルタリング
     let filteredImages = result.images;
     if (includeHidden !== 'true' && hiddenImages.length > 0) {
       filteredImages = result.images.filter(img => !hiddenImages.includes(img.id));
     }
 
-    console.log(`✅ Found ${filteredImages.length} images (${hiddenImages.length} hidden)`);
+    console.log(`✁EFound ${filteredImages.length} images (${hiddenImages.length} hidden)`);
 
-    // キャッシュヘッダーを設定（1時間）
+    // キャチE��ュヘッダーを設定！E時間�E�E
     res.set('Cache-Control', 'public, max-age=3600');
     res.json({
       ...result,
@@ -387,7 +387,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       hiddenImages: includeHidden === 'true' ? hiddenImages : undefined
     });
   } catch (error: any) {
-    console.error('❌ Error fetching property images:', error);
+    console.error('❁EError fetching property images:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
@@ -400,33 +400,33 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
   }
 });
 
-// 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
+// 画像�Eロキシエンド�Eイント！Eoogle Driveの画像をバックエンド経由で取得！E
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
   try {
     const { fileId } = req.params;
     
-    console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
+    console.log(`🖼�E�EProxying thumbnail image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
+    // GoogleDriveServiceを使用して画像データを取征E
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
     if (!imageData) {
-      console.error(`❌ Image not found: ${fileId}`);
+      console.error(`❁EImage not found: ${fileId}`);
       return res.status(404).json({ 
         success: false, 
         error: 'Image not found'
       });
     }
     
-    // キャッシュヘッダーとCORSヘッダーを設定（1日間キャッシュ）
+    // キャチE��ュヘッダーとCORSヘッダーを設定！E日間キャチE��ュ�E�E
     res.set({
       'Content-Type': imageData.mimeType,
       'Content-Length': imageData.size,
-      'Cache-Control': 'public, max-age=86400', // 1日間キャッシュ
-      'Access-Control-Allow-Origin': '*', // CORS対応
+      'Cache-Control': 'public, max-age=86400', // 1日間キャチE��ュ
+      'Access-Control-Allow-Origin': '*', // CORS対忁E
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'Content-Type',
     });
@@ -434,9 +434,9 @@ app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
     // 画像データを返す
     res.send(imageData.buffer);
     
-    console.log(`✅ Thumbnail image proxied successfully: ${fileId}`);
+    console.log(`✁EThumbnail image proxied successfully: ${fileId}`);
   } catch (error: any) {
-    console.error('❌ Error proxying thumbnail image:', error);
+    console.error('❁EError proxying thumbnail image:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
@@ -455,27 +455,27 @@ app.get('/api/public/images/:fileId', async (req, res) => {
   try {
     const { fileId } = req.params;
     
-    console.log(`🖼️ Proxying full image: ${fileId}`);
+    console.log(`🖼�E�EProxying full image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
+    // GoogleDriveServiceを使用して画像データを取征E
     const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
     if (!imageData) {
-      console.error(`❌ Image not found: ${fileId}`);
+      console.error(`❁EImage not found: ${fileId}`);
       return res.status(404).json({ 
         success: false, 
         error: 'Image not found'
       });
     }
     
-    // キャッシュヘッダーとCORSヘッダーを設定（1日間キャッシュ）
+    // キャチE��ュヘッダーとCORSヘッダーを設定！E日間キャチE��ュ�E�E
     res.set({
       'Content-Type': imageData.mimeType,
       'Content-Length': imageData.size,
-      'Cache-Control': 'public, max-age=86400', // 1日間キャッシュ
-      'Access-Control-Allow-Origin': '*', // CORS対応
+      'Cache-Control': 'public, max-age=86400', // 1日間キャチE��ュ
+      'Access-Control-Allow-Origin': '*', // CORS対忁E
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'Content-Type',
     });
@@ -483,9 +483,9 @@ app.get('/api/public/images/:fileId', async (req, res) => {
     // 画像データを返す
     res.send(imageData.buffer);
     
-    console.log(`✅ Full image proxied successfully: ${fileId}`);
+    console.log(`✁EFull image proxied successfully: ${fileId}`);
   } catch (error: any) {
-    console.error('❌ Error proxying full image:', error);
+    console.error('❁EError proxying full image:', error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,
@@ -499,17 +499,17 @@ app.get('/api/public/images/:fileId', async (req, res) => {
   }
 });
 
-// 概算書PDF生成（物件番号で生成）
+// 概算書PDF生�E�E�物件番号で生�E�E�E
 app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     
     console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
     
-    // PropertyServiceを使用（静的インポート）
+    // PropertyServiceを使用�E�静皁E��ンポ�Eト！E
     const propertyService = new PropertyService();
     
-    // 概算書PDFを生成
+    // 概算書PDFを生戁E
     const pdfUrl = await propertyService.generateEstimatePdf(propertyNumber);
     
     console.log(`[Estimate PDF] Generated PDF URL: ${pdfUrl}`);
@@ -528,22 +528,22 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
     res.status(500).json({ 
       success: false,
       error: 'Internal server error',
-      message: error.message || '概算書の生成に失敗しました'
+      message: error.message || '概算書の生�Eに失敗しました'
     });
   }
 });
 
-// パノラマURL取得（物件番号で取得）
+// パノラマURL取得（物件番号で取得！E
 app.get('/api/public/properties/:propertyNumber/panorama-url', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     
     console.log(`[Panorama URL] Fetching for property: ${propertyNumber}`);
     
-    // PanoramaUrlServiceを使用（静的インポート）
+    // PanoramaUrlServiceを使用�E�静皁E��ンポ�Eト！E
     const panoramaUrlService = new PanoramaUrlService();
     
-    // パノラマURLを取得
+    // パノラマURLを取征E
     const panoramaUrl = await panoramaUrlService.getPanoramaUrl(propertyNumber);
     
     if (panoramaUrl) {
@@ -574,14 +574,14 @@ app.get('/api/public/properties/:propertyNumber/panorama-url', async (req, res) 
   }
 });
 
-// 環境変数チェックエンドポイント（デバッグ用）
+// 環墁E��数チェチE��エンド�Eイント（デバッグ用�E�E
 app.get('/api/check-env', (_req, res) => {
   const envCheck = {
-    SUPABASE_URL: process.env.SUPABASE_URL ? '✅ 設定済み' : '❌ 未設定',
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ 設定済み' : '❌ 未設定',
-    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? '✅ 設定済み' : '❌ 未設定',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ 設定済み' : '❌ 未設定',
-    NODE_ENV: process.env.NODE_ENV || '未設定',
+    SUPABASE_URL: process.env.SUPABASE_URL ? '✁E設定済み' : '❁E未設宁E,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✁E設定済み' : '❁E未設宁E,
+    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? '✁E設定済み' : '❁E未設宁E,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✁E設定済み' : '❁E未設宁E,
+    NODE_ENV: process.env.NODE_ENV || '未設宁E,
   };
 
   res.status(200).json({
@@ -591,81 +591,81 @@ app.get('/api/check-env', (_req, res) => {
   });
 });
 
-// 問い合わせ送信API（直接スプレッドシートに書き込む）
+// 問い合わせ送信API�E�直接スプレチE��シートに書き込む�E�E
 app.post('/api/public/inquiries', async (req, res) => {
   try {
-    console.log('[Inquiry API] Received inquiry request');
+    console.error('[Inquiry API] Received inquiry request');
     
-    // バリデーション
+    // バリチE�Eション
     const { name, email, phone, message, propertyId } = req.body;
     
     if (!name || !email || !phone || !message) {
       console.error('[Inquiry API] Validation failed: missing required fields');
       return res.status(400).json({
         success: false,
-        message: '必須項目を入力してください'
+        message: '忁E��頁E��を�E力してください'
       });
     }
     
-    // 物件情報を取得（propertyIdが指定されている場合）
+    // 物件惁E��を取得！EropertyIdが指定されてぁE��場合！E
     let propertyNumber = null;
     if (propertyId) {
-      console.log('[Inquiry API] Fetching property:', propertyId);
+      console.error('[Inquiry API] Fetching property:', propertyId);
       const property = await propertyListingService.getPublicPropertyById(propertyId);
       if (property) {
         propertyNumber = property.property_number;
-        console.log('[Inquiry API] Property found:', propertyNumber);
+        console.error('[Inquiry API] Property found:', propertyNumber);
       }
     }
     
-    // 買主番号を採番（スプレッドシートベース：一番下の行+1）
+    // 買主番号を採番�E�スプレチE��シート�Eース�E�一番下�E衁E1�E�E
     let nextBuyerNumber = 1;
     
     try {
-      console.log('[Inquiry API] Getting buyer number from spreadsheet...');
-      console.log('[Inquiry API] Environment check:', {
+      console.error('[Inquiry API] Getting buyer number from spreadsheet...');
+      console.error('[Inquiry API] Environment check:', {
         hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
         googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスチE,
       });
       
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスチE,
       });
       
-      console.log('[Inquiry API] Calling authenticate()...');
+      console.error('[Inquiry API] Calling authenticate()...');
       await sheetsClient.authenticate();
-      console.log('[Inquiry API] Authentication completed successfully');
+      console.error('[Inquiry API] Authentication completed successfully');
       
-      // 最後の行だけを取得（高速）
-      console.log('[Inquiry API] Calling getLastRow()...');
+      // 最後�E行だけを取得（高速！E
+      console.error('[Inquiry API] Calling getLastRow()...');
       const lastRow = await sheetsClient.getLastRow();
       
-      console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
+      console.error('[Inquiry API] Last row from spreadsheet:', lastRow);
       
       if (lastRow) {
         const lastBuyerNumber = lastRow['買主番号'];
-        console.log('[Inquiry API] Last buyer number value:', lastBuyerNumber);
-        console.log('[Inquiry API] Last row keys:', Object.keys(lastRow));
+        console.error('[Inquiry API] Last buyer number value:', lastBuyerNumber);
+        console.error('[Inquiry API] Last row keys:', Object.keys(lastRow));
         
         if (lastBuyerNumber) {
           nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
-          console.log('[Inquiry API] Last buyer number from spreadsheet:', lastBuyerNumber);
+          console.error('[Inquiry API] Last buyer number from spreadsheet:', lastBuyerNumber);
         } else {
-          console.log('[Inquiry API] 買主番号 key not found in last row');
+          console.error('[Inquiry API] 買主番号 key not found in last row');
         }
       } else {
-        console.log('[Inquiry API] Last row is null');
+        console.error('[Inquiry API] Last row is null');
       }
       
-      console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
+      console.error('[Inquiry API] Next buyer number:', nextBuyerNumber);
     } catch (error: any) {
       console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error.message);
       console.error('[Inquiry API] Error stack:', error.stack);
-      // フォールバック: データベースから取得
+      // フォールバック: チE�Eタベ�Eスから取征E
       const { data: latestInquiry } = await supabase
         .from('property_inquiries')
         .select('buyer_number')
@@ -676,62 +676,62 @@ app.post('/api/public/inquiries', async (req, res) => {
       
       if (latestInquiry?.buyer_number) {
         nextBuyerNumber = latestInquiry.buyer_number + 1;
-        console.log('[Inquiry API] Next buyer number from database:', nextBuyerNumber);
+        console.error('[Inquiry API] Next buyer number from database:', nextBuyerNumber);
       } else {
         nextBuyerNumber = 1;
-        console.log('[Inquiry API] No buyer numbers found, starting from 1');
+        console.error('[Inquiry API] No buyer numbers found, starting from 1');
       }
     }
     
     let sheetSyncStatus = 'synced';
     
-    // スプレッドシートに同期（同期的に実行）
+    // スプレチE��シートに同期�E�同期的に実行！E
     try {
-      console.log('[Inquiry API] Starting spreadsheet sync...');
+      console.error('[Inquiry API] Starting spreadsheet sync...');
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスチE,
       });
       
       await sheetsClient.authenticate();
-      console.log('[Inquiry API] Google Sheets authenticated');
+      console.error('[Inquiry API] Google Sheets authenticated');
       
       // 電話番号を正規化
       const normalizedPhone = phone.replace(/[^0-9]/g, '');
       
-      // 現在時刻をJST（日本時間）で取得
+      // 現在時刻をJST�E�日本時間�E�で取征E
       const nowUtc = new Date();
       const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
       const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
       
-      // 受付日（今日の日付、YYYY/MM/DD形式）
+      // 受付日�E�今日の日付、YYYY/MM/DD形式！E
       const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
       
-      // スプレッドシートに追加
+      // スプレチE��シートに追加
       const rowData = {
         '買主番号': nextBuyerNumber.toString(),
-        '作成日時': jstDateString,
-        '●氏名・会社名': name,
+        '作�E日晁E: jstDateString,
+        '●氏名・会社吁E: name,
         '●問合時ヒアリング': message,
-        '●電話番号\n（ハイフン不要）': normalizedPhone,
+        '●電話番号\n�E�ハイフン不要E��E: normalizedPhone,
         '受付日': receptionDate,
-        '●メアド': email,
-        '●問合せ元': 'いふう独自サイト',
+        '●メアチE: email,
+        '●問合せ允E: 'ぁE�EぁE��自サイチE,
         '物件番号': propertyNumber || '',
-        '【問合メール】電話対応': '未',
+        '【問合メール】電話対忁E: '未',
       };
       
       await sheetsClient.appendRow(rowData);
-      console.log('[Inquiry API] Spreadsheet sync completed successfully');
+      console.error('[Inquiry API] Spreadsheet sync completed successfully');
       
     } catch (syncError: any) {
       console.error('[Inquiry API] Spreadsheet sync error:', syncError);
       sheetSyncStatus = 'failed';
-      // エラーが発生してもデータベースには保存する
+      // エラーが発生してもデータベ�Eスには保存すめE
     }
     
-    // データベースに保存
+    // チE�Eタベ�Eスに保孁E
     const { data: savedInquiry, error: saveError } = await supabase
       .from('property_inquiries')
       .insert({
@@ -753,31 +753,31 @@ app.post('/api/public/inquiries', async (req, res) => {
       throw saveError;
     }
     
-    console.log('[Inquiry API] Saved to database with status:', sheetSyncStatus);
+    console.error('[Inquiry API] Saved to database with status:', sheetSyncStatus);
     
     // ユーザーに成功を返す
     res.status(201).json({
       success: true,
-      message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
+      message: 'お問ぁE��わせを受け付けました。担当老E��り折り返しご連絡ぁE��します、E
     });
   } catch (error: any) {
     console.error('[Inquiry API] Error:', error);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
+      message: 'サーバ�Eエラーが発生しました。しばらく時間をおぁE��から再度お試しください、E
     });
   }
 });
 
-// Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
+// Cron Job: 問合せをスプレチE��シートに同期�E�E刁E��とに実行！E
 app.get('/api/cron/sync-inquiries', async (req, res) => {
   try {
     console.log('[Cron] Starting inquiry sync job...');
     
-    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
-    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
+    // ⚠�E�EVercel Cron Jobsは冁E��皁E��実行されるため、認証チェチE��は不要E
+    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定すめE
     
-    // pending状態の問合せを取得（最大10件）
+    // pending状態�E問合せを取得（最大10件�E�E
     const { data: pendingInquiries, error: fetchError } = await supabase
       .from('property_inquiries')
       .select('*')
@@ -801,17 +801,17 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     
     console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
     
-    // Google Sheets認証（環境変数から自動的に読み込まれる）
+    // Google Sheets認証�E�環墁E��数から自動的に読み込まれる�E�E
     const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
     const sheetsClient = new GoogleSheetsClient({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスチE,
     });
     
     await sheetsClient.authenticate();
     console.log('[Cron] Google Sheets authenticated');
     
-    // 最大買主番号を取得
+    // 最大買主番号を取征E
     const { data: latestInquiry } = await supabase
       .from('property_inquiries')
       .select('buyer_number')
@@ -822,7 +822,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     
     let nextBuyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
     
-    // 各問合せを同期
+    // 吁E��合せを同朁E
     let syncedCount = 0;
     let failedCount = 0;
     
@@ -833,31 +833,31 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
         // 電話番号を正規化
         const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
         
-        // 現在時刻をJST（日本時間）で取得
+        // 現在時刻をJST�E�日本時間�E�で取征E
         const nowUtc = new Date(inquiry.created_at);
         const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
         const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
         
-        // 受付日（今日の日付、YYYY/MM/DD形式）
+        // 受付日�E�今日の日付、YYYY/MM/DD形式！E
         const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
         
-        // スプレッドシートに追加
+        // スプレチE��シートに追加
         const rowData = {
           '買主番号': nextBuyerNumber.toString(),
-          '作成日時': jstDateString,
-          '●氏名・会社名': inquiry.name,
+          '作�E日晁E: jstDateString,
+          '●氏名・会社吁E: inquiry.name,
           '●問合時ヒアリング': inquiry.message,
-          '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '●電話番号\n�E�ハイフン不要E��E: normalizedPhone,
           '受付日': receptionDate,
-          '●メアド': inquiry.email,
-          '●問合せ元': 'いふう独自サイト',
+          '●メアチE: inquiry.email,
+          '●問合せ允E: 'ぁE�EぁE��自サイチE,
           '物件番号': inquiry.property_number || '',
-          '【問合メール】電話対応': '未',
+          '【問合メール】電話対忁E: '未',
         };
         
         await sheetsClient.appendRow(rowData);
         
-        // データベースを更新
+        // チE�Eタベ�Eスを更新
         await supabase
           .from('property_inquiries')
           .update({ 
@@ -873,7 +873,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
       } catch (error) {
         console.error(`[Cron] Failed to sync inquiry ${inquiry.id}:`, error);
         
-        // 失敗をデータベースに記録
+        // 失敗をチE�Eタベ�Eスに記録
         await supabase
           .from('property_inquiries')
           .update({ 
@@ -916,9 +916,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   });
 });
 
-// Vercel用のハンドラー（重要：これがないとVercelで動作しない）
-// Vercelのサーバーレス関数として動作させるため、Expressアプリをラップ
+// Vercel用のハンドラー�E�重要E��これがなぁE��Vercelで動作しなぁE��E
+// Vercelのサーバ�Eレス関数として動作させるため、ExpressアプリをラチE�E
 export default async (req: VercelRequest, res: VercelResponse) => {
-  // Expressアプリにリクエストを渡す
+  // Expressアプリにリクエストを渡ぁE
   return app(req as any, res as any);
 };
