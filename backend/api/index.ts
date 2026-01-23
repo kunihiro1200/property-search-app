@@ -595,28 +595,53 @@ app.get('/api/check-env', (_req, res) => {
 app.post('/api/public/inquiries', async (req, res) => {
   try {
     console.log('[Inquiry API] Received inquiry request');
+    console.log('[Inquiry API] Request body:', JSON.stringify(req.body, null, 2));
     
     // バリデーション
     const { name, email, phone, message, propertyId } = req.body;
     
     if (!name || !email || !phone || !message) {
+      console.error('[Inquiry API] Validation failed: missing required fields');
       return res.status(400).json({
         success: false,
         message: '必須項目を入力してください'
       });
     }
     
+    // 環境変数チェック
+    console.log('[Inquiry API] Environment variables check:', {
+      GOOGLE_SHEETS_BUYER_SPREADSHEET_ID: !!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+      GOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'not set'
+    });
+    
+    if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
+      console.error('[Inquiry API] Missing GOOGLE_SHEETS_BUYER_SPREADSHEET_ID');
+      return res.status(500).json({
+        success: false,
+        message: 'サーバー設定エラー: スプレッドシートIDが設定されていません'
+      });
+    }
+    
     // 物件情報を取得（propertyIdが指定されている場合）
     let propertyNumber = null;
     if (propertyId) {
+      console.log('[Inquiry API] Fetching property:', propertyId);
       const property = await propertyListingService.getPublicPropertyById(propertyId);
       if (property) {
         propertyNumber = property.property_number;
+        console.log('[Inquiry API] Property found:', propertyNumber);
+      } else {
+        console.log('[Inquiry API] Property not found:', propertyId);
       }
     }
     
     // InquirySyncServiceを動的にインポート
+    console.log('[Inquiry API] Importing InquirySyncService...');
     const { InquirySyncService } = await import('../src/services/InquirySyncService');
+    console.log('[Inquiry API] InquirySyncService imported successfully');
+    
+    console.log('[Inquiry API] Creating InquirySyncService instance...');
     const inquirySyncService = new InquirySyncService({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
@@ -624,11 +649,17 @@ app.post('/api/public/inquiries', async (req, res) => {
       maxRetries: 3,
       retryDelayMs: 1000,
     });
+    console.log('[Inquiry API] InquirySyncService instance created');
     
+    console.log('[Inquiry API] Authenticating...');
     await inquirySyncService.authenticate();
+    console.log('[Inquiry API] Authentication successful');
     
     // 買主番号を採番
+    console.log('[Inquiry API] Reading all rows...');
     const allRows = await inquirySyncService['sheetsClient'].readAll();
+    console.log(`[Inquiry API] Read ${allRows.length} rows`);
+    
     const columnEValues = allRows
       .map(row => row['買主番号'])
       .filter(value => value !== null && value !== undefined)
@@ -638,6 +669,7 @@ app.post('/api/public/inquiries', async (req, res) => {
       ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
       : 0;
     const buyerNumber = maxNumber + 1;
+    console.log('[Inquiry API] Generated buyer number:', buyerNumber);
     
     // 電話番号を正規化（数字のみ）
     const normalizedPhone = phone.replace(/[^0-9]/g, '');
@@ -654,7 +686,9 @@ app.post('/api/public/inquiries', async (req, res) => {
       '【問合メール】電話対応': '未',
     };
     
+    console.log('[Inquiry API] Appending row to sheet...');
     await inquirySyncService['sheetsClient'].appendRow(rowData);
+    console.log('[Inquiry API] Row appended successfully');
     
     console.log('[Inquiry API] Successfully synced to buyer sheet:', {
       buyerNumber,
@@ -668,9 +702,12 @@ app.post('/api/public/inquiries', async (req, res) => {
     });
   } catch (error: any) {
     console.error('[Inquiry API] Error:', error);
+    console.error('[Inquiry API] Error message:', error.message);
+    console.error('[Inquiry API] Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
+      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
