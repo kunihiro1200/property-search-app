@@ -620,6 +620,10 @@ app.post('/api/public/inquiries', async (req, res) => {
     
     // Supabaseのproperty_inquiriesテーブルに保存
     console.log('[Inquiry API] Saving to database...');
+    const now = new Date();
+    console.log('[Inquiry API] Current time (UTC):', now.toISOString());
+    console.log('[Inquiry API] Current time (JST):', new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString());
+    
     const { data: inquiry, error } = await supabase
       .from('property_inquiries')
       .insert({
@@ -629,7 +633,7 @@ app.post('/api/public/inquiries', async (req, res) => {
         phone,
         message,
         sheet_sync_status: 'pending', // スプレッドシート同期待ち
-        created_at: new Date().toISOString()
+        created_at: now.toISOString() // UTCで保存（Supabaseが自動的にタイムゾーンを処理）
       })
       .select()
       .single();
@@ -642,25 +646,32 @@ app.post('/api/public/inquiries', async (req, res) => {
     console.log('[Inquiry API] Saved to database:', inquiry.id);
     
     // スプレッドシートに同期（タイムアウト付き）
+    const syncStartTime = Date.now();
     try {
       console.log('[Inquiry API] Starting sync to sheet...');
       
-      // タイムアウト付きで同期処理を実行（8秒でタイムアウト）
+      // タイムアウト付きで同期処理を実行（15秒でタイムアウト - Google Sheets APIが遅い場合を考慮）
       const syncPromise = (async () => {
+        console.log('[Inquiry API] [1/6] Importing GoogleSheetsClient...');
         const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+        
+        console.log('[Inquiry API] [2/6] Creating GoogleSheetsClient instance...');
         const sheetsClient = new GoogleSheetsClient({
           spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
           sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
           serviceAccountKeyPath: './google-service-account.json',
         });
         
+        console.log('[Inquiry API] [3/6] Authenticating with Google Sheets...');
         await sheetsClient.authenticate();
+        console.log('[Inquiry API] Authentication successful');
         
         // 買主番号を採番（データベースから取得して競合を防ぐ）
+        console.log('[Inquiry API] [4/6] Getting buyer number from database...');
         let buyerNumber: number;
         try {
           // データベースから最新の買主番号を取得
-          const { data: latestInquiry } = await supabase
+          const { data: latestInquiry, error: dbError } = await supabase
             .from('property_inquiries')
             .select('buyer_number')
             .not('buyer_number', 'is', null)
@@ -668,8 +679,15 @@ app.post('/api/public/inquiries', async (req, res) => {
             .limit(1)
             .single();
           
+          if (dbError && dbError.code !== 'PGRST116') { // PGRST116 = no rows found
+            console.error('[Inquiry API] Database error getting buyer number:', dbError);
+            throw dbError;
+          }
+          
           buyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
+          console.log('[Inquiry API] Buyer number from database:', buyerNumber);
         } catch (error) {
+          console.log('[Inquiry API] Falling back to spreadsheet for buyer number...');
           // データベースに買主番号がない場合は、スプレッドシートから取得
           const allRows = await sheetsClient.readAll();
           const columnEValues = allRows
@@ -681,18 +699,25 @@ app.post('/api/public/inquiries', async (req, res) => {
             ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
             : 0;
           buyerNumber = maxNumber + 1;
+          console.log('[Inquiry API] Buyer number from spreadsheet:', buyerNumber);
         }
         
         // 買主番号をデータベースに保存（次回の採番用）
-        await supabase
+        console.log('[Inquiry API] [5/6] Saving buyer number to database...');
+        const { error: updateError } = await supabase
           .from('property_inquiries')
           .update({ buyer_number: buyerNumber })
           .eq('id', inquiry.id);
+        
+        if (updateError) {
+          console.error('[Inquiry API] Error updating buyer number:', updateError);
+        }
         
         // 電話番号を正規化
         const normalizedPhone = phone.replace(/[^0-9]/g, '');
         
         // スプレッドシートに追加
+        console.log('[Inquiry API] [6/6] Appending row to spreadsheet...');
         const rowData = {
           '買主番号': buyerNumber.toString(),
           '●氏名・会社名': name,
@@ -704,18 +729,28 @@ app.post('/api/public/inquiries', async (req, res) => {
           '【問合メール】電話対応': '未',
         };
         
+        console.log('[Inquiry API] Row data prepared:', {
+          buyerNumber: buyerNumber.toString(),
+          name,
+          propertyNumber: propertyNumber || '',
+        });
+        
         await sheetsClient.appendRow(rowData);
+        console.log('[Inquiry API] Row appended successfully');
         
         return buyerNumber;
       })();
       
-      // タイムアウト処理
+      // タイムアウト処理（15秒）
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Sync timeout after 8 seconds')), 8000);
+        setTimeout(() => reject(new Error('Sync timeout after 15 seconds')), 15000);
       });
       
       // どちらか早い方を待つ
       const buyerNumber = await Promise.race([syncPromise, timeoutPromise]) as number;
+      
+      const syncDuration = Date.now() - syncStartTime;
+      console.log(`[Inquiry API] Sync completed in ${syncDuration}ms, buyer number: ${buyerNumber}`);
       
       // 同期成功をデータベースに記録
       await supabase
@@ -723,13 +758,16 @@ app.post('/api/public/inquiries', async (req, res) => {
         .update({ sheet_sync_status: 'synced' })
         .eq('id', inquiry.id);
       
-      console.log('[Inquiry API] Sync completed:', buyerNumber);
+      console.log('[Inquiry API] Database updated with sync status: synced');
     } catch (syncError) {
-      console.error('[Inquiry API] Sync failed:', syncError);
+      const syncDuration = Date.now() - syncStartTime;
+      console.error(`[Inquiry API] Sync failed after ${syncDuration}ms:`, syncError);
       console.error('[Inquiry API] Error details:', {
         message: syncError instanceof Error ? syncError.message : String(syncError),
         stack: syncError instanceof Error ? syncError.stack : undefined,
         name: syncError instanceof Error ? syncError.name : undefined,
+        code: (syncError as any)?.code,
+        response: (syncError as any)?.response?.data,
       });
       
       // 同期失敗をデータベースに記録
@@ -740,6 +778,8 @@ app.post('/api/public/inquiries', async (req, res) => {
           sync_retry_count: 1
         })
         .eq('id', inquiry.id);
+      
+      console.log('[Inquiry API] Database updated with sync status: failed');
     }
     
     // ユーザーに成功を返す
