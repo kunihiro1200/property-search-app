@@ -65,7 +65,7 @@ app.get('/api/test/routes', (_req, res) => {
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-app.use('/api/public', publicPropertiesRoutes);
+// app.use('/api/public', publicPropertiesRoutes); // 一時的にコメントアウト（ルートの重複を回避）
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
@@ -589,6 +589,90 @@ app.get('/api/check-env', (_req, res) => {
     env: envCheck,
     timestamp: new Date().toISOString()
   });
+});
+
+// 問い合わせ送信API
+app.post('/api/public/inquiries', async (req, res) => {
+  try {
+    console.log('[Inquiry API] Received inquiry request');
+    
+    // バリデーション
+    const { name, email, phone, message, propertyId } = req.body;
+    
+    if (!name || !email || !phone || !message) {
+      return res.status(400).json({
+        success: false,
+        message: '必須項目を入力してください'
+      });
+    }
+    
+    // 物件情報を取得（propertyIdが指定されている場合）
+    let propertyNumber = null;
+    if (propertyId) {
+      const property = await propertyListingService.getPublicPropertyById(propertyId);
+      if (property) {
+        propertyNumber = property.property_number;
+      }
+    }
+    
+    // InquirySyncServiceを動的にインポート
+    const { InquirySyncService } = await import('../src/services/InquirySyncService');
+    const inquirySyncService = new InquirySyncService({
+      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      maxRetries: 3,
+      retryDelayMs: 1000,
+    });
+    
+    await inquirySyncService.authenticate();
+    
+    // 買主番号を採番
+    const allRows = await inquirySyncService['sheetsClient'].readAll();
+    const columnEValues = allRows
+      .map(row => row['買主番号'])
+      .filter(value => value !== null && value !== undefined)
+      .map(value => String(value));
+    
+    const maxNumber = columnEValues.length > 0
+      ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
+      : 0;
+    const buyerNumber = maxNumber + 1;
+    
+    // 電話番号を正規化（数字のみ）
+    const normalizedPhone = phone.replace(/[^0-9]/g, '');
+    
+    // スプレッドシートに追加
+    const rowData = {
+      '買主番号': buyerNumber.toString(),
+      '●氏名・会社名': name,
+      '●問合時ヒアリング': message,
+      '●電話番号\n（ハイフン不要）': normalizedPhone,
+      '●メアド': email,
+      '●問合せ元': 'いふう独自サイト',
+      '物件番号': propertyNumber || '',
+      '【問合メール】電話対応': '未',
+    };
+    
+    await inquirySyncService['sheetsClient'].appendRow(rowData);
+    
+    console.log('[Inquiry API] Successfully synced to buyer sheet:', {
+      buyerNumber,
+      propertyNumber: propertyNumber || '(none)',
+      customerName: name
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
+    });
+  } catch (error: any) {
+    console.error('[Inquiry API] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
+    });
+  }
 });
 
 // Error handling middleware
