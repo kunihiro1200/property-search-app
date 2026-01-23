@@ -618,17 +618,34 @@ app.post('/api/public/inquiries', async (req, res) => {
       }
     }
     
-    // 買主番号を採番（データベースから最大値を取得）
-    const { data: latestInquiry } = await supabase
-      .from('property_inquiries')
-      .select('buyer_number')
-      .not('buyer_number', 'is', null)
-      .order('buyer_number', { ascending: false })
-      .limit(1)
-      .single();
-    
-    const nextBuyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
-    console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
+    // 買主番号を採番（スプレッドシートの一番下の行 + 1）
+    let nextBuyerNumber = 1;
+    try {
+      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+      const sheetsClient = new GoogleSheetsClient({
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      });
+      
+      await sheetsClient.authenticate();
+      const allRows = await sheetsClient.readAll();
+      
+      // 一番下の行の買主番号を取得
+      if (allRows.length > 0) {
+        const lastRow = allRows[allRows.length - 1];
+        const lastBuyerNumber = lastRow['買主番号'];
+        if (lastBuyerNumber) {
+          nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
+        }
+      }
+      
+      console.log('[Inquiry API] Next buyer number (last row + 1):', nextBuyerNumber);
+    } catch (error: any) {
+      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error);
+      // フォールバック: 1から開始
+      nextBuyerNumber = 1;
+      console.log('[Inquiry API] Using fallback buyer number:', nextBuyerNumber);
+    }
     
     // データベースに保存（synced状態で保存）
     const { data: savedInquiry, error: saveError } = await supabase
