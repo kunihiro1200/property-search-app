@@ -623,28 +623,48 @@ app.post('/api/public/inquiries', async (req, res) => {
     
     try {
       console.log('[Inquiry API] Getting buyer number from spreadsheet...');
+      console.log('[Inquiry API] Environment check:', {
+        hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      });
+      
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
+      console.log('[Inquiry API] Calling authenticate()...');
       await sheetsClient.authenticate();
+      console.log('[Inquiry API] Authentication completed successfully');
       
       // 最後の行だけを取得（高速）
+      console.log('[Inquiry API] Calling getLastRow()...');
       const lastRow = await sheetsClient.getLastRow();
+      
+      console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
       
       if (lastRow) {
         const lastBuyerNumber = lastRow['買主番号'];
+        console.log('[Inquiry API] Last buyer number value:', lastBuyerNumber);
+        console.log('[Inquiry API] Last row keys:', Object.keys(lastRow));
+        
         if (lastBuyerNumber) {
           nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
           console.log('[Inquiry API] Last buyer number from spreadsheet:', lastBuyerNumber);
+        } else {
+          console.log('[Inquiry API] 買主番号 key not found in last row');
         }
+      } else {
+        console.log('[Inquiry API] Last row is null');
       }
       
       console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
     } catch (error: any) {
-      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error);
+      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error.message);
+      console.error('[Inquiry API] Error stack:', error.stack);
       // フォールバック: データベースから取得
       const { data: latestInquiry } = await supabase
         .from('property_inquiries')
