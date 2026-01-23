@@ -6,7 +6,7 @@ import { WorkTaskService } from '../services/WorkTaskService';
 import { RecommendedCommentService } from '../services/RecommendedCommentService';
 import { FavoriteCommentService } from '../services/FavoriteCommentService';
 import { AthomeDataService } from '../services/AthomeDataService';
-import { InquirySyncService } from '../services/InquirySyncService';
+// import { InquirySyncService } from '../services/InquirySyncService'; // 動的インポートに変更
 import { PropertyService } from '../services/PropertyService';
 import { PanoramaUrlService } from '../services/PanoramaUrlService';
 import { createRateLimiter } from '../middleware/rateLimiter';
@@ -35,12 +35,13 @@ const athomeDataService = new AthomeDataService();
 const propertyService = new PropertyService();
 const panoramaUrlService = new PanoramaUrlService();
 
-// InquirySyncServiceのインスタンス化（遅延初期化）
-let inquirySyncService: InquirySyncService | null = null;
+// InquirySyncServiceのインスタンス化（遅延初期化 + 動的インポート）
+let inquirySyncService: any = null;
 
 // InquirySyncServiceを取得（必要な時だけ初期化）
-const getInquirySyncService = () => {
+const getInquirySyncService = async () => {
   if (!inquirySyncService) {
+    const { InquirySyncService } = await import('../services/InquirySyncService');
     inquirySyncService = new InquirySyncService({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
@@ -834,7 +835,7 @@ router.post('/inquiries', inquiryRateLimiter, async (req: Request, res: Response
       console.log('[Inquiry] Starting sync to buyer sheet...');
       
       // InquirySyncServiceを取得（必要な時だけ初期化）
-      const syncService = getInquirySyncService();
+      const syncService = await getInquirySyncService();
       console.log('[Inquiry] InquirySyncService obtained');
       
       await syncService.authenticate();
