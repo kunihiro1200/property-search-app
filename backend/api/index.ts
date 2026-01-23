@@ -656,17 +656,38 @@ app.post('/api/public/inquiries', async (req, res) => {
         
         await sheetsClient.authenticate();
         
-        // 買主番号を採番
-        const allRows = await sheetsClient.readAll();
-        const columnEValues = allRows
-          .map(row => row['買主番号'])
-          .filter(value => value !== null && value !== undefined)
-          .map(value => String(value));
+        // 買主番号を採番（データベースから取得して競合を防ぐ）
+        let buyerNumber: number;
+        try {
+          // データベースから最新の買主番号を取得
+          const { data: latestInquiry } = await supabase
+            .from('property_inquiries')
+            .select('buyer_number')
+            .not('buyer_number', 'is', null)
+            .order('buyer_number', { ascending: false })
+            .limit(1)
+            .single();
+          
+          buyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
+        } catch (error) {
+          // データベースに買主番号がない場合は、スプレッドシートから取得
+          const allRows = await sheetsClient.readAll();
+          const columnEValues = allRows
+            .map(row => row['買主番号'])
+            .filter(value => value !== null && value !== undefined)
+            .map(value => String(value));
+          
+          const maxNumber = columnEValues.length > 0
+            ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
+            : 0;
+          buyerNumber = maxNumber + 1;
+        }
         
-        const maxNumber = columnEValues.length > 0
-          ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
-          : 0;
-        const buyerNumber = maxNumber + 1;
+        // 買主番号をデータベースに保存（次回の採番用）
+        await supabase
+          .from('property_inquiries')
+          .update({ buyer_number: buyerNumber })
+          .eq('id', inquiry.id);
         
         // 電話番号を正規化
         const normalizedPhone = phone.replace(/[^0-9]/g, '');
