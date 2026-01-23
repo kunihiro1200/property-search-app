@@ -617,11 +617,26 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments.map((comment: string | string[], commentIndex: number) => (
-                    <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                      {Array.isArray(comment) ? comment.join(' ') : comment}
-                    </Typography>
-                  ))}
+                  {completeData.recommendedComments.map((comment: any, commentIndex: number) => {
+                    // commentが文字列の場合はそのまま表示
+                    if (typeof comment === 'string') {
+                      return (
+                        <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                          {comment}
+                        </Typography>
+                      );
+                    }
+                    // commentが配列の場合は結合して表示
+                    if (Array.isArray(comment)) {
+                      return (
+                        <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                          {comment.join(' ')}
+                        </Typography>
+                      );
+                    }
+                    // それ以外（オブジェクトなど）の場合はスキップ
+                    return null;
+                  })}
                 </Box>
               </Paper>
             )}
