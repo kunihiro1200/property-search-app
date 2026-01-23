@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc --noEmit false || exit 0",
-    "vercel-build": "tsc --noEmit false || exit 0",
+    "vercel-build": "echo 'Using @vercel/node - no build needed'",
     "start": "node dist/index.js",
     "migrate": "ts-node migrations/migrate.ts",
     "verify-migration-009": "ts-node migrations/verify-009-migration.ts",
