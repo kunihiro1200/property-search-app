@@ -716,10 +716,16 @@ app.post('/api/public/inquiries', async (req, res) => {
         // 電話番号を正規化
         const normalizedPhone = phone.replace(/[^0-9]/g, '');
         
+        // 現在時刻をJST（日本時間）で取得
+        const nowUtc = new Date();
+        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000); // UTC + 9時間
+        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19); // "2026-01-23 12:00:00"
+        
         // スプレッドシートに追加
         console.log('[Inquiry API] [6/6] Appending row to spreadsheet...');
         const rowData = {
           '買主番号': buyerNumber.toString(),
+          '作成日時': jstDateString, // B列：JST（日本時間）で記録
           '●氏名・会社名': name,
           '●問合時ヒアリング': message,
           '●電話番号\n（ハイフン不要）': normalizedPhone,
@@ -732,6 +738,7 @@ app.post('/api/public/inquiries', async (req, res) => {
         console.log('[Inquiry API] Row data prepared:', {
           buyerNumber: buyerNumber.toString(),
           name,
+          createdAt: jstDateString, // JST
           propertyNumber: propertyNumber || '',
         });
         
