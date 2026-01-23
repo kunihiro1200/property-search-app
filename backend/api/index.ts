@@ -630,7 +630,7 @@ app.post('/api/public/inquiries', async (req, res) => {
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
         serviceAccountEmail: serviceAccount.client_email,
-        serviceAccountPrivateKey: serviceAccount.private_key,
+        privateKey: serviceAccount.private_key,
       });
       
       await sheetsClient.authenticate();
