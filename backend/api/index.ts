@@ -12,10 +12,18 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
-import publicInquiriesRoutes from '../src/routes/publicInquiries';
 // import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
+
+// 問合せAPIルートを動的にインポート（エラーを防ぐため）
+let publicInquiriesRoutes: any = null;
+try {
+  publicInquiriesRoutes = require('../src/routes/publicInquiries').default;
+  console.log('✅ publicInquiriesRoutes loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load publicInquiriesRoutes:', error);
+}
 
 // 環境変数のデバッグログ
 console.log('🔍 Environment variables check:', {
@@ -68,8 +76,13 @@ app.get('/api/test/routes', (_req, res) => {
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
 // app.use('/api/public', publicPropertiesRoutes);
 
-// 問合せAPIルート
-app.use('/api/public/inquiries', publicInquiriesRoutes);
+// 問合せAPIルート（エラーがある場合はスキップ）
+if (publicInquiriesRoutes) {
+  app.use('/api/public/inquiries', publicInquiriesRoutes);
+  console.log('✅ Inquiry routes registered');
+} else {
+  console.warn('⚠️ Inquiry routes not available');
+}
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
