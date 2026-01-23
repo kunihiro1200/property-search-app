@@ -338,10 +338,13 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ 環境変数から取得、未設定の場合は本番URLをフォールバック
-    const baseUrl = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://property-site-frontend-kappa.vercel.app';
+    // ✅ Vercel本番環境では必ず本番URLを使用（環境変数が設定されていない場合の対策）
+    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    const baseUrl = isProduction 
+      ? 'https://property-site-frontend-kappa.vercel.app'
+      : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
     
-    console.log(`[PropertyImageService] Using baseUrl: ${baseUrl}`);
+    console.log(`[PropertyImageService] Environment: ${process.env.NODE_ENV}, VERCEL: ${process.env.VERCEL}, Using baseUrl: ${baseUrl}`);
     
     return driveFiles.map(file => ({
       id: file.id,
@@ -436,8 +439,11 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ 環境変数から取得、未設定の場合は本番URLをフォールバック
-      const baseUrl = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://property-site-frontend-kappa.vercel.app';
+      // ✅ Vercel本番環境では必ず本番URLを使用
+      const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+      const baseUrl = isProduction 
+        ? 'https://property-site-frontend-kappa.vercel.app'
+        : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
@@ -479,8 +485,11 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ 環境変数から取得、未設定の場合は本番URLをフォールバック
-      const baseUrl = process.env.BACKEND_URL || process.env.VITE_API_URL || 'https://property-site-frontend-kappa.vercel.app';
+      // ✅ Vercel本番環境では必ず本番URLを使用
+      const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+      const baseUrl = isProduction 
+        ? 'https://property-site-frontend-kappa.vercel.app'
+        : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);
