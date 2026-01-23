@@ -628,12 +628,13 @@ app.post('/api/public/inquiries', async (req, res) => {
       .from('property_inquiries')
       .insert({
         property_id: propertyId || null,
+        property_number: propertyNumber || null,
         name,
         email,
         phone,
         message,
-        sheet_sync_status: 'pending', // スプレッドシート同期待ち
-        created_at: now.toISOString() // UTCで保存（Supabaseが自動的にタイムゾーンを処理）
+        sheet_sync_status: 'pending', // スプレッドシート同期待ち（Cron Jobが処理）
+        created_at: now.toISOString()
       })
       .select()
       .single();
@@ -644,152 +645,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     }
     
     console.log('[Inquiry API] Saved to database:', inquiry.id);
+    console.log('[Inquiry API] Sync status: pending (will be processed by cron job)');
     
-    // スプレッドシートに同期（タイムアウト付き）
-    const syncStartTime = Date.now();
-    try {
-      console.log('[Inquiry API] Starting sync to sheet...');
-      
-      // タイムアウト付きで同期処理を実行（15秒でタイムアウト - Google Sheets APIが遅い場合を考慮）
-      const syncPromise = (async () => {
-        console.log('[Inquiry API] [1/6] Importing GoogleSheetsClient...');
-        const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
-        
-        console.log('[Inquiry API] [2/6] Creating GoogleSheetsClient instance...');
-        const sheetsClient = new GoogleSheetsClient({
-          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-          sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-          serviceAccountKeyPath: './google-service-account.json',
-        });
-        
-        console.log('[Inquiry API] [3/6] Authenticating with Google Sheets...');
-        await sheetsClient.authenticate();
-        console.log('[Inquiry API] Authentication successful');
-        
-        // 買主番号を採番（データベースから取得して競合を防ぐ）
-        console.log('[Inquiry API] [4/6] Getting buyer number from database...');
-        let buyerNumber: number;
-        try {
-          // データベースから最新の買主番号を取得
-          const { data: latestInquiry, error: dbError } = await supabase
-            .from('property_inquiries')
-            .select('buyer_number')
-            .not('buyer_number', 'is', null)
-            .order('buyer_number', { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (dbError && dbError.code !== 'PGRST116') { // PGRST116 = no rows found
-            console.error('[Inquiry API] Database error getting buyer number:', dbError);
-            throw dbError;
-          }
-          
-          buyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
-          console.log('[Inquiry API] Buyer number from database:', buyerNumber);
-        } catch (error) {
-          console.log('[Inquiry API] Falling back to spreadsheet for buyer number...');
-          // データベースに買主番号がない場合は、スプレッドシートから取得
-          const allRows = await sheetsClient.readAll();
-          const columnEValues = allRows
-            .map(row => row['買主番号'])
-            .filter(value => value !== null && value !== undefined)
-            .map(value => String(value));
-          
-          const maxNumber = columnEValues.length > 0
-            ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
-            : 0;
-          buyerNumber = maxNumber + 1;
-          console.log('[Inquiry API] Buyer number from spreadsheet:', buyerNumber);
-        }
-        
-        // 買主番号をデータベースに保存（次回の採番用）
-        console.log('[Inquiry API] [5/6] Saving buyer number to database...');
-        const { error: updateError } = await supabase
-          .from('property_inquiries')
-          .update({ buyer_number: buyerNumber })
-          .eq('id', inquiry.id);
-        
-        if (updateError) {
-          console.error('[Inquiry API] Error updating buyer number:', updateError);
-        }
-        
-        // 電話番号を正規化
-        const normalizedPhone = phone.replace(/[^0-9]/g, '');
-        
-        // 現在時刻をJST（日本時間）で取得
-        const nowUtc = new Date();
-        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000); // UTC + 9時間
-        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19); // "2026-01-23 12:00:00"
-        
-        // スプレッドシートに追加
-        console.log('[Inquiry API] [6/6] Appending row to spreadsheet...');
-        const rowData = {
-          '買主番号': buyerNumber.toString(),
-          '作成日時': jstDateString, // B列：JST（日本時間）で記録
-          '●氏名・会社名': name,
-          '●問合時ヒアリング': message,
-          '●電話番号\n（ハイフン不要）': normalizedPhone,
-          '●メアド': email,
-          '●問合せ元': 'いふう独自サイト',
-          '物件番号': propertyNumber || '',
-          '【問合メール】電話対応': '未',
-        };
-        
-        console.log('[Inquiry API] Row data prepared:', {
-          buyerNumber: buyerNumber.toString(),
-          name,
-          createdAt: jstDateString, // JST
-          propertyNumber: propertyNumber || '',
-        });
-        
-        await sheetsClient.appendRow(rowData);
-        console.log('[Inquiry API] Row appended successfully');
-        
-        return buyerNumber;
-      })();
-      
-      // タイムアウト処理（15秒）
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Sync timeout after 15 seconds')), 15000);
-      });
-      
-      // どちらか早い方を待つ
-      const buyerNumber = await Promise.race([syncPromise, timeoutPromise]) as number;
-      
-      const syncDuration = Date.now() - syncStartTime;
-      console.log(`[Inquiry API] Sync completed in ${syncDuration}ms, buyer number: ${buyerNumber}`);
-      
-      // 同期成功をデータベースに記録
-      await supabase
-        .from('property_inquiries')
-        .update({ sheet_sync_status: 'synced' })
-        .eq('id', inquiry.id);
-      
-      console.log('[Inquiry API] Database updated with sync status: synced');
-    } catch (syncError) {
-      const syncDuration = Date.now() - syncStartTime;
-      console.error(`[Inquiry API] Sync failed after ${syncDuration}ms:`, syncError);
-      console.error('[Inquiry API] Error details:', {
-        message: syncError instanceof Error ? syncError.message : String(syncError),
-        stack: syncError instanceof Error ? syncError.stack : undefined,
-        name: syncError instanceof Error ? syncError.name : undefined,
-        code: (syncError as any)?.code,
-        response: (syncError as any)?.response?.data,
-      });
-      
-      // 同期失敗をデータベースに記録
-      await supabase
-        .from('property_inquiries')
-        .update({ 
-          sheet_sync_status: 'failed',
-          sync_retry_count: 1
-        })
-        .eq('id', inquiry.id);
-      
-      console.log('[Inquiry API] Database updated with sync status: failed');
-    }
-    
-    // ユーザーに成功を返す
+    // ユーザーに即座に成功を返す
     res.status(201).json({
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
@@ -799,6 +657,142 @@ app.post('/api/public/inquiries', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
+    });
+  }
+});
+
+// Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
+app.get('/api/cron/sync-inquiries', async (req, res) => {
+  try {
+    console.log('[Cron] Starting inquiry sync job...');
+    
+    // Vercel Cron Jobの認証チェック
+    const authHeader = req.headers.authorization;
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.error('[Cron] Unauthorized access attempt');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // pending状態の問合せを取得（最大10件）
+    const { data: pendingInquiries, error: fetchError } = await supabase
+      .from('property_inquiries')
+      .select('*')
+      .eq('sheet_sync_status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(10);
+    
+    if (fetchError) {
+      console.error('[Cron] Error fetching pending inquiries:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!pendingInquiries || pendingInquiries.length === 0) {
+      console.log('[Cron] No pending inquiries to sync');
+      return res.status(200).json({ 
+        success: true, 
+        message: 'No pending inquiries',
+        synced: 0
+      });
+    }
+    
+    console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
+    
+    // Google Sheets認証
+    const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+    const sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      serviceAccountKeyPath: './google-service-account.json',
+    });
+    
+    await sheetsClient.authenticate();
+    console.log('[Cron] Google Sheets authenticated');
+    
+    // 最大買主番号を取得
+    const { data: latestInquiry } = await supabase
+      .from('property_inquiries')
+      .select('buyer_number')
+      .not('buyer_number', 'is', null)
+      .order('buyer_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    let nextBuyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
+    
+    // 各問合せを同期
+    let syncedCount = 0;
+    let failedCount = 0;
+    
+    for (const inquiry of pendingInquiries) {
+      try {
+        console.log(`[Cron] Syncing inquiry ${inquiry.id} (${inquiry.name})...`);
+        
+        // 電話番号を正規化
+        const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
+        
+        // 現在時刻をJST（日本時間）で取得
+        const nowUtc = new Date(inquiry.created_at);
+        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
+        
+        // スプレッドシートに追加
+        const rowData = {
+          '買主番号': nextBuyerNumber.toString(),
+          '作成日時': jstDateString,
+          '●氏名・会社名': inquiry.name,
+          '●問合時ヒアリング': inquiry.message,
+          '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '●メアド': inquiry.email,
+          '●問合せ元': 'いふう独自サイト',
+          '物件番号': inquiry.property_number || '',
+          '【問合メール】電話対応': '未',
+        };
+        
+        await sheetsClient.appendRow(rowData);
+        
+        // データベースを更新
+        await supabase
+          .from('property_inquiries')
+          .update({ 
+            sheet_sync_status: 'synced',
+            buyer_number: nextBuyerNumber
+          })
+          .eq('id', inquiry.id);
+        
+        console.log(`[Cron] Synced inquiry ${inquiry.id} with buyer number ${nextBuyerNumber}`);
+        syncedCount++;
+        nextBuyerNumber++;
+        
+      } catch (error) {
+        console.error(`[Cron] Failed to sync inquiry ${inquiry.id}:`, error);
+        
+        // 失敗をデータベースに記録
+        await supabase
+          .from('property_inquiries')
+          .update({ 
+            sheet_sync_status: 'failed',
+            sync_retry_count: (inquiry.sync_retry_count || 0) + 1
+          })
+          .eq('id', inquiry.id);
+        
+        failedCount++;
+      }
+    }
+    
+    console.log(`[Cron] Sync job completed: ${syncedCount} synced, ${failedCount} failed`);
+    
+    res.status(200).json({
+      success: true,
+      synced: syncedCount,
+      failed: failedCount,
+      total: pendingInquiries.length
+    });
+    
+  } catch (error: any) {
+    console.error('[Cron] Error in sync job:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

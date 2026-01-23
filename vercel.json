@@ -31,5 +31,11 @@
       "dest": "/frontend/index.html"
     }
   ],
-  "outputDirectory": "frontend/dist"
+  "outputDirectory": "frontend/dist",
+  "crons": [
+    {
+      "path": "/api/cron/sync-inquiries",
+      "schedule": "* * * * *"
+    }
+  ]
 }
