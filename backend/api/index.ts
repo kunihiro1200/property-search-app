@@ -693,6 +693,11 @@ app.post('/api/public/inquiries', async (req, res) => {
         console.log('[Inquiry API] Background sync completed:', buyerNumber);
       } catch (syncError) {
         console.error('[Inquiry API] Background sync failed:', syncError);
+        console.error('[Inquiry API] Error details:', {
+          message: syncError instanceof Error ? syncError.message : String(syncError),
+          stack: syncError instanceof Error ? syncError.stack : undefined,
+          name: syncError instanceof Error ? syncError.name : undefined,
+        });
         
         // 同期失敗をデータベースに記録
         await supabase
