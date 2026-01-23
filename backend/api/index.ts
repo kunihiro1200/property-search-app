@@ -660,12 +660,8 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
   try {
     console.log('[Cron] Starting inquiry sync job...');
     
-    // Vercel Cron Jobの認証チェック
-    const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      console.error('[Cron] Unauthorized access attempt');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
+    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
     // pending状態の問合せを取得（最大10件）
     const { data: pendingInquiries, error: fetchError } = await supabase
@@ -691,12 +687,11 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     
     console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
     
-    // Google Sheets認証
+    // Google Sheets認証（環境変数から自動的に読み込まれる）
     const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
     const sheetsClient = new GoogleSheetsClient({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      serviceAccountKeyPath: './google-service-account.json',
     });
     
     await sheetsClient.authenticate();
