@@ -345,14 +345,14 @@ export class PropertyListingService {
         }
       }
       
-      // NEW: 公開中のみ表示フィルター
-      if (showPublicOnly) {
-        // atbb_statusに「公開中」が含まれる物件のみを表示
-        // nullや空文字列を除外し、明示的に「公開中」を含むもののみ
-        query = query
-          .not('atbb_status', 'is', null)
-          .ilike('atbb_status', '%公開中%');
-      }
+      // ⚠️ 重要: showPublicOnlyフィルターは削除
+      // 全ての物件を表示し、atbb_statusはバッジ表示のみに使用
+      // 公開中、成約済み、非公開などの状態はバッジで判断
+      // if (showPublicOnly) {
+      //   query = query
+      //     .not('atbb_status', 'is', null)
+      //     .ilike('atbb_status', '%公開中%');
+      // }
       
       // NEW: 座標がある物件のみ取得（地図表示用）
       if (withCoordinates) {
