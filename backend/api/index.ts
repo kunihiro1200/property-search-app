@@ -612,7 +612,6 @@ app.post('/api/public/inquiries', async (req, res) => {
     console.log('[Inquiry API] Environment variables check:', {
       GOOGLE_SHEETS_BUYER_SPREADSHEET_ID: !!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
       GOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'not set'
     });
     
     if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
@@ -636,28 +635,26 @@ app.post('/api/public/inquiries', async (req, res) => {
       }
     }
     
-    // InquirySyncServiceを動的にインポート
-    console.log('[Inquiry API] Importing InquirySyncService...');
-    const { InquirySyncService } = await import('../src/services/InquirySyncService');
-    console.log('[Inquiry API] InquirySyncService imported successfully');
+    // GoogleSheetsClientを直接使用（InquirySyncServiceを使用しない）
+    console.log('[Inquiry API] Importing GoogleSheetsClient...');
+    const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+    console.log('[Inquiry API] GoogleSheetsClient imported successfully');
     
-    console.log('[Inquiry API] Creating InquirySyncService instance...');
-    const inquirySyncService = new InquirySyncService({
+    console.log('[Inquiry API] Creating GoogleSheetsClient instance...');
+    const sheetsClient = new GoogleSheetsClient({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-      maxRetries: 3,
-      retryDelayMs: 1000,
+      serviceAccountKeyPath: './google-service-account.json', // Vercel環境では無視される
     });
-    console.log('[Inquiry API] InquirySyncService instance created');
+    console.log('[Inquiry API] GoogleSheetsClient instance created');
     
     console.log('[Inquiry API] Authenticating...');
-    await inquirySyncService.authenticate();
+    await sheetsClient.authenticate();
     console.log('[Inquiry API] Authentication successful');
     
     // 買主番号を採番
     console.log('[Inquiry API] Reading all rows...');
-    const allRows = await inquirySyncService['sheetsClient'].readAll();
+    const allRows = await sheetsClient.readAll();
     console.log(`[Inquiry API] Read ${allRows.length} rows`);
     
     const columnEValues = allRows
@@ -687,7 +684,7 @@ app.post('/api/public/inquiries', async (req, res) => {
     };
     
     console.log('[Inquiry API] Appending row to sheet...');
-    await inquirySyncService['sheetsClient'].appendRow(rowData);
+    await sheetsClient.appendRow(rowData);
     console.log('[Inquiry API] Row appended successfully');
     
     console.log('[Inquiry API] Successfully synced to buyer sheet:', {
