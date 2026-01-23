@@ -694,6 +694,9 @@ app.post('/api/public/inquiries', async (req, res) => {
         const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
         const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
         
+        // 受付日（今日の日付、YYYY/MM/DD形式）
+        const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
+        
         // スプレッドシートに追加
         const rowData = {
           '買主番号': nextBuyerNumber.toString(),
@@ -701,6 +704,7 @@ app.post('/api/public/inquiries', async (req, res) => {
           '●氏名・会社名': name,
           '●問合時ヒアリング': message,
           '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '受付日': receptionDate,
           '●メアド': email,
           '●問合せ元': 'いふう独自サイト',
           '物件番号': propertyNumber || '',
@@ -804,6 +808,9 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
         const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
         const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
         
+        // 受付日（今日の日付、YYYY/MM/DD形式）
+        const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
+        
         // スプレッドシートに追加
         const rowData = {
           '買主番号': nextBuyerNumber.toString(),
@@ -811,6 +818,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
           '●氏名・会社名': inquiry.name,
           '●問合時ヒアリング': inquiry.message,
           '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '受付日': receptionDate,
           '●メアド': inquiry.email,
           '●問合せ元': 'いふう独自サイト',
           '物件番号': inquiry.property_number || '',
