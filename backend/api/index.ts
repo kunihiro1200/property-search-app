@@ -12,17 +12,16 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
-// import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
 
-// 問合せAPIルートを動的にインポート（エラーを防ぐため）
-let publicInquiriesRoutes: any = null;
+// publicPropertiesRoutesを動的にインポート（エラーを防ぐため）
+let publicPropertiesRoutes: any = null;
 try {
-  publicInquiriesRoutes = require('../src/routes/publicInquiries').default;
-  console.log('✅ publicInquiriesRoutes loaded successfully');
+  publicPropertiesRoutes = require('../src/routes/publicProperties').default;
+  console.log('✅ publicPropertiesRoutes loaded successfully');
 } catch (error) {
-  console.error('❌ Failed to load publicInquiriesRoutes:', error);
+  console.error('❌ Failed to load publicPropertiesRoutes:', error);
 }
 
 // 環境変数のデバッグログ
@@ -74,14 +73,11 @@ app.get('/api/test/routes', (_req, res) => {
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes);
-
-// 問合せAPIルート（エラーがある場合はスキップ）
-if (publicInquiriesRoutes) {
-  app.use('/api/public/inquiries', publicInquiriesRoutes);
-  console.log('✅ Inquiry routes registered');
+if (publicPropertiesRoutes) {
+  app.use('/api/public', publicPropertiesRoutes);
+  console.log('✅ Public properties routes registered (includes inquiry API)');
 } else {
-  console.warn('⚠️ Inquiry routes not available');
+  console.warn('⚠️ Public properties routes not available');
 }
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
