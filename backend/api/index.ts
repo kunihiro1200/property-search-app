@@ -662,7 +662,55 @@ app.post('/api/public/inquiries', async (req, res) => {
     
     console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
     
-    // データベースに保存（synced状態で保存）
+    let sheetSyncStatus = 'synced';
+    
+    // スプレッドシートに同期（同期的に実行）
+    try {
+      console.log('[Inquiry API] Starting spreadsheet sync...');
+      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+      const sheetsClient = new GoogleSheetsClient({
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      });
+      
+      await sheetsClient.authenticate();
+      console.log('[Inquiry API] Google Sheets authenticated');
+      
+      // 電話番号を正規化
+      const normalizedPhone = phone.replace(/[^0-9]/g, '');
+      
+      // 現在時刻をJST（日本時間）で取得
+      const nowUtc = new Date();
+      const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+      const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
+      
+      // 受付日（今日の日付、YYYY/MM/DD形式）
+      const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
+      
+      // スプレッドシートに追加
+      const rowData = {
+        '買主番号': nextBuyerNumber.toString(),
+        '作成日時': jstDateString,
+        '●氏名・会社名': name,
+        '●問合時ヒアリング': message,
+        '●電話番号\n（ハイフン不要）': normalizedPhone,
+        '受付日': receptionDate,
+        '●メアド': email,
+        '●問合せ元': 'いふう独自サイト',
+        '物件番号': propertyNumber || '',
+        '【問合メール】電話対応': '未',
+      };
+      
+      await sheetsClient.appendRow(rowData);
+      console.log('[Inquiry API] Spreadsheet sync completed successfully');
+      
+    } catch (syncError: any) {
+      console.error('[Inquiry API] Spreadsheet sync error:', syncError);
+      sheetSyncStatus = 'failed';
+      // エラーが発生してもデータベースには保存する
+    }
+    
+    // データベースに保存
     const { data: savedInquiry, error: saveError } = await supabase
       .from('property_inquiries')
       .insert({
@@ -673,7 +721,7 @@ app.post('/api/public/inquiries', async (req, res) => {
         phone,
         message,
         buyer_number: nextBuyerNumber,
-        sheet_sync_status: 'synced', // 直接同期するため
+        sheet_sync_status: sheetSyncStatus,
         created_at: new Date().toISOString()
       })
       .select()
@@ -684,63 +732,9 @@ app.post('/api/public/inquiries', async (req, res) => {
       throw saveError;
     }
     
-    console.log('[Inquiry API] Saved to database');
+    console.log('[Inquiry API] Saved to database with status:', sheetSyncStatus);
     
-    // スプレッドシートに同期（非同期で実行、エラーが発生してもユーザーには影響しない）
-    (async () => {
-      try {
-        console.log('[Inquiry API] Starting spreadsheet sync...');
-        
-        // Google Sheets認証
-        const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
-        const sheetsClient = new GoogleSheetsClient({
-          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-          sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-        });
-        
-        await sheetsClient.authenticate();
-        console.log('[Inquiry API] Google Sheets authenticated');
-        
-        // 電話番号を正規化
-        const normalizedPhone = phone.replace(/[^0-9]/g, '');
-        
-        // 現在時刻をJST（日本時間）で取得
-        const nowUtc = new Date();
-        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
-        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
-        
-        // 受付日（今日の日付、YYYY/MM/DD形式）
-        const receptionDate = jstDate.toISOString().substring(0, 10).replace(/-/g, '/');
-        
-        // スプレッドシートに追加
-        const rowData = {
-          '買主番号': nextBuyerNumber.toString(),
-          '作成日時': jstDateString,
-          '●氏名・会社名': name,
-          '●問合時ヒアリング': message,
-          '●電話番号\n（ハイフン不要）': normalizedPhone,
-          '受付日': receptionDate,
-          '●メアド': email,
-          '●問合せ元': 'いふう独自サイト',
-          '物件番号': propertyNumber || '',
-          '【問合メール】電話対応': '未',
-        };
-        
-        await sheetsClient.appendRow(rowData);
-        console.log('[Inquiry API] Spreadsheet sync completed');
-        
-      } catch (syncError: any) {
-        console.error('[Inquiry API] Spreadsheet sync error:', syncError);
-        // エラーが発生してもデータベースには保存済みなので、後で手動同期可能
-        // sheet_sync_statusをfailedに更新
-        await supabase
-          .from('property_inquiries')
-          .update({ sheet_sync_status: 'failed' })
-          .eq('id', savedInquiry.id);
-      }
-    })();
-    
-    // ユーザーに即座に成功を返す（スプレッドシート同期を待たない）
+    // ユーザーに成功を返す
     res.status(201).json({
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
