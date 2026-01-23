@@ -641,11 +641,12 @@ app.post('/api/public/inquiries', async (req, res) => {
     
     console.log('[Inquiry API] Saved to database:', inquiry.id);
     
-    // バックグラウンドでスプレッドシートに同期（エラーが発生してもユーザーには影響しない）
-    (async () => {
-      try {
-        console.log('[Inquiry API] Starting background sync to sheet...');
-        
+    // スプレッドシートに同期（タイムアウト付き）
+    try {
+      console.log('[Inquiry API] Starting sync to sheet...');
+      
+      // タイムアウト付きで同期処理を実行（8秒でタイムアウト）
+      const syncPromise = (async () => {
         const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
         const sheetsClient = new GoogleSheetsClient({
           spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
@@ -684,33 +685,43 @@ app.post('/api/public/inquiries', async (req, res) => {
         
         await sheetsClient.appendRow(rowData);
         
-        // 同期成功をデータベースに記録
-        await supabase
-          .from('property_inquiries')
-          .update({ sheet_sync_status: 'synced' })
-          .eq('id', inquiry.id);
-        
-        console.log('[Inquiry API] Background sync completed:', buyerNumber);
-      } catch (syncError) {
-        console.error('[Inquiry API] Background sync failed:', syncError);
-        console.error('[Inquiry API] Error details:', {
-          message: syncError instanceof Error ? syncError.message : String(syncError),
-          stack: syncError instanceof Error ? syncError.stack : undefined,
-          name: syncError instanceof Error ? syncError.name : undefined,
-        });
-        
-        // 同期失敗をデータベースに記録
-        await supabase
-          .from('property_inquiries')
-          .update({ 
-            sheet_sync_status: 'failed',
-            sync_retry_count: 1
-          })
-          .eq('id', inquiry.id);
-      }
-    })();
+        return buyerNumber;
+      })();
+      
+      // タイムアウト処理
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Sync timeout after 8 seconds')), 8000);
+      });
+      
+      // どちらか早い方を待つ
+      const buyerNumber = await Promise.race([syncPromise, timeoutPromise]) as number;
+      
+      // 同期成功をデータベースに記録
+      await supabase
+        .from('property_inquiries')
+        .update({ sheet_sync_status: 'synced' })
+        .eq('id', inquiry.id);
+      
+      console.log('[Inquiry API] Sync completed:', buyerNumber);
+    } catch (syncError) {
+      console.error('[Inquiry API] Sync failed:', syncError);
+      console.error('[Inquiry API] Error details:', {
+        message: syncError instanceof Error ? syncError.message : String(syncError),
+        stack: syncError instanceof Error ? syncError.stack : undefined,
+        name: syncError instanceof Error ? syncError.name : undefined,
+      });
+      
+      // 同期失敗をデータベースに記録
+      await supabase
+        .from('property_inquiries')
+        .update({ 
+          sheet_sync_status: 'failed',
+          sync_retry_count: 1
+        })
+        .eq('id', inquiry.id);
+    }
     
-    // ユーザーには即座に成功を返す
+    // ユーザーに成功を返す
     res.status(201).json({
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
