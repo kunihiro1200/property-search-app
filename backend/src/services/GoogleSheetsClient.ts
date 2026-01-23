@@ -237,6 +237,44 @@ export class GoogleSheetsClient {
   }
 
   /**
+   * 最後の行を取得（高速）
+   */
+  async getLastRow(): Promise<SheetRow | null> {
+    this.ensureAuthenticated();
+    
+    return await sheetsRateLimiter.executeRequest(async () => {
+      // まずシート全体のメタデータを取得して行数を確認
+      const sheetMetadata = await this.sheets!.spreadsheets.get({
+        spreadsheetId: this.config.spreadsheetId,
+      });
+      
+      const sheet = sheetMetadata.data.sheets?.find(
+        s => s.properties?.title === this.config.sheetName
+      );
+      
+      if (!sheet || !sheet.properties?.gridProperties?.rowCount) {
+        return null;
+      }
+      
+      const lastRowIndex = sheet.properties.gridProperties.rowCount;
+      
+      // 最後の行だけを取得
+      const range = `${this.config.sheetName}!A${lastRowIndex}:ZZ${lastRowIndex}`;
+      const response = await this.sheets!.spreadsheets.values.get({
+        spreadsheetId: this.config.spreadsheetId,
+        range,
+      });
+
+      const rows = response.data.values || [];
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return await this.rowToObject(rows[0]);
+    });
+  }
+
+  /**
    * 指定範囲のデータを読み取り
    */
   async readRange(range: string): Promise<SheetRow[]> {

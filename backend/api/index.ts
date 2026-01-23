@@ -630,11 +630,11 @@ app.post('/api/public/inquiries', async (req, res) => {
       });
       
       await sheetsClient.authenticate();
-      const allRows = await sheetsClient.readAll();
       
-      // 一番下の行の買主番号を取得
-      if (allRows.length > 0) {
-        const lastRow = allRows[allRows.length - 1];
+      // 最後の行だけを取得（高速）
+      const lastRow = await sheetsClient.getLastRow();
+      
+      if (lastRow) {
         const lastBuyerNumber = lastRow['買主番号'];
         if (lastBuyerNumber) {
           nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
