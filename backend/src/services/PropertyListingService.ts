@@ -438,7 +438,7 @@ export class PropertyListingService {
             });
             
             try {
-              let images: string[] = [];
+              let images: any[] = [];
               let storageLocation = property.storage_location;
               
               // storage_locationが空の場合、業務リストから取得
@@ -453,16 +453,38 @@ export class PropertyListingService {
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
-                images = [property.image_url];
+                // image_urlをオブジェクト形式に変換
+                images = [{
+                  id: 'legacy',
+                  name: 'Property Image',
+                  thumbnailUrl: property.image_url,
+                  fullImageUrl: property.image_url,
+                  mimeType: 'image/jpeg',
+                  size: 0,
+                  modifiedTime: new Date().toISOString()
+                }];
               }
               // 2. storage_locationがある場合はGoogle Driveから取得
               else if (storageLocation) {
                 console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
-                images = await this.propertyImageService.getFirstImage(
+                const imageUrls = await this.propertyImageService.getFirstImage(
                   property.id,
                   storageLocation
                 );
-                console.log(`[PropertyListingService] Got ${images.length} images for ${property.property_number}`);
+                console.log(`[PropertyListingService] Got ${imageUrls.length} images for ${property.property_number}`);
+                
+                // URLをオブジェクト形式に変換
+                if (imageUrls.length > 0) {
+                  images = [{
+                    id: 'drive',
+                    name: 'Property Image',
+                    thumbnailUrl: imageUrls[0],
+                    fullImageUrl: imageUrls[0],
+                    mimeType: 'image/jpeg',
+                    size: 0,
+                    modifiedTime: new Date().toISOString()
+                  }];
+                }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
               }
