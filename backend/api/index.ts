@@ -12,7 +12,7 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
-// import publicPropertiesRoutes from '../src/routes/publicProperties';
+import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
 
@@ -59,13 +59,13 @@ app.get('/api/health', (_req, res) => {
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'publicPropertiesRoutes commented out for testing',
+    message: 'publicPropertiesRoutes is now active',
     timestamp: new Date().toISOString() 
   });
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes);
+app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
