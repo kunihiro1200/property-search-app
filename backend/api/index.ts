@@ -595,7 +595,6 @@ app.get('/api/check-env', (_req, res) => {
 app.post('/api/public/inquiries', async (req, res) => {
   try {
     console.log('[Inquiry API] Received inquiry request');
-    console.log('[Inquiry API] Request body:', JSON.stringify(req.body, null, 2));
     
     // バリデーション
     const { name, email, phone, message, propertyId } = req.body;
@@ -608,20 +607,6 @@ app.post('/api/public/inquiries', async (req, res) => {
       });
     }
     
-    // 環境変数チェック
-    console.log('[Inquiry API] Environment variables check:', {
-      GOOGLE_SHEETS_BUYER_SPREADSHEET_ID: !!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
-      GOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-    });
-    
-    if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
-      console.error('[Inquiry API] Missing GOOGLE_SHEETS_BUYER_SPREADSHEET_ID');
-      return res.status(500).json({
-        success: false,
-        message: 'サーバー設定エラー: スプレッドシートIDが設定されていません'
-      });
-    }
-    
     // 物件情報を取得（propertyIdが指定されている場合）
     let propertyNumber = null;
     if (propertyId) {
@@ -630,81 +615,106 @@ app.post('/api/public/inquiries', async (req, res) => {
       if (property) {
         propertyNumber = property.property_number;
         console.log('[Inquiry API] Property found:', propertyNumber);
-      } else {
-        console.log('[Inquiry API] Property not found:', propertyId);
       }
     }
     
-    // GoogleSheetsClientを直接使用（InquirySyncServiceを使用しない）
-    console.log('[Inquiry API] Importing GoogleSheetsClient...');
-    const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
-    console.log('[Inquiry API] GoogleSheetsClient imported successfully');
+    // Supabaseのproperty_inquiriesテーブルに保存
+    console.log('[Inquiry API] Saving to database...');
+    const { data: inquiry, error } = await supabase
+      .from('property_inquiries')
+      .insert({
+        property_id: propertyId || null,
+        name,
+        email,
+        phone,
+        message,
+        sheet_sync_status: 'pending', // スプレッドシート同期待ち
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
     
-    console.log('[Inquiry API] Creating GoogleSheetsClient instance...');
-    const sheetsClient = new GoogleSheetsClient({
-      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      serviceAccountKeyPath: './google-service-account.json', // Vercel環境では無視される
-    });
-    console.log('[Inquiry API] GoogleSheetsClient instance created');
+    if (error) {
+      console.error('[Inquiry API] Database error:', error);
+      throw error;
+    }
     
-    console.log('[Inquiry API] Authenticating...');
-    await sheetsClient.authenticate();
-    console.log('[Inquiry API] Authentication successful');
+    console.log('[Inquiry API] Saved to database:', inquiry.id);
     
-    // 買主番号を採番
-    console.log('[Inquiry API] Reading all rows...');
-    const allRows = await sheetsClient.readAll();
-    console.log(`[Inquiry API] Read ${allRows.length} rows`);
+    // バックグラウンドでスプレッドシートに同期（エラーが発生してもユーザーには影響しない）
+    (async () => {
+      try {
+        console.log('[Inquiry API] Starting background sync to sheet...');
+        
+        const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+        const sheetsClient = new GoogleSheetsClient({
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+          sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+          serviceAccountKeyPath: './google-service-account.json',
+        });
+        
+        await sheetsClient.authenticate();
+        
+        // 買主番号を採番
+        const allRows = await sheetsClient.readAll();
+        const columnEValues = allRows
+          .map(row => row['買主番号'])
+          .filter(value => value !== null && value !== undefined)
+          .map(value => String(value));
+        
+        const maxNumber = columnEValues.length > 0
+          ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
+          : 0;
+        const buyerNumber = maxNumber + 1;
+        
+        // 電話番号を正規化
+        const normalizedPhone = phone.replace(/[^0-9]/g, '');
+        
+        // スプレッドシートに追加
+        const rowData = {
+          '買主番号': buyerNumber.toString(),
+          '●氏名・会社名': name,
+          '●問合時ヒアリング': message,
+          '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '●メアド': email,
+          '●問合せ元': 'いふう独自サイト',
+          '物件番号': propertyNumber || '',
+          '【問合メール】電話対応': '未',
+        };
+        
+        await sheetsClient.appendRow(rowData);
+        
+        // 同期成功をデータベースに記録
+        await supabase
+          .from('property_inquiries')
+          .update({ sheet_sync_status: 'synced' })
+          .eq('id', inquiry.id);
+        
+        console.log('[Inquiry API] Background sync completed:', buyerNumber);
+      } catch (syncError) {
+        console.error('[Inquiry API] Background sync failed:', syncError);
+        
+        // 同期失敗をデータベースに記録
+        await supabase
+          .from('property_inquiries')
+          .update({ 
+            sheet_sync_status: 'failed',
+            sync_retry_count: 1
+          })
+          .eq('id', inquiry.id);
+      }
+    })();
     
-    const columnEValues = allRows
-      .map(row => row['買主番号'])
-      .filter(value => value !== null && value !== undefined)
-      .map(value => String(value));
-    
-    const maxNumber = columnEValues.length > 0
-      ? Math.max(...columnEValues.map(v => parseInt(v) || 0))
-      : 0;
-    const buyerNumber = maxNumber + 1;
-    console.log('[Inquiry API] Generated buyer number:', buyerNumber);
-    
-    // 電話番号を正規化（数字のみ）
-    const normalizedPhone = phone.replace(/[^0-9]/g, '');
-    
-    // スプレッドシートに追加
-    const rowData = {
-      '買主番号': buyerNumber.toString(),
-      '●氏名・会社名': name,
-      '●問合時ヒアリング': message,
-      '●電話番号\n（ハイフン不要）': normalizedPhone,
-      '●メアド': email,
-      '●問合せ元': 'いふう独自サイト',
-      '物件番号': propertyNumber || '',
-      '【問合メール】電話対応': '未',
-    };
-    
-    console.log('[Inquiry API] Appending row to sheet...');
-    await sheetsClient.appendRow(rowData);
-    console.log('[Inquiry API] Row appended successfully');
-    
-    console.log('[Inquiry API] Successfully synced to buyer sheet:', {
-      buyerNumber,
-      propertyNumber: propertyNumber || '(none)',
-      customerName: name
-    });
-    
+    // ユーザーには即座に成功を返す
     res.status(201).json({
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
     });
   } catch (error: any) {
     console.error('[Inquiry API] Error:', error);
-    console.error('[Inquiry API] Error message:', error.message);
-    console.error('[Inquiry API] Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
     });
   }
 });
