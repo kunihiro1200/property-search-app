@@ -119,6 +119,143 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
+// ⚠️ 重要: 他のルートより前に定義（より具体的なルートを優先）
+app.get('/api/cron/sync-inquiries', async (req, res) => {
+  try {
+    console.log('[Cron] Starting inquiry sync job...');
+    
+    // Vercel Cron Jobの認証チェック
+    const authHeader = req.headers.authorization;
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.error('[Cron] Unauthorized access attempt');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // pending状態の問合せを取得（最大10件）
+    const { data: pendingInquiries, error: fetchError } = await supabase
+      .from('property_inquiries')
+      .select('*')
+      .eq('sheet_sync_status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(10);
+    
+    if (fetchError) {
+      console.error('[Cron] Error fetching pending inquiries:', fetchError);
+      throw fetchError;
+    }
+    
+    if (!pendingInquiries || pendingInquiries.length === 0) {
+      console.log('[Cron] No pending inquiries to sync');
+      return res.status(200).json({ 
+        success: true, 
+        message: 'No pending inquiries',
+        synced: 0
+      });
+    }
+    
+    console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
+    
+    // Google Sheets認証
+    const { GoogleSheetsClient } = await import('./services/GoogleSheetsClient');
+    const sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    });
+    
+    await sheetsClient.authenticate();
+    console.log('[Cron] Google Sheets authenticated');
+    
+    // 最大買主番号を取得
+    const { data: latestInquiry } = await supabase
+      .from('property_inquiries')
+      .select('buyer_number')
+      .not('buyer_number', 'is', null)
+      .order('buyer_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    let nextBuyerNumber = latestInquiry?.buyer_number ? latestInquiry.buyer_number + 1 : 1;
+    
+    // 各問合せを同期
+    let syncedCount = 0;
+    let failedCount = 0;
+    
+    for (const inquiry of pendingInquiries) {
+      try {
+        console.log(`[Cron] Syncing inquiry ${inquiry.id} (${inquiry.name})...`);
+        
+        // 電話番号を正規化
+        const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
+        
+        // 現在時刻をJST（日本時間）で取得
+        const nowUtc = new Date(inquiry.created_at);
+        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
+        
+        // スプレッドシートに追加
+        const rowData = {
+          '買主番号': nextBuyerNumber.toString(),
+          '作成日時': jstDateString,
+          '●氏名・会社名': inquiry.name,
+          '●問合時ヒアリング': inquiry.message,
+          '●電話番号\n（ハイフン不要）': normalizedPhone,
+          '●メアド': inquiry.email,
+          '●問合せ元': 'いふう独自サイト',
+          '物件番号': inquiry.property_number || '',
+          '【問合メール】電話対応': '未',
+        };
+        
+        await sheetsClient.appendRow(rowData);
+        
+        // データベースを更新
+        await supabase
+          .from('property_inquiries')
+          .update({ 
+            sheet_sync_status: 'synced',
+            buyer_number: nextBuyerNumber
+          })
+          .eq('id', inquiry.id);
+        
+        console.log(`[Cron] Synced inquiry ${inquiry.id} with buyer number ${nextBuyerNumber}`);
+        syncedCount++;
+        nextBuyerNumber++;
+        
+      } catch (error) {
+        console.error(`[Cron] Failed to sync inquiry ${inquiry.id}:`, error);
+        
+        // 失敗をデータベースに記録
+        await supabase
+          .from('property_inquiries')
+          .update({ 
+            sheet_sync_status: 'failed',
+            sync_retry_count: (inquiry.sync_retry_count || 0) + 1
+          })
+          .eq('id', inquiry.id);
+        
+        failedCount++;
+      }
+    }
+    
+    console.log(`[Cron] Sync job completed: ${syncedCount} synced, ${failedCount} failed`);
+    
+    res.status(200).json({
+      success: true,
+      synced: syncedCount,
+      failed: failedCount,
+      total: pendingInquiries.length
+    });
+    
+  } catch (error: any) {
+    console.error('[Cron] Error in sync job:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Routes
 // 認証ルート（ローカルと本番の両方に対応）
 app.use('/auth', authSupabaseRoutes);

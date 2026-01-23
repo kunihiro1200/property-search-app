@@ -85,9 +85,15 @@ async function retryFailedInquirySync() {
         // 電話番号を正規化
         const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
 
+        // 現在時刻をJST（日本時間）で取得
+        const nowUtc = new Date(inquiry.created_at);
+        const jstDate = new Date(nowUtc.getTime() + 9 * 60 * 60 * 1000);
+        const jstDateString = jstDate.toISOString().replace('T', ' ').substring(0, 19);
+
         // スプレッドシートに追加
         const rowData = {
           '買主番号': buyerNumber.toString(),
+          '作成日時': jstDateString, // JST変換済み
           '●氏名・会社名': inquiry.name,
           '●問合時ヒアリング': inquiry.message,
           '●電話番号\n（ハイフン不要）': normalizedPhone,
