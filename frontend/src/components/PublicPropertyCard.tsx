@@ -99,7 +99,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
 
   const thumbnailUrl = property.images && property.images.length > 0
     ? property.images[0].thumbnailUrl
-    : '/placeholder-property.jpg';
+    : 'https://via.placeholder.com/400x300?text=No+Image';
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 

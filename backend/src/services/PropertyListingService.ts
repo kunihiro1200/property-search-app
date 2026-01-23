@@ -467,23 +467,16 @@ export class PropertyListingService {
               // 2. storage_locationがある場合はGoogle Driveから取得
               else if (storageLocation) {
                 console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
-                const imageUrls = await this.propertyImageService.getFirstImage(
-                  property.id,
-                  storageLocation
-                );
-                console.log(`[PropertyListingService] Got ${imageUrls.length} images for ${property.property_number}`);
                 
-                // URLをオブジェクト形式に変換
-                if (imageUrls.length > 0) {
-                  images = [{
-                    id: 'drive',
-                    name: 'Property Image',
-                    thumbnailUrl: imageUrls[0],
-                    fullImageUrl: imageUrls[0],
-                    mimeType: 'image/jpeg',
-                    size: 0,
-                    modifiedTime: new Date().toISOString()
-                  }];
+                // PropertyImageServiceを使用して画像オブジェクトを取得
+                const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
+                
+                if (imageResult.images.length > 0) {
+                  // 最初の画像のみを使用
+                  images = [imageResult.images[0]];
+                  console.log(`[PropertyListingService] Got image for ${property.property_number}: ${images[0].thumbnailUrl}`);
+                } else {
+                  console.log(`[PropertyListingService] No images found for ${property.property_number}`);
                 }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
