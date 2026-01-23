@@ -622,15 +622,12 @@ app.post('/api/public/inquiries', async (req, res) => {
     try {
       console.log('[Inquiry API] Syncing to Google Sheets...');
       
-      // Google Sheets認証（GOOGLE_SERVICE_ACCOUNT_JSONを使用）
+      // Google Sheets認証（環境変数GOOGLE_SERVICE_ACCOUNT_JSONを使用）
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       
-      const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-        serviceAccountEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
       });
       
       await sheetsClient.authenticate();
