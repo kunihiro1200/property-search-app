@@ -618,71 +618,49 @@ app.post('/api/public/inquiries', async (req, res) => {
       }
     }
     
-    // 買主番号を採番（スプレッドシートの一番下の行 + 1）
-    let nextBuyerNumber: number | null = null;
-    let buyerNumberError: Error | null = null;
+    // 買主番号を採番（データベースベース：確実に採番できる）
+    // スプレッドシートへの同期は非同期で行う
+    const { data: latestInquiry } = await supabase
+      .from('property_inquiries')
+      .select('buyer_number')
+      .not('buyer_number', 'is', null)
+      .order('buyer_number', { ascending: false })
+      .limit(1)
+      .single();
     
-    try {
-      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
-      const sheetsClient = new GoogleSheetsClient({
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      });
-      
-      await sheetsClient.authenticate();
-      const allRows = await sheetsClient.readAll();
-      
-      // 一番下の行の買主番号を取得
-      if (allRows.length > 0) {
-        const lastRow = allRows[allRows.length - 1];
-        const lastBuyerNumber = lastRow['買主番号'];
-        if (lastBuyerNumber) {
-          nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
-        } else {
-          nextBuyerNumber = 1;
+    let nextBuyerNumber = 1;
+    if (latestInquiry?.buyer_number) {
+      nextBuyerNumber = latestInquiry.buyer_number + 1;
+    } else {
+      // データベースに買主番号がない場合、スプレッドシートから取得を試みる
+      try {
+        const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
+        const sheetsClient = new GoogleSheetsClient({
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+          sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        });
+        
+        await sheetsClient.authenticate();
+        const allRows = await sheetsClient.readAll();
+        
+        // 一番下の行の買主番号を取得
+        if (allRows.length > 0) {
+          const lastRow = allRows[allRows.length - 1];
+          const lastBuyerNumber = lastRow['買主番号'];
+          if (lastBuyerNumber) {
+            nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
+          }
         }
-      } else {
+        
+        console.log('[Inquiry API] Next buyer number from spreadsheet:', nextBuyerNumber);
+      } catch (error: any) {
+        console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error);
+        // フォールバック: 1から開始
         nextBuyerNumber = 1;
       }
-      
-      console.log('[Inquiry API] Next buyer number (last row + 1):', nextBuyerNumber);
-    } catch (error: any) {
-      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error);
-      buyerNumberError = error;
-      // エラーが発生した場合は、pending状態で保存してCron Jobに任せる
-      console.log('[Inquiry API] Will save as pending and let Cron Job handle it');
     }
     
-    // エラーが発生した場合は、pending状態で保存
-    if (buyerNumberError) {
-      const { data: savedInquiry, error: saveError } = await supabase
-        .from('property_inquiries')
-        .insert({
-          property_id: propertyId || null,
-          property_number: propertyNumber || null,
-          name,
-          email,
-          phone,
-          message,
-          sheet_sync_status: 'pending', // Cron Jobが同期する
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
-      if (saveError) {
-        console.error('[Inquiry API] Database save error:', saveError);
-        throw saveError;
-      }
-      
-      console.log('[Inquiry API] Saved to database with status: pending (will be synced by Cron Job)');
-      
-      // ユーザーに即座に成功を返す
-      return res.status(201).json({
-        success: true,
-        message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
-      });
-    }
+    console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
     
     // データベースに保存（synced状態で保存）
     const { data: savedInquiry, error: saveError } = await supabase
