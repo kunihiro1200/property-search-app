@@ -219,7 +219,8 @@ export class GoogleSheetsClient {
     this.ensureAuthenticated();
     
     return await sheetsRateLimiter.executeRequest(async () => {
-      const range = `${this.config.sheetName}!A2:ZZ`;
+      // 範囲を拡大（ZZZまで = 18,278列）
+      const range = `${this.config.sheetName}!A2:ZZZ`;
       const response = await this.sheets!.spreadsheets.values.get({
         spreadsheetId: this.config.spreadsheetId,
         range,
@@ -238,28 +239,14 @@ export class GoogleSheetsClient {
 
   /**
    * 最後の行を取得（高速）
+   * 空行をスキップして、実際にデータがある最後の行を返す
    */
   async getLastRow(): Promise<SheetRow | null> {
     this.ensureAuthenticated();
     
     return await sheetsRateLimiter.executeRequest(async () => {
-      // まずシート全体のメタデータを取得して行数を確認
-      const sheetMetadata = await this.sheets!.spreadsheets.get({
-        spreadsheetId: this.config.spreadsheetId,
-      });
-      
-      const sheet = sheetMetadata.data.sheets?.find(
-        s => s.properties?.title === this.config.sheetName
-      );
-      
-      if (!sheet || !sheet.properties?.gridProperties?.rowCount) {
-        return null;
-      }
-      
-      const lastRowIndex = sheet.properties.gridProperties.rowCount;
-      
-      // 最後の行だけを取得
-      const range = `${this.config.sheetName}!A${lastRowIndex}:ZZ${lastRowIndex}`;
+      // 範囲を拡大（ZZZまで = 18,278列）
+      const range = `${this.config.sheetName}!A2:ZZZ`;
       const response = await this.sheets!.spreadsheets.values.get({
         spreadsheetId: this.config.spreadsheetId,
         range,
@@ -270,7 +257,17 @@ export class GoogleSheetsClient {
         return null;
       }
 
-      return await this.rowToObject(rows[0]);
+      // 最後の非空行を探す（後ろから検索）
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        // 行に何かデータがあるかチェック
+        const hasData = row.some((cell: any) => cell !== undefined && cell !== null && cell !== '');
+        if (hasData) {
+          return await this.rowToObject(row);
+        }
+      }
+
+      return null;
     });
   }
 
