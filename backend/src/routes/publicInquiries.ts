@@ -9,16 +9,17 @@ const router = Router();
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY!
 );
 
 // PostgreSQLプールを初期化（property_inquiriesテーブル用 - PostgRESTをバイパス）
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// 現在は使用していないのでコメントアウト
+// const pgPool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl: {
+//     rejectUnauthorized: false
+//   }
+// });
 
 // GoogleSheetsClientを直接初期化
 const sheetsClient = new GoogleSheetsClient({
