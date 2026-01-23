@@ -12,6 +12,7 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
+import publicInquiriesRoutes from '../src/routes/publicInquiries';
 // import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
@@ -66,6 +67,9 @@ app.get('/api/test/routes', (_req, res) => {
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
 // app.use('/api/public', publicPropertiesRoutes);
+
+// 問合せAPIルート
+app.use('/api/public/inquiries', publicInquiriesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
