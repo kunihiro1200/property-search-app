@@ -244,50 +244,64 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     console.log(`[Complete API] Found property: ${property.property_number}`);
     
-    // PropertyDetailsServiceを使用（静的インポート）
-    const propertyDetailsService = new PropertyDetailsService();
-
-    let dbDetails;
-    try {
-      dbDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-      console.log(`[Complete API] PropertyDetailsService returned:`, {
-        has_favorite_comment: !!dbDetails.favorite_comment,
-        has_recommended_comments: !!dbDetails.recommended_comments,
-        has_athome_data: !!dbDetails.athome_data,
-        has_property_about: !!dbDetails.property_about
-      });
-    } catch (error: any) {
-      console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
-      dbDetails = {
-        property_number: property.property_number,
-        favorite_comment: null,
-        recommended_comments: null,
-        athome_data: null,
-        property_about: null
-      };
-    }
-
-    // 決済日を取得（成約済みの場合のみ）
-    let settlementDate = null;
-    const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
-    if (isSold) {
-      try {
-        const propertyService = new PropertyService();
-        settlementDate = await propertyService.getSettlementDate(property.property_number);
-      } catch (err) {
-        console.error('[Complete API] Settlement date error:', err);
-      }
-    }
-
-    // パノラマURLを取得
-    let panoramaUrl = null;
-    try {
-      const panoramaUrlService = new PanoramaUrlService();
-      panoramaUrl = await panoramaUrlService.getPanoramaUrl(property.property_number);
-      console.log(`[Complete API] Panorama URL: ${panoramaUrl || '(not found)'}`);
-    } catch (err) {
-      console.error('[Complete API] Panorama URL error:', err);
-    }
+    // 全てのデータ取得を並列実行（高速化）
+    const startTime = Date.now();
+    
+    const [dbDetails, settlementDate, panoramaUrl] = await Promise.all([
+      // PropertyDetailsServiceを使用（静的インポート）
+      (async () => {
+        try {
+          const propertyDetailsService = new PropertyDetailsService();
+          const details = await propertyDetailsService.getPropertyDetails(property.property_number);
+          console.log(`[Complete API] PropertyDetailsService returned:`, {
+            has_favorite_comment: !!details.favorite_comment,
+            has_recommended_comments: !!details.recommended_comments,
+            has_athome_data: !!details.athome_data,
+            has_property_about: !!details.property_about
+          });
+          return details;
+        } catch (error: any) {
+          console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
+          return {
+            property_number: property.property_number,
+            favorite_comment: null,
+            recommended_comments: null,
+            athome_data: null,
+            property_about: null
+          };
+        }
+      })(),
+      
+      // 決済日を取得（成約済みの場合のみ）
+      (async () => {
+        const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';
+        if (!isSold) return null;
+        
+        try {
+          const propertyService = new PropertyService();
+          return await propertyService.getSettlementDate(property.property_number);
+        } catch (err) {
+          console.error('[Complete API] Settlement date error:', err);
+          return null;
+        }
+      })(),
+      
+      // パノラマURLを取得
+      (async () => {
+        try {
+          const panoramaUrlService = new PanoramaUrlService();
+          const url = await panoramaUrlService.getPanoramaUrl(property.property_number);
+          console.log(`[Complete API] Panorama URL: ${url || '(not found)'}`);
+          return url;
+        } catch (err) {
+          console.error('[Complete API] Panorama URL error:', err);
+          return null;
+        }
+      })(),
+    ]);
+    
+    const endTime = Date.now();
+    console.log(`[Complete API] All data fetched in ${endTime - startTime}ms`);
 
     // レスポンスを返す
     res.json({
