@@ -23,6 +23,7 @@ import publicApi from '../services/publicApi';
 import PublicInquiryForm from '../components/PublicInquiryForm';
 import PropertyImageGallery from '../components/PropertyImageGallery';
 import PublicPropertyHeader from '../components/PublicPropertyHeader';
+import { RefreshButtons } from '../components/RefreshButtons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
 import { getBadgeType } from '../utils/propertyStatusUtils';
 import { SEOHead } from '../components/SEOHead';
@@ -273,6 +274,19 @@ const PublicPropertyDetailPage: React.FC = () => {
       />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">
+          {/* 更新ボタン（管理者モードのみ表示） */}
+          {isAuthenticated && (
+            <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <RefreshButtons
+                propertyId={property?.property_number || ''}
+                onRefreshComplete={(data) => {
+                  console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
+                  setCompleteData(data);
+                }}
+                canRefresh={isAuthenticated}
+              />
+            </Box>
+          )}
           {/* 印刷ボタン（右上に固定、スマホでは非表示） */}
           <Box
             className="no-print"

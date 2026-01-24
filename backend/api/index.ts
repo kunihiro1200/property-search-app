@@ -534,6 +534,195 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
   }
 });
 
+// 画像・基本情報を更新（軽量版）
+app.post('/api/public/properties/:identifier/refresh-essential', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    
+    console.log(`[Refresh Essential] Request for property: ${identifier}`);
+    
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+    
+    // 物件情報を取得（データベース）
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+    
+    if (!property) {
+      console.log(`[Refresh Essential] Property not found: ${identifier}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found',
+        message: '物件が見つかりません'
+      });
+    }
+    
+    console.log(`[Refresh Essential] Property found: ${property.property_number}`);
+    
+    // 画像を取得（Google Drive）- キャッシュをバイパス
+    const propertyImageService = new PropertyImageService(
+      60, // cacheTTLMinutes
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+    
+    // storage_locationを取得
+    let storageUrl = property.storage_location;
+    
+    if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
+      storageUrl = property.athome_data[0];
+    }
+    
+    let images = [];
+    if (storageUrl) {
+      // キャッシュをクリアしてから画像を取得
+      const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+      if (folderId) {
+        propertyImageService.clearCache(folderId);
+      }
+      
+      const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
+      
+      // 非表示画像をフィルタリング
+      const hiddenImages = await propertyListingService.getHiddenImages(property.id);
+      images = result.images.filter(img => !hiddenImages.includes(img.id));
+      
+      console.log(`[Refresh Essential] Images fetched: ${images.length} images`);
+    } else {
+      console.log(`[Refresh Essential] No storage URL found`);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        property,
+        images
+      },
+      message: '画像と基本情報を更新しました'
+    });
+  } catch (error: any) {
+    console.error('[Refresh Essential] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: '更新に失敗しました'
+    });
+  }
+});
+
+// 全て更新（完全版）
+app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    
+    console.log(`[Refresh All] Request for property: ${identifier}`);
+    
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+    
+    // 物件情報を取得
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+    
+    if (!property) {
+      console.log(`[Refresh All] Property not found: ${identifier}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found',
+        message: '物件が見つかりません'
+      });
+    }
+    
+    console.log(`[Refresh All] Property found: ${property.property_number}`);
+    
+    // 全てのデータを並列取得（キャッシュをバイパス）
+    const startTime = Date.now();
+    
+    // PropertyImageServiceのインスタンスを作成
+    const propertyImageService = new PropertyImageService(
+      60, // cacheTTLMinutes
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+    
+    // storage_locationを取得
+    let storageUrl = property.storage_location;
+    
+    if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
+      storageUrl = property.athome_data[0];
+    }
+    
+    // 画像取得の準備（キャッシュクリア）
+    if (storageUrl) {
+      const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+      if (folderId) {
+        propertyImageService.clearCache(folderId);
+      }
+    }
+    
+    // PropertyDetailsServiceを使用して全データを取得
+    const propertyDetailsService = new PropertyDetailsService();
+    
+    const [images, dbDetails] = await Promise.all([
+      // 画像を取得
+      (async () => {
+        if (!storageUrl) return [];
+        const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
+        const hiddenImages = await propertyListingService.getHiddenImages(property.id);
+        return result.images.filter(img => !hiddenImages.includes(img.id));
+      })(),
+      
+      // PropertyDetailsServiceから全データを取得（キャッシュをクリア）
+      (async () => {
+        // PropertyDetailsServiceのキャッシュをクリア（内部的に実装されている場合）
+        return await propertyDetailsService.getPropertyDetails(property.property_number);
+      })(),
+    ]);
+    
+    const duration = Date.now() - startTime;
+    console.log(`[Refresh All] All data fetched in ${duration}ms`);
+    
+    // パノラマURLを取得
+    let panoramaUrl = null;
+    if (dbDetails.athome_data && Array.isArray(dbDetails.athome_data) && dbDetails.athome_data.length > 1) {
+      panoramaUrl = dbDetails.athome_data[1] || null;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        property,
+        images,
+        recommendedComments: dbDetails.recommended_comments,
+        favoriteComment: dbDetails.favorite_comment,
+        athomeData: dbDetails.athome_data,
+        panoramaUrl,
+        propertyAbout: dbDetails.property_about
+      },
+      message: '全てのデータを更新しました'
+    });
+  } catch (error: any) {
+    console.error('[Refresh All] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: '更新に失敗しました'
+    });
+  }
+});
+
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
