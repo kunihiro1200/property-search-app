@@ -38,7 +38,19 @@ export class GoogleSheetsClient {
   private headerCache: string[] | null = null;
 
   constructor(config: GoogleSheetsConfig) {
+    console.log('[GoogleSheetsClient] Constructor called with config:', {
+      spreadsheetId: config.spreadsheetId,
+      sheetName: config.sheetName,
+      hasServiceAccountKeyPath: !!config.serviceAccountKeyPath,
+    });
+    
+    if (!config.spreadsheetId) {
+      console.error('[GoogleSheetsClient] ❌ spreadsheetId is missing in config!');
+      throw new Error('spreadsheetId is required in GoogleSheetsConfig');
+    }
+    
     this.config = config;
+    console.log('[GoogleSheetsClient] Config saved successfully');
   }
 
   /**
