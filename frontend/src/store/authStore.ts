@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Employee } from '../types';
 import api from '../services/api';
 import { supabase } from '../config/supabase';
@@ -13,7 +14,9 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
   employee: null,
   isAuthenticated: false,
   isLoading: false, // 初期状態はfalseに変更
@@ -196,4 +199,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ employee: null, isAuthenticated: false, isLoading: false });
     }
   },
-}));
+})),
+    {
+      name: 'auth-storage', // localStorageのキー名
+      partialize: (state) => ({
+        employee: state.employee,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);
