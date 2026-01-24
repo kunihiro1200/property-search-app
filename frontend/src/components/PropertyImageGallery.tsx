@@ -95,13 +95,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   
   const { data, isLoading, isError, refetch } = usePropertyImages(propertyId, includeHidden);
   
-  // refetch関数を親コンポーネントに渡す
-  useEffect(() => {
-    if (onRefetchReady && refetch) {
-      onRefetchReady(refetch);
-    }
-  }, [onRefetchReady, refetch]);
-  
   // デバッグログ
   console.log('PropertyImageGallery - data:', data);
   console.log('PropertyImageGallery - isLoading:', isLoading);
