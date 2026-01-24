@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Box, Typography, Chip } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { PROPERTY_FEATURE_ICONS } from '../utils/propertyIcons';
@@ -21,6 +21,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   navigationState
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // バッジタイプとクリック可能性を判定
   const badgeType = getBadgeType(property.atbb_status);
@@ -32,9 +33,20 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       return;
     }
     
+    // useSearchParamsから確実にcanHideパラメータを取得
+    const canHide = searchParams.get('canHide');
+    
+    console.log('[PublicPropertyCard] handleClick - canHide:', canHide);
+    console.log('[PublicPropertyCard] handleClick - property:', property.property_number);
+    
     // navigationStateが渡されていない場合はデフォルト値を使用
     if (!navigationState) {
-      navigate(`/public/properties/${property.property_number}`);
+      // canHideパラメータを引き継ぐ
+      const targetUrl = canHide === 'true' 
+        ? `/public/properties/${property.property_number}?canHide=true`
+        : `/public/properties/${property.property_number}`;
+      console.log('[PublicPropertyCard] Navigating to (no state):', targetUrl);
+      navigate(targetUrl);
       return;
     }
     
@@ -48,8 +60,15 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       filters: navigationState.filters
     };
     
+    // canHideパラメータを引き継ぐ
+    const targetUrl = canHide === 'true' 
+      ? `/public/properties/${property.property_number}?canHide=true`
+      : `/public/properties/${property.property_number}`;
+    
+    console.log('[PublicPropertyCard] Navigating to (with state):', targetUrl);
+    
     // 状態を保持してナビゲート
-    navigate(`/public/properties/${property.property_number}`, {
+    navigate(targetUrl, {
       state: fullNavigationState
     });
   };
