@@ -70,6 +70,9 @@ const PublicPropertyDetailPage: React.FC = () => {
   
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // 画像ギャラリーの再レンダリング用キー
+  const [imageGalleryKey, setImageGalleryKey] = useState(0);
 
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
@@ -289,6 +292,8 @@ const PublicPropertyDetailPage: React.FC = () => {
                 onRefreshComplete={(data) => {
                   console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
                   setCompleteData(data);
+                  // 画像ギャラリーを強制的に再レンダリング
+                  setImageGalleryKey(prev => prev + 1);
                 }}
                 canRefresh={isAdminMode}
               />
@@ -359,6 +364,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 
                 {property.property_number && (
                   <PropertyImageGallery
+                    key={imageGalleryKey}
                     propertyId={property.property_number}
                     canDelete={false}
                     canHide={isAdminMode}
