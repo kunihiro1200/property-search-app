@@ -482,11 +482,8 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ Vercel本番環境では必ず本番URLを使用
-      const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-      const baseUrl = isProduction 
-        ? 'https://property-site-frontend-kappa.vercel.app'
-        : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
+      // ✅ 常に本番URLを使用
+      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);
