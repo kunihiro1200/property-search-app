@@ -285,16 +285,32 @@ export class GoogleSheetsClient {
   async getLastRow(): Promise<SheetRow | null> {
     this.ensureAuthenticated();
     
+    console.log('[GoogleSheetsClient] getLastRow() called');
+    console.log('[GoogleSheetsClient] Config:', {
+      spreadsheetId: this.config.spreadsheetId,
+      sheetName: this.config.sheetName,
+    });
+    
     return await sheetsRateLimiter.executeRequest(async () => {
       // 範囲を拡大（ZZZまで = 18,278列）
       const range = `${this.config.sheetName}!A2:ZZZ`;
+      
+      console.log('[GoogleSheetsClient] Calling sheets.spreadsheets.values.get()...');
+      console.log('[GoogleSheetsClient] Parameters:', {
+        spreadsheetId: this.config.spreadsheetId,
+        range,
+      });
+      
       const response = await this.sheets!.spreadsheets.values.get({
         spreadsheetId: this.config.spreadsheetId,
         range,
       });
 
+      console.log('[GoogleSheetsClient] Response received, rows count:', response.data.values?.length || 0);
+
       const rows = response.data.values || [];
       if (rows.length === 0) {
+        console.log('[GoogleSheetsClient] No rows found');
         return null;
       }
 
@@ -304,10 +320,12 @@ export class GoogleSheetsClient {
         // 行に何かデータがあるかチェック
         const hasData = row.some((cell: any) => cell !== undefined && cell !== null && cell !== '');
         if (hasData) {
+          console.log('[GoogleSheetsClient] Found last row at index:', i);
           return await this.rowToObject(row);
         }
       }
 
+      console.log('[GoogleSheetsClient] No non-empty rows found');
       return null;
     });
   }
