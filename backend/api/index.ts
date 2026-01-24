@@ -1,5 +1,4 @@
 // 公開物件サイト専用のエントリーポイント
-// Last updated: 2026-01-24 - Force rebuild #2 to clear @vercel/node cache
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -13,7 +12,6 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
-import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
@@ -632,18 +630,9 @@ app.post('/api/public/inquiries', async (req, res) => {
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
-      // 環境変数が設定されているか確認
-      if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
-        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
-      }
-      
+      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      });
-      
-      console.log('[Inquiry API] GoogleSheetsClient created with config:', {
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
@@ -699,19 +688,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     // スプレッドシートに同期（同期的に実行）
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
-      
-      // 環境変数が設定されているか確認
-      if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
-        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
-      }
-      
+      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-      });
-      
-      console.log('[Inquiry API] GoogleSheetsClient created for sync with config:', {
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
@@ -823,6 +802,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
     
     // Google Sheets認証（環境変数から自動的に読み込まれる）
+    const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
     const sheetsClient = new GoogleSheetsClient({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
