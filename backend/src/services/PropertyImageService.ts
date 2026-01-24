@@ -338,13 +338,10 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ Vercel本番環境では必ず本番URLを使用（環境変数が設定されていない場合の対策）
-    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-    const baseUrl = isProduction 
-      ? 'https://property-site-frontend-kappa.vercel.app'
-      : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
+    // ✅ 常に本番URLを使用（ローカル開発時のみlocalhost）
+    const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
     
-    console.log(`[PropertyImageService] Environment: ${process.env.NODE_ENV}, VERCEL: ${process.env.VERCEL}, Using baseUrl: ${baseUrl}`);
+    console.log(`[PropertyImageService] Using baseUrl: ${baseUrl}`);
     
     return driveFiles.map(file => ({
       id: file.id,
