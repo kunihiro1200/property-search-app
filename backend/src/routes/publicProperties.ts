@@ -1,5 +1,6 @@
 // 公開物件サイト用のAPIルート
 import { Router, Request, Response } from 'express';
+import { createClient } from '@supabase/supabase-js';
 import { PropertyListingService } from '../services/PropertyListingService';
 import { PropertyImageService } from '../services/PropertyImageService';
 import { WorkTaskService } from '../services/WorkTaskService';
@@ -14,6 +15,12 @@ import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
 
 const router = Router();
+
+// Supabase クライアントの初期化
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 const propertyListingService = new PropertyListingService();
 
 // PropertyImageServiceの設定を環境変数から読み込む
@@ -1430,6 +1437,78 @@ router.post('/properties/:identifier/refresh-all', async (req: Request, res: Res
     });
   } catch (error: any) {
     console.error('[Refresh All] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: '更新に失敗しました'
+    });
+  }
+});
+
+// 格納先URL更新（認証不要 - 公開サイトのエンドポイント）
+router.post('/properties/:identifier/update-storage-url', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { identifier } = req.params;
+    const { storageUrl } = req.body;
+    
+    console.log(`[Update Storage URL] Request for property: ${identifier}`);
+    console.log(`[Update Storage URL] New storage URL: ${storageUrl}`);
+    
+    if (!storageUrl || typeof storageUrl !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid storage URL',
+        message: '有効なGoogle DriveフォルダURLを入力してください'
+      });
+      return;
+    }
+    
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+    
+    // 物件情報を取得
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+    
+    if (!property) {
+      console.log(`[Update Storage URL] Property not found: ${identifier}`);
+      res.status(404).json({
+        success: false,
+        error: 'Property not found',
+        message: '物件が見つかりません'
+      });
+      return;
+    }
+    
+    // storage_locationを更新（Supabaseクライアントを直接使用）
+    const { error: updateError } = await supabase
+      .from('property_listings')
+      .update({ storage_location: storageUrl })
+      .eq('id', property.id);
+    
+    if (updateError) {
+      console.error('[Update Storage URL] Database error:', updateError);
+      res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: 'データベースの更新に失敗しました'
+      });
+      return;
+    }
+    
+    console.log(`[Update Storage URL] Successfully updated storage_location for ${property.property_number}`);
+    
+    res.json({
+      success: true,
+      message: '格納先URLを更新しました'
+    });
+  } catch (error: any) {
+    console.error('[Update Storage URL] Error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
