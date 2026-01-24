@@ -158,8 +158,8 @@ export class PropertyImageService {
   }
 
   /**
-   * "athome公開"または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
-   * 検索順序: athome公開 → atbb公開 → 親フォルダ
+   * "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
+   * 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
    * 任意の深さまで再帰的に検索（デフォルト最大5階層）
    * 存在しない場合は元のフォルダIDを返す
    */
@@ -200,7 +200,16 @@ export class PropertyImageService {
         return athomeFolderId;
       }
       
-      // 2. 直下の"atbb公開"フォルダを検索（後方互換性）
+      // 2. 直下の"athome作成"フォルダを検索（AA886など）
+      const athomeSakuseiFolderId = await this.driveService.findFolderByName(searchFolderId, 'athome作成');
+      if (athomeSakuseiFolderId) {
+        const elapsedMs = Date.now() - startTime;
+        console.log(`✅ Found "athome作成" subfolder: ${athomeSakuseiFolderId} in parent: ${searchFolderId} (${elapsedMs}ms)`);
+        this.cacheFolderId(cacheKey, athomeSakuseiFolderId);
+        return athomeSakuseiFolderId;
+      }
+      
+      // 3. 直下の"atbb公開"フォルダを検索（後方互換性）
       const atbbFolderId = await this.driveService.findFolderByName(searchFolderId, 'atbb公開');
       if (atbbFolderId) {
         const elapsedMs = Date.now() - startTime;
@@ -266,7 +275,7 @@ export class PropertyImageService {
   }
 
   /**
-   * サブフォルダ内の"athome公開"または"atbb公開"フォルダを再帰的に検索
+   * サブフォルダ内の"athome公開"、"athome作成"、または"atbb公開"フォルダを再帰的に検索
    * 任意の深さまで検索可能（デフォルト最大5階層）
    * 例: 親フォルダ → 中間フォルダ1 → 中間フォルダ2 → athome公開
    * 並列処理で高速化、タイムアウト付き
@@ -306,6 +315,13 @@ export class PropertyImageService {
         if (athomeFolderId) {
           console.log(`  ${'  '.repeat(currentDepth)}✅ Found "athome公開" in: ${subfolder.name} at depth ${currentDepth + 1}`);
           return { type: 'athome', folderId: athomeFolderId, depth: currentDepth + 1 };
+        }
+        
+        // athome作成を次に検索（直下）
+        const athomeSakuseiFolderId = await this.driveService.findFolderByName(subfolder.id, 'athome作成');
+        if (athomeSakuseiFolderId) {
+          console.log(`  ${'  '.repeat(currentDepth)}✅ Found "athome作成" in: ${subfolder.name} at depth ${currentDepth + 1}`);
+          return { type: 'athome-sakusei', folderId: athomeSakuseiFolderId, depth: currentDepth + 1 };
         }
         
         // atbb公開を次に検索（直下）
@@ -356,8 +372,8 @@ export class PropertyImageService {
 
   /**
    * 格納先URLから画像を取得
-   * "athome公開"または"atbb公開"サブフォルダが存在する場合は優先的にそこから取得
-   * 検索順序: athome公開 → atbb公開 → 親フォルダ
+   * "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在する場合は優先的にそこから取得
+   * 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
    */
   async getImagesFromStorageUrl(storageUrl: string | null | undefined, propertyNumber?: string): Promise<PropertyImagesResult> {
     // 格納先URLが設定されていない場合
@@ -381,8 +397,8 @@ export class PropertyImageService {
       };
     }
 
-    // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
-    // 検索順序: athome公開 → atbb公開 → 親フォルダ
+    // "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
+    // 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
     const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId, propertyNumber);
 
     // キャッシュを確認
@@ -493,8 +509,8 @@ export class PropertyImageService {
   /**
    * 一覧表示用に最初の1枚の画像URLのみを取得
    * パフォーマンス最適化のため、サムネイル用に使用
-   * "athome公開"または"atbb公開"サブフォルダが存在する場合は優先的にそこから取得
-   * 検索順序: athome公開 → atbb公開 → 親フォルダ
+   * "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在する場合は優先的にそこから取得
+   * 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
    * @param propertyId 物件ID（ログ用）
    * @param storageUrl 物件の格納先URL
    * @returns 画像URLの配列（最大1件）
@@ -513,8 +529,8 @@ export class PropertyImageService {
       return [];
     }
 
-    // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
-    // 検索順序: athome公開 → atbb公開 → 親フォルダ
+    // "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
+    // 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
     const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
 
     // キャッシュキーをfolderIdベースに変更（同じフォルダを複数の物件で共有する可能性があるため）
