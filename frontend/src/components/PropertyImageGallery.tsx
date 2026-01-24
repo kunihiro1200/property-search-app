@@ -133,6 +133,11 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   
   // 格納先URLを更新
   const handleUpdateStorageUrl = async () => {
+    console.log('[handleUpdateStorageUrl] Starting...');
+    console.log('[handleUpdateStorageUrl] propertyId:', propertyId);
+    console.log('[handleUpdateStorageUrl] storageUrlInput:', storageUrlInput);
+    console.log('[handleUpdateStorageUrl] canHide:', canHide);
+    
     if (!storageUrlInput.trim()) {
       setSnackbar({
         open: true,
@@ -146,9 +151,17 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     try {
       // 管理者モード（canHide=true）の場合は認証付きAPIを使用
       const apiClient = canHide ? api : publicApi;
-      const response = await apiClient.post(`/api/public/properties/${propertyId}/update-storage-url`, {
+      console.log('[handleUpdateStorageUrl] Using API client:', canHide ? 'api (authenticated)' : 'publicApi');
+      
+      const url = `/api/public/properties/${propertyId}/update-storage-url`;
+      console.log('[handleUpdateStorageUrl] Request URL:', url);
+      console.log('[handleUpdateStorageUrl] Request body:', { storageUrl: storageUrlInput.trim() });
+      
+      const response = await apiClient.post(url, {
         storageUrl: storageUrlInput.trim()
       });
+      
+      console.log('[handleUpdateStorageUrl] Response:', response.data);
       
       if (response.data.success) {
         // 成功後、画像を再取得
@@ -164,7 +177,10 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
         setStorageUrlInput('');
       }
     } catch (error: any) {
-      console.error('Failed to update storage URL:', error);
+      console.error('[handleUpdateStorageUrl] Error:', error);
+      console.error('[handleUpdateStorageUrl] Error response:', error.response);
+      console.error('[handleUpdateStorageUrl] Error message:', error.message);
+      
       setSnackbar({
         open: true,
         message: error.response?.data?.message || '格納先URLの更新に失敗しました',
