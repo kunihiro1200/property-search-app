@@ -29,6 +29,7 @@ import { SEOHead } from '../components/SEOHead';
 import { StructuredData } from '../components/StructuredData';
 import { generatePropertyStructuredData } from '../utils/structuredData';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { useAuthStore } from '../store/authStore';
 import '../styles/print.css';
 
 
@@ -38,6 +39,9 @@ const PublicPropertyDetailPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ判定（600px未満）
+  
+  // 認証状態を取得（管理者モード判定用）
+  const { isAuthenticated } = useAuthStore();
   
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -336,7 +340,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   <PropertyImageGallery
                     propertyId={property.property_number}
                     canDelete={false}
-                    canHide={false}
+                    canHide={isAuthenticated}
                     showHiddenImages={false}
                     isPublicSite={true}
                   />
