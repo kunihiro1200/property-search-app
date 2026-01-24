@@ -98,9 +98,10 @@ export class GoogleSheetsClient {
     
     const keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
     
-    // private_keyの改行を復元（Environment Contract準拠）
+    // ⚠️ 重要：private_keyの\\nを実際の改行に変換
     if (keyFile.private_key) {
       keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+      console.log('[GoogleSheetsClient] ✅ Converted \\\\n to actual newlines in private_key');
     }
 
     this.auth = new google.auth.JWT({
