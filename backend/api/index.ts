@@ -1,4 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
+// Force cache clear: 2026-01-24 12:00
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
