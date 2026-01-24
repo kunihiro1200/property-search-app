@@ -350,6 +350,12 @@ const PublicPropertiesPage: React.FC = () => {
       newParams.delete('view');
     }
     
+    // canHideパラメータを保持（重要：検索時も保持）
+    const currentCanHide = searchParams.get('canHide');
+    if (currentCanHide === 'true') {
+      newParams.set('canHide', 'true');
+    }
+    
     setSearchParams(newParams, { replace: true });
   }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
