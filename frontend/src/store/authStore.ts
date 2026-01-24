@@ -199,7 +199,7 @@ export const useAuthStore = create<AuthState>()(
       set({ employee: null, isAuthenticated: false, isLoading: false });
     }
   },
-})),
+}),
     {
       name: 'auth-storage', // localStorageのキー名
       partialize: (state) => ({
