@@ -2,7 +2,8 @@
  * PropertyImageService
  * 物件の格納先URL（storage_url）からGoogleドライブの画像を取得するサービス
  * 画像の削除機能も提供
- * Last updated: 2026-01-24 - Force rebuild to clear Vercel cache
+ * Last updated: 2026-01-24 - Force rebuild to clear Vercel cache v2
+ * PRODUCTION URL ONLY: https://property-site-frontend-kappa.vercel.app
  */
 
 import { GoogleDriveService, DriveFile } from './GoogleDriveService';
