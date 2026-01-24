@@ -566,6 +566,19 @@ export class PropertyListingSyncService {
 
       console.log(`📊 Detected ${updates.length} properties with changes`);
 
+      // 1.5. 業務リストのキャッシュを事前にリフレッシュ（Google Sheets APIクォータ対策）
+      console.log('📋 Pre-loading 業務リスト cache to avoid API quota issues...');
+      try {
+        const { GyomuListService } = await import('./GyomuListService');
+        const gyomuListService = new GyomuListService();
+        // ダミーの物件番号で呼び出してキャッシュをリフレッシュ
+        await gyomuListService.getByPropertyNumber('DUMMY');
+        console.log('✅ 業務リスト cache pre-loaded');
+      } catch (error: any) {
+        console.warn('⚠️ Failed to pre-load 業務リスト cache:', error.message);
+        // エラーでも続行（業務リスト取得は必須ではない）
+      }
+
       // 2. Process in batches
       const BATCH_SIZE = 10;
       const results: UpdateResult[] = [];
@@ -594,6 +607,7 @@ export class PropertyListingSyncService {
               }
 
               // 業務リストから格納先URLを取得（storage_locationが空の場合）
+              // キャッシュが事前にロードされているため、API呼び出しは発生しない
               if (!changedFieldsOnly.storage_location || changedFieldsOnly.storage_location === null) {
                 const storageUrlFromGyomu = await this.getStorageUrlFromGyomuList(update.property_number);
                 if (storageUrlFromGyomu) {
