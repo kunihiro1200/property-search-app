@@ -413,6 +413,127 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
   }
 });
 
+// 画像キャッシュクリアエンドポイント（特定の物件または全体）
+app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    
+    console.log(`🗑️ Clearing image cache for: ${identifier}`);
+
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+
+    // 物件情報を取得
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+
+    if (!property) {
+      console.error(`❌ Property not found: ${identifier}`);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Property not found' 
+      });
+    }
+
+    console.log(`✅ Found property: ${property.property_number} (${property.id})`);
+
+    // storage_locationを取得
+    let storageUrl = property.storage_location;
+    
+    if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
+      storageUrl = property.athome_data[0];
+    }
+
+    if (!storageUrl) {
+      console.error(`❌ No storage URL found for property: ${identifier}`);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Storage URL not found',
+        message: '画像の格納先URLが設定されていません'
+      });
+    }
+
+    // PropertyImageServiceを使用してキャッシュをクリア
+    const propertyImageService = new PropertyImageService(
+      60, // cacheTTLMinutes
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+
+    // フォルダIDを抽出
+    const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+    
+    if (folderId) {
+      // 特定のフォルダのキャッシュをクリア
+      propertyImageService.clearCache(folderId);
+      console.log(`✅ Image cache cleared for folder: ${folderId}`);
+      
+      res.json({
+        success: true,
+        message: `物件 ${property.property_number} の画像キャッシュをクリアしました`,
+        propertyNumber: property.property_number,
+        folderId: folderId
+      });
+    } else {
+      console.error(`❌ Could not extract folder ID from storage URL: ${storageUrl}`);
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid storage URL',
+        message: '格納先URLからフォルダIDを抽出できませんでした'
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Error clearing image cache:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message || 'Failed to clear image cache'
+    });
+  }
+});
+
+// 全物件の画像キャッシュをクリア
+app.post('/api/public/clear-all-image-cache', async (req, res) => {
+  try {
+    console.log(`🗑️ Clearing all image cache`);
+
+    // PropertyImageServiceを使用して全キャッシュをクリア
+    const propertyImageService = new PropertyImageService(
+      60, // cacheTTLMinutes
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+
+    // 全キャッシュをクリア
+    propertyImageService.clearCache();
+    console.log(`✅ All image cache cleared`);
+    
+    res.json({
+      success: true,
+      message: '全ての画像キャッシュをクリアしました'
+    });
+  } catch (error: any) {
+    console.error('❌ Error clearing all image cache:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message || 'Failed to clear all image cache'
+    });
+  }
+});
+
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {

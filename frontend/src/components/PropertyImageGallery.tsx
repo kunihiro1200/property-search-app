@@ -23,6 +23,7 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { usePropertyImages } from '../hooks/usePublicProperties';
 import ImageDeleteButton from './ImageDeleteButton';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -81,6 +82,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   // 非表示画像を含めて取得するかどうか（管理者モードまたは非表示画像表示モード）
   const includeHidden = canHide || showHiddenImages;
   
+  // キャッシュクリア状態
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  
   // デバッグログ
   console.log('PropertyImageGallery - propertyId:', propertyId);
   console.log('PropertyImageGallery - includeHidden:', includeHidden);
@@ -91,6 +95,35 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   console.log('PropertyImageGallery - data:', data);
   console.log('PropertyImageGallery - isLoading:', isLoading);
   console.log('PropertyImageGallery - isError:', isError);
+
+  // 画像キャッシュをクリアして再取得
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      // publicApiインスタンスを使用
+      const response = await publicApi.post(`/api/public/properties/${propertyId}/clear-image-cache`);
+      
+      if (response.data.success) {
+        // キャッシュクリア成功後、画像を再取得
+        await refetch();
+        
+        setSnackbar({
+          open: true,
+          message: '画像キャッシュをクリアしました。最新の画像が表示されます。',
+          severity: 'success',
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to clear image cache:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '画像キャッシュのクリアに失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
 
   // APIから取得した非表示画像リストとローカル状態をマージ
   const hiddenImageIds = useMemo(() => {
@@ -395,23 +428,40 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   return (
     <>
       <Box sx={{ position: 'relative', width: '100%' }}>
-        {/* 非表示画像カウンター（管理者モード時） */}
-        {canHide && hiddenImageIds.length > 0 && (
-          <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Chip
-              icon={<VisibilityOffIcon />}
-              label={`非表示: ${hiddenImageIds.length}枚`}
-              size="small"
-              color="warning"
+        {/* ヘッダー部分（非表示画像カウンター + キャッシュクリアボタン） */}
+        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          {/* 左側: 非表示画像カウンター（管理者モード時） */}
+          {canHide && hiddenImageIds.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                icon={<VisibilityOffIcon />}
+                label={`非表示: ${hiddenImageIds.length}枚`}
+                size="small"
+                color="warning"
+                variant="outlined"
+              />
+              {!showHiddenImages && (
+                <Typography variant="caption" color="text.secondary">
+                  ※非表示画像は公開サイトに表示されません
+                </Typography>
+              )}
+            </Box>
+          )}
+          
+          {/* 右側: キャッシュクリアボタン（管理者モード時のみ） */}
+          {canHide && (
+            <Button
               variant="outlined"
-            />
-            {!showHiddenImages && (
-              <Typography variant="caption" color="text.secondary">
-                ※非表示画像は公開サイトに表示されません
-              </Typography>
-            )}
-          </Box>
-        )}
+              size="small"
+              onClick={handleClearCache}
+              disabled={isClearingCache}
+              startIcon={isClearingCache ? <CircularProgress size={16} /> : <RefreshIcon />}
+              sx={{ ml: 'auto' }}
+            >
+              {isClearingCache ? '更新中...' : '画像を更新'}
+            </Button>
+          )}
+        </Box>
 
         {/* 画像グリッド */}
         <ImageList cols={cols} gap={8} sx={{ m: 0 }}>
