@@ -36,7 +36,6 @@ interface PropertyImageGalleryProps {
   canHide?: boolean;  // 非表示機能を有効にするか（管理者モード）
   showHiddenImages?: boolean;  // 非表示画像も表示するか
   isPublicSite?: boolean;  // 公開サイトかどうか
-  onRefetchReady?: (refetch: () => void) => void;  // refetch関数を親に渡すコールバック
 }
 
 interface DeleteState {
@@ -53,7 +52,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   canHide = false,
   showHiddenImages = false,
   isPublicSite = false,
-  onRefetchReady,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -86,6 +84,10 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   
   // キャッシュクリア状態
   const [isClearingCache, setIsClearingCache] = useState(false);
+  
+  // 格納先URL入力フィールドの状態
+  const [storageUrlInput, setStorageUrlInput] = useState('');
+  const [isUpdatingStorageUrl, setIsUpdatingStorageUrl] = useState(false);
   
   // デバッグログ
   console.log('PropertyImageGallery - propertyId:', propertyId);
@@ -131,6 +133,49 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
       });
     } finally {
       setIsClearingCache(false);
+    }
+  };
+  
+  // 格納先URLを更新
+  const handleUpdateStorageUrl = async () => {
+    if (!storageUrlInput.trim()) {
+      setSnackbar({
+        open: true,
+        message: 'Google DriveフォルダURLを入力してください',
+        severity: 'error',
+      });
+      return;
+    }
+    
+    setIsUpdatingStorageUrl(true);
+    try {
+      const apiClient = isPublicSite ? publicApi : api;
+      const response = await apiClient.post(`/api/public/properties/${propertyId}/update-storage-url`, {
+        storageUrl: storageUrlInput.trim()
+      });
+      
+      if (response.data.success) {
+        // 成功後、画像を再取得
+        await refetch();
+        
+        setSnackbar({
+          open: true,
+          message: '格納先URLを更新しました。画像を取得しています...',
+          severity: 'success',
+        });
+        
+        // 入力フィールドをクリア
+        setStorageUrlInput('');
+      }
+    } catch (error: any) {
+      console.error('Failed to update storage URL:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '格納先URLの更新に失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setIsUpdatingStorageUrl(false);
     }
   };
 
@@ -437,9 +482,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   return (
     <>
       <Box sx={{ position: 'relative', width: '100%' }}>
-        {/* ヘッダー部分（非表示画像カウンター + キャッシュクリアボタン） */}
-        <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-          {/* 左側: 非表示画像カウンター（管理者モード時） */}
+        {/* ヘッダー部分（非表示画像カウンター + 格納先URL入力 + キャッシュクリアボタン） */}
+        <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* 上段: 非表示画像カウンター */}
           {canHide && hiddenImageIds.length > 0 && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Chip
@@ -457,18 +502,45 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
             </Box>
           )}
           
-          {/* 右側: キャッシュクリアボタン（管理者モード時のみ） */}
+          {/* 下段: 格納先URL入力 + ボタン（管理者モード時のみ） */}
           {canHide && (
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleClearCache}
-              disabled={isClearingCache}
-              startIcon={isClearingCache ? <CircularProgress size={16} /> : <RefreshIcon />}
-              sx={{ ml: 'auto' }}
-            >
-              {isClearingCache ? '更新中...' : '画像を更新'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: '300px', display: 'flex', gap: 1 }}>
+                <input
+                  type="text"
+                  value={storageUrlInput}
+                  onChange={(e) => setStorageUrlInput(e.target.value)}
+                  placeholder="Google DriveフォルダURL（例: https://drive.google.com/drive/folders/...）"
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleUpdateStorageUrl}
+                  disabled={isUpdatingStorageUrl || !storageUrlInput.trim()}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  {isUpdatingStorageUrl ? '更新中...' : 'URL更新'}
+                </Button>
+              </Box>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+                startIcon={isClearingCache ? <CircularProgress size={16} /> : <RefreshIcon />}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                {isClearingCache ? '更新中...' : '画像を更新'}
+              </Button>
+            </Box>
           )}
         </Box>
 

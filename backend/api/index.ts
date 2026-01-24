@@ -534,6 +534,75 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
   }
 });
 
+// 格納先URLを更新
+app.post('/api/public/properties/:identifier/update-storage-url', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const { storageUrl } = req.body;
+    
+    console.log(`[Update Storage URL] Request for property: ${identifier}`);
+    console.log(`[Update Storage URL] New storage URL: ${storageUrl}`);
+    
+    if (!storageUrl || typeof storageUrl !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid storage URL',
+        message: '有効なGoogle DriveフォルダURLを入力してください'
+      });
+    }
+    
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+    
+    // 物件情報を取得
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+    
+    if (!property) {
+      console.log(`[Update Storage URL] Property not found: ${identifier}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found',
+        message: '物件が見つかりません'
+      });
+    }
+    
+    // storage_locationを更新
+    const { error: updateError } = await supabase
+      .from('property_listings')
+      .update({ storage_location: storageUrl })
+      .eq('id', property.id);
+    
+    if (updateError) {
+      console.error('[Update Storage URL] Database error:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: 'データベースの更新に失敗しました'
+      });
+    }
+    
+    console.log(`[Update Storage URL] Successfully updated storage_location for ${property.property_number}`);
+    
+    res.json({
+      success: true,
+      message: '格納先URLを更新しました'
+    });
+  } catch (error: any) {
+    console.error('[Update Storage URL] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: '更新に失敗しました'
+    });
+  }
+});
+
 // 画像・基本情報を更新（軽量版）
 app.post('/api/public/properties/:identifier/refresh-essential', async (req, res) => {
   try {
