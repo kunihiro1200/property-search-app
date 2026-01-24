@@ -589,8 +589,8 @@ router.get('/properties/:id/images', async (req: Request, res: Response): Promis
     // 格納先URLから画像を取得
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
-    // 非表示画像リストを取得
-    const hiddenImages = await propertyListingService.getHiddenImages(id);
+    // 非表示画像リストを取得（UUIDを使用）
+    const hiddenImages = await propertyListingService.getHiddenImages(property.id);
 
     // includeHiddenがfalseの場合、非表示画像をフィルタリング
     let filteredImages = result.images;
@@ -1139,6 +1139,113 @@ router.get('/debug/db-test/:propertyNumber', async (req: Request, res: Response)
       success: false,
       error: error.message,
       stack: error.stack
+    });
+  }
+});
+
+// 画像キャッシュクリア（特定物件）
+router.post('/properties/:identifier/clear-image-cache', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { identifier } = req.params;
+    
+    console.log(`🗑️ Clearing image cache for: ${identifier}`);
+
+    // UUIDの形式かどうかをチェック
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUUID = uuidRegex.test(identifier);
+
+    // 物件情報を取得
+    let property;
+    if (isUUID) {
+      property = await propertyListingService.getPublicPropertyById(identifier);
+    } else {
+      property = await propertyListingService.getPublicPropertyByNumber(identifier);
+    }
+
+    if (!property) {
+      console.error(`❌ Property not found: ${identifier}`);
+      res.status(404).json({ 
+        success: false,
+        error: 'Property not found' 
+      });
+      return;
+    }
+
+    console.log(`✅ Found property: ${property.property_number} (${property.id})`);
+
+    // storage_locationを取得
+    let storageUrl = property.storage_location;
+    
+    if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
+      storageUrl = property.athome_data[0];
+    }
+
+    if (!storageUrl) {
+      console.error(`❌ No storage URL found for property: ${identifier}`);
+      res.status(404).json({ 
+        success: false,
+        error: 'Storage URL not found',
+        message: '画像の格納先URLが設定されていません'
+      });
+      return;
+    }
+
+    // フォルダIDを抽出
+    const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+    
+    if (folderId) {
+      // 特定のフォルダのキャッシュをクリア
+      propertyImageService.clearCache(folderId);
+      console.log(`✅ Image cache cleared for folder: ${folderId}`);
+      
+      res.json({
+        success: true,
+        message: `物件 ${property.property_number} の画像キャッシュをクリアしました`,
+        propertyNumber: property.property_number,
+        folderId: folderId
+      });
+    } else {
+      console.error(`❌ Could not extract folder ID from storage URL: ${storageUrl}`);
+      res.status(400).json({ 
+        success: false,
+        error: 'Invalid storage URL',
+        message: '格納先URLからフォルダIDを抽出できませんでした'
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Error clearing image cache:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: (error as any).code,
+    });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message || 'Failed to clear image cache'
+    });
+  }
+});
+
+// 全物件の画像キャッシュをクリア
+router.post('/clear-all-image-cache', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    console.log(`🗑️ Clearing all image cache`);
+
+    // 全キャッシュをクリア
+    propertyImageService.clearCache();
+    console.log(`✅ All image cache cleared`);
+    
+    res.json({
+      success: true,
+      message: '全ての画像キャッシュをクリアしました'
+    });
+  } catch (error: any) {
+    console.error('❌ Error clearing all image cache:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message || 'Failed to clear all image cache'
     });
   }
 });
