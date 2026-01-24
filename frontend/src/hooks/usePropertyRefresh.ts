@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { publicApi } from '../services/api';
+import api from '../services/api';
 
 interface UsePropertyRefreshReturn {
   refreshEssential: (propertyId: string) => Promise<any>;
@@ -18,7 +18,7 @@ export const usePropertyRefresh = (): UsePropertyRefreshReturn => {
     
     try {
       console.log(`[usePropertyRefresh] Refreshing essential data for ${propertyId}`);
-      const response = await publicApi.post(
+      const response = await api.post(
         `/api/public/properties/${propertyId}/refresh-essential`
       );
       console.log('[usePropertyRefresh] Essential data refreshed successfully');
@@ -39,7 +39,7 @@ export const usePropertyRefresh = (): UsePropertyRefreshReturn => {
     
     try {
       console.log(`[usePropertyRefresh] Refreshing all data for ${propertyId}`);
-      const response = await publicApi.post(
+      const response = await api.post(
         `/api/public/properties/${propertyId}/refresh-all`
       );
       console.log('[usePropertyRefresh] All data refreshed successfully');
