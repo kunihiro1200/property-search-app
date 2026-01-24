@@ -71,8 +71,8 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // 画像ギャラリーの再レンダリング用キー
-  const [imageGalleryKey, setImageGalleryKey] = useState(0);
+  // 画像ギャラリーのrefetch関数を保持
+  const [imageGalleryRefetch, setImageGalleryRefetch] = useState<(() => void) | null>(null);
 
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
@@ -292,8 +292,11 @@ const PublicPropertyDetailPage: React.FC = () => {
                 onRefreshComplete={(data) => {
                   console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
                   setCompleteData(data);
-                  // 画像ギャラリーを強制的に再レンダリング
-                  setImageGalleryKey(prev => prev + 1);
+                  // 画像ギャラリーのrefetchを呼び出す
+                  if (imageGalleryRefetch) {
+                    console.log('[PublicPropertyDetailPage] Calling imageGalleryRefetch');
+                    imageGalleryRefetch();
+                  }
                 }}
                 canRefresh={isAdminMode}
               />
@@ -364,12 +367,15 @@ const PublicPropertyDetailPage: React.FC = () => {
                 
                 {property.property_number && (
                   <PropertyImageGallery
-                    key={imageGalleryKey}
                     propertyId={property.property_number}
                     canDelete={false}
                     canHide={isAdminMode}
                     showHiddenImages={false}
                     isPublicSite={true}
+                    onRefetchReady={(refetch) => {
+                      console.log('[PublicPropertyDetailPage] Received refetch function from PropertyImageGallery');
+                      setImageGalleryRefetch(() => refetch);
+                    }}
                   />
                 )}
               </Paper>

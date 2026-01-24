@@ -36,6 +36,7 @@ interface PropertyImageGalleryProps {
   canHide?: boolean;  // 非表示機能を有効にするか（管理者モード）
   showHiddenImages?: boolean;  // 非表示画像も表示するか
   isPublicSite?: boolean;  // 公開サイトかどうか
+  onRefetchReady?: (refetch: () => void) => void;  // refetch関数を親に渡すコールバック
 }
 
 interface DeleteState {
@@ -52,6 +53,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   canHide = false,
   showHiddenImages = false,
   isPublicSite = false,
+  onRefetchReady,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -90,6 +92,13 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   console.log('PropertyImageGallery - includeHidden:', includeHidden);
   
   const { data, isLoading, isError, refetch } = usePropertyImages(propertyId, includeHidden);
+  
+  // refetch関数を親コンポーネントに渡す
+  useEffect(() => {
+    if (onRefetchReady && refetch) {
+      onRefetchReady(refetch);
+    }
+  }, [onRefetchReady, refetch]);
   
   // デバッグログ
   console.log('PropertyImageGallery - data:', data);
