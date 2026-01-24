@@ -47,26 +47,42 @@ export class GoogleSheetsClient {
    */
   async authenticate(): Promise<void> {
     try {
+      console.log('[GoogleSheetsClient] Starting authentication...');
+      console.log('[GoogleSheetsClient] Environment check:', {
+        hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        hasServiceAccountKeyPath: !!this.config.serviceAccountKeyPath,
+        hasServiceAccountEmail: !!this.config.serviceAccountEmail,
+        hasOAuthCredentials: !!(this.config.clientId && this.config.clientSecret && this.config.refreshToken),
+      });
+      
       // 1. 環境変数からJSON読み込み（Vercel環境用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.log('[GoogleSheetsClient] Using GOOGLE_SERVICE_ACCOUNT_JSON');
         await this.authenticateWithServiceAccountJson();
       }
       // 2. JSONファイルから読み込み（ローカル環境用）
       else if (this.config.serviceAccountKeyPath) {
+        console.log('[GoogleSheetsClient] Using serviceAccountKeyPath');
         await this.authenticateWithServiceAccountFile();
       }
       // 3. 個別の環境変数から読み込み
       else if (this.config.serviceAccountEmail && this.config.privateKey) {
+        console.log('[GoogleSheetsClient] Using serviceAccountEmail and privateKey');
         await this.authenticateWithServiceAccount();
       } 
       // 4. OAuth 2.0認証（フォールバック）
       else if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
+        console.log('[GoogleSheetsClient] Using OAuth 2.0');
         await this.authenticateWithOAuth();
       } 
       else {
         throw new Error('No valid authentication credentials provided');
       }
+      
+      console.log('[GoogleSheetsClient] Authentication completed successfully');
     } catch (error: any) {
+      console.error('[GoogleSheetsClient] Authentication failed:', error.message);
+      console.error('[GoogleSheetsClient] Error stack:', error.stack);
       throw new Error(`Google Sheets authentication failed: ${error.message}`);
     }
   }
@@ -95,25 +111,49 @@ export class GoogleSheetsClient {
    */
   private async authenticateWithServiceAccountJson(): Promise<void> {
     console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_JSON');
+    console.log('[GoogleSheetsClient] JSON length:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0);
     
-    const keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
-    
-    // ⚠️ 重要：private_keyの\\nを実際の改行に変換
-    if (keyFile.private_key) {
-      keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
-      console.log('[GoogleSheetsClient] ✅ Converted \\\\n to actual newlines in private_key');
+    try {
+      const keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
+      console.log('[GoogleSheetsClient] JSON parsed successfully');
+      console.log('[GoogleSheetsClient] Key file keys:', Object.keys(keyFile));
+      
+      // ⚠️ 重要：private_keyの\\nを実際の改行に変換
+      if (keyFile.private_key) {
+        const beforeLength = keyFile.private_key.length;
+        const beforeNewlineCount = (keyFile.private_key.match(/\\n/g) || []).length;
+        
+        keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+        
+        const afterLength = keyFile.private_key.length;
+        const afterNewlineCount = (keyFile.private_key.match(/\n/g) || []).length;
+        
+        console.log('[GoogleSheetsClient] ✅ Converted \\\\n to actual newlines in private_key');
+        console.log('[GoogleSheetsClient] Before:', { length: beforeLength, newlineCount: beforeNewlineCount });
+        console.log('[GoogleSheetsClient] After:', { length: afterLength, newlineCount: afterNewlineCount });
+      } else {
+        console.error('[GoogleSheetsClient] ❌ private_key not found in key file');
+      }
+
+      this.auth = new google.auth.JWT({
+        email: keyFile.client_email,
+        key: keyFile.private_key,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+
+      console.log('[GoogleSheetsClient] JWT created, calling authorize()...');
+      await this.auth.authorize();
+      console.log('[GoogleSheetsClient] JWT authorized successfully');
+      
+      this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+      
+      console.log('[GoogleSheetsClient] Authentication successful');
+    } catch (error: any) {
+      console.error('[GoogleSheetsClient] Authentication error:', error.message);
+      console.error('[GoogleSheetsClient] Error code:', error.code);
+      console.error('[GoogleSheetsClient] Error stack:', error.stack);
+      throw error;
     }
-
-    this.auth = new google.auth.JWT({
-      email: keyFile.client_email,
-      key: keyFile.private_key,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    await this.auth.authorize();
-    this.sheets = google.sheets({ version: 'v4', auth: this.auth });
-    
-    console.log('[GoogleSheetsClient] Authentication successful');
   }
 
   /**
