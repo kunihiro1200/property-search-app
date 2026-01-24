@@ -1,4 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
+// Last updated: 2026-01-24 - Restored from f623fde
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
