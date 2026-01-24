@@ -374,7 +374,7 @@ const PublicPropertiesPage: React.FC = () => {
   
   // viewModeが変更されたときも全件取得
   useEffect(() => {
-    if (viewMode === 'map' && allProperties.length === 0) {
+    if (viewMode === 'map') {
       console.log('🗺️ Map view activated, fetching all properties...');
       fetchAllProperties();
     } else if (viewMode === 'list') {
@@ -382,7 +382,7 @@ const PublicPropertiesPage: React.FC = () => {
       console.log('📋 List view activated, fetching properties...');
       fetchProperties();
     }
-  }, [viewMode]);
+  }, [viewMode, searchParams]); // searchParamsを依存配列に追加
 
   const fetchProperties = async () => {
     try {
