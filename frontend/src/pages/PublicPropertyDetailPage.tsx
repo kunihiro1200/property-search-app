@@ -44,6 +44,13 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 認証状態を取得（管理者モード判定用）
   const { isAuthenticated } = useAuthStore();
   
+  // URLクエリパラメータから管理者モードを判定
+  const searchParams = new URLSearchParams(location.search);
+  const canHideParam = searchParams.get('canHide') === 'true';
+  
+  // 管理者モード: 認証済み かつ canHide=true パラメータがある場合のみ
+  const isAdminMode = isAuthenticated && canHideParam;
+  
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded: isMapLoaded } = useJsApiLoader({
@@ -275,7 +282,7 @@ const PublicPropertyDetailPage: React.FC = () => {
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">
           {/* 更新ボタン（管理者モードのみ表示） */}
-          {isAuthenticated && (
+          {isAdminMode && (
             <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
               <RefreshButtons
                 propertyId={property?.property_number || ''}
@@ -283,7 +290,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
                   setCompleteData(data);
                 }}
-                canRefresh={isAuthenticated}
+                canRefresh={isAdminMode}
               />
             </Box>
           )}
@@ -354,7 +361,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   <PropertyImageGallery
                     propertyId={property.property_number}
                     canDelete={false}
-                    canHide={isAuthenticated}
+                    canHide={isAdminMode}
                     showHiddenImages={false}
                     isPublicSite={true}
                   />
