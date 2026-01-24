@@ -43,7 +43,7 @@ app.use(cors({
   origin: '*', // 公開サイトなので全てのオリジンを許可
   credentials: false,
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(compression());
 app.use(morgan('dev'));

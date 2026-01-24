@@ -149,9 +149,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     
     setIsUpdatingStorageUrl(true);
     try {
-      // 管理者モード（canHide=true）の場合は認証付きAPIを使用
-      const apiClient = canHide ? api : publicApi;
-      console.log('[handleUpdateStorageUrl] Using API client:', canHide ? 'api (authenticated)' : 'publicApi');
+      // 公開サイトのエンドポイントなので、publicApiを使用（認証不要）
+      const apiClient = publicApi;
+      console.log('[handleUpdateStorageUrl] Using API client: publicApi (no auth)');
       
       const url = `/api/public/properties/${propertyId}/update-storage-url`;
       console.log('[handleUpdateStorageUrl] Request URL:', url);
