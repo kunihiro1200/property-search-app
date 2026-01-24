@@ -24,6 +24,8 @@ console.log('🔍 Environment variables check:', {
   SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? `Set (${process.env.SUPABASE_SERVICE_KEY.length} chars)` : 'Missing',
   GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON ? `Set (${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars)` : 'Missing',
   GOOGLE_SERVICE_ACCOUNT_KEY_PATH: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'Not set',
+  GOOGLE_SHEETS_BUYER_SPREADSHEET_ID: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || 'Not set',
+  GOOGLE_SHEETS_BUYER_SHEET_NAME: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || 'Not set',
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
