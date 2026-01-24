@@ -437,11 +437,8 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ Vercel本番環境では必ず本番URLを使用
-      const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-      const baseUrl = isProduction 
-        ? 'https://property-site-frontend-kappa.vercel.app'
-        : (process.env.BACKEND_URL || process.env.VITE_API_URL || 'http://localhost:3000');
+      // ✅ 常に本番URLを使用
+      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
