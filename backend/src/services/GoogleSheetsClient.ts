@@ -39,6 +39,15 @@ export class GoogleSheetsClient {
 
   constructor(config: GoogleSheetsConfig) {
     this.config = config;
+    console.log('[GoogleSheetsClient] Constructor called with config:', {
+      spreadsheetId: config.spreadsheetId,
+      sheetName: config.sheetName,
+      hasServiceAccountKeyPath: !!config.serviceAccountKeyPath,
+      hasServiceAccountEmail: !!config.serviceAccountEmail,
+      hasPrivateKey: !!config.privateKey,
+      hasClientId: !!config.clientId,
+      hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+    });
   }
 
   /**
@@ -46,27 +55,44 @@ export class GoogleSheetsClient {
    * 優先順位: GOOGLE_SERVICE_ACCOUNT_JSON > serviceAccountKeyPath > OAuth 2.0
    */
   async authenticate(): Promise<void> {
+    console.log('[GoogleSheetsClient] authenticate() called');
+    console.log('[GoogleSheetsClient] Environment check:', {
+      hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+      hasServiceAccountKeyPath: !!this.config.serviceAccountKeyPath,
+      hasServiceAccountEmail: !!this.config.serviceAccountEmail,
+      hasPrivateKey: !!this.config.privateKey,
+      hasClientId: !!this.config.clientId,
+    });
+    
     try {
       // 1. 環境変数からJSON読み込み（Vercel環境用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.log('[GoogleSheetsClient] Using GOOGLE_SERVICE_ACCOUNT_JSON');
         await this.authenticateWithServiceAccountJson();
       }
       // 2. JSONファイルから読み込み（ローカル環境用）
       else if (this.config.serviceAccountKeyPath) {
+        console.log('[GoogleSheetsClient] Using serviceAccountKeyPath');
         await this.authenticateWithServiceAccountFile();
       }
       // 3. 個別の環境変数から読み込み
       else if (this.config.serviceAccountEmail && this.config.privateKey) {
+        console.log('[GoogleSheetsClient] Using serviceAccountEmail and privateKey');
         await this.authenticateWithServiceAccount();
       } 
       // 4. OAuth 2.0認証（フォールバック）
       else if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
+        console.log('[GoogleSheetsClient] Using OAuth 2.0');
         await this.authenticateWithOAuth();
       } 
       else {
+        console.error('[GoogleSheetsClient] No valid authentication credentials provided');
         throw new Error('No valid authentication credentials provided');
       }
     } catch (error: any) {
+      console.error('[GoogleSheetsClient] Authentication failed:', error.message);
+      console.error('[GoogleSheetsClient] Error stack:', error.stack);
       throw new Error(`Google Sheets authentication failed: ${error.message}`);
     }
   }
@@ -172,12 +198,17 @@ export class GoogleSheetsClient {
    * ヘッダー行を取得（キャッシュ付き）
    */
   async getHeaders(): Promise<string[]> {
+    console.log('[GoogleSheetsClient] getHeaders() called');
+    
     if (this.headerCache) {
+      console.log('[GoogleSheetsClient] Using cached headers');
       return this.headerCache;
     }
 
     this.ensureAuthenticated();
     const range = `${this.config.sheetName}!1:1`;
+    
+    console.log('[GoogleSheetsClient] Fetching headers from range:', range);
     
     const response = await this.sheets!.spreadsheets.values.get({
       spreadsheetId: this.config.spreadsheetId,
@@ -186,6 +217,9 @@ export class GoogleSheetsClient {
 
     const headers = response.data.values?.[0] || [];
     this.headerCache = headers as string[];
+    
+    console.log('[GoogleSheetsClient] Headers fetched:', this.headerCache.length, 'columns');
+    
     return this.headerCache;
   }
 
