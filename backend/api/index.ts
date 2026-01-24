@@ -631,9 +631,19 @@ app.post('/api/public/inquiries', async (req, res) => {
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
+      // 環境変数が設定されているか確認
+      if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
+        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
+      }
+      
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      });
+      
+      console.log('[Inquiry API] GoogleSheetsClient created with config:', {
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
@@ -689,9 +699,20 @@ app.post('/api/public/inquiries', async (req, res) => {
     // スプレッドシートに同期（同期的に実行）
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
+      
+      // 環境変数が設定されているか確認
+      if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
+        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
+      }
+      
       const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      });
+      
+      console.log('[Inquiry API] GoogleSheetsClient created for sync with config:', {
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       

@@ -218,6 +218,16 @@ export class GoogleSheetsClient {
     }
 
     this.ensureAuthenticated();
+    
+    // デバッグログを追加
+    console.log('[GoogleSheetsClient] getHeaders() called');
+    console.log('[GoogleSheetsClient] this.config.spreadsheetId:', this.config.spreadsheetId);
+    console.log('[GoogleSheetsClient] this.config.sheetName:', this.config.sheetName);
+    
+    if (!this.config.spreadsheetId) {
+      throw new Error('Missing required parameters: spreadsheetId');
+    }
+    
     const range = `${this.config.sheetName}!1:1`;
     
     const response = await this.sheets!.spreadsheets.values.get({
