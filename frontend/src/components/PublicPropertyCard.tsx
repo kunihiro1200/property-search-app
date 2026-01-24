@@ -38,6 +38,8 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     
     console.log('[PublicPropertyCard] handleClick - canHide:', canHide);
     console.log('[PublicPropertyCard] handleClick - property:', property.property_number);
+    console.log('[PublicPropertyCard] handleClick - current URL:', window.location.href);
+    console.log('[PublicPropertyCard] handleClick - searchParams:', Object.fromEntries(searchParams.entries()));
     
     // navigationStateが渡されていない場合はデフォルト値を使用
     if (!navigationState) {

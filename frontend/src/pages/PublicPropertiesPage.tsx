@@ -357,7 +357,7 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     setSearchParams(newParams, { replace: true });
-  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
+  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode, searchParams]);
   
   useEffect(() => {
     // 状態復元が完了するまで待つ

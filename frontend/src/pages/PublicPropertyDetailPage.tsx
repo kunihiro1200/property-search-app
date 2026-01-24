@@ -48,8 +48,14 @@ const PublicPropertyDetailPage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const canHideParam = searchParams.get('canHide') === 'true';
   
+  console.log('[PublicPropertyDetailPage] location.search:', location.search);
+  console.log('[PublicPropertyDetailPage] canHideParam:', canHideParam);
+  console.log('[PublicPropertyDetailPage] isAuthenticated:', isAuthenticated);
+  
   // 管理者モード: 認証済み かつ canHide=true パラメータがある場合のみ
   const isAdminMode = isAuthenticated && canHideParam;
+  
+  console.log('[PublicPropertyDetailPage] isAdminMode:', isAdminMode);
   
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
