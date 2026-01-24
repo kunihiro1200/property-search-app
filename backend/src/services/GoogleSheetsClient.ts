@@ -38,6 +38,10 @@ export class GoogleSheetsClient {
   private headerCache: string[] | null = null;
 
   constructor(config: GoogleSheetsConfig) {
+    // spreadsheetIdのバリデーション
+    if (!config.spreadsheetId) {
+      throw new Error('Missing required parameters: spreadsheetId');
+    }
     this.config = config;
   }
 

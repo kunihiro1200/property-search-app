@@ -1,5 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
-// Force cache clear: 2026-01-24 12:00
+// Force cache clear: 2026-01-24 13:00 - Inquiry form debug
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -629,7 +629,7 @@ app.post('/api/public/inquiries', async (req, res) => {
       console.log('[Inquiry API] Getting buyer number from spreadsheet...');
       
       // 環境変数の詳細ログ
-      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID;
+      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
       console.log('[Inquiry API] Environment check:', {
@@ -640,11 +640,6 @@ app.post('/api/public/inquiries', async (req, res) => {
         spreadsheetIdLength: spreadsheetId?.length || 0,
         sheetName: sheetName,
       });
-      
-      // 環境変数が未定義の場合はエラーをスロー
-      if (!spreadsheetId) {
-        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
-      }
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
@@ -705,7 +700,7 @@ app.post('/api/public/inquiries', async (req, res) => {
       console.log('[Inquiry API] Starting spreadsheet sync...');
       
       // 環境変数の詳細ログ
-      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID;
+      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
       console.log('[Inquiry API] Sync environment check:', {
@@ -714,11 +709,6 @@ app.post('/api/public/inquiries', async (req, res) => {
         spreadsheetIdLength: spreadsheetId?.length || 0,
         sheetName: sheetName,
       });
-      
-      // 環境変数が未定義の場合はエラーをスロー
-      if (!spreadsheetId) {
-        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
-      }
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
