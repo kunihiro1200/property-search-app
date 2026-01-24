@@ -450,26 +450,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   }
 
   // エラー状態または画像なし
-  if (isError || images.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 6,
-          bgcolor: 'grey.100',
-          borderRadius: 2,
-        }}
-      >
-        <ImageNotSupportedIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          画像がありません
-        </Typography>
-      </Box>
-    );
-  }
+  const hasNoImages = isError || images.length === 0;
 
   // グリッドの列数を画面サイズに応じて調整
   const cols = isMobile ? 2 : isTablet ? 3 : 4;
@@ -539,8 +520,29 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
           )}
         </Box>
 
+        {/* 画像がない場合のメッセージ */}
+        {hasNoImages && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 6,
+              bgcolor: 'grey.100',
+              borderRadius: 2,
+            }}
+          >
+            <ImageNotSupportedIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
+            <Typography variant="body2" color="text.secondary">
+              画像がありません
+            </Typography>
+          </Box>
+        )}
+
         {/* 画像グリッド */}
-        <ImageList cols={cols} gap={8} sx={{ m: 0 }}>
+        {!hasNoImages && (
+          <ImageList cols={cols} gap={8} sx={{ m: 0 }}>
           {images.map((image, index) => {
             const isHidden = isImageHidden(image.id);
             const isLoading = isHideLoading === image.id;
@@ -654,9 +656,10 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
             );
           })}
         </ImageList>
+        )}
 
         {/* 「他の画像を見る」ボタン */}
-        {!showAllImages && hasMoreImages && (
+        {!showAllImages && hasMoreImages && !hasNoImages && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
               variant="outlined"
@@ -675,7 +678,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
         )}
 
         {/* 「閉じる」ボタン（全画像表示中） */}
-        {showAllImages && hasMoreImages && (
+        {showAllImages && hasMoreImages && !hasNoImages && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
               variant="outlined"
