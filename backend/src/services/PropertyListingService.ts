@@ -345,11 +345,16 @@ export class PropertyListingService {
         }
       }
       
-      // 公開中のみ表示フィルター
+      // 公開中のみ表示フィルター（ホワイトリスト方式）
       if (showPublicOnly) {
-        console.log('[PropertyListingService] Applying showPublicOnly filter');
-        // atbb_statusが「公開中」または空（null/undefined）の物件のみを取得
-        query = query.or('atbb_status.is.null,atbb_status.eq.公開中,atbb_status.eq.');
+        console.log('[PropertyListingService] Applying showPublicOnly filter (whitelist)');
+        // 公開物件のみを表示（ホワイトリスト）
+        // 参照: .kiro/steering/atbb-status-classification.md
+        query = query.in('atbb_status', [
+          '専任・公開中',
+          '一般・公開中',
+          '非公開（配信メールのみ）'
+        ]);
       }
       
       // NEW: 座標がある物件のみ取得（地図表示用）
