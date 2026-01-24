@@ -247,7 +247,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     // 全てのデータ取得を並列実行（高速化）
     const startTime = Date.now();
     
-    const [dbDetails, settlementDate, panoramaUrl] = await Promise.all([
+    const [dbDetails, settlementDate] = await Promise.all([
       // PropertyDetailsServiceを使用（静的インポート）
       (async () => {
         try {
@@ -285,20 +285,15 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
           return null;
         }
       })(),
-      
-      // パノラマURLを取得
-      (async () => {
-        try {
-          const panoramaUrlService = new PanoramaUrlService();
-          const url = await panoramaUrlService.getPanoramaUrl(property.property_number);
-          console.log(`[Complete API] Panorama URL: ${url || '(not found)'}`);
-          return url;
-        } catch (err) {
-          console.error('[Complete API] Panorama URL error:', err);
-          return null;
-        }
-      })(),
     ]);
+    
+    // パノラマURLを取得（athome_dataから取得、なければnull）
+    let panoramaUrl = null;
+    if (dbDetails.athome_data && Array.isArray(dbDetails.athome_data) && dbDetails.athome_data.length > 1) {
+      // athome_dataの2番目の要素がパノラマURL
+      panoramaUrl = dbDetails.athome_data[1] || null;
+      console.log(`[Complete API] Panorama URL from athome_data: ${panoramaUrl || '(not found)'}`);
+    }
     
     const endTime = Date.now();
     console.log(`[Complete API] All data fetched in ${endTime - startTime}ms`);
