@@ -587,7 +587,7 @@ router.get('/properties/:id/images', async (req: Request, res: Response): Promis
     }
 
     // 格納先URLから画像を取得
-    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
+    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
 
     // 非表示画像リストを取得（UUIDを使用）
     const hiddenImages = await propertyListingService.getHiddenImages(property.id);
@@ -1190,28 +1190,38 @@ router.post('/properties/:identifier/clear-image-cache', async (req: Request, re
       return;
     }
 
-    // フォルダIDを抽出
-    const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+    // フォルダIDを抽出（親フォルダ）
+    const parentFolderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
     
-    if (folderId) {
-      // 特定のフォルダのキャッシュをクリア
-      propertyImageService.clearCache(folderId);
-      console.log(`✅ Image cache cleared for folder: ${folderId}`);
-      
-      res.json({
-        success: true,
-        message: `物件 ${property.property_number} の画像キャッシュをクリアしました`,
-        propertyNumber: property.property_number,
-        folderId: folderId
-      });
-    } else {
+    if (!parentFolderId) {
       console.error(`❌ Could not extract folder ID from storage URL: ${storageUrl}`);
       res.status(400).json({ 
         success: false,
         error: 'Invalid storage URL',
         message: '格納先URLからフォルダIDを抽出できませんでした'
       });
+      return;
     }
+
+    // 画像表示時と同じロジックで実際のフォルダIDを取得
+    // （athome公開フォルダが存在する場合はそのID、なければ親フォルダID）
+    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
+    const actualFolderId = result.folderId || parentFolderId;
+    
+    console.log(`📁 Parent folder ID: ${parentFolderId}`);
+    console.log(`📁 Actual folder ID (used for images): ${actualFolderId}`);
+    
+    // 実際に使われているフォルダのキャッシュをクリア
+    propertyImageService.clearCache(actualFolderId);
+    console.log(`✅ Image cache cleared for folder: ${actualFolderId}`);
+    
+    res.json({
+      success: true,
+      message: `物件 ${property.property_number} の画像キャッシュをクリアしました`,
+      propertyNumber: property.property_number,
+      parentFolderId: parentFolderId,
+      actualFolderId: actualFolderId
+    });
   } catch (error: any) {
     console.error('❌ Error clearing image cache:', error);
     console.error('Error details:', {

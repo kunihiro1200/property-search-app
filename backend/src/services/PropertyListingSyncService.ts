@@ -100,7 +100,7 @@ export class PropertyListingSyncService {
       }
 
       // Map seller fields to property_listing fields
-      const propertyListingData = this.mapSellerToPropertyListing(seller);
+      const propertyListingData = await this.mapSellerToPropertyListing(seller);
 
       // Insert into property_listings
       const { error: insertError } = await this.supabase
@@ -168,20 +168,34 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * 業務リストから格納先URLを取得
+   * 業務リストから格納先URLを取得し、athome公開フォルダのURLを返す
    * 
    * @param propertyNumber 物件番号
-   * @returns 格納先URL（業務リストから取得）
+   * @returns athome公開フォルダのURL（見つからない場合は親フォルダURL）
    */
   private async getStorageUrlFromGyomuList(propertyNumber: string): Promise<string | null> {
     try {
       const { GyomuListService } = await import('./GyomuListService');
+      const { GoogleDriveService } = await import('./GoogleDriveService');
+      
       const gyomuListService = new GyomuListService();
+      const driveService = new GoogleDriveService();
       
       const gyomuData = await gyomuListService.getByPropertyNumber(propertyNumber);
       
       if (gyomuData && gyomuData.storageUrl) {
         console.log(`[PropertyListingSyncService] Found storage_url in 業務リスト for ${propertyNumber}: ${gyomuData.storageUrl}`);
+        
+        // 親フォルダURLからathome公開フォルダのURLを取得
+        const athomePublicUrl = await this.findAthomePublicFolderUrl(gyomuData.storageUrl, propertyNumber, driveService);
+        
+        if (athomePublicUrl) {
+          console.log(`[PropertyListingSyncService] Found athome公開 folder URL for ${propertyNumber}: ${athomePublicUrl}`);
+          return athomePublicUrl;
+        }
+        
+        // athome公開フォルダが見つからない場合は親フォルダURLを返す
+        console.log(`[PropertyListingSyncService] athome公開 folder not found, using parent folder URL for ${propertyNumber}`);
         return gyomuData.storageUrl;
       }
       
@@ -195,12 +209,121 @@ export class PropertyListingSyncService {
   }
 
   /**
+   * 親フォルダURLからathome公開フォルダのURLを取得
+   * 
+   * @param parentFolderUrl 親フォルダのURL
+   * @param propertyNumber 物件番号
+   * @param driveService GoogleDriveServiceインスタンス
+   * @returns athome公開フォルダのURL、見つからない場合はnull
+   */
+  private async findAthomePublicFolderUrl(
+    parentFolderUrl: string,
+    propertyNumber: string,
+    driveService: any
+  ): Promise<string | null> {
+    try {
+      // URLからフォルダIDを抽出
+      const folderIdMatch = parentFolderUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      if (!folderIdMatch) {
+        console.log(`[PropertyListingSyncService] Invalid folder URL format: ${parentFolderUrl}`);
+        return null;
+      }
+      
+      const parentFolderId = folderIdMatch[1];
+      console.log(`[PropertyListingSyncService] Searching for athome公開 in parent folder: ${parentFolderId}`);
+      
+      // 1. 物件番号を含むサブフォルダを検索
+      const propertyFolderId = await this.findPropertyFolderInParent(parentFolderId, propertyNumber, driveService);
+      
+      if (!propertyFolderId) {
+        console.log(`[PropertyListingSyncService] Property folder not found for ${propertyNumber} in ${parentFolderId}`);
+        return null;
+      }
+      
+      console.log(`[PropertyListingSyncService] Found property folder: ${propertyFolderId}`);
+      
+      // 2. 物件フォルダ内でathome公開フォルダを検索
+      const athomeFolderId = await driveService.findFolderByName(propertyFolderId, 'athome公開', true);
+      
+      if (!athomeFolderId) {
+        console.log(`[PropertyListingSyncService] athome公開 folder not found in property folder: ${propertyFolderId}`);
+        return null;
+      }
+      
+      // 3. athome公開フォルダのURLを生成
+      const athomePublicUrl = `https://drive.google.com/drive/folders/${athomeFolderId}`;
+      return athomePublicUrl;
+      
+    } catch (error: any) {
+      console.error(`[PropertyListingSyncService] Error finding athome公開 folder:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 親フォルダ内で物件番号を含むサブフォルダを検索
+   * 
+   * @param parentFolderId 親フォルダID
+   * @param propertyNumber 物件番号
+   * @param driveService GoogleDriveServiceインスタンス
+   * @returns 物件フォルダID、見つからない場合はnull
+   */
+  private async findPropertyFolderInParent(
+    parentFolderId: string,
+    propertyNumber: string,
+    driveService: any
+  ): Promise<string | null> {
+    try {
+      // サブフォルダ一覧を取得
+      const subfolders = await driveService.listSubfolders(parentFolderId);
+      
+      console.log(`[PropertyListingSyncService] Found ${subfolders.length} subfolders in parent`);
+      
+      // 物件番号を含むフォルダを検索
+      const propertyFolder = subfolders.find((folder: any) => 
+        folder.name && folder.name.includes(propertyNumber)
+      );
+      
+      if (propertyFolder) {
+        console.log(`[PropertyListingSyncService] Found property folder: ${propertyFolder.name} (${propertyFolder.id})`);
+        return propertyFolder.id;
+      }
+      
+      return null;
+      
+    } catch (error: any) {
+      console.error(`[PropertyListingSyncService] Error finding property folder:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * Map seller fields to property_listing fields
    * 
    * Maps data from sellers table to property_listings table format.
    * Note: storage_location uses site_url (preferred) with fallback to site
+   * 
+   * ⚠️ 重要: storage_locationは親フォルダURLのため、
+   * 実際の画像取得時にはathome公開フォルダを検索する必要がある
    */
-  private mapSellerToPropertyListing(seller: any): any {
+  private async mapSellerToPropertyListing(seller: any): Promise<any> {
+    // storage_locationの取得（athome公開フォルダURLを優先）
+    let storageLocation = seller.site_url || seller.site;
+    
+    // 業務リストからathome公開フォルダURLを取得を試みる
+    if (storageLocation) {
+      try {
+        const athomePublicUrl = await this.getStorageUrlFromGyomuList(seller.property_number);
+        if (athomePublicUrl) {
+          storageLocation = athomePublicUrl;
+          console.log(`[PropertyListingSyncService] Using athome公開 URL for ${seller.property_number}: ${storageLocation}`);
+        }
+      } catch (error: any) {
+        console.error(`[PropertyListingSyncService] Error getting athome公開 URL for ${seller.property_number}:`, error.message);
+        // エラーの場合は元のURLを使用
+      }
+    }
+    
     return {
       property_number: seller.property_number,
       seller_number: seller.seller_number,
@@ -243,8 +366,8 @@ export class PropertyListingSyncService {
       seller_situation: seller.seller_situation,
       site: seller.site,
       google_map_url: seller.google_map_url,
-      // Storage location: uses site_url (preferred) or falls back to site
-      storage_location: seller.site_url || seller.site,
+      // Storage location: athome公開フォルダURL（取得できた場合）または親フォルダURL
+      storage_location: storageLocation,
       other_section_1: seller.other_section_1,
       other_section_2: seller.other_section_2,
       other_section_3: seller.other_section_3,

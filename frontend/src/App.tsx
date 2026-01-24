@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import SellersPage from './pages/SellersPage';
@@ -22,8 +23,16 @@ import PublicPropertiesPage from './pages/PublicPropertiesPage';
 import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuthStore } from './store/authStore';
 
 function App() {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+  
+  // アプリ起動時に認証状態を確認
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+  
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

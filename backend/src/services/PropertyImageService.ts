@@ -67,18 +67,21 @@ export class PropertyImageService {
   private folderIdCacheTTL: number; // milliseconds
   private searchTimeoutMs: number; // milliseconds
   private maxSubfoldersToSearch: number;
+  private maxSearchDepth: number; // 最大検索深度
 
   constructor(
     cacheTTLMinutes: number = 60,
     folderIdCacheTTLMinutes: number = 60,
     searchTimeoutSeconds: number = 2,
-    maxSubfoldersToSearch: number = 3
+    maxSubfoldersToSearch: number = 3,
+    maxSearchDepth: number = 5 // デフォルト5階層まで検索
   ) {
     this.driveService = new GoogleDriveService();
     this.cacheTTL = cacheTTLMinutes * 60 * 1000;
     this.folderIdCacheTTL = folderIdCacheTTLMinutes * 60 * 1000;
     this.searchTimeoutMs = searchTimeoutSeconds * 1000;
     this.maxSubfoldersToSearch = maxSubfoldersToSearch;
+    this.maxSearchDepth = maxSearchDepth;
   }
 
   /**
@@ -108,12 +111,50 @@ export class PropertyImageService {
   }
 
   /**
+   * 親フォルダ内で物件番号を含むサブフォルダを検索
+   * 例: 業務依頼フォルダ内で「〇〇CC6〇〇」というフォルダを探す
+   */
+  private async findSubfolderContainingPropertyNumber(
+    parentFolderId: string,
+    propertyNumber: string
+  ): Promise<string | null> {
+    try {
+      console.log(`🔍 Searching for subfolder containing "${propertyNumber}" in parent: ${parentFolderId}`);
+      
+      const subfolders = await this.driveService.listSubfolders(parentFolderId);
+      
+      if (subfolders.length === 0) {
+        console.log(`  ⚠️ No subfolders found in parent folder`);
+        return null;
+      }
+      
+      console.log(`  📂 Found ${subfolders.length} subfolders, searching for "${propertyNumber}"...`);
+      
+      // 物件番号を含むフォルダを探す
+      const matchingFolder = subfolders.find(folder => 
+        folder.name.includes(propertyNumber)
+      );
+      
+      if (matchingFolder) {
+        console.log(`  ✅ Found matching folder: "${matchingFolder.name}" (${matchingFolder.id})`);
+        return matchingFolder.id;
+      }
+      
+      console.log(`  ⚠️ No folder containing "${propertyNumber}" found`);
+      return null;
+    } catch (error: any) {
+      console.error(`  ❌ Error searching for subfolder:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * "athome公開"または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
    * 検索順序: athome公開 → atbb公開 → 親フォルダ
-   * 2階層まで再帰的に検索（中間フォルダがある場合に対応）
+   * 任意の深さまで再帰的に検索（デフォルト最大5階層）
    * 存在しない場合は元のフォルダIDを返す
    */
-  private async getPublicFolderIdIfExists(parentFolderId: string): Promise<string> {
+  private async getPublicFolderIdIfExists(parentFolderId: string, propertyNumber?: string): Promise<string> {
     const startTime = Date.now();
     
     // キャッシュをチェック
@@ -130,27 +171,38 @@ export class PropertyImageService {
     try {
       console.log(`🔍 Checking for public subfolders in parent: ${parentFolderId}`);
       
+      // 0. 物件番号が指定されている場合、まず物件番号を含むサブフォルダを探す
+      // 例: 業務依頼フォルダ内で「〇〇CC6〇〇」というフォルダを探す
+      let searchFolderId = parentFolderId;
+      if (propertyNumber) {
+        const propertyFolder = await this.findSubfolderContainingPropertyNumber(parentFolderId, propertyNumber);
+        if (propertyFolder) {
+          console.log(`✅ Found property folder, now searching for public folder inside it`);
+          searchFolderId = propertyFolder;
+        }
+      }
+      
       // 1. 直下の"athome公開"フォルダを検索（最優先）
-      const athomeFolderId = await this.driveService.findFolderByName(parentFolderId, 'athome公開');
+      const athomeFolderId = await this.driveService.findFolderByName(searchFolderId, 'athome公開');
       if (athomeFolderId) {
         const elapsedMs = Date.now() - startTime;
-        console.log(`✅ Found "athome公開" subfolder: ${athomeFolderId} in parent: ${parentFolderId} (${elapsedMs}ms)`);
+        console.log(`✅ Found "athome公開" subfolder: ${athomeFolderId} in parent: ${searchFolderId} (${elapsedMs}ms)`);
         this.cacheFolderId(cacheKey, athomeFolderId);
         return athomeFolderId;
       }
       
       // 2. 直下の"atbb公開"フォルダを検索（後方互換性）
-      const atbbFolderId = await this.driveService.findFolderByName(parentFolderId, 'atbb公開');
+      const atbbFolderId = await this.driveService.findFolderByName(searchFolderId, 'atbb公開');
       if (atbbFolderId) {
         const elapsedMs = Date.now() - startTime;
-        console.log(`✅ Found "atbb公開" subfolder: ${atbbFolderId} in parent: ${parentFolderId} (${elapsedMs}ms)`);
+        console.log(`✅ Found "atbb公開" subfolder: ${atbbFolderId} in parent: ${searchFolderId} (${elapsedMs}ms)`);
         this.cacheFolderId(cacheKey, atbbFolderId);
         return atbbFolderId;
       }
       
-      // 3. 中間フォルダがある場合に対応（2階層目まで検索）
-      console.log(`🔍 Searching for public folders in subfolders (2nd level)...`);
-      const publicFolderId = await this.searchPublicFolderInSubfolders(parentFolderId);
+      // 3. 中間フォルダがある場合に対応（最大5階層まで再帰的に検索）
+      console.log(`🔍 Searching for public folders in subfolders (recursive, max depth: ${this.maxSearchDepth})...`);
+      const publicFolderId = await this.searchPublicFolderInSubfolders(searchFolderId, 0, this.maxSearchDepth);
       if (publicFolderId) {
         const elapsedMs = Date.now() - startTime;
         console.log(`✅ Found public folder in subfolder: ${publicFolderId} (${elapsedMs}ms)`);
@@ -160,9 +212,9 @@ export class PropertyImageService {
       
       // 4. 親フォルダを使用（フォールバック）
       const elapsedMs = Date.now() - startTime;
-      console.log(`📁 No public subfolder found in parent: ${parentFolderId}, using parent folder (${elapsedMs}ms)`);
-      this.cacheFolderId(cacheKey, parentFolderId);
-      return parentFolderId;
+      console.log(`📁 No public subfolder found in parent: ${searchFolderId}, using parent folder (${elapsedMs}ms)`);
+      this.cacheFolderId(cacheKey, searchFolderId);
+      return searchFolderId;
     } catch (error: any) {
       const elapsedMs = Date.now() - startTime;
       console.error(`⚠️ Error checking for public subfolders in parent: ${parentFolderId} (${elapsedMs}ms):`, error.message);
@@ -205,12 +257,23 @@ export class PropertyImageService {
   }
 
   /**
-   * サブフォルダ内の"athome公開"または"atbb公開"フォルダを検索（2階層目）
-   * 例: 親フォルダ → 中間フォルダ → athome公開
+   * サブフォルダ内の"athome公開"または"atbb公開"フォルダを再帰的に検索
+   * 任意の深さまで検索可能（デフォルト最大5階層）
+   * 例: 親フォルダ → 中間フォルダ1 → 中間フォルダ2 → athome公開
    * 並列処理で高速化、タイムアウト付き
    */
-  private async searchPublicFolderInSubfolders(parentFolderId: string): Promise<string | null> {
+  private async searchPublicFolderInSubfolders(
+    parentFolderId: string,
+    currentDepth: number = 0,
+    maxDepth: number = 5
+  ): Promise<string | null> {
     try {
+      // 最大深度に達したら終了
+      if (currentDepth >= maxDepth) {
+        console.log(`  ⚠️ Max depth ${maxDepth} reached, stopping search`);
+        return null;
+      }
+      
       // 親フォルダ内のすべてのサブフォルダを取得
       const subfolders = await this.driveService.listSubfolders(parentFolderId);
       
@@ -218,26 +281,41 @@ export class PropertyImageService {
         return null;
       }
       
-      // サブフォルダ数を制限
-      const limitedSubfolders = subfolders.slice(0, this.maxSubfoldersToSearch);
-      console.log(`  📂 Found ${subfolders.length} subfolders, checking first ${limitedSubfolders.length}...`);
+      // サブフォルダ数を制限（最初の階層のみ）
+      const foldersToCheck = currentDepth === 0 
+        ? subfolders.slice(0, this.maxSubfoldersToSearch)
+        : subfolders;
+      
+      console.log(`  ${'  '.repeat(currentDepth)}📂 Depth ${currentDepth}: Found ${subfolders.length} subfolders, checking ${foldersToCheck.length}...`);
       
       // 各サブフォルダの検索を並列実行
-      const searchPromises = limitedSubfolders.map(async (subfolder) => {
-        console.log(`  🔍 Checking subfolder: ${subfolder.name} (${subfolder.id})`);
+      const searchPromises = foldersToCheck.map(async (subfolder) => {
+        console.log(`  ${'  '.repeat(currentDepth)}🔍 Checking: ${subfolder.name} (${subfolder.id})`);
         
-        // athome公開を優先検索
+        // athome公開を優先検索（直下）
         const athomeFolderId = await this.driveService.findFolderByName(subfolder.id, 'athome公開');
         if (athomeFolderId) {
-          console.log(`  ✅ Found "athome公開" in subfolder: ${subfolder.name}`);
-          return { type: 'athome', folderId: athomeFolderId };
+          console.log(`  ${'  '.repeat(currentDepth)}✅ Found "athome公開" in: ${subfolder.name} at depth ${currentDepth + 1}`);
+          return { type: 'athome', folderId: athomeFolderId, depth: currentDepth + 1 };
         }
         
-        // atbb公開を次に検索
+        // atbb公開を次に検索（直下）
         const atbbFolderId = await this.driveService.findFolderByName(subfolder.id, 'atbb公開');
         if (atbbFolderId) {
-          console.log(`  ✅ Found "atbb公開" in subfolder: ${subfolder.name}`);
-          return { type: 'atbb', folderId: atbbFolderId };
+          console.log(`  ${'  '.repeat(currentDepth)}✅ Found "atbb公開" in: ${subfolder.name} at depth ${currentDepth + 1}`);
+          return { type: 'atbb', folderId: atbbFolderId, depth: currentDepth + 1 };
+        }
+        
+        // 見つからなかった場合、さらに深く再帰的に検索
+        console.log(`  ${'  '.repeat(currentDepth)}⬇️ Searching deeper in: ${subfolder.name}`);
+        const deeperResult = await this.searchPublicFolderInSubfolders(
+          subfolder.id,
+          currentDepth + 1,
+          maxDepth
+        );
+        
+        if (deeperResult) {
+          return { type: 'found-deeper', folderId: deeperResult, depth: currentDepth + 2 };
         }
         
         return null;
@@ -252,16 +330,16 @@ export class PropertyImageService {
             throw new Error('Not found');
           })
         ),
-        this.searchTimeoutMs,
+        this.searchTimeoutMs * (maxDepth - currentDepth), // 深さに応じてタイムアウトを調整
         null,
-        'subfolder search'
+        `subfolder search at depth ${currentDepth}`
       );
       
       const result = await searchWithTimeout;
       return result;
     } catch (error: any) {
       if (error.message !== 'Not found') {
-        console.error(`⚠️ Error searching public folders in subfolders:`, error.message);
+        console.error(`  ${'  '.repeat(currentDepth)}⚠️ Error searching at depth ${currentDepth}:`, error.message);
       }
       return null;
     }
@@ -272,7 +350,7 @@ export class PropertyImageService {
    * "athome公開"または"atbb公開"サブフォルダが存在する場合は優先的にそこから取得
    * 検索順序: athome公開 → atbb公開 → 親フォルダ
    */
-  async getImagesFromStorageUrl(storageUrl: string | null | undefined): Promise<PropertyImagesResult> {
+  async getImagesFromStorageUrl(storageUrl: string | null | undefined, propertyNumber?: string): Promise<PropertyImagesResult> {
     // 格納先URLが設定されていない場合
     if (!storageUrl) {
       return {
@@ -296,7 +374,7 @@ export class PropertyImageService {
 
     // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
     // 検索順序: athome公開 → atbb公開 → 親フォルダ
-    const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
+    const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId, propertyNumber);
 
     // キャッシュを確認
     const cachedResult = this.getFromCache(targetFolderId);
@@ -339,8 +417,8 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ 常に本番URLを使用（ローカル開発時のみlocalhost）
-    const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+    // 環境変数からベースURLを取得（ローカル開発時はlocalhost、本番はVercel URL）
+    const baseUrl = process.env.VITE_API_URL || process.env.API_BASE_URL || 'http://localhost:3000';
     
     console.log(`[PropertyImageService] Using baseUrl: ${baseUrl}`);
     
@@ -437,8 +515,8 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ 常に本番URLを使用
-      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+      // 環境変数からベースURLを取得
+      const baseUrl = process.env.VITE_API_URL || process.env.API_BASE_URL || 'http://localhost:3000';
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
@@ -480,8 +558,8 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ 常に本番URLを使用
-      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+      // 環境変数からベースURLを取得
+      const baseUrl = process.env.VITE_API_URL || process.env.API_BASE_URL || 'http://localhost:3000';
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);

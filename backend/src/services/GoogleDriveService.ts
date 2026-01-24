@@ -811,6 +811,8 @@ export class GoogleDriveService extends BaseRepository {
    * - U_AA13069_xxx (プレフィックス付き)
    * - その他の形式で物件番号を含む
    * 
+   * ⚠️ 全角・半角の違いに対応（CC6とCC６など）
+   * 
    * @param folderName 検索するフォルダ名（物件番号）
    * @returns フォルダID、見つからない場合はnull
    */
@@ -818,8 +820,11 @@ export class GoogleDriveService extends BaseRepository {
     try {
       const drive = await this.getDriveClient();
       
+      // 全角・半角を正規化（検索用）
+      const normalizedSearchTerm = this.normalizePropertyNumber(folderName);
+      
       // 1. まずマイドライブを検索
-      console.log(`🔍 Searching for folder containing "${folderName}" in My Drive`);
+      console.log(`🔍 Searching for folder containing "${folderName}" (normalized: "${normalizedSearchTerm}") in My Drive`);
       
       const myDriveResponse = await drive.files.list({
         q: `name contains '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -833,6 +838,14 @@ export class GoogleDriveService extends BaseRepository {
       if (files.length > 0) {
         console.log(`📋 Found ${files.length} folders in My Drive containing "${folderName}":`);
         files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+        
+        // フォルダ名を正規化してマッチング
+        const matchingFolder = this.findMatchingFolder(files, normalizedSearchTerm);
+        
+        if (matchingFolder) {
+          console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
+          return matchingFolder.id || null;
+        }
       } else {
         // 2. マイドライブで見つからなければ共有ドライブも検索
         console.log(`📁 Not found in My Drive, searching in Shared Drives...`);
@@ -851,36 +864,14 @@ export class GoogleDriveService extends BaseRepository {
         if (files.length > 0) {
           console.log(`📋 Found ${files.length} folders in Shared Drives containing "${folderName}":`);
           files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
-        }
-      }
-      
-      if (files.length > 0) {
-        // 優先順位:
-        // 1. 物件番号で始まるフォルダ（例: AA13069_xxx）
-        // 2. プレフィックス付きで物件番号を含むフォルダ（例: U_AA13069_xxx）
-        // 3. その他、物件番号を含むフォルダ
-        
-        // 1. 物件番号で始まるフォルダを優先
-        let matchingFolder = files.find(f => f.name?.startsWith(folderName));
-        
-        // 2. プレフィックス付きフォルダを検索（例: U_AA13069, S_AA13069など）
-        if (!matchingFolder) {
-          matchingFolder = files.find(f => {
-            const name = f.name || '';
-            // プレフィックス_物件番号 のパターンにマッチ
-            const prefixPattern = new RegExp(`^[A-Z]_${folderName}`);
-            return prefixPattern.test(name);
-          });
-        }
-        
-        // 3. その他、物件番号を含むフォルダ（最後の手段）
-        if (!matchingFolder) {
-          matchingFolder = files.find(f => f.name?.includes(folderName));
-        }
-        
-        if (matchingFolder) {
-          console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
-          return matchingFolder.id || null;
+          
+          // フォルダ名を正規化してマッチング
+          const matchingFolder = this.findMatchingFolder(files, normalizedSearchTerm);
+          
+          if (matchingFolder) {
+            console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
+            return matchingFolder.id || null;
+          }
         }
       }
       
@@ -890,6 +881,62 @@ export class GoogleDriveService extends BaseRepository {
       console.error('Error searching folder:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * 物件番号を正規化（全角→半角、大文字化）
+   * @param propertyNumber 物件番号
+   * @returns 正規化された物件番号
+   */
+  private normalizePropertyNumber(propertyNumber: string): string {
+    return propertyNumber
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => {
+        // 全角英数字を半角に変換
+        return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+      })
+      .toUpperCase();
+  }
+
+  /**
+   * フォルダリストから物件番号にマッチするフォルダを検索
+   * 優先順位:
+   * 1. 物件番号で始まるフォルダ（例: AA13069_xxx）
+   * 2. プレフィックス付きで物件番号を含むフォルダ（例: U_AA13069_xxx）
+   * 3. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+   * 
+   * @param files フォルダリスト
+   * @param normalizedSearchTerm 正規化された検索キーワード
+   * @returns マッチしたフォルダ、見つからない場合はundefined
+   */
+  private findMatchingFolder(
+    files: Array<{ id?: string | null; name?: string | null; parents?: string[] | null }>,
+    normalizedSearchTerm: string
+  ): { id?: string | null; name?: string | null } | undefined {
+    // 1. 物件番号で始まるフォルダを優先
+    let matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.startsWith(normalizedSearchTerm);
+    });
+    
+    // 2. プレフィックス付きフォルダを検索（例: U_AA13069, S_AA13069など）
+    if (!matchingFolder) {
+      matchingFolder = files.find(f => {
+        const normalizedName = this.normalizePropertyNumber(f.name || '');
+        // プレフィックス_物件番号 のパターンにマッチ
+        const prefixPattern = new RegExp(`^[A-Z]_${normalizedSearchTerm}`);
+        return prefixPattern.test(normalizedName);
+      });
+    }
+    
+    // 3. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+    if (!matchingFolder) {
+      matchingFolder = files.find(f => {
+        const normalizedName = this.normalizePropertyNumber(f.name || '');
+        return normalizedName.includes(normalizedSearchTerm);
+      });
+    }
+    
+    return matchingFolder;
   }
 
   /**
