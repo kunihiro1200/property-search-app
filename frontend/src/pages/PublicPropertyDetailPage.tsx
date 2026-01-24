@@ -51,6 +51,11 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 管理者モード: 認証済み かつ canHide=true パラメータがある場合のみ
   const isAdminMode = isAuthenticated && canHideParam;
   
+  // デバッグログ
+  console.log('[PublicPropertyDetailPage] isAuthenticated:', isAuthenticated);
+  console.log('[PublicPropertyDetailPage] canHideParam:', canHideParam);
+  console.log('[PublicPropertyDetailPage] isAdminMode:', isAdminMode);
+  
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded: isMapLoaded } = useJsApiLoader({
@@ -71,9 +76,8 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // 画像ギャラリーのrefetch関数を保持
-  const [imageGalleryRefetch, setImageGalleryRefetch] = useState<(() => void) | null>(null);
-
+  // 画像ギャラリーのrefetch関数を保持 - 削除
+  
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
   // デバッグログ
@@ -284,24 +288,7 @@ const PublicPropertyDetailPage: React.FC = () => {
       />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">
-          {/* 更新ボタン（管理者モードのみ表示） */}
-          {isAdminMode && (
-            <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
-              <RefreshButtons
-                propertyId={property?.property_number || ''}
-                onRefreshComplete={(data) => {
-                  console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
-                  setCompleteData(data);
-                  // 画像ギャラリーのrefetchを呼び出す
-                  if (imageGalleryRefetch) {
-                    console.log('[PublicPropertyDetailPage] Calling imageGalleryRefetch');
-                    imageGalleryRefetch();
-                  }
-                }}
-                canRefresh={isAdminMode}
-              />
-            </Box>
-          )}
+          {/* 更新ボタン（管理者モードのみ表示） - 削除 */}
           {/* 印刷ボタン（右上に固定、スマホでは非表示） */}
           <Box
             className="no-print"
@@ -372,10 +359,6 @@ const PublicPropertyDetailPage: React.FC = () => {
                     canHide={isAdminMode}
                     showHiddenImages={false}
                     isPublicSite={true}
-                    onRefetchReady={(refetch) => {
-                      console.log('[PublicPropertyDetailPage] Received refetch function from PropertyImageGallery');
-                      setImageGalleryRefetch(() => refetch);
-                    }}
                   />
                 )}
               </Paper>

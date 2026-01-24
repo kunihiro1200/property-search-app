@@ -92,6 +92,8 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   // デバッグログ
   console.log('PropertyImageGallery - propertyId:', propertyId);
   console.log('PropertyImageGallery - includeHidden:', includeHidden);
+  console.log('PropertyImageGallery - canHide:', canHide);
+  console.log('PropertyImageGallery - isPublicSite:', isPublicSite);
   
   const { data, isLoading, isError, refetch } = usePropertyImages(propertyId, includeHidden);
   
