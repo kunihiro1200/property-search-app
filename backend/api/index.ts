@@ -1,5 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
-// Last updated: 2026-01-24 - Force rebuild to clear @vercel/node cache
+// Last updated: 2026-01-24 - Force rebuild #2 to clear @vercel/node cache
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
