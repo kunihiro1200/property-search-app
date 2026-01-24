@@ -12,6 +12,7 @@ import { GoogleDriveService } from '../src/services/GoogleDriveService';
 import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
+import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
@@ -630,7 +631,6 @@ app.post('/api/public/inquiries', async (req, res) => {
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
       });
       
-      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
@@ -688,7 +688,6 @@ app.post('/api/public/inquiries', async (req, res) => {
     // スプレッドシートに同期（同期的に実行）
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
-      const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
@@ -802,7 +801,6 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     console.log(`[Cron] Found ${pendingInquiries.length} pending inquiries`);
     
     // Google Sheets認証（環境変数から自動的に読み込まれる）
-    const { GoogleSheetsClient } = await import('../src/services/GoogleSheetsClient');
     const sheetsClient = new GoogleSheetsClient({
       spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
       sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
