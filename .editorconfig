@@ -1,0 +1,56 @@
+# EditorConfig - エディタ設定の統一
+
+root = true
+
+# 全てのファイルのデフォルト設定
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# TypeScript/JavaScript
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_style = space
+indent_size = 2
+charset = utf-8
+end_of_line = lf
+
+# JSON
+[*.json]
+indent_style = space
+indent_size = 2
+charset = utf-8
+end_of_line = lf
+
+# Markdown
+[*.md]
+indent_style = space
+indent_size = 2
+charset = utf-8
+end_of_line = lf
+trim_trailing_whitespace = false
+
+# YAML
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+charset = utf-8
+end_of_line = lf
+
+# HTML/CSS
+[*.{html,css,scss,sass}]
+indent_style = space
+indent_size = 2
+charset = utf-8
+end_of_line = lf
+
+# Windowsバッチファイル
+[*.{bat,cmd}]
+charset = utf-8
+end_of_line = crlf
+
+# シェルスクリプト
+[*.{sh,bash}]
+charset = utf-8
+end_of_line = lf
