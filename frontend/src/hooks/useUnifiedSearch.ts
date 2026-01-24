@@ -114,6 +114,12 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
     // ページ番号をリセット（検索時は1ページ目に戻る）
     newParams.delete('page');
 
+    // canHideパラメータを明示的に保持（重要：管理者モードを維持）
+    const currentCanHide = searchParams.get('canHide');
+    if (currentCanHide === 'true') {
+      newParams.set('canHide', 'true');
+    }
+
     // 既存のフィルター（types, minPrice, maxPrice, minAge, maxAge, showPublicOnly）は保持される
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
