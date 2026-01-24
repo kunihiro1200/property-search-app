@@ -144,7 +144,8 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     
     setIsUpdatingStorageUrl(true);
     try {
-      const apiClient = isPublicSite ? publicApi : api;
+      // 管理者モード（canHide=true）の場合は認証付きAPIを使用
+      const apiClient = canHide ? api : publicApi;
       const response = await apiClient.post(`/api/public/properties/${propertyId}/update-storage-url`, {
         storageUrl: storageUrlInput.trim()
       });
