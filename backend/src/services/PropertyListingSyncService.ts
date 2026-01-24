@@ -45,6 +45,8 @@ export class PropertyListingSyncService {
   private diagnosticService: DataIntegrityDiagnosticService;
   private sheetsClient?: GoogleSheetsClient;
   private columnMapper: PropertyListingColumnMapper;
+  private gyomuListService?: any; // GyomuListServiceのインスタンスをキャッシュ
+  private driveService?: any; // GoogleDriveServiceのインスタンスをキャッシュ
 
   constructor(sheetsClient?: GoogleSheetsClient) {
     this.supabase = createClient(
@@ -175,19 +177,25 @@ export class PropertyListingSyncService {
    */
   private async getStorageUrlFromGyomuList(propertyNumber: string): Promise<string | null> {
     try {
-      const { GyomuListService } = await import('./GyomuListService');
-      const { GoogleDriveService } = await import('./GoogleDriveService');
+      // 業務リストサービスのインスタンスを初回のみ作成（キャッシュ）
+      if (!this.gyomuListService) {
+        const { GyomuListService } = await import('./GyomuListService');
+        this.gyomuListService = new GyomuListService();
+      }
       
-      const gyomuListService = new GyomuListService();
-      const driveService = new GoogleDriveService();
+      // Google Driveサービスのインスタンスを初回のみ作成（キャッシュ）
+      if (!this.driveService) {
+        const { GoogleDriveService } = await import('./GoogleDriveService');
+        this.driveService = new GoogleDriveService();
+      }
       
-      const gyomuData = await gyomuListService.getByPropertyNumber(propertyNumber);
+      const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
       
       if (gyomuData && gyomuData.storageUrl) {
         console.log(`[PropertyListingSyncService] Found storage_url in 業務リスト for ${propertyNumber}: ${gyomuData.storageUrl}`);
         
         // 親フォルダURLからathome公開フォルダのURLを取得
-        const athomePublicUrl = await this.findAthomePublicFolderUrl(gyomuData.storageUrl, propertyNumber, driveService);
+        const athomePublicUrl = await this.findAthomePublicFolderUrl(gyomuData.storageUrl, propertyNumber, this.driveService);
         
         if (athomePublicUrl) {
           console.log(`[PropertyListingSyncService] Found athome公開 folder URL for ${propertyNumber}: ${athomePublicUrl}`);
@@ -617,8 +625,8 @@ export class PropertyListingSyncService {
               }
 
               // 追加データも取得して保存（初回から高速表示のため）
-              // 一時的に無効化: sellersテーブルのcommentsカラムエラーを回避
-              // await this.updatePropertyDetailsFromSheets(update.property_number);
+              // エラーが発生しても処理を続行（エラーハンドリング済み）
+              await this.updatePropertyDetailsFromSheets(update.property_number);
 
               return await this.updatePropertyListing(
                 update.property_number,

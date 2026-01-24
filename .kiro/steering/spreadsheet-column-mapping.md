@@ -31,8 +31,24 @@ inclusion: always
 | `construction_year_month` | `築年月` | - | |
 | `floor_plan` | `間取り` | - | |
 | `storage_location` | **存在しない** | - | **物件リストスプレッドシートには存在しない。物件リスト（ブラウザ）のみに存在** |
+| `property_about` | `●内覧前伝達事項` | BQ列 | **公開物件サイトの「こちらの物件について」セクションに表示** |
 
 ### 重要な値のマッピング
+
+#### property_about（こちらの物件について）の取得
+**取得元**: 物件リストスプレッドシートのBQ列（`●内覧前伝達事項`）
+
+**実装場所**: `backend/src/services/PropertyService.ts`の`getPropertyAbout()`メソッド
+
+**使用方法**:
+```typescript
+const propertyService = new PropertyService();
+const propertyAbout = await propertyService.getPropertyAbout('AA13287');
+```
+
+**保存先**: `property_details.property_about`（データベーステーブル）
+
+**表示場所**: 公開物件サイトの「こちらの物件について」セクション
 
 #### 格納先URL（画像フォルダ）の取得元
 **⚠️ 重要**: 物件リストスプレッドシートには「格納先URL」カラムは**存在しません**

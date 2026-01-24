@@ -614,7 +614,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const isUUID = uuidRegex.test(identifier);
     
-    // 物件情報を取得（データベース）
+    // 物件情報を取得（データベース）- 最新のデータを取得
     let property;
     if (isUUID) {
       property = await propertyListingService.getPublicPropertyById(identifier);
@@ -632,6 +632,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     }
     
     console.log(`[Refresh Essential] Property found: ${property.property_number}`);
+    console.log(`[Refresh Essential] Current storage_location: ${property.storage_location}`);
     
     // 画像を取得（Google Drive）- キャッシュをバイパス
     const propertyImageService = new PropertyImageService(
@@ -653,6 +654,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
       // キャッシュをクリアしてから画像を取得
       const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
       if (folderId) {
+        console.log(`[Refresh Essential] Clearing cache for folder: ${folderId}`);
         propertyImageService.clearCache(folderId);
       }
       
@@ -662,7 +664,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
       const hiddenImages = await propertyListingService.getHiddenImages(property.id);
       images = result.images.filter(img => !hiddenImages.includes(img.id));
       
-      console.log(`[Refresh Essential] Images fetched: ${images.length} images`);
+      console.log(`[Refresh Essential] Images fetched: ${images.length} images (${result.images.length} total, ${hiddenImages.length} hidden)`);
     } else {
       console.log(`[Refresh Essential] No storage URL found`);
     }
