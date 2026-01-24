@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Box, useMediaQuery, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmailIcon from '@mui/icons-material/Email';
@@ -22,21 +22,36 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
   showInquiryButton = false,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const badgeType = getBadgeType(atbbStatus);
 
   const handleBackClick = () => {
+    // 現在のURLからcanHideパラメータを取得
+    const searchParams = new URLSearchParams(location.search);
+    const canHide = searchParams.get('canHide');
+    
+    console.log('[PublicPropertyHeader] handleBackClick - canHide:', canHide);
+    console.log('[PublicPropertyHeader] handleBackClick - location.search:', location.search);
+    
+    // canHideパラメータを保持したURLを構築
+    const backUrl = canHide === 'true' 
+      ? '/public/properties?canHide=true' 
+      : '/public/properties';
+    
+    console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
+    
     // navigationStateを保持したまま一覧ページに戻る
     if (navigationState) {
       // stateを保持して一覧ページに戻る
-      navigate('/public/properties', {
+      navigate(backUrl, {
         state: navigationState,
         replace: false
       });
     } else {
       // stateがない場合は通常の戻る
-      navigate('/public/properties');
+      navigate(backUrl);
     }
   };
 
