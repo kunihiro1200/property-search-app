@@ -625,16 +625,28 @@ app.post('/api/public/inquiries', async (req, res) => {
     
     try {
       console.log('[Inquiry API] Getting buyer number from spreadsheet...');
+      
+      // 環境変数の詳細ログ
+      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID;
+      const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
+      
       console.log('[Inquiry API] Environment check:', {
         hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
         googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        spreadsheetId: spreadsheetId,
+        spreadsheetIdType: typeof spreadsheetId,
+        spreadsheetIdLength: spreadsheetId?.length || 0,
+        sheetName: sheetName,
       });
       
+      // 環境変数が未定義の場合はエラーをスロー
+      if (!spreadsheetId) {
+        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
+      }
+      
       const sheetsClient = new GoogleSheetsClient({
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        spreadsheetId: spreadsheetId,
+        sheetName: sheetName,
       });
       
       console.log('[Inquiry API] Calling authenticate()...');
@@ -689,9 +701,26 @@ app.post('/api/public/inquiries', async (req, res) => {
     // スプレッドシートに同期（同期的に実行）
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
+      
+      // 環境変数の詳細ログ
+      const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID;
+      const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
+      
+      console.log('[Inquiry API] Sync environment check:', {
+        spreadsheetId: spreadsheetId,
+        spreadsheetIdType: typeof spreadsheetId,
+        spreadsheetIdLength: spreadsheetId?.length || 0,
+        sheetName: sheetName,
+      });
+      
+      // 環境変数が未定義の場合はエラーをスロー
+      if (!spreadsheetId) {
+        throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set in environment variables');
+      }
+      
       const sheetsClient = new GoogleSheetsClient({
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+        spreadsheetId: spreadsheetId,
+        sheetName: sheetName,
       });
       
       await sheetsClient.authenticate();
