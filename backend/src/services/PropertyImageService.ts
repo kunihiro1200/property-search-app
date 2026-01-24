@@ -92,20 +92,29 @@ export class PropertyImageService {
    * - https://drive.google.com/drive/folders/FOLDER_ID?usp=sharing
    */
   extractFolderIdFromUrl(url: string): string | null {
-    if (!url) return null;
+    if (!url) {
+      console.log('[extractFolderIdFromUrl] URL is empty or null');
+      return null;
+    }
 
     try {
+      console.log(`[extractFolderIdFromUrl] Input URL: ${url}`);
+      
       // フォルダIDを抽出する正規表現
       const folderIdRegex = /\/folders\/([a-zA-Z0-9_-]+)/;
       const match = url.match(folderIdRegex);
       
+      console.log(`[extractFolderIdFromUrl] Regex match result:`, match);
+      
       if (match && match[1]) {
+        console.log(`[extractFolderIdFromUrl] Extracted folder ID: ${match[1]}`);
         return match[1];
       }
       
+      console.log('[extractFolderIdFromUrl] No match found');
       return null;
     } catch (error) {
-      console.error('Error extracting folder ID from URL:', error);
+      console.error('[extractFolderIdFromUrl] Error extracting folder ID from URL:', error);
       return null;
     }
   }

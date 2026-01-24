@@ -1198,14 +1198,20 @@ router.post('/properties/:identifier/clear-image-cache', async (req: Request, re
     }
 
     // フォルダIDを抽出（親フォルダ）
+    console.log(`🔍 Extracting folder ID from storage URL: ${storageUrl}`);
     const parentFolderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
+    console.log(`🔍 Extracted parent folder ID: ${parentFolderId}`);
     
     if (!parentFolderId) {
       console.error(`❌ Could not extract folder ID from storage URL: ${storageUrl}`);
       res.status(400).json({ 
         success: false,
         error: 'Invalid storage URL',
-        message: '格納先URLからフォルダIDを抽出できませんでした'
+        message: '格納先URLからフォルダIDを抽出できませんでした',
+        details: {
+          storageUrl: storageUrl,
+          extractedId: parentFolderId
+        }
       });
       return;
     }
