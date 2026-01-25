@@ -381,9 +381,15 @@ const PublicPropertiesPage: React.FC = () => {
   //   fetchAllProperties();
   // }, [searchParams, isStateRestored]);
   
-  // viewModeが地図に変更されたときのみ全件取得
+  // viewModeが地図に変更されたときのみ全件取得（既に取得済みの場合はスキップ）
   useEffect(() => {
     if (viewMode === 'map' && isStateRestored) {
+      // 既に地図用データが取得済みの場合はスキップ（戻るボタンで戻った時の高速化）
+      if (allProperties.length > 0) {
+        console.log('🗺️ Map view activated, using cached data (', allProperties.length, 'properties)');
+        return;
+      }
+      
       console.log('🗺️ Map view activated, fetching all properties...');
       // 地図表示時は公開中のみをデフォルトで取得（showAllOnMapがfalseの場合）
       fetchAllProperties(!showAllOnMap); // showAllOnMapがfalseなら公開中のみ（true）、trueなら全物件（false）
