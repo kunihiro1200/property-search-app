@@ -21,12 +21,12 @@ async function syncPanoramaUrlForProperty(propertyNumber: string): Promise<boole
     let spreadsheetUrl: string | null = null;
     
     // ========================================
-    // ステップ1: 業務リストから「スプシURL」を取得
+    // ステップ1: 業務依頼シートから「スプシURL」を取得
     // ========================================
     try {
       const gyomuListClient = new GoogleSheetsClient({
-        spreadsheetId: '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY',
-        sheetName: '物件',
+        spreadsheetId: '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g', // 業務依頼
+        sheetName: '業務依頼',
         serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json',
       });
       
