@@ -670,7 +670,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
       
       // 最初の画像のURLを取得（データベース更新用）
       if (images.length > 0) {
-        newImageUrl = images[0].url;
+        newImageUrl = images[0].fullImageUrl;
         console.log(`[Refresh Essential] First image URL: ${newImageUrl}`);
         
         // データベースのimage_urlを更新（永続化）
@@ -779,7 +779,7 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
         
         // 最初の画像のURLを取得（データベース更新用）
         if (filteredImages.length > 0) {
-          const newImageUrl = filteredImages[0].url;
+          const newImageUrl = filteredImages[0].fullImageUrl;
           console.log(`[Refresh All] First image URL: ${newImageUrl}`);
           
           // データベースのimage_urlを更新（永続化）
