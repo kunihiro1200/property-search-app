@@ -1,90 +1,105 @@
-import dotenv from 'dotenv';
+// CC23の個別スプシのathomeシート構造を確認
+import * as dotenv from 'dotenv';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
-import { google } from 'googleapis';
+import { GyomuDriveFolderService } from './src/services/GyomuDriveFolderService';
 
+// .envファイルを読み込む
 dotenv.config();
 
-async function checkAthomeSheetStructure() {
+async function checkCC23AthomeSheetStructure(propertyNumber: string) {
   try {
-    console.log('🔍 CC23のathomeシート構造を確認中...\n');
-
-    // 業務リストから情報を取得
-    const gyomuListClient = new GoogleSheetsClient({
-      spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID!,
-      sheetName: '業務依頼',
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-    });
-
-    await gyomuListClient.authenticate();
-    const gyomuData = await gyomuListClient.readAll();
-
-    const cc23Row = gyomuData.find(row => row['物件番号'] === 'CC23');
-    if (!cc23Row) {
-      console.error('❌ 業務リストにCC23が見つかりません');
+    console.log(`\n========================================`);
+    console.log(`${propertyNumber}の個別スプシのathomeシート構造を確認`);
+    console.log(`========================================\n`);
+    
+    // ========================================
+    // ステップ1: 個別スプシを検索
+    // ========================================
+    console.log(`[Step 1] 業務依頼フォルダから個別スプシを検索...`);
+    
+    const gyomuDriveFolderService = new GyomuDriveFolderService();
+    const spreadsheetUrl = await gyomuDriveFolderService.findSpreadsheetByPropertyNumber(propertyNumber);
+    
+    if (!spreadsheetUrl) {
+      console.error(`❌ 個別スプシが見つかりませんでした`);
       return;
     }
-
-    const spreadsheetUrl = cc23Row['スプシURL'];
+    
+    console.log(`✅ 個別スプシが見つかりました: ${spreadsheetUrl}`);
+    
+    // スプレッドシートIDを抽出
     const spreadsheetIdMatch = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (!spreadsheetIdMatch) {
-      console.error('❌ スプレッドシートIDを抽出できません');
-      return;
+      throw new Error('スプレッドシートIDを抽出できませんでした');
     }
-
-    const individualSpreadsheetId = spreadsheetIdMatch[1];
-    console.log('個別スプレッドシートID:', individualSpreadsheetId);
-    console.log('');
-
-    // athomeシートの最初の100行を取得
-    const athomeClient = new GoogleSheetsClient({
-      spreadsheetId: individualSpreadsheetId,
+    const spreadsheetId = spreadsheetIdMatch[1];
+    console.log(`   スプレッドシートID: ${spreadsheetId}`);
+    
+    // ========================================
+    // ステップ2: athomeシートの全データを取得
+    // ========================================
+    console.log(`\n[Step 2] athomeシートの全データを取得...`);
+    
+    const individualSheetClient = new GoogleSheetsClient({
+      spreadsheetId: spreadsheetId,
       sheetName: 'athome',
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json',
     });
-
-    await athomeClient.authenticate();
-    const sheets = google.sheets({ version: 'v4', auth: athomeClient.getAuth() });
-
-    // A列とB列の最初の200行を取得
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: individualSpreadsheetId,
-      range: 'athome!A1:B200',
-    });
-
-    const data = response.data.values || [];
-
-    console.log('=== athomeシートの構造（A列とB列の最初の200行） ===');
-    console.log('');
-
+    
+    await individualSheetClient.authenticate();
+    console.log(`✅ 個別スプシ認証成功`);
+    
+    // A1:Z10の範囲を取得（最初の10行）
+    const data = await individualSheetClient.readRange('A1:Z10');
+    
+    console.log(`\n取得したデータ（最初の10行）:`);
+    console.log(`行数: ${data.length}`);
+    
     data.forEach((row, index) => {
-      const rowNum = index + 1;
-      const colA = row[0] || '';
-      const colB = row[1] || '';
-      
-      // 重要そうな行だけ表示
-      if (colA.includes('お気に入り') || 
-          colA.includes('パノラマ') || 
-          colB.includes('お気に入り') || 
-          colB.includes('パノラマ') ||
-          colA.includes('URL') ||
-          colB.includes('URL')) {
-        console.log(`行${rowNum}: A="${colA}" | B="${colB}"`);
-      }
+      console.log(`\n--- 行 ${index + 1} ---`);
+      console.log(JSON.stringify(row, null, 2));
     });
-
-    console.log('');
-    console.log('=== 全行表示（最初の30行） ===');
-    data.slice(0, 30).forEach((row, index) => {
-      const rowNum = index + 1;
-      const colA = row[0] || '';
-      const colB = row[1] || '';
-      console.log(`行${rowNum}: A="${colA.substring(0, 40)}" | B="${colB.substring(0, 40)}"`);
+    
+    // ========================================
+    // ステップ3: M列とN列のデータを確認
+    // ========================================
+    console.log(`\n[Step 3] M列とN列のデータを確認...`);
+    
+    const mColumnData = await individualSheetClient.readRange('M1:M10');
+    const nColumnData = await individualSheetClient.readRange('N1:N10');
+    
+    console.log(`\nM列のデータ（最初の10行）:`);
+    mColumnData.forEach((row, index) => {
+      const value = Object.values(row)[0];
+      console.log(`  M${index + 1}: ${value || '(empty)'}`);
     });
-
+    
+    console.log(`\nN列のデータ（最初の10行）:`);
+    nColumnData.forEach((row, index) => {
+      const value = Object.values(row)[0];
+      console.log(`  N${index + 1}: ${value || '(empty)'}`);
+    });
+    
+    console.log(`\n========================================`);
+    console.log(`✅ 確認完了`);
+    console.log(`========================================\n`);
+    
   } catch (error: any) {
-    console.error('❌ エラーが発生しました:', error.message);
-    console.error(error.stack);
+    console.error(`\n❌ エラーが発生しました:`, error);
+    console.error(`エラー詳細:`, {
+      message: error.message,
+      stack: error.stack,
+    });
   }
 }
 
-checkAthomeSheetStructure();
+// CC23のathomeシート構造を確認
+checkCC23AthomeSheetStructure('CC23')
+  .then(() => {
+    console.log('スクリプト実行完了');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('スクリプト実行エラー:', error);
+    process.exit(1);
+  });
