@@ -425,8 +425,8 @@ export class PropertyListingService {
         }
       } else {
         // 通常の画像取得処理（リストビュー用）
-        // 全件を並列処理して高速化（ローカル環境と同じ動作）
-        const concurrencyLimit = 20; // 5から20に変更
+        // ⚠️ 重要: storage_locationがある物件のみ画像を取得（業務リストへのアクセスを回避）
+        const concurrencyLimit = 20;
         
         for (let i = 0; i < (data || []).length; i += concurrencyLimit) {
           const batch = (data || []).slice(i, i + concurrencyLimit);
@@ -442,21 +442,10 @@ export class PropertyListingService {
             
             try {
               let images: any[] = [];
-              let storageLocation = property.storage_location;
-              
-              // storage_locationが空の場合、業務リストから取得
-              if (!storageLocation && property.property_number) {
-                console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
-                storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
-                if (storageLocation) {
-                  console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
-                }
-              }
               
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
-                // image_urlをオブジェクト形式に変換
                 images = [{
                   id: 'legacy',
                   name: 'Property Image',
@@ -468,11 +457,11 @@ export class PropertyListingService {
                 }];
               }
               // 2. storage_locationがある場合はGoogle Driveから取得
-              else if (storageLocation) {
+              else if (property.storage_location) {
                 console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
                 
                 // PropertyImageServiceを使用して画像オブジェクトを取得
-                const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
+                const imageResult = await this.propertyImageService.getImagesFromStorageUrl(property.storage_location);
                 
                 if (imageResult.images.length > 0) {
                   // 最初の画像のみを使用
@@ -482,7 +471,9 @@ export class PropertyListingService {
                   console.log(`[PropertyListingService] No images found for ${property.property_number}`);
                 }
               } else {
-                console.log(`[PropertyListingService] No image source for ${property.property_number}`);
+                // ⚠️ 重要: storage_locationがない場合は業務リストへのアクセスをスキップ
+                // これにより、Google Sheets APIのクォータ制限を回避
+                console.log(`[PropertyListingService] No storage_location for ${property.property_number}, skipping image fetch`);
               }
               
               return {
