@@ -42,9 +42,17 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
     
     console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
     
-    // ⚠️ 重要: navigationStateを渡さずに一覧ページに戻る
-    // これにより、状態復元処理が実行されず、高速に戻ることができる
-    navigate(backUrl);
+    // navigationStateを保持したまま一覧ページに戻る
+    if (navigationState) {
+      // stateを保持して一覧ページに戻る
+      navigate(backUrl, {
+        state: navigationState,
+        replace: false
+      });
+    } else {
+      // stateがない場合は通常の戻る
+      navigate(backUrl);
+    }
   };
 
   const handleInquiryClick = () => {
