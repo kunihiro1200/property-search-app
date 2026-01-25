@@ -293,6 +293,13 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       // athome_dataの2番目の要素がパノラマURL
       panoramaUrl = dbDetails.athome_data[1] || null;
       console.log(`[Complete API] Panorama URL from athome_data: ${panoramaUrl || '(not found)'}`);
+    } else {
+      console.log(`[Complete API] Panorama URL not available:`, {
+        has_athome_data: !!dbDetails.athome_data,
+        is_array: Array.isArray(dbDetails.athome_data),
+        length: dbDetails.athome_data?.length || 0,
+        athome_data: dbDetails.athome_data,
+      });
     }
     
     const endTime = Date.now();
@@ -945,6 +952,12 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
     const { propertyNumber } = req.params;
     
     console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
+    console.log(`[Estimate PDF] Environment check:`, {
+      hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+      hasGoogleServiceAccountKeyPath: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+      nodeEnv: process.env.NODE_ENV,
+    });
     
     // PropertyServiceを使用（静的インポート）
     const propertyService = new PropertyService();
@@ -964,11 +977,24 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
       message: error.message,
       stack: error.stack,
       code: error.code,
+      name: error.name,
     });
+    
+    // より詳細なエラーメッセージを返す
+    let userMessage = '概算書の生成に失敗しました';
+    if (error.message?.includes('Quota exceeded')) {
+      userMessage = 'Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。';
+    } else if (error.message?.includes('タイムアウト')) {
+      userMessage = '計算がタイムアウトしました。もう一度お試しください。';
+    } else if (error.message?.includes('認証')) {
+      userMessage = 'Google Sheetsの認証に失敗しました。管理者にお問い合わせください。';
+    }
+    
     res.status(500).json({ 
       success: false,
       error: 'Internal server error',
-      message: error.message || '概算書の生成に失敗しました'
+      message: userMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
