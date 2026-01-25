@@ -421,20 +421,26 @@ export class PropertyService {
    * @returns PDFのURL
    */
   async generateEstimatePdf(propertyNumber: string): Promise<string> {
+    console.log(`[generateEstimatePdf] Method called for: ${propertyNumber}`);
+    
     try {
       // キャッシュをチェック（5分間）- Redisが利用できない場合はスキップ
       const cacheKey = `estimate_pdf:${propertyNumber}`;
+      console.log(`[generateEstimatePdf] Checking cache with key: ${cacheKey}`);
+      
       try {
         const cached = await CacheHelper.get<string>(cacheKey);
         if (cached !== null) {
           console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
           return cached;
         }
+        console.log(`[generateEstimatePdf] No cached PDF found`);
       } catch (cacheError: any) {
         // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
         console.log(`[generateEstimatePdf] Cache not available, skipping:`, cacheError?.message || cacheError);
       }
       
+      console.log(`[generateEstimatePdf] Importing googleapis...`);
       const { google } = await import('googleapis');
       const fs = require('fs');
       const path = require('path');
@@ -444,14 +450,23 @@ export class PropertyService {
       // サービスアカウント認証
       // Vercel環境では環境変数から、ローカル環境ではファイルから読み込む
       let keyFile;
+      console.log(`[generateEstimatePdf] Loading service account credentials...`);
+      
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         // Vercel環境: 環境変数から直接読み込む
         console.log(`[generateEstimatePdf] Using GOOGLE_SERVICE_ACCOUNT_JSON from environment`);
-        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        try {
+          keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          console.log(`[generateEstimatePdf] Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON`);
+        } catch (parseError: any) {
+          console.error(`[generateEstimatePdf] Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:`, parseError);
+          throw new Error(`認証情報のパースに失敗しました: ${parseError.message}`);
+        }
       } else {
         // ローカル環境: ファイルから読み込む
         console.log(`[generateEstimatePdf] Using service account key file`);
         const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json');
+        console.log(`[generateEstimatePdf] Key file path: ${keyPath}`);
         keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
       }
       
@@ -511,14 +526,28 @@ export class PropertyService {
       
       return pdfUrl;
     } catch (error: any) {
-      console.error('[generateEstimatePdf] Error:', error);
+      console.error('[generateEstimatePdf] Error occurred:', error);
+      console.error('[generateEstimatePdf] Error type:', typeof error);
+      console.error('[generateEstimatePdf] Error constructor:', error?.constructor?.name);
+      console.error('[generateEstimatePdf] Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        name: error?.name,
+      });
       
       // クォータ超過エラーの場合は分かりやすいメッセージを返す
       if (error.code === 429 || error.message?.includes('Quota exceeded')) {
-        throw new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        const quotaError = new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        console.error('[generateEstimatePdf] Throwing quota error:', quotaError.message);
+        throw quotaError;
       }
       
-      throw new Error(error.message || '概算書の生成に失敗しました');
+      // エラーメッセージを構築
+      const errorMessage = error?.message || error?.toString() || '概算書の生成に失敗しました';
+      const finalError = new Error(errorMessage);
+      console.error('[generateEstimatePdf] Throwing error:', finalError.message);
+      throw finalError;
     }
   }
   
