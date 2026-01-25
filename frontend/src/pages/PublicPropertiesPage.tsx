@@ -165,6 +165,11 @@ const PublicPropertiesPage: React.FC = () => {
       // 復元完了フラグを先に立てる（無限ループ防止）
       hasRestoredState.current = true;
       
+      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
+      // これにより、地図用データの取得useEffectが実行されない
+      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
+      setViewMode('list');
+      
       // ページ番号を復元
       if (savedState.currentPage) {
         setCurrentPage(savedState.currentPage);
