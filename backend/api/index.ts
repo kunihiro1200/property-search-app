@@ -289,10 +289,25 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     
     // パノラマURLを取得（athome_dataから取得、なければnull）
     let panoramaUrl = null;
-    if (dbDetails.athome_data && Array.isArray(dbDetails.athome_data) && dbDetails.athome_data.length > 1) {
-      // athome_dataの2番目の要素がパノラマURL
-      panoramaUrl = dbDetails.athome_data[1] || null;
-      console.log(`[Complete API] Panorama URL from athome_data: ${panoramaUrl || '(not found)'}`);
+    if (dbDetails.athome_data && Array.isArray(dbDetails.athome_data) && dbDetails.athome_data.length > 0) {
+      // athome_dataの構造:
+      // - [0]: Google DriveフォルダURL または パノラマURL
+      // - [1]: パノラマURL（存在する場合）
+      
+      // まず[1]を確認（2要素構造の場合）
+      if (dbDetails.athome_data.length > 1 && dbDetails.athome_data[1]) {
+        panoramaUrl = dbDetails.athome_data[1];
+        console.log(`[Complete API] Panorama URL from athome_data[1]: ${panoramaUrl}`);
+      } 
+      // [1]がない場合、[0]がパノラマURLかチェック（vrpanorama.athome.jpを含むか）
+      else if (dbDetails.athome_data[0] && typeof dbDetails.athome_data[0] === 'string' && dbDetails.athome_data[0].includes('vrpanorama.athome.jp')) {
+        panoramaUrl = dbDetails.athome_data[0];
+        console.log(`[Complete API] Panorama URL from athome_data[0]: ${panoramaUrl}`);
+      }
+      
+      if (!panoramaUrl) {
+        console.log(`[Complete API] Panorama URL not found in athome_data:`, dbDetails.athome_data);
+      }
     } else {
       console.log(`[Complete API] Panorama URL not available:`, {
         has_athome_data: !!dbDetails.athome_data,
