@@ -165,11 +165,6 @@ const PublicPropertiesPage: React.FC = () => {
       // 復元完了フラグを先に立てる（無限ループ防止）
       hasRestoredState.current = true;
       
-      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
-      // これにより、地図用データの取得useEffectが実行されない
-      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
-      setViewMode('list');
-      
       // ページ番号を復元
       if (savedState.currentPage) {
         setCurrentPage(savedState.currentPage);
@@ -365,7 +360,7 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     setSearchParams(newParams, { replace: true });
-  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
+  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode, searchParams]);
   
   useEffect(() => {
     // 状態復元が完了するまで待つ
@@ -373,9 +368,8 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
-    console.log('📊 fetchProperties triggered by:', { currentPage, searchParams: searchParams.toString() });
     fetchProperties();
-  }, [currentPage, searchParams]);
+  }, [currentPage, searchParams, isStateRestored]);
   
   // 全件取得は地図表示時のみ実行（初回ロード時は実行しない）
   // useEffect(() => {
@@ -387,15 +381,9 @@ const PublicPropertiesPage: React.FC = () => {
   //   fetchAllProperties();
   // }, [searchParams, isStateRestored]);
   
-  // viewModeが地図に変更されたときのみ全件取得（既に取得済みの場合はスキップ）
+  // viewModeが地図に変更されたときのみ全件取得
   useEffect(() => {
     if (viewMode === 'map' && isStateRestored) {
-      // 既に地図用データが取得済みの場合はスキップ（戻るボタンで戻った時の高速化）
-      if (allProperties.length > 0) {
-        console.log('🗺️ Map view activated, using cached data (', allProperties.length, 'properties)');
-        return;
-      }
-      
       console.log('🗺️ Map view activated, fetching all properties...');
       // 地図表示時は公開中のみをデフォルトで取得（showAllOnMapがfalseの場合）
       fetchAllProperties(!showAllOnMap); // showAllOnMapがfalseなら公開中のみ（true）、trueなら全物件（false）
@@ -615,11 +603,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 物件タイプフィルターのトグル処理
   const handleTypeToggle = (type: PropertyType) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    // これにより、地図用データの取得useEffectが実行されない
-    console.log('🔄 Property type filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
     setSelectedTypes((prev) => {
       if (prev.includes(type)) {
         return prev.filter((t) => t !== type);
@@ -631,52 +614,9 @@ const PublicPropertiesPage: React.FC = () => {
     setCurrentPage(1);
   };
   
-  // 価格フィルター変更ハンドラー
-  const handlePriceChange = (type: 'min' | 'max', value: string) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Price filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
-    if (type === 'min') {
-      setMinPrice(value);
-    } else {
-      setMaxPrice(value);
-    }
-    setCurrentPage(1);
-  };
-  
-  // 築年数フィルター変更ハンドラー
-  const handleAgeChange = (type: 'min' | 'max', value: string) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Building age filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
-    if (type === 'min') {
-      setMinAge(value);
-    } else {
-      setMaxAge(value);
-    }
-    setCurrentPage(1);
-  };
-  
-  // 公開中のみ表示フィルター変更ハンドラー
-  const handleShowPublicOnlyToggle = () => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Show public only filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
-    setShowPublicOnly(!showPublicOnly);
-    setCurrentPage(1);
-  };
-  
   // すべてのフィルターをクリアする処理
   const handleClearAllFilters = () => {
     try {
-      // ⚠️ 重要: フィルタークリア時は、viewModeを強制的に'list'に設定
-      // これにより、地図用データの取得useEffectが実行されない
-      console.log('🔄 Clearing all filters, forcing viewMode to list');
-      setViewMode('list');
-      
       // 物件タイプ選択をクリア
       setSelectedTypes([]);
       
@@ -867,7 +807,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minPrice}
-                  onChange={(e) => handlePriceChange('min', e.target.value)}
+                  onChange={(e) => setMinPrice(e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -877,7 +817,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxPrice}
-                  onChange={(e) => handlePriceChange('max', e.target.value)}
+                  onChange={(e) => setMaxPrice(e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
               </Stack>
@@ -895,7 +835,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minAge}
-                  onChange={(e) => handleAgeChange('min', e.target.value)}
+                  onChange={(e) => setMinAge(e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -905,7 +845,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxAge}
-                  onChange={(e) => handleAgeChange('max', e.target.value)}
+                  onChange={(e) => setMaxAge(e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
               </Stack>
@@ -915,7 +855,10 @@ const PublicPropertiesPage: React.FC = () => {
             <Box>
               <Button
                 variant={showPublicOnly ? "contained" : "outlined"}
-                onClick={handleShowPublicOnlyToggle}
+                onClick={() => {
+                  setShowPublicOnly(!showPublicOnly);
+                  setCurrentPage(1);
+                }}
                 disabled={filterLoading}
                 sx={{
                   borderColor: '#4CAF50',
