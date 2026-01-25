@@ -614,6 +614,11 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 物件タイプフィルターのトグル処理
   const handleTypeToggle = (type: PropertyType) => {
+    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
+    // これにより、地図用データの取得useEffectが実行されない
+    console.log('🔄 Property type filter changed, forcing viewMode to list');
+    setViewMode('list');
+    
     setSelectedTypes((prev) => {
       if (prev.includes(type)) {
         return prev.filter((t) => t !== type);
@@ -625,9 +630,52 @@ const PublicPropertiesPage: React.FC = () => {
     setCurrentPage(1);
   };
   
+  // 価格フィルター変更ハンドラー
+  const handlePriceChange = (type: 'min' | 'max', value: string) => {
+    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
+    console.log('🔄 Price filter changed, forcing viewMode to list');
+    setViewMode('list');
+    
+    if (type === 'min') {
+      setMinPrice(value);
+    } else {
+      setMaxPrice(value);
+    }
+    setCurrentPage(1);
+  };
+  
+  // 築年数フィルター変更ハンドラー
+  const handleAgeChange = (type: 'min' | 'max', value: string) => {
+    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
+    console.log('🔄 Building age filter changed, forcing viewMode to list');
+    setViewMode('list');
+    
+    if (type === 'min') {
+      setMinAge(value);
+    } else {
+      setMaxAge(value);
+    }
+    setCurrentPage(1);
+  };
+  
+  // 公開中のみ表示フィルター変更ハンドラー
+  const handleShowPublicOnlyToggle = () => {
+    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
+    console.log('🔄 Show public only filter changed, forcing viewMode to list');
+    setViewMode('list');
+    
+    setShowPublicOnly(!showPublicOnly);
+    setCurrentPage(1);
+  };
+  
   // すべてのフィルターをクリアする処理
   const handleClearAllFilters = () => {
     try {
+      // ⚠️ 重要: フィルタークリア時は、viewModeを強制的に'list'に設定
+      // これにより、地図用データの取得useEffectが実行されない
+      console.log('🔄 Clearing all filters, forcing viewMode to list');
+      setViewMode('list');
+      
       // 物件タイプ選択をクリア
       setSelectedTypes([]);
       
@@ -818,7 +866,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
+                  onChange={(e) => handlePriceChange('min', e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -828,7 +876,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
+                  onChange={(e) => handlePriceChange('max', e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
               </Stack>
@@ -846,7 +894,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minAge}
-                  onChange={(e) => setMinAge(e.target.value)}
+                  onChange={(e) => handleAgeChange('min', e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -856,7 +904,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxAge}
-                  onChange={(e) => setMaxAge(e.target.value)}
+                  onChange={(e) => handleAgeChange('max', e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
               </Stack>
@@ -866,10 +914,7 @@ const PublicPropertiesPage: React.FC = () => {
             <Box>
               <Button
                 variant={showPublicOnly ? "contained" : "outlined"}
-                onClick={() => {
-                  setShowPublicOnly(!showPublicOnly);
-                  setCurrentPage(1);
-                }}
+                onClick={handleShowPublicOnlyToggle}
                 disabled={filterLoading}
                 sx={{
                   borderColor: '#4CAF50',
