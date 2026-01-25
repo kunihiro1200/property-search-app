@@ -430,9 +430,9 @@ export class PropertyService {
           console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
           return cached;
         }
-      } catch (cacheError) {
+      } catch (cacheError: any) {
         // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
-        console.log(`[generateEstimatePdf] Cache not available, skipping: ${cacheError.message}`);
+        console.log(`[generateEstimatePdf] Cache not available, skipping:`, cacheError?.message || cacheError);
       }
       
       const { google } = await import('googleapis');
@@ -504,9 +504,9 @@ export class PropertyService {
       // キャッシュに保存（5分間）- Redisが利用できない場合はスキップ
       try {
         await CacheHelper.set(cacheKey, pdfUrl, 300);
-      } catch (cacheError) {
+      } catch (cacheError: any) {
         // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
-        console.log(`[generateEstimatePdf] Cache save failed, skipping: ${cacheError.message}`);
+        console.log(`[generateEstimatePdf] Cache save failed, skipping:`, cacheError?.message || cacheError);
       }
       
       return pdfUrl;
