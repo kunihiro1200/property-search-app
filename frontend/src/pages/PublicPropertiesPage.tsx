@@ -64,8 +64,8 @@ const PublicPropertiesPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   
-  // 公開中のみ表示フィルター状態（デフォルトで公開物件のみ表示）
-  const [showPublicOnly, setShowPublicOnly] = useState<boolean>(true);
+  // 公開中のみ表示フィルター状態（デフォルトで全物件を表示）
+  const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
   
   // 初回ロード完了フラグ
   const isInitialLoadDone = useRef(false);
