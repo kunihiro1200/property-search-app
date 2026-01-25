@@ -1,12 +1,13 @@
 // 公開サイトに表示される全物件のパノラマURLを自動同期（V2）
 // 業務リストの「スプシURL」があるものだけ、そのスプシのathomeシートのN1セルから取得
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { PropertyDetailsService } from './src/services/PropertyDetailsService';
 
-// .envファイルを読み込む
-dotenv.config();
+// .envファイルを読み込む（backendディレクトリの.env）
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // Supabaseクライアントの初期化
 const supabaseUrl = process.env.SUPABASE_URL!;
