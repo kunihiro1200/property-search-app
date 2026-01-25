@@ -1,3 +1,10 @@
+---
+tags: [general, frontend, validation, troubleshooting, best-practices]
+priority: high
+context: all
+last-verified: 2026-01-25
+---
+
 # フロントエンドデータ型検証ガイド
 
 ## 概要

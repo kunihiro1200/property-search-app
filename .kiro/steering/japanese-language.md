@@ -1,5 +1,9 @@
 ---
+tags: [general, language, communication, critical]
+priority: high
+context: all
 inclusion: always
+last-verified: 2026-01-25
 ---
 
 # 日本語応答設定

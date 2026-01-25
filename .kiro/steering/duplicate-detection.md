@@ -1,5 +1,9 @@
 ---
+tags: [general, code-quality, eslint, troubleshooting, best-practices]
+priority: medium
+context: all
 inclusion: always
+last-verified: 2026-01-25
 ---
 
 # 重複宣言の検出と防止ガイド

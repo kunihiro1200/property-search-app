@@ -1,5 +1,9 @@
 ---
+tags: [general, security, project-management, critical]
+priority: critical
+context: all
 inclusion: always
+last-verified: 2026-01-25
 ---
 
 # プロジェクト隔離ルール（重要）

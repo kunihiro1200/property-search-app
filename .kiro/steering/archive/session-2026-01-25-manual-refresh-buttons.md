@@ -1,3 +1,11 @@
+---
+tags: [session-record, public-site, admin-features, manual-refresh, resolved]
+priority: low
+context: public-site
+date: 2026-01-25
+status: completed
+---
+
 # セッション記録：手動更新ボタン実装（2026年1月25日）
 
 ## ✅ 完了した作業

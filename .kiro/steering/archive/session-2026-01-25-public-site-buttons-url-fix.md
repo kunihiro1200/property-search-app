@@ -1,3 +1,10 @@
+---
+tags: [session-record, public-site, buttons, url-fix, resolved]
+priority: low
+context: public-site
+last-verified: 2026-01-25
+---
+
 # セッション記録：公開サイトボタンURL修正（2026年1月25日）
 
 ## ✅ 完了した作業
