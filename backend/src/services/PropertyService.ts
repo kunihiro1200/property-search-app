@@ -422,12 +422,17 @@ export class PropertyService {
    */
   async generateEstimatePdf(propertyNumber: string): Promise<string> {
     try {
-      // キャッシュをチェック（5分間）
+      // キャッシュをチェック（5分間）- Redisが利用できない場合はスキップ
       const cacheKey = `estimate_pdf:${propertyNumber}`;
-      const cached = await CacheHelper.get<string>(cacheKey);
-      if (cached !== null) {
-        console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
-        return cached;
+      try {
+        const cached = await CacheHelper.get<string>(cacheKey);
+        if (cached !== null) {
+          console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
+          return cached;
+        }
+      } catch (cacheError) {
+        // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
+        console.log(`[generateEstimatePdf] Cache not available, skipping: ${cacheError.message}`);
       }
       
       const { google } = await import('googleapis');
@@ -496,8 +501,13 @@ export class PropertyService {
       const pdfUrl = this.exportSheetAsPdf(spreadsheetId, sheetId, propertyNumber);
       console.log(`[generateEstimatePdf] Generated PDF URL: ${pdfUrl}`);
       
-      // キャッシュに保存（5分間）
-      await CacheHelper.set(cacheKey, pdfUrl, 300);
+      // キャッシュに保存（5分間）- Redisが利用できない場合はスキップ
+      try {
+        await CacheHelper.set(cacheKey, pdfUrl, 300);
+      } catch (cacheError) {
+        // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
+        console.log(`[generateEstimatePdf] Cache save failed, skipping: ${cacheError.message}`);
+      }
       
       return pdfUrl;
     } catch (error: any) {
