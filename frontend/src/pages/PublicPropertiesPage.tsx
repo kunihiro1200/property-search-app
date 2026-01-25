@@ -410,8 +410,8 @@ const PublicPropertiesPage: React.FC = () => {
       const params = new URLSearchParams({
         limit: '20',
         offset: offset.toString(),
-        // ⚠️ 重要: 画像取得をスキップして高速化（初回ロード時間を1-2秒に短縮）
-        skipImages: 'true',
+        // ⚠️ 重要: 一覧画面では画像を表示する（skipImagesは使用しない）
+        // 地図表示のみskipImages=trueを使用
       });
       
       if (propertyNumber) {
