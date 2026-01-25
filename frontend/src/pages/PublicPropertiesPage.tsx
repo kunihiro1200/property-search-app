@@ -364,14 +364,6 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
-    // ⚠️ 重要: 詳細画面から戻ってきた場合は、fetchProperties()をスキップ
-    // 既に物件データが存在し、フィルター条件も変わっていないため、再取得は不要
-    const savedState = location.state as NavigationState | null;
-    if (savedState && properties.length > 0) {
-      console.log('🔄 Skipping fetchProperties() - returning from detail page with existing data');
-      return;
-    }
-    
     fetchProperties();
   }, [currentPage, searchParams, isStateRestored]);
   
