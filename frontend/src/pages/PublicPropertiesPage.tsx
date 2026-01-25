@@ -610,6 +610,28 @@ const PublicPropertiesPage: React.FC = () => {
     setCurrentPage(1);
   };
   
+  // 価格フィルターの変更ハンドラー
+  const handlePriceChange = (type: 'min' | 'max', value: string) => {
+    if (type === 'min') {
+      setMinPrice(value);
+    } else {
+      setMaxPrice(value);
+    }
+    // ページを1に戻す
+    setCurrentPage(1);
+  };
+  
+  // 築年数フィルターの変更ハンドラー
+  const handleAgeChange = (type: 'min' | 'max', value: string) => {
+    if (type === 'min') {
+      setMinAge(value);
+    } else {
+      setMaxAge(value);
+    }
+    // ページを1に戻す
+    setCurrentPage(1);
+  };
+  
   // すべてのフィルターをクリアする処理
   const handleClearAllFilters = () => {
     try {
@@ -803,7 +825,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
+                  onChange={(e) => handlePriceChange('min', e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -813,7 +835,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
+                  onChange={(e) => handlePriceChange('max', e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
               </Stack>
@@ -831,7 +853,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minAge}
-                  onChange={(e) => setMinAge(e.target.value)}
+                  onChange={(e) => handleAgeChange('min', e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -841,7 +863,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxAge}
-                  onChange={(e) => setMaxAge(e.target.value)}
+                  onChange={(e) => handleAgeChange('max', e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
               </Stack>
