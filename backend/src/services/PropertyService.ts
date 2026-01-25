@@ -458,6 +458,12 @@ export class PropertyService {
         try {
           keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
           console.log(`[generateEstimatePdf] Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON`);
+          
+          // ⚠️ 重要：private_keyの\\nを実際の改行に変換
+          if (keyFile.private_key) {
+            keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+            console.log(`[generateEstimatePdf] ✅ Converted \\\\n to actual newlines in private_key`);
+          }
         } catch (parseError: any) {
           console.error(`[generateEstimatePdf] Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:`, parseError);
           throw new Error(`認証情報のパースに失敗しました: ${parseError.message}`);
