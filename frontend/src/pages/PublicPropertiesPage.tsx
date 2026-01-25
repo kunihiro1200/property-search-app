@@ -199,6 +199,11 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
+      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
+      // これにより、地図用データの取得useEffectが実行されない
+      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
+      setViewMode('list');
+      
       // 状態復元完了
       setIsStateRestored(true);
     } else if (!savedState) {
