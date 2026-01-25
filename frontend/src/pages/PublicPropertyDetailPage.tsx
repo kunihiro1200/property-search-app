@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
@@ -44,18 +44,12 @@ const PublicPropertyDetailPage: React.FC = () => {
   // 認証状態を取得（管理者モード判定用）
   const { isAuthenticated } = useAuthStore();
   
-  // URLクエリパラメータから管理者モードを判定
-  const searchParams = new URLSearchParams(location.search);
-  const canHideParam = searchParams.get('canHide') === 'true';
-  
-  console.log('[PublicPropertyDetailPage] location.search:', location.search);
-  console.log('[PublicPropertyDetailPage] canHideParam:', canHideParam);
-  console.log('[PublicPropertyDetailPage] isAuthenticated:', isAuthenticated);
-  
-  // 管理者モード: 認証済み かつ canHide=true パラメータがある場合のみ
-  const isAdminMode = isAuthenticated && canHideParam;
-  
-  console.log('[PublicPropertyDetailPage] isAdminMode:', isAdminMode);
+  // URLクエリパラメータから管理者モードを判定（location.searchが変わるたびに再計算）
+  const isAdminMode = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const canHideParam = searchParams.get('canHide') === 'true';
+    return isAuthenticated && canHideParam;
+  }, [location.search, isAuthenticated]);
   
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
