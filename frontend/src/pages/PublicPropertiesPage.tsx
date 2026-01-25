@@ -64,8 +64,8 @@ const PublicPropertiesPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   
-  // 公開中のみ表示フィルター状態（デフォルトで全物件を表示）
-  const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
+  // 公開中のみ表示フィルター状態（デフォルトで公開物件のみ表示）
+  const [showPublicOnly, setShowPublicOnly] = useState<boolean>(true);
   
   // 初回ロード完了フラグ
   const isInitialLoadDone = useRef(false);
@@ -84,9 +84,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 地図ビューへのスクロールフラグ
   const [shouldScrollToMap, setShouldScrollToMap] = useState(false);
-  
-  // 地図表示時の成約済み物件表示フラグ
-  const [showAllOnMap, setShowAllOnMap] = useState(false);
   
   // 検索実行後に物件グリッドまでスクロール
   const handleSearch = () => {
@@ -353,14 +350,8 @@ const PublicPropertiesPage: React.FC = () => {
       newParams.delete('view');
     }
     
-    // canHideパラメータを保持（重要：検索時も保持）
-    const currentCanHide = searchParams.get('canHide');
-    if (currentCanHide === 'true') {
-      newParams.set('canHide', 'true');
-    }
-    
     setSearchParams(newParams, { replace: true });
-  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode, searchParams]);
+  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
   useEffect(() => {
     // 状態復元が完了するまで待つ
@@ -371,24 +362,27 @@ const PublicPropertiesPage: React.FC = () => {
     fetchProperties();
   }, [currentPage, searchParams, isStateRestored]);
   
-  // 全件取得は地図表示時のみ実行（初回ロード時は実行しない）
-  // useEffect(() => {
-  //   // 状態復元が完了するまで待つ
-  //   if (!isStateRestored) {
-  //     return;
-  //   }
-  //   
-  //   fetchAllProperties();
-  // }, [searchParams, isStateRestored]);
-  
-  // viewModeが地図に変更されたときのみ全件取得
+  // 全件取得は初回とフィルター変更時のみ（currentPageは除外）
   useEffect(() => {
-    if (viewMode === 'map' && isStateRestored) {
-      console.log('🗺️ Map view activated, fetching all properties...');
-      // 地図表示時は公開中のみをデフォルトで取得（showAllOnMapがfalseの場合）
-      fetchAllProperties(!showAllOnMap); // showAllOnMapがfalseなら公開中のみ（true）、trueなら全物件（false）
+    // 状態復元が完了するまで待つ
+    if (!isStateRestored) {
+      return;
     }
-  }, [viewMode, isStateRestored, showAllOnMap]); // showAllOnMapを依存配列に追加
+    
+    fetchAllProperties();
+  }, [searchParams, isStateRestored]);
+  
+  // viewModeが変更されたときも全件取得
+  useEffect(() => {
+    if (viewMode === 'map' && allProperties.length === 0) {
+      console.log('🗺️ Map view activated, fetching all properties...');
+      fetchAllProperties();
+    } else if (viewMode === 'list') {
+      // リスト表示に戻ったときは、物件データを再取得
+      console.log('📋 List view activated, fetching properties...');
+      fetchProperties();
+    }
+  }, [viewMode]);
 
   const fetchProperties = async () => {
     try {
@@ -416,8 +410,6 @@ const PublicPropertiesPage: React.FC = () => {
       const params = new URLSearchParams({
         limit: '20',
         offset: offset.toString(),
-        // ⚠️ 重要: 画像取得をスキップして高速化（初回ロード時間を2-3秒に短縮）
-        skipImages: 'true',
       });
       
       if (propertyNumber) {
@@ -501,8 +493,7 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 地図表示用に全件取得（フィルター条件は適用）
   // 座標がある物件のみを取得して高速化
-  // forcePublicOnly: 地図表示時は公開中のみをデフォルトで取得（高速化）
-  const fetchAllProperties = async (forcePublicOnly: boolean = false) => {
+  const fetchAllProperties = async () => {
     try {
       setIsLoadingAllProperties(true);
       
@@ -560,8 +551,7 @@ const PublicPropertiesPage: React.FC = () => {
           params.set('maxAge', maxAgeParam);
         }
         
-        // 地図表示時は公開中のみをデフォルトで取得（高速化）
-        if (forcePublicOnly || showPublicOnlyParam === 'true') {
+        if (showPublicOnlyParam === 'true') {
           params.set('showPublicOnly', 'true');
         }
         
@@ -594,7 +584,6 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
-      console.log(`✅ Fetched ${allFetchedProperties.length} properties for map view (forcePublicOnly: ${forcePublicOnly})`);
       setAllProperties(allFetchedProperties);
     } catch (err: any) {
       console.error('全件取得エラー:', err);
@@ -923,7 +912,7 @@ const PublicPropertiesPage: React.FC = () => {
           <>
             {/* 表示モード切り替えボタン */}
             {viewMode === 'map' && (
-              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"
                   startIcon={<ListIcon />}
@@ -939,25 +928,6 @@ const PublicPropertiesPage: React.FC = () => {
                 >
                   リスト表示に戻る
                 </Button>
-                
-                {/* 成約済みも表示ボタン */}
-                <Button
-                  variant={showAllOnMap ? "contained" : "outlined"}
-                  onClick={() => setShowAllOnMap(!showAllOnMap)}
-                  disabled={isLoadingAllProperties}
-                  sx={{
-                    borderColor: '#4CAF50',
-                    color: showAllOnMap ? '#ffffff' : '#4CAF50',
-                    backgroundColor: showAllOnMap ? '#4CAF50' : 'transparent',
-                    fontWeight: 600,
-                    '&:hover': {
-                      borderColor: '#45A049',
-                      backgroundColor: showAllOnMap ? '#45A049' : 'rgba(76, 175, 80, 0.08)',
-                    },
-                  }}
-                >
-                  {showAllOnMap ? '✓ 成約済みも表示中' : '成約済みも表示'}
-                </Button>
               </Box>
             )}
 
@@ -968,19 +938,11 @@ const PublicPropertiesPage: React.FC = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
                     <CircularProgress />
                     <Typography sx={{ mt: 2 }} color="text.secondary">
-                      {showAllOnMap ? '全物件データを取得中...' : '公開中の物件データを取得中...'}
+                      全物件データを取得中...
                     </Typography>
                   </Box>
                 ) : (
-                  <>
-                    {/* 物件数表示 */}
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {showAllOnMap 
-                        ? `全${allProperties.length}件の物件を表示中（公開中・成約済み含む）` 
-                        : `公開中の物件${allProperties.length}件を表示中`}
-                    </Typography>
-                    <PropertyMapView properties={allProperties} />
-                  </>
+                  <PropertyMapView properties={allProperties} />
                 )}
               </Box>
             ) : (
