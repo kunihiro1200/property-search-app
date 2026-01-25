@@ -42,17 +42,10 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
     
     console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
     
-    // navigationStateを保持したまま一覧ページに戻る
-    if (navigationState) {
-      // stateを保持して一覧ページに戻る
-      navigate(backUrl, {
-        state: navigationState,
-        replace: false
-      });
-    } else {
-      // stateがない場合は通常の戻る
-      navigate(backUrl);
-    }
+    // ⚠️ 重要: 一覧画面から一覧画面に戻る場合はnavigationStateを渡さない
+    // これにより、フィルターがリセットされず、表示も遅くならない
+    // navigationStateは詳細画面から戻る場合のみ使用される
+    navigate(backUrl);
   };
 
   const handleInquiryClick = () => {
