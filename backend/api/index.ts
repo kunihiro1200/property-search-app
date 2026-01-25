@@ -650,6 +650,8 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     }
     
     let images = [];
+    let newImageUrl: string | null = null;
+    
     if (storageUrl) {
       // キャッシュをクリアしてから画像を取得
       const folderId = propertyImageService.extractFolderIdFromUrl(storageUrl);
@@ -665,6 +667,27 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
       images = result.images.filter(img => !hiddenImages.includes(img.id));
       
       console.log(`[Refresh Essential] Images fetched: ${images.length} images (${result.images.length} total, ${hiddenImages.length} hidden)`);
+      
+      // 最初の画像のURLを取得（データベース更新用）
+      if (images.length > 0) {
+        newImageUrl = images[0].url;
+        console.log(`[Refresh Essential] First image URL: ${newImageUrl}`);
+        
+        // データベースのimage_urlを更新（永続化）
+        const { error: updateError } = await supabase
+          .from('property_listings')
+          .update({ 
+            image_url: newImageUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', property.id);
+        
+        if (updateError) {
+          console.error('[Refresh Essential] Failed to update image_url:', updateError);
+        } else {
+          console.log(`[Refresh Essential] ✅ Updated image_url in database: ${newImageUrl}`);
+        }
+      }
     } else {
       console.log(`[Refresh Essential] No storage URL found`);
     }
@@ -675,7 +698,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
         property,
         images
       },
-      message: '画像と基本情報を更新しました'
+      message: '画像と基本情報を更新しました（データベースにも保存しました）'
     });
   } catch (error: any) {
     console.error('[Refresh Essential] Error:', error);
@@ -752,7 +775,30 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
         if (!storageUrl) return [];
         const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
         const hiddenImages = await propertyListingService.getHiddenImages(property.id);
-        return result.images.filter(img => !hiddenImages.includes(img.id));
+        const filteredImages = result.images.filter(img => !hiddenImages.includes(img.id));
+        
+        // 最初の画像のURLを取得（データベース更新用）
+        if (filteredImages.length > 0) {
+          const newImageUrl = filteredImages[0].url;
+          console.log(`[Refresh All] First image URL: ${newImageUrl}`);
+          
+          // データベースのimage_urlを更新（永続化）
+          const { error: updateError } = await supabase
+            .from('property_listings')
+            .update({ 
+              image_url: newImageUrl,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', property.id);
+          
+          if (updateError) {
+            console.error('[Refresh All] Failed to update image_url:', updateError);
+          } else {
+            console.log(`[Refresh All] ✅ Updated image_url in database: ${newImageUrl}`);
+          }
+        }
+        
+        return filteredImages;
       })(),
       
       // PropertyDetailsServiceから全データを取得（キャッシュをクリア）
@@ -782,7 +828,7 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
         panoramaUrl,
         propertyAbout: dbDetails.property_about
       },
-      message: '全てのデータを更新しました'
+      message: '全てのデータを更新しました（データベースにも保存しました）'
     });
   } catch (error: any) {
     console.error('[Refresh All] Error:', error);
