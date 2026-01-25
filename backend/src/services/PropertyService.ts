@@ -422,6 +422,14 @@ export class PropertyService {
    */
   async generateEstimatePdf(propertyNumber: string): Promise<string> {
     try {
+      // キャッシュをチェック（5分間）
+      const cacheKey = `estimate_pdf:${propertyNumber}`;
+      const cached = await CacheHelper.get<string>(cacheKey);
+      if (cached !== null) {
+        console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
+        return cached;
+      }
+      
       const { google } = await import('googleapis');
       const fs = require('fs');
       const path = require('path');
@@ -488,10 +496,19 @@ export class PropertyService {
       const pdfUrl = this.exportSheetAsPdf(spreadsheetId, sheetId, propertyNumber);
       console.log(`[generateEstimatePdf] Generated PDF URL: ${pdfUrl}`);
       
+      // キャッシュに保存（5分間）
+      await CacheHelper.set(cacheKey, pdfUrl, 300);
+      
       return pdfUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[generateEstimatePdf] Error:', error);
-      throw new Error('概算書の生成に失敗しました');
+      
+      // クォータ超過エラーの場合は分かりやすいメッセージを返す
+      if (error.code === 429 || error.message?.includes('Quota exceeded')) {
+        throw new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+      }
+      
+      throw new Error(error.message || '概算書の生成に失敗しました');
     }
   }
   
@@ -509,8 +526,8 @@ export class PropertyService {
     sheetName: string
   ): Promise<void> {
     const VALIDATION_CELL = 'D11';  // 金額セル
-    const MAX_ATTEMPTS = 20;        // 最大試行回数
-    const RETRY_INTERVAL = 500;     // リトライ間隔（ms）
+    const MAX_ATTEMPTS = 5;         // 最大試行回数（20 → 5に削減してクォータ超過を防ぐ）
+    const RETRY_INTERVAL = 2000;    // リトライ間隔（ms）（500ms → 2000msに変更してクォータ超過を防ぐ）
     
     console.log(`[waitForCalculationCompletion] Starting validation for cell ${VALIDATION_CELL}`);
     
@@ -531,19 +548,27 @@ export class PropertyService {
           return;
         }
         
-        // 最後の試行でない場合は待機
+        // 最後の試行でない場合は待機（指数バックオフ）
         if (attempt < MAX_ATTEMPTS) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+          const backoffDelay = RETRY_INTERVAL * Math.pow(1.5, attempt - 1); // 指数バックオフ
+          console.log(`[waitForCalculationCompletion] Waiting ${backoffDelay}ms before next attempt...`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[waitForCalculationCompletion] Error reading cell on attempt ${attempt}:`, error);
-        // エラーが発生しても続行（次の試行へ）
+        
+        // クォータ超過エラーの場合は即座に失敗
+        if (error.code === 429 || error.message?.includes('Quota exceeded')) {
+          throw new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        }
+        
+        // その他のエラーは続行（次の試行へ）
       }
     }
     
     // タイムアウト
     const timeoutSeconds = (MAX_ATTEMPTS * RETRY_INTERVAL) / 1000;
-    throw new Error(`計算がタイムアウトしました（${timeoutSeconds}秒）。D11セルに値が入力されませんでした。`);
+    throw new Error(`計算がタイムアウトしました（約${timeoutSeconds}秒）。D11セルに値が入力されませんでした。`);
   }
   
   /**
