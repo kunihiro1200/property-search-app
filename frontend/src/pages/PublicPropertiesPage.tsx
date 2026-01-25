@@ -373,8 +373,9 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
+    console.log('📊 fetchProperties triggered by:', { currentPage, searchParams: searchParams.toString() });
     fetchProperties();
-  }, [currentPage, searchParams, isStateRestored]);
+  }, [currentPage, searchParams]);
   
   // 全件取得は地図表示時のみ実行（初回ロード時は実行しない）
   // useEffect(() => {
