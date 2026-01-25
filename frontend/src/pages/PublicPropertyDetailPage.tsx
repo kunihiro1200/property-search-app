@@ -62,11 +62,9 @@ const PublicPropertyDetailPage: React.FC = () => {
   
   // 全データの状態管理
   const [completeData, setCompleteData] = useState<any>(null);
-  const [isLoadingComplete, setIsLoadingComplete] = useState(true);
   
   // パノラマURLの状態管理
   const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
-  const [isLoadingPanorama, setIsLoadingPanorama] = useState(true);
   
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -86,7 +84,6 @@ const PublicPropertyDetailPage: React.FC = () => {
     if (!id) return;
     
     const fetchCompleteData = async () => {
-      setIsLoadingComplete(true);
       try {
         // publicApiインスタンスを使用（ベースURLが自動的に追加される）
         console.log(`[publicProperty:"${property?.property_number || id}"] Fetching complete data from: /api/public/properties/${id}/complete`);
@@ -96,39 +93,45 @@ const PublicPropertyDetailPage: React.FC = () => {
         console.log(`[publicProperty:"${property?.property_number || id}"] recommendedComments:`, response.data?.recommendedComments);
         console.log(`[publicProperty:"${property?.property_number || id}"] propertyAbout:`, response.data?.propertyAbout);
         console.log(`[publicProperty:"${property?.property_number || id}"] athomeData:`, response.data?.athomeData);
+        console.log(`[publicProperty:"${property?.property_number || id}"] panoramaUrl:`, response.data?.panoramaUrl);
+        
         setCompleteData(response.data);
+        
+        // パノラマURLを/completeレスポンスから取得（別途APIを呼ばない）
+        if (response.data?.panoramaUrl) {
+          setPanoramaUrl(response.data.panoramaUrl);
+          console.log('Panorama URL loaded from /complete:', response.data.panoramaUrl);
+        }
       } catch (error) {
         console.error(`[publicProperty:"${property?.property_number || id}"] Failed to fetch complete data:`, error);
-      } finally {
-        setIsLoadingComplete(false);
       }
     };
     
     fetchCompleteData();
   }, [id]); // idのみに依存（property?.property_numberを削除して無限ループを防ぐ）
   
-  // パノラマURLを取得
-  useEffect(() => {
-    if (!property?.property_number) return;
-    
-    const fetchPanoramaUrl = async () => {
-      setIsLoadingPanorama(true);
-      try {
-        // publicApiインスタンスを使用
-        const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
-        if (response.data.success && response.data.panoramaUrl) {
-          setPanoramaUrl(response.data.panoramaUrl);
-          console.log('Panorama URL loaded:', response.data.panoramaUrl);
-        }
-      } catch (error) {
-        console.error('Failed to fetch panorama URL:', error);
-      } finally {
-        setIsLoadingPanorama(false);
-      }
-    };
-    
-    fetchPanoramaUrl();
-  }, [property?.property_number]);
+  // パノラマURLを取得（削除：/completeから取得するため不要）
+  // useEffect(() => {
+  //   if (!property?.property_number) return;
+  //   
+  //   const fetchPanoramaUrl = async () => {
+  //     setIsLoadingPanorama(true);
+  //     try {
+  //       // publicApiインスタンスを使用
+  //       const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
+  //       if (response.data.success && response.data.panoramaUrl) {
+  //         setPanoramaUrl(response.data.panoramaUrl);
+  //         console.log('Panorama URL loaded:', response.data.panoramaUrl);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch panorama URL:', error);
+  //     } finally {
+  //       setIsLoadingPanorama(false);
+  //     }
+  //   };
+  //   
+  //   fetchPanoramaUrl();
+  // }, [property?.property_number]);
   
   const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
     if (!property) return;
