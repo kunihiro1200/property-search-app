@@ -723,7 +723,8 @@ export class PropertyListingService {
   // キャッシュを使用してパフォーマンスを最適化
   private gyomuListCache: Map<string, string> | null = null;
   private gyomuListCacheExpiry: number = 0;
-  private readonly GYOMU_LIST_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
+  private readonly GYOMU_LIST_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（5分→30分に延長）
+  private gyomuListCacheLoading: Promise<void> | null = null; // キャッシュ読み込み中フラグ
   
   private async getStorageUrlFromWorkTasks(propertyNumber: string): Promise<string | null> {
     try {
@@ -739,35 +740,31 @@ export class PropertyListingService {
         return null;
       }
       
-      console.log(`[PropertyListingService] Loading 業務リスト（業務依頼） into cache...`);
-      
-      // 業務リスト（業務依頼）スプレッドシートに接続
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
-      const gyomuListClient = new GoogleSheetsClient({
-        spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g',
-        sheetName: '業務依頼',
-        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-      });
-      
-      await gyomuListClient.authenticate();
-      
-      // すべての行を取得してキャッシュに保存
-      const rows = await gyomuListClient.readAll();
-      this.gyomuListCache = new Map();
-      
-      for (const row of rows) {
-        const propNumber = row['物件番号'];
-        const storageUrl = row['格納先URL'];
-        if (propNumber && storageUrl) {
-          this.gyomuListCache.set(propNumber as string, storageUrl as string);
+      // 既に読み込み中の場合は待機（並列処理時の重複読み込みを防ぐ）
+      if (this.gyomuListCacheLoading) {
+        console.log(`[PropertyListingService] Waiting for cache loading to complete...`);
+        await this.gyomuListCacheLoading;
+        // 読み込み完了後、キャッシュから取得
+        const cachedUrl = this.gyomuListCache?.get(propertyNumber);
+        if (cachedUrl) {
+          console.log(`[PropertyListingService] Found storage_url for ${propertyNumber} in cache (after waiting)`);
+          return cachedUrl;
         }
+        return null;
       }
       
-      this.gyomuListCacheExpiry = now + this.GYOMU_LIST_CACHE_TTL;
-      console.log(`[PropertyListingService] Loaded ${this.gyomuListCache.size} entries from 業務リスト（業務依頼）`);
+      // キャッシュ読み込み開始
+      console.log(`[PropertyListingService] Loading 業務リスト（業務依頼） into cache...`);
+      this.gyomuListCacheLoading = this.loadGyomuListCache();
+      
+      try {
+        await this.gyomuListCacheLoading;
+      } finally {
+        this.gyomuListCacheLoading = null;
+      }
       
       // キャッシュから取得
-      const storageUrl = this.gyomuListCache.get(propertyNumber);
+      const storageUrl = this.gyomuListCache?.get(propertyNumber);
       if (storageUrl) {
         console.log(`[PropertyListingService] Found storage_url for ${propertyNumber}: ${storageUrl}`);
         return storageUrl;
@@ -779,6 +776,36 @@ export class PropertyListingService {
       console.error(`[PropertyListingService] Error in getStorageUrlFromWorkTasks:`, error);
       return null;
     }
+  }
+  
+  // 業務リストをキャッシュに読み込む（別メソッドに分離）
+  private async loadGyomuListCache(): Promise<void> {
+    const now = Date.now();
+    
+    // 業務リスト（業務依頼）スプレッドシートに接続
+    const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+    const gyomuListClient = new GoogleSheetsClient({
+      spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g',
+      sheetName: '業務依頼',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    });
+    
+    await gyomuListClient.authenticate();
+    
+    // すべての行を取得してキャッシュに保存
+    const rows = await gyomuListClient.readAll();
+    this.gyomuListCache = new Map();
+    
+    for (const row of rows) {
+      const propNumber = row['物件番号'];
+      const storageUrl = row['格納先URL'];
+      if (propNumber && storageUrl) {
+        this.gyomuListCache.set(propNumber as string, storageUrl as string);
+      }
+    }
+    
+    this.gyomuListCacheExpiry = now + this.GYOMU_LIST_CACHE_TTL;
+    console.log(`[PropertyListingService] ✅ Loaded ${this.gyomuListCache.size} entries from 業務リスト（業務依頼） (cache valid for 30 minutes)`);
   }
 
   /**
