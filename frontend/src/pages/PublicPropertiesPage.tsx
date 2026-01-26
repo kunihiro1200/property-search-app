@@ -197,44 +197,7 @@ const PublicPropertiesPage: React.FC = () => {
         if (filters.showPublicOnly !== undefined) {
           setShowPublicOnly(filters.showPublicOnly);
         }
-        
-        // ⚠️ 重要: URLパラメータも直接更新する
-        // これにより、fetchProperties()が正しいフィルター条件で実行される
-        const newParams = new URLSearchParams();
-        
-        if (filters.propertyTypes && filters.propertyTypes.length > 0) {
-          newParams.set('types', filters.propertyTypes.join(','));
-        }
-        
-        if (filters.priceRange) {
-          if (filters.priceRange.min) newParams.set('minPrice', filters.priceRange.min);
-          if (filters.priceRange.max) newParams.set('maxPrice', filters.priceRange.max);
-        }
-        
-        if (filters.buildingAgeRange) {
-          if (filters.buildingAgeRange.min) newParams.set('minAge', filters.buildingAgeRange.min);
-          if (filters.buildingAgeRange.max) newParams.set('maxAge', filters.buildingAgeRange.max);
-        }
-        
-        if (filters.searchQuery) {
-          if (filters.searchType === 'property_number') {
-            newParams.set('propertyNumber', filters.searchQuery);
-          } else {
-            newParams.set('location', filters.searchQuery);
-          }
-        }
-        
-        if (filters.showPublicOnly) {
-          newParams.set('showPublicOnly', 'true');
-        }
-        
-        setSearchParams(newParams, { replace: true });
       }
-      
-      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
-      // これにより、地図用データの取得useEffectが実行されない
-      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
-      setViewMode('list');
       
       // 状態復元完了
       setIsStateRestored(true);
@@ -642,28 +605,6 @@ const PublicPropertiesPage: React.FC = () => {
     setCurrentPage(1);
   };
   
-  // 価格フィルターの変更ハンドラー
-  const handlePriceChange = (type: 'min' | 'max', value: string) => {
-    if (type === 'min') {
-      setMinPrice(value);
-    } else {
-      setMaxPrice(value);
-    }
-    // ページを1に戻す
-    setCurrentPage(1);
-  };
-  
-  // 築年数フィルターの変更ハンドラー
-  const handleAgeChange = (type: 'min' | 'max', value: string) => {
-    if (type === 'min') {
-      setMinAge(value);
-    } else {
-      setMaxAge(value);
-    }
-    // ページを1に戻す
-    setCurrentPage(1);
-  };
-  
   // すべてのフィルターをクリアする処理
   const handleClearAllFilters = () => {
     try {
@@ -857,7 +798,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minPrice}
-                  onChange={(e) => handlePriceChange('min', e.target.value)}
+                  onChange={(e) => setMinPrice(e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -867,7 +808,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxPrice}
-                  onChange={(e) => handlePriceChange('max', e.target.value)}
+                  onChange={(e) => setMaxPrice(e.target.value)}
                   inputProps={{ min: 0, step: 100 }}
                 />
               </Stack>
@@ -885,7 +826,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={minAge}
-                  onChange={(e) => handleAgeChange('min', e.target.value)}
+                  onChange={(e) => setMinAge(e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
                 <Typography color="text.secondary">〜</Typography>
@@ -895,7 +836,7 @@ const PublicPropertiesPage: React.FC = () => {
                   size="small"
                   fullWidth
                   value={maxAge}
-                  onChange={(e) => handleAgeChange('max', e.target.value)}
+                  onChange={(e) => setMaxAge(e.target.value)}
                   inputProps={{ min: 0, step: 1 }}
                 />
               </Stack>

@@ -353,8 +353,6 @@ export class PropertyListingService {
         query = query.in('atbb_status', [
           '専任・公開中',
           '一般・公開中',
-          '専任・公開前',  // NEW: 公開前も公開中に含まれる
-          '一般・公開前',  // NEW: 公開前も公開中に含まれる
           '非公開（配信メールのみ）'
         ]);
       }
