@@ -1,8 +1,8 @@
-# 画像URL自動同期除外機能実装ガイド
+# 画像URL・格納先URL自動同期除外機能実装ガイド
 
 ## 概要
 
-このドキュメントは、管理画面で物件の画像を手動更新した場合、自動同期によって`image_url`が古い値に戻されないようにする機能の実装ガイドです。
+このドキュメントは、管理画面で物件の画像や格納先URLを手動更新した場合、自動同期によって`image_url`や`storage_location`が古い値に戻されないようにする機能の実装ガイドです。
 
 ---
 
@@ -10,20 +10,25 @@
 
 ### 問題
 - 管理画面でCC6の画像を変更しても、しばらくすると元の画像に戻ってしまう
+- 管理画面でCC6の格納先URLを変更しても、しばらくすると元のURLに戻ってしまう
 
 ### 原因
 1. **`image_url`カラムが古いまま**
    - データベースの`image_url`カラムに保存されている画像ファイルのURLが更新されない
    
-2. **自動同期が`image_url`を上書きしている**
+2. **`storage_location`カラムが古いまま**
+   - データベースの`storage_location`カラムに保存されている格納先URLが更新されない
+
+3. **自動同期が`image_url`と`storage_location`を上書きしている**
    - `PropertyListingSyncService.syncUpdatedPropertyListings()`が定期的に実行
    - スプレッドシートのデータでデータベースを更新
-   - `image_url`も含めて上書きされる可能性
+   - `image_url`と`storage_location`も含めて上書きされる可能性
 
-3. **ユーザーの運用フロー**:
+4. **ユーザーの運用フロー**:
    - Google Driveの`athome公開`フォルダの中身（画像ファイル）を入れ替える
-   - フォルダのURL自体は変わらない（同じフォルダ）
-   - 管理画面で「画像を変更」ボタンをクリック（同じURLを再入力）
+   - または、フォルダの場所を変更する
+   - 管理画面で「画像を変更」ボタンをクリック
+   - 新しい格納先URLを入力（または同じURLを再入力）
    - 画像キャッシュがクリアされて、新しい画像が表示される
    - しばらくすると元の画像に戻る
 
@@ -36,10 +41,10 @@
 **`backend/src/services/PropertyListingSyncService.ts`**
 
 **修正内容**:
-- `detectChanges()`メソッドで`image_url`を比較対象から除外
-- 理由: `image_url`は手動更新ボタン（`refresh-essential`、`refresh-all`）で管理される
+- `detectChanges()`メソッドで`image_url`と`storage_location`を比較対象から除外
+- 理由: これらは手動更新ボタン（`refresh-essential`、`refresh-all`）で管理される
 
-**変更箇所**: 約850行目
+**変更箇所**: 約810-820行目
 
 ```typescript
 // Compare each field
@@ -52,6 +57,12 @@ for (const [dbField, spreadsheetValue] of Object.entries(mappedData)) {
   // ⚠️ 重要: image_urlは手動更新ボタンで管理されるため、自動同期から除外
   if (dbField === 'image_url') {
     console.log(`[PropertyListingSyncService] Skipping image_url comparison (managed by manual refresh)`);
+    continue;
+  }
+
+  // ⚠️ 重要: storage_locationは手動更新ボタンで管理されるため、自動同期から除外
+  if (dbField === 'storage_location') {
+    console.log(`[PropertyListingSyncService] Skipping storage_location comparison (managed by manual refresh)`);
     continue;
   }
 
@@ -71,25 +82,26 @@ for (const [dbField, spreadsheetValue] of Object.entries(mappedData)) {
 **重要なポイント**:
 - **既存機能に影響を与えない**（画像表示速度、コメント表示速度など）
 - **単純な`if`文のみ**（追加のデータベースクエリなし）
-- **`image_url`のみをスキップ**（他のフィールドは通常通り更新）
+- **`image_url`と`storage_location`のみをスキップ**（他のフィールドは通常通り更新）
 
 ---
 
 ## 使用方法
 
-### 管理者として画像を更新する
+### 管理者として画像や格納先URLを更新する
 
-1. Google Driveで`athome公開`フォルダの中身（画像ファイル）を入れ替える
+1. Google Driveで`athome公開`フォルダの中身（画像ファイル）を入れ替える、または、フォルダの場所を変更する
 2. 管理画面で物件詳細ページを開く（例: CC6）
 3. 「画像を変更」ボタンをクリック
-4. 同じフォルダURLを再入力（フォルダURLは変わらない）
+4. 新しい格納先URLを入力（または同じフォルダURLを再入力）
 5. 「更新」をクリック
 
 **結果**:
 - 画像キャッシュがクリアされる
 - 新しい画像が表示される
 - データベースの`image_url`が新しい画像ファイルのURLに更新される
-- **次回の自動同期で`image_url`がスキップされる**
+- データベースの`storage_location`が新しい格納先URLに更新される
+- **次回の自動同期で`image_url`と`storage_location`がスキップされる**
 
 ---
 
@@ -220,21 +232,23 @@ npm run type-check
 
 - ✅ `PropertyListingSyncService.detectChanges()`を修正
 - ✅ `image_url`を自動同期から除外
+- ✅ `storage_location`を自動同期から除外（2026年1月26日追加）
 - ✅ 手動更新ボタンは変更なし
 - ✅ 既存機能に影響なし
 
 ### 動作確認
 
 - ✅ CC6の画像を変更しても元に戻らない
+- ✅ CC6の格納先URLを変更しても元に戻らない
 - ✅ 自動同期が正常に動作する
 - ✅ 他のフィールドは通常通り更新される
 
 ### 今後の改善
 
-- 不要: `storage_location_manually_set`フラグは実装しない（`storage_location`は変わらないため）
-- 不要: UI改善（バッジ、ボタンなど）は不要（`image_url`は自動的に管理される）
+- 不要: `storage_location_manually_set`フラグは実装しない（手動更新した値は自動同期でスキップされるため）
+- 不要: UI改善（バッジ、ボタンなど）は不要（`image_url`と`storage_location`は自動的に管理される）
 
 ---
 
 **最終更新日**: 2026年1月26日  
-**ステータス**: ✅ 実装完了（最小限の変更）
+**ステータス**: ✅ 実装完了（`image_url`と`storage_location`の両方を自動同期から除外）
