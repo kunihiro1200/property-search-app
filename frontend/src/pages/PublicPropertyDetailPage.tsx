@@ -687,37 +687,51 @@ const PublicPropertyDetailPage: React.FC = () => {
 
                 {/* 地図表示（座標がある場合） */}
                 {mapCoordinates && isMapLoaded && (
-                  <Box
-                    sx={{
-                      width: '100%',
-                      height: '400px',
-                      borderRadius: 1,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <GoogleMap
-                      mapContainerStyle={{ width: '100%', height: '100%' }}
-                      center={{
-                        lat: mapCoordinates.lat,
-                        lng: mapCoordinates.lng,
-                      }}
-                      zoom={15}
-                      options={{
-                        zoomControl: true,
-                        streetViewControl: false,
-                        mapTypeControl: false,
-                        fullscreenControl: true,
+                  <>
+                    {console.log('🗺️ [Rendering Map] mapCoordinates:', mapCoordinates, 'isMapLoaded:', isMapLoaded)}
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '400px',
+                        borderRadius: 1,
+                        overflow: 'hidden',
                       }}
                     >
-                      {/* マーカー表示 */}
-                      <Marker
-                        position={{
+                      <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '100%' }}
+                        center={{
                           lat: mapCoordinates.lat,
                           lng: mapCoordinates.lng,
                         }}
-                      />
-                    </GoogleMap>
-                  </Box>
+                        zoom={15}
+                        options={{
+                          zoomControl: true,
+                          streetViewControl: false,
+                          mapTypeControl: false,
+                          fullscreenControl: true,
+                        }}
+                        onLoad={(map) => {
+                          console.log('🗺️ [Map Loaded] Map instance created');
+                        }}
+                      >
+                        {/* マーカー表示 */}
+                        {console.log('🗺️ [Rendering Marker] position:', { lat: mapCoordinates.lat, lng: mapCoordinates.lng })}
+                        <Marker
+                          position={{
+                            lat: mapCoordinates.lat,
+                            lng: mapCoordinates.lng,
+                          }}
+                          title={property.address}
+                          onLoad={(marker) => {
+                            console.log('🗺️ [Marker Loaded] Marker instance created:', marker);
+                          }}
+                          onClick={() => {
+                            console.log('🗺️ [Marker Clicked] Marker was clicked');
+                          }}
+                        />
+                      </GoogleMap>
+                    </Box>
+                  </>
                 )}
               </Paper>
             )}
