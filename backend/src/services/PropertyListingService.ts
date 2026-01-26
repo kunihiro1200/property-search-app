@@ -446,14 +446,9 @@ export class PropertyListingService {
               let images: any[] = [];
               let storageLocation = property.storage_location;
               
-              // storage_locationが空の場合、業務リストから取得
-              if (!storageLocation && property.property_number) {
-                console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
-                storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
-                if (storageLocation) {
-                  console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
-                }
-              }
+              // ⚠️ 重要: storage_locationがない場合は業務リストへのアクセスをスキップ
+              // これにより、Google Sheets APIのクォータ制限を回避し、画像読み込みを高速化
+              // 参照: コミット 2941bbf
               
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
@@ -484,7 +479,9 @@ export class PropertyListingService {
                   console.log(`[PropertyListingService] No images found for ${property.property_number}`);
                 }
               } else {
-                console.log(`[PropertyListingService] No image source for ${property.property_number}`);
+                // ⚠️ 重要: storage_locationがない場合は業務リストへのアクセスをスキップ
+                // これにより、Google Sheets APIのクォータ超過を回避
+                console.log(`[PropertyListingService] No storage_location for ${property.property_number}, skipping image fetch`);
               }
               
               return {
