@@ -708,14 +708,18 @@ const PublicPropertyDetailPage: React.FC = () => {
                 onClick={() => handleGenerateEstimatePdf('preview')}
                 disabled={isGeneratingPdf}
                 fullWidth
+                sx={{ mb: isGeneratingPdf ? 2 : 0 }}
               >
                 {isGeneratingPdf ? '生成中...' : '概算書を表示'}
               </Button>
               
               {isGeneratingPdf && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-                  概算書を生成しています。少々お待ちください...
-                </Typography>
+                <Box sx={{ textAlign: 'center' }}>
+                  <CircularProgress size={24} sx={{ mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    概算書を生成しています。10秒ほどお待ちください...
+                  </Typography>
+                </Box>
               )}
             </Paper>
 

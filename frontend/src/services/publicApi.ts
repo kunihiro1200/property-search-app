@@ -20,7 +20,7 @@ const publicApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000, // 60秒タイムアウト（初回のコールドスタートに対応）
+  timeout: 90000, // 90秒タイムアウト（概算書PDF生成に対応）
 });
 
 // レスポンスインターセプター（エラーハンドリング）
