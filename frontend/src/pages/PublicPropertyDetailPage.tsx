@@ -811,7 +811,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             )}
             
             {/* 「概算書」セクション（印刷時は非表示） */}
-            <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print"> {/* 8番目 */}
+            <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print"> {/* 8番目 */}r elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print"> {/* 8番目 */}
               <Typography variant="h6" sx={{ mb: 2 }}>
                 概算書
               </Typography>
