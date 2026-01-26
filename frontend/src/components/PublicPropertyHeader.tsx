@@ -28,24 +28,11 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
   const badgeType = getBadgeType(atbbStatus);
 
   const handleBackClick = () => {
-    // 現在のURLからcanHideパラメータを取得
-    const searchParams = new URLSearchParams(location.search);
-    const canHide = searchParams.get('canHide');
-    
-    console.log('[PublicPropertyHeader] handleBackClick - canHide:', canHide);
-    console.log('[PublicPropertyHeader] handleBackClick - location.search:', location.search);
-    
-    // canHideパラメータを保持したURLを構築
-    const backUrl = canHide === 'true' 
-      ? '/public/properties?canHide=true' 
-      : '/public/properties';
-    
-    console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
-    
-    // ⚠️ 重要: 一覧画面から一覧画面に戻る場合はnavigationStateを渡さない
-    // これにより、フィルターがリセットされず、表示も遅くならない
-    // navigationStateは詳細画面から戻る場合のみ使用される
-    navigate(backUrl);
+    // ⚠️ 重要: navigate(-1)を使用してブラウザの履歴を1つ戻る
+    // これにより、location.stateが保持され、スクロール位置とフィルター状態が復元される
+    // 詳細画面から一覧画面に戻る際に、以前表示していた位置（例：CC6）に戻る
+    console.log('[PublicPropertyHeader] handleBackClick - navigating back with history');
+    navigate(-1);
   };
 
   const handleInquiryClick = () => {
