@@ -304,36 +304,16 @@ const PublicPropertyDetailPage: React.FC = () => {
   };
 
   const handleBackClick = () => {
-    // デバッグ：location.stateを確認
-    console.log('[PublicPropertyDetailPage] handleBackClick - location.state:', location.state);
-    console.log('[PublicPropertyDetailPage] handleBackClick - window.history.state:', window.history.state);
+    // 一覧ページに戻る（canHideパラメータを引き継ぐ）
+    const searchParams = new URLSearchParams(location.search);
+    const canHide = searchParams.get('canHide');
+    const targetUrl = canHide === 'true' 
+      ? '/public/properties?canHide=true'
+      : '/public/properties';
     
-    // location.stateがある場合は、ページ番号をURLパラメータに含めて戻る
-    const savedState = location.state as any;
-    if (savedState && savedState.currentPage) {
-      // canHideパラメータを引き継ぐ
-      const searchParams = new URLSearchParams(location.search);
-      const canHide = searchParams.get('canHide');
-      
-      // ページ番号をURLパラメータに含める
-      const params = new URLSearchParams();
-      params.set('page', savedState.currentPage.toString());
-      if (canHide === 'true') {
-        params.set('canHide', 'true');
-      }
-      
-      const targetUrl = `/public/properties?${params.toString()}`;
-      console.log('[PublicPropertyDetailPage] Navigating back with page:', savedState.currentPage, 'URL:', targetUrl);
-      
-      // 状態を保持してナビゲート
-      navigate(targetUrl, {
-        state: savedState
-      });
-    } else {
-      // location.stateがない場合はブラウザの戻るボタンと同じ動作
-      console.log('[PublicPropertyDetailPage] No state found, using navigate(-1)');
-      navigate(-1);
-    }
+    // navigate(-1)の代わりに明示的に一覧ページに戻る
+    // これにより、ブラウザの履歴に依存しない
+    navigate(targetUrl);
   };
 
   // 印刷ボタンのハンドラー

@@ -44,11 +44,7 @@ const PublicPropertiesPage: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // URLパラメータからページ番号を取得（デフォルト: 1）
-  const pageParam = searchParams.get('page');
-  const initialPage = pageParam ? parseInt(pageParam, 10) : 1;
-  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // 表示モード（リスト or 地図）
   // URLパラメータから初期値を取得
