@@ -304,16 +304,8 @@ const PublicPropertyDetailPage: React.FC = () => {
   };
 
   const handleBackClick = () => {
-    // 一覧ページに戻る（canHideパラメータを引き継ぐ）
-    const searchParams = new URLSearchParams(location.search);
-    const canHide = searchParams.get('canHide');
-    const targetUrl = canHide === 'true' 
-      ? '/public/properties?canHide=true'
-      : '/public/properties';
-    
-    // navigate(-1)の代わりに明示的に一覧ページに戻る
-    // これにより、ブラウザの履歴に依存しない
-    navigate(targetUrl);
+    // ブラウザの戻るボタンと同じ動作（location.stateを保持）
+    navigate(-1);
   };
 
   // 印刷ボタンのハンドラー
