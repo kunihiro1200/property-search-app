@@ -52,6 +52,11 @@ export class EnhancedAutoSyncService {
   private propertySyncHandler: PropertySyncHandler;
   private isInitialized = false;
 
+  // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
+  private spreadsheetCache: any[] | null = null;
+  private spreadsheetCacheExpiry: number = 0;
+  private readonly SPREADSHEET_CACHE_TTL = 15 * 60 * 1000; // 15分間キャッシュ
+
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
     this.columnMapper = new ColumnMapper();
@@ -80,6 +85,33 @@ export class EnhancedAutoSyncService {
       console.error('❌ EnhancedAutoSyncService initialization failed:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * スプレッドシートデータを取得（キャッシュ対応）
+   * Google Sheets APIクォータ対策のため、15分間キャッシュします
+   */
+  private async getSpreadsheetData(): Promise<any[]> {
+    const now = Date.now();
+
+    // キャッシュが有効な場合は使用
+    if (this.spreadsheetCache && now < this.spreadsheetCacheExpiry) {
+      console.log('📦 Using cached spreadsheet data (valid for', Math.round((this.spreadsheetCacheExpiry - now) / 1000), 'seconds)');
+      return this.spreadsheetCache;
+    }
+
+    // キャッシュが無効な場合は再取得
+    console.log('🔄 Fetching fresh spreadsheet data...');
+    if (!this.isInitialized || !this.sheetsClient) {
+      await this.initialize();
+    }
+
+    const allRows = await this.sheetsClient!.readAll();
+    this.spreadsheetCache = allRows;
+    this.spreadsheetCacheExpiry = now + this.SPREADSHEET_CACHE_TTL;
+    
+    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 15 minutes)`);
+    return allRows;
   }
 
   /**
@@ -151,8 +183,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting missing sellers (full comparison)...');
 
-    // スプレッドシートから全売主番号を取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全売主番号を取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetSellerNumbers = new Set<string>();
     
     for (const row of allRows) {
@@ -201,8 +233,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting deleted sellers (full comparison)...');
 
-    // スプレッドシートから全売主番号を取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全売主番号を取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetSellerNumbers = new Set<string>();
     
     for (const row of allRows) {
@@ -696,8 +728,8 @@ export class EnhancedAutoSyncService {
 
     console.log(`🔄 Syncing ${sellerNumbers.length} missing sellers...`);
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const rowsBySellerNumber = new Map<string, any>();
     for (const row of allRows) {
       const sellerNumber = row['売主番号'];
@@ -762,8 +794,8 @@ export class EnhancedAutoSyncService {
 
     console.log(`🔄 Updating ${sellerNumbers.length} existing sellers...`);
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const rowsBySellerNumber = new Map<string, any>();
     for (const row of allRows) {
       const sellerNumber = row['売主番号'];
@@ -825,8 +857,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting updated sellers (comparing data)...');
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetDataBySellerNumber = new Map<string, any>();
     
     for (const row of allRows) {
