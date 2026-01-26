@@ -715,21 +715,6 @@ const PublicPropertyDetailPage: React.FC = () => {
                           lat: mapCoordinates.lat,
                           lng: mapCoordinates.lng,
                         }}
-                        icon={{
-                          path: window.google.maps.SymbolPath.CIRCLE,
-                          fillColor: (() => {
-                            // バッジの色に合わせてマーカーの色を決定
-                            const badgeType = getBadgeType(property.atbb_status);
-                            if (badgeType === 'pre_publish') return '#ff9800'; // オレンジ（公開前情報）
-                            if (badgeType === 'private') return '#f44336'; // 赤（非公開物件）
-                            if (badgeType === 'sold') return '#9e9e9e'; // グレー（成約済み）
-                            return '#2196F3'; // 青（販売中物件）
-                          })(),
-                          fillOpacity: 1,
-                          strokeColor: '#fff',
-                          strokeWeight: 2,
-                          scale: 10,
-                        }}
                       />
                     </GoogleMap>
                   </Box>
