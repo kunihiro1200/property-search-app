@@ -308,8 +308,32 @@ const PublicPropertyDetailPage: React.FC = () => {
     console.log('[PublicPropertyDetailPage] handleBackClick - location.state:', location.state);
     console.log('[PublicPropertyDetailPage] handleBackClick - window.history.state:', window.history.state);
     
-    // ブラウザの戻るボタンと同じ動作（location.stateを保持）
-    navigate(-1);
+    // location.stateがある場合は、ページ番号をURLパラメータに含めて戻る
+    const savedState = location.state as any;
+    if (savedState && savedState.currentPage) {
+      // canHideパラメータを引き継ぐ
+      const searchParams = new URLSearchParams(location.search);
+      const canHide = searchParams.get('canHide');
+      
+      // ページ番号をURLパラメータに含める
+      const params = new URLSearchParams();
+      params.set('page', savedState.currentPage.toString());
+      if (canHide === 'true') {
+        params.set('canHide', 'true');
+      }
+      
+      const targetUrl = `/public/properties?${params.toString()}`;
+      console.log('[PublicPropertyDetailPage] Navigating back with page:', savedState.currentPage, 'URL:', targetUrl);
+      
+      // 状態を保持してナビゲート
+      navigate(targetUrl, {
+        state: savedState
+      });
+    } else {
+      // location.stateがない場合はブラウザの戻るボタンと同じ動作
+      console.log('[PublicPropertyDetailPage] No state found, using navigate(-1)');
+      navigate(-1);
+    }
   };
 
   // 印刷ボタンのハンドラー
