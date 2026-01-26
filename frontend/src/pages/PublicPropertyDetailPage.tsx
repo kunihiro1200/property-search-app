@@ -134,18 +134,30 @@ const PublicPropertyDetailPage: React.FC = () => {
   // }, [property?.property_number]);
   
   const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
-    if (!property) return;
+    console.log('🔘 [Estimate PDF] Button clicked!', { property: property?.property_number, mode });
+    
+    if (!property) {
+      console.error('❌ [Estimate PDF] No property data available');
+      return;
+    }
     
     setIsGeneratingPdf(true);
+    console.log('⏳ [Estimate PDF] Generating PDF...');
+    
     try {
       // publicApiインスタンスを使用
+      console.log('📡 [Estimate PDF] Sending request to:', `/api/public/properties/${property.property_number}/estimate-pdf`);
       const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
+      
+      console.log('✅ [Estimate PDF] Response received:', response.data);
       
       if (mode === 'preview') {
         // プレビュー：新しいタブで開く
+        console.log('🌐 [Estimate PDF] Opening PDF in new tab:', response.data.pdfUrl);
         window.open(response.data.pdfUrl, '_blank');
       } else {
         // ダウンロード：ファイルとしてダウンロード
+        console.log('💾 [Estimate PDF] Downloading PDF:', response.data.pdfUrl);
         const link = document.createElement('a');
         link.href = response.data.pdfUrl;
         link.download = `概算書_${property.property_number}.pdf`;
@@ -154,10 +166,16 @@ const PublicPropertyDetailPage: React.FC = () => {
         document.body.removeChild(link);
       }
     } catch (error: any) {
-      console.error('Failed to generate estimate PDF:', error);
+      console.error('❌ [Estimate PDF] Failed to generate estimate PDF:', error);
+      console.error('❌ [Estimate PDF] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       alert(error.response?.data?.message || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);
+      console.log('🏁 [Estimate PDF] Process completed');
     }
   };
 
