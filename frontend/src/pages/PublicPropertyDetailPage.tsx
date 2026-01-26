@@ -33,6 +33,74 @@ import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { useAuthStore } from '../store/authStore';
 import '../styles/print.css';
 
+/**
+ * Google Map URLから座標を抽出する関数
+ * 対応フォーマット:
+ * - https://maps.google.com/maps?q=33.2820604,131.4869034
+ * - https://www.google.com/maps/place/33.2820604,131.4869034
+ * - https://www.google.com/maps/@33.2820604,131.4869034,15z
+ * - https://maps.app.goo.gl/xxxxx (短縮URL - バックエンド経由でリダイレクト先を取得)
+ */
+async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: number; lng: number } | null> {
+  if (!url) return null;
+  
+  try {
+    // 短縮URL（goo.gl）の場合、バックエンド経由でリダイレクト先を取得
+    if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
+      console.log('🔗 Detected shortened URL, fetching redirect via backend...');
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const response = await fetch(
+          `${apiUrl}/api/url-redirect/resolve?url=${encodeURIComponent(url)}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🔗 Redirected URL:', data.redirectedUrl);
+          url = data.redirectedUrl;
+        } else {
+          console.warn('⚠️ Failed to fetch redirect URL from backend, trying to extract from original URL');
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch redirect URL from backend:', error);
+        // リダイレクト取得に失敗した場合、元のURLから抽出を試みる
+      }
+    }
+    
+    // パターン1: ?q=lat,lng
+    const qMatch = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (qMatch) {
+      return {
+        lat: parseFloat(qMatch[1]),
+        lng: parseFloat(qMatch[2]),
+      };
+    }
+    
+    // パターン2: /place/lat,lng
+    const placeMatch = url.match(/\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (placeMatch) {
+      return {
+        lat: parseFloat(placeMatch[1]),
+        lng: parseFloat(placeMatch[2]),
+      };
+    }
+    
+    // パターン3: /@lat,lng,zoom
+    const atMatch = url.match(/\/@(-?\d+\.?\d*),(-?\d+\.?\d*),/);
+    if (atMatch) {
+      return {
+        lat: parseFloat(atMatch[1]),
+        lng: parseFloat(atMatch[2]),
+      };
+    }
+    
+    console.warn('⚠️ Could not extract coordinates from Google Map URL:', url);
+    return null;
+  } catch (error) {
+    console.error('❌ Error extracting coordinates from Google Map URL:', error);
+    return null;
+  }
+}
 
 const PublicPropertyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +140,9 @@ const PublicPropertyDetailPage: React.FC = () => {
   
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // 地図表示用の座標（Google Map URLまたは住所から取得）
+  const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
