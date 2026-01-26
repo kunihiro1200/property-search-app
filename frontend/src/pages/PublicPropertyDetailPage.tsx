@@ -37,6 +37,7 @@ import '../styles/print.css';
  * Google Map URLから座標を抽出する関数
  * 対応フォーマット:
  * - https://maps.google.com/maps?q=33.2820604,131.4869034
+ * - https://www.google.com/maps/search/33.231233,+131.576897
  * - https://www.google.com/maps/place/33.2820604,131.4869034
  * - https://www.google.com/maps/@33.2820604,131.4869034,15z
  * - https://maps.app.goo.gl/xxxxx (短縮URL - バックエンド経由でリダイレクト先を取得)
@@ -76,7 +77,16 @@ async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: n
       };
     }
     
-    // パターン2: /place/lat,lng
+    // パターン2: /search/lat,lng
+    const searchMatch = url.match(/\/search\/(-?\d+\.?\d*),\+?(-?\d+\.?\d*)/);
+    if (searchMatch) {
+      return {
+        lat: parseFloat(searchMatch[1]),
+        lng: parseFloat(searchMatch[2]),
+      };
+    }
+    
+    // パターン3: /place/lat,lng
     const placeMatch = url.match(/\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
     if (placeMatch) {
       return {
@@ -85,7 +95,7 @@ async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: n
       };
     }
     
-    // パターン3: /@lat,lng,zoom
+    // パターン4: /@lat,lng,zoom
     const atMatch = url.match(/\/@(-?\d+\.?\d*),(-?\d+\.?\d*),/);
     if (atMatch) {
       return {
