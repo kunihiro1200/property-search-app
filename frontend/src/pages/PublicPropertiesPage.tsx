@@ -631,10 +631,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 物件タイプフィルターのトグル処理
   const handleTypeToggle = (type: PropertyType) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Property type filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
     setSelectedTypes((prev) => {
       if (prev.includes(type)) {
         return prev.filter((t) => t !== type);
@@ -648,10 +644,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 価格フィルターの変更ハンドラー
   const handlePriceChange = (type: 'min' | 'max', value: string) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Price filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
     if (type === 'min') {
       setMinPrice(value);
     } else {
@@ -663,10 +655,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 築年数フィルターの変更ハンドラー
   const handleAgeChange = (type: 'min' | 'max', value: string) => {
-    // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-    console.log('🔄 Building age filter changed, forcing viewMode to list');
-    setViewMode('list');
-    
     if (type === 'min') {
       setMinAge(value);
     } else {
@@ -679,10 +667,6 @@ const PublicPropertiesPage: React.FC = () => {
   // すべてのフィルターをクリアする処理
   const handleClearAllFilters = () => {
     try {
-      // ⚠️ 重要: フィルタークリア時は、viewModeを強制的に'list'に設定
-      console.log('🔄 Clearing all filters, forcing viewMode to list');
-      setViewMode('list');
-      
       // 物件タイプ選択をクリア
       setSelectedTypes([]);
       
@@ -922,9 +906,6 @@ const PublicPropertiesPage: React.FC = () => {
               <Button
                 variant={showPublicOnly ? "contained" : "outlined"}
                 onClick={() => {
-                  // ⚠️ 重要: フィルター変更時は、viewModeを強制的に'list'に設定
-                  console.log('🔄 Show public only filter changed, forcing viewMode to list');
-                  setViewMode('list');
                   setShowPublicOnly(!showPublicOnly);
                   setCurrentPage(1);
                 }}
