@@ -304,6 +304,10 @@ const PublicPropertyDetailPage: React.FC = () => {
   };
 
   const handleBackClick = () => {
+    // デバッグ：location.stateを確認
+    console.log('[PublicPropertyDetailPage] handleBackClick - location.state:', location.state);
+    console.log('[PublicPropertyDetailPage] handleBackClick - window.history.state:', window.history.state);
+    
     // ブラウザの戻るボタンと同じ動作（location.stateを保持）
     navigate(-1);
   };
