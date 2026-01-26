@@ -53,12 +53,16 @@ const PublicPropertyDetailPage: React.FC = () => {
   
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded: isMapLoaded } = useJsApiLoader({
+  console.log('🗺️ [Google Maps] API Key:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NOT SET');
+  
+  const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     language: 'ja',
     region: 'JP',
   });
+  
+  console.log('🗺️ [Google Maps] isLoaded:', isMapLoaded, 'loadError:', loadError);
   
   // 全データの状態管理
   const [completeData, setCompleteData] = useState<any>(null);
@@ -110,6 +114,45 @@ const PublicPropertyDetailPage: React.FC = () => {
     fetchCompleteData();
   }, [id]); // idのみに依存（property?.property_numberを削除して無限ループを防ぐ）
   
+  // 地図表示用の座標を取得（Google Map URLまたはデータベースの座標から）
+  useEffect(() => {
+    if (!property) return;
+    
+    const fetchMapCoordinates = async () => {
+      console.log('🗺️ [Map Coordinates] Starting coordinate extraction...');
+      
+      // 1. データベースに座標がある場合はそれを使用（最優先）
+      if (property.latitude && property.longitude) {
+        console.log('🗺️ [Map Coordinates] Using coordinates from database:', {
+          lat: property.latitude,
+          lng: property.longitude,
+        });
+        setMapCoordinates({
+          lat: property.latitude,
+          lng: property.longitude,
+        });
+        return;
+      }
+      
+      // 2. Google Map URLから座標を抽出
+      if (property.google_map_url) {
+        console.log('🗺️ [Map Coordinates] Extracting from Google Map URL:', property.google_map_url);
+        const coords = await extractCoordinatesFromGoogleMapUrl(property.google_map_url);
+        if (coords) {
+          console.log('🗺️ [Map Coordinates] Successfully extracted:', coords);
+          setMapCoordinates(coords);
+          return;
+        }
+      }
+      
+      // 3. 住所から座標を取得（Geocoding API - 未実装）
+      // TODO: 必要に応じて実装
+      console.log('🗺️ [Map Coordinates] No coordinates available for this property');
+      setMapCoordinates(null);
+    };
+    
+    fetchMapCoordinates();
+  }, [property?.property_number, property?.google_map_url, property?.latitude, property?.longitude]);
   // パノラマURLを取得（削除：/completeから取得するため不要）
   // useEffect(() => {
   //   if (!property?.property_number) return;
@@ -540,7 +583,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             </Paper>
 
             {/* 地図セクション（独立したPaper） */}
-            {(property.google_map_url || (property.latitude && property.longitude && isMapLoaded)) && (
+            {(property.google_map_url || mapCoordinates) && (
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}> {/* 5番目 */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   地図
@@ -555,14 +598,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     fullWidth
-                    sx={{ mb: property.latitude && property.longitude && isMapLoaded ? 2 : 0 }}
+                    sx={{ mb: mapCoordinates && isMapLoaded ? 2 : 0 }}
                   >
                     Google Mapで見る
                   </Button>
                 )}
 
                 {/* 地図表示（座標がある場合） */}
-                {property.latitude && property.longitude && isMapLoaded && (
+                {mapCoordinates && isMapLoaded && (
                   <Box
                     sx={{
                       width: '100%',
@@ -574,8 +617,8 @@ const PublicPropertyDetailPage: React.FC = () => {
                     <GoogleMap
                       mapContainerStyle={{ width: '100%', height: '100%' }}
                       center={{
-                        lat: property.latitude,
-                        lng: property.longitude,
+                        lat: mapCoordinates.lat,
+                        lng: mapCoordinates.lng,
                       }}
                       zoom={15}
                       options={{
@@ -588,8 +631,8 @@ const PublicPropertyDetailPage: React.FC = () => {
                       {/* マーカー表示 */}
                       <Marker
                         position={{
-                          lat: property.latitude,
-                          lng: property.longitude,
+                          lat: mapCoordinates.lat,
+                          lng: mapCoordinates.lng,
                         }}
                         icon={{
                           path: window.google.maps.SymbolPath.CIRCLE,
