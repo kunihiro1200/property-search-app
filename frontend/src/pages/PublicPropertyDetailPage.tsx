@@ -330,8 +330,8 @@ const PublicPropertyDetailPage: React.FC = () => {
               buildYear: property.construction_year_month ? parseInt(property.construction_year_month.substring(0, 4)) : undefined,
               rooms: property.floor_plan,
               images: property.images?.map(url => ({ url })),
-              latitude: property.latitude,
-              longitude: property.longitude,
+              latitude: mapCoordinates?.lat || property.latitude,
+              longitude: mapCoordinates?.lng || property.longitude,
             })}
           />
         </>
