@@ -597,7 +597,9 @@ app.post('/api/public/properties/:identifier/update-storage-url', async (req, re
     // storage_locationを更新
     const { error: updateError } = await supabase
       .from('property_listings')
-      .update({ storage_location: storageUrl })
+      .update({ 
+        storage_location: storageUrl
+      })
       .eq('id', property.id);
     
     if (updateError) {

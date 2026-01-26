@@ -805,6 +805,18 @@ export class PropertyListingSyncService {
         continue;
       }
 
+      // ⚠️ 重要: image_urlは手動更新ボタンで管理されるため、自動同期から除外
+      if (dbField === 'image_url') {
+        console.log(`[PropertyListingSyncService] Skipping image_url comparison (managed by manual refresh)`);
+        continue;
+      }
+
+      // ⚠️ 重要: storage_locationは手動更新ボタンで管理されるため、自動同期から除外
+      if (dbField === 'storage_location') {
+        console.log(`[PropertyListingSyncService] Skipping storage_location comparison (managed by manual refresh)`);
+        continue;
+      }
+
       const dbValue = dbProperty[dbField];
       const normalizedSpreadsheetValue = this.normalizeValue(spreadsheetValue);
       const normalizedDbValue = this.normalizeValue(dbValue);
