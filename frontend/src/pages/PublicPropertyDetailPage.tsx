@@ -152,19 +152,9 @@ const PublicPropertyDetailPage: React.FC = () => {
       console.log('✅ [Estimate PDF] Response received:', response.data);
       
       if (mode === 'preview') {
-        // プレビュー：新しいタブで開く
-        console.log('🌐 [Estimate PDF] Opening PDF in new tab:', response.data.pdfUrl);
-        
-        // window.open()の代わりに、aタグを使用（ポップアップブロッカー回避）
-        const link = document.createElement('a');
-        link.href = response.data.pdfUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        console.log('✅ [Estimate PDF] PDF link clicked');
+        // プレビュー：同じタブでPDFを開く（ポップアップブロッカー回避）
+        console.log('🌐 [Estimate PDF] Opening PDF in same tab:', response.data.pdfUrl);
+        window.location.href = response.data.pdfUrl;
       } else {
         // ダウンロード：ファイルとしてダウンロード
         console.log('💾 [Estimate PDF] Downloading PDF:', response.data.pdfUrl);
