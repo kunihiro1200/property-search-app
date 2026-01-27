@@ -22,11 +22,24 @@
 
 ### 方法1: コミットから復元（推奨）
 
+**フロントエンド**:
 ```bash
-# 動作確認済みコミット: b67e7fd
-git checkout b67e7fd -- frontend/src/pages/PublicPropertyDetailPage.tsx
+# 動作確認済みコミット: 7445465
+git checkout 7445465 -- frontend/src/pages/PublicPropertyDetailPage.tsx
 git add frontend/src/pages/PublicPropertyDetailPage.tsx
-git commit -m "Restore: Fix Google Maps marker display (commit b67e7fd)"
+git commit -m "Restore: Fix Google Maps marker display (commit 7445465)"
+```
+
+**バックエンド**:
+```bash
+# 動作確認済みコミット: 3d6088d
+git checkout 3d6088d -- backend/api/index.ts
+git add backend/api/index.ts
+git commit -m "Restore: Add url-redirect endpoint (commit 3d6088d)"
+```
+
+**プッシュ**:
+```bash
 git push
 ```
 
@@ -119,9 +132,12 @@ Ctrl + Shift + R
 
 ### 成功したコミット
 
-**コミットハッシュ**: `b67e7fd`
+**コミットハッシュ**: `b67e7fd` → `7445465` → `3d6088d`
 
-**コミットメッセージ**: "Debug: Add onLoad callbacks to GoogleMap and Marker to verify component creation"
+**コミットメッセージ**: 
+- `b67e7fd`: "Debug: Add onLoad callbacks to GoogleMap and Marker to verify component creation"
+- `7445465`: "Fix: Use direct Google Maps API to create marker instead of Marker component"
+- `3d6088d`: "Fix: Add /api/url-redirect/resolve endpoint for shortened URL resolution in production"
 
 **変更内容**:
 ```
@@ -236,7 +252,10 @@ Get-Content frontend/.env.local | Select-String -Pattern "VITE_GOOGLE_MAPS_API_K
 
 **最もシンプルな依頼**:
 ```
-地図のピンが表示されない。コミット b67e7fd に戻して。
+地図のピンが表示されない。
+フロントエンド: コミット 7445465
+バックエンド: コミット 3d6088d
+に戻して。
 ```
 
 ### 重要なポイント

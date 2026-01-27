@@ -1,55 +1,77 @@
-import { GoogleSheetsClient } from './api/src/services/GoogleSheetsClient';
+// AA13453のスプレッドシートデータを確認
+import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 async function checkAA13453InSheet() {
   console.log('🔍 Checking AA13453 in spreadsheet...\n');
-
-  const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
-  const PROPERTY_LIST_SHEET_NAME = '物件';
-
+  
+  const sheetsClient = new GoogleSheetsClient();
+  
+  // 業務リストのスプレッドシートID
+  const spreadsheetId = process.env.GOOGLE_SHEETS_GYOMU_LIST_SPREADSHEET_ID!;
+  
+  // AA13453のシート名を取得（物件番号がシート名）
+  const sheetName = 'AA13453';
+  
   try {
-    const sheetsClient = new GoogleSheetsClient({
-      spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
-      sheetName: PROPERTY_LIST_SHEET_NAME,
-      serviceAccountKeyPath: './google-service-account.json',
-    });
-
-    console.log('🔐 Authenticating with Google Sheets...');
-    await sheetsClient.authenticate();
-    console.log('✅ Authenticated\n');
-
-    console.log('📊 Reading all rows from spreadsheet...');
-    const allRows = await sheetsClient.readAll();
-    console.log(`✅ Found ${allRows.length} rows\n`);
-
-    // AA13453を検索
-    const aa13453Row = allRows.find((row: any) => row['物件番号'] === 'AA13453');
-
-    if (aa13453Row) {
-      console.log('✅ AA13453 FOUND in spreadsheet:');
-      console.log('   物件番号:', aa13453Row['物件番号']);
-      console.log('   住所:', aa13453Row['住所']);
-      console.log('   価格:', aa13453Row['価格']);
-      console.log('   atbb_status:', aa13453Row['atbb_status']);
-      console.log('\n   Full row data:');
-      console.log(JSON.stringify(aa13453Row, null, 2));
-    } else {
-      console.log('❌ AA13453 NOT FOUND in spreadsheet');
-    }
-
-    console.log('\n📊 Latest 10 property numbers in spreadsheet:');
-    const propertyNumbers = allRows
-      .map((row: any) => row['物件番号'])
-      .filter((num: any) => num && typeof num === 'string' && num.startsWith('AA'))
-      .slice(-10);
+    // シートのヘッダー行を取得（1行目）
+    const headers = await sheetsClient.getSheetData(spreadsheetId, `${sheetName}!1:1`);
+    console.log('📋 Sheet headers:');
+    console.log(headers[0]);
+    console.log('---\n');
     
-    propertyNumbers.forEach((num: string, i: number) => {
-      console.log(`   ${i + 1}. ${num}`);
+    // AA13453のデータを取得（2行目以降）
+    const data = await sheetsClient.getSheetData(spreadsheetId, `${sheetName}!A2:ZZ100`);
+    
+    if (!data || data.length === 0) {
+      console.log('❌ No data found in sheet');
+      return;
+    }
+    
+    console.log(`✅ Found ${data.length} rows in sheet\n`);
+    
+    // ヘッダーとデータを組み合わせて表示
+    const headerRow = headers[0];
+    
+    // コメント関連の列を探す
+    const commentColumns = [
+      'お気に入り文言',
+      'おすすめコメント',
+      '内覧時伝達事項',
+      'Athome公開フォルダ',
+      'パノラマURL',
+    ];
+    
+    console.log('🔍 Looking for comment-related columns...\n');
+    
+    commentColumns.forEach(columnName => {
+      const columnIndex = headerRow.indexOf(columnName);
+      if (columnIndex !== -1) {
+        console.log(`✅ Found column: "${columnName}" at index ${columnIndex}`);
+        
+        // 最初の行のデータを表示
+        if (data[0] && data[0][columnIndex]) {
+          console.log(`   Value: ${data[0][columnIndex]}`);
+        } else {
+          console.log(`   Value: (empty)`);
+        }
+        console.log('---');
+      } else {
+        console.log(`❌ Column not found: "${columnName}"`);
+      }
     });
-
+    
+    // 全てのヘッダーを表示（参考用）
+    console.log('\n📋 All headers:');
+    headerRow.forEach((header: string, index: number) => {
+      console.log(`  [${index}] ${header}`);
+    });
+    
   } catch (error: any) {
     console.error('❌ Error:', error.message);
-    console.error(error);
   }
 }
 
-checkAA13453InSheet();
+checkAA13453InSheet().catch(console.error);

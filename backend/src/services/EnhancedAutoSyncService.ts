@@ -1607,30 +1607,34 @@ export class EnhancedAutoSyncService {
 
         for (const propertyNumber of batch) {
           try {
-            // updatePropertyDetailsFromSheetsメソッドを呼び出し
-            // このメソッドはprivateなので、直接呼び出せない
-            // 代わりに、syncUpdatedPropertyListingsを使用するか、
-            // 新しいpublicメソッドを作成する必要がある
-            
-            // 一時的な解決策: property_detailsに空のレコードを作成
-            const { error: insertError } = await this.supabase
-              .from('property_details')
-              .insert({
-                property_number: propertyNumber,
-                property_about: null,
-                recommended_comments: null,
-                athome_data: null,
-                favorite_comment: null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
+            // 物件情報を取得（物件種別が必要）
+            const { data: property, error: propertyError } = await this.supabase
+              .from('property_listings')
+              .select('property_type')
+              .eq('property_number', propertyNumber)
+              .single();
 
-            if (insertError) {
-              console.error(`❌ ${propertyNumber}: ${insertError.message}`);
+            if (propertyError || !property) {
+              console.error(`❌ ${propertyNumber}: Property not found in property_listings`);
               failed++;
-            } else {
-              console.log(`✅ ${propertyNumber}: Created empty property_details`);
+              continue;
+            }
+
+            // AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
+            const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
+            const athomeSheetSyncService = new AthomeSheetSyncService();
+            
+            const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+              propertyNumber,
+              property.property_type as 'land' | 'detached_house' | 'apartment'
+            );
+
+            if (syncSuccess) {
+              console.log(`✅ ${propertyNumber}: Synced comments from spreadsheet`);
               synced++;
+            } else {
+              console.error(`❌ ${propertyNumber}: Failed to sync comments from spreadsheet`);
+              failed++;
             }
           } catch (error: any) {
             console.error(`❌ ${propertyNumber}: ${error.message}`);

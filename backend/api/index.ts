@@ -14,6 +14,7 @@ import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
 import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
+import { AthomeSheetSyncService } from '../src/services/AthomeSheetSyncService';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
 
 const app = express();
@@ -315,6 +316,37 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             has_athome_data: !!details.athome_data,
             has_property_about: !!details.property_about
           });
+          
+          // コメントデータがnullの場合、Athomeシートから自動同期
+          const needsSync = !details.favorite_comment && !details.recommended_comments;
+          if (needsSync) {
+            console.log(`[Complete API] Comment data is null, syncing from Athome sheet...`);
+            try {
+              const athomeSheetSyncService = new AthomeSheetSyncService();
+              const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+                property.property_number,
+                property.property_type as 'land' | 'detached_house' | 'apartment'
+              );
+              
+              if (syncSuccess) {
+                console.log(`[Complete API] Successfully synced comments from Athome sheet`);
+                // 同期後のデータを再取得
+                const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
+                console.log(`[Complete API] Updated details:`, {
+                  has_favorite_comment: !!updatedDetails.favorite_comment,
+                  has_recommended_comments: !!updatedDetails.recommended_comments,
+                  has_athome_data: !!updatedDetails.athome_data,
+                  has_property_about: !!updatedDetails.property_about
+                });
+                return updatedDetails;
+              } else {
+                console.error(`[Complete API] Failed to sync comments from Athome sheet`);
+              }
+            } catch (syncError: any) {
+              console.error(`[Complete API] Error syncing comments:`, syncError.message);
+            }
+          }
+          
           return details;
         } catch (error: any) {
           console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
@@ -1506,6 +1538,150 @@ app.get('/api/cron/sync-sellers', async (req, res) => {
     
   } catch (error: any) {
     console.error('[Cron] Error in seller sync job:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 手動同期エンドポイント（第3層）- コメントデータの緊急同期用
+app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    
+    console.log(`[Manual Sync] Syncing comments for ${propertyNumber}...`);
+    
+    // 物件情報を取得
+    const { data: property, error: propertyError } = await supabase
+      .from('property_listings')
+      .select('property_type')
+      .eq('property_number', propertyNumber)
+      .single();
+    
+    if (propertyError || !property) {
+      console.error(`[Manual Sync] Property not found: ${propertyNumber}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Property not found',
+        propertyNumber
+      });
+    }
+    
+    // AthomeSheetSyncServiceを使用して同期
+    const athomeSheetSyncService = new AthomeSheetSyncService();
+    const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+      propertyNumber,
+      property.property_type as 'land' | 'detached_house' | 'apartment'
+    );
+    
+    if (syncSuccess) {
+      console.log(`[Manual Sync] ✅ Successfully synced comments for ${propertyNumber}`);
+      res.json({
+        success: true,
+        message: `Successfully synced comments for ${propertyNumber}`,
+        propertyNumber
+      });
+    } else {
+      console.error(`[Manual Sync] ❌ Failed to sync comments for ${propertyNumber}`);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to sync comments from spreadsheet',
+        propertyNumber
+      });
+    }
+  } catch (error: any) {
+    console.error('[Manual Sync] Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 一括手動同期エンドポイント - 複数物件のコメントデータを同期
+app.post('/api/admin/sync-comments-batch', async (req, res) => {
+  try {
+    const { propertyNumbers } = req.body;
+    
+    if (!Array.isArray(propertyNumbers) || propertyNumbers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'propertyNumbers must be a non-empty array'
+      });
+    }
+    
+    console.log(`[Batch Sync] Syncing comments for ${propertyNumbers.length} properties...`);
+    
+    const results = {
+      success: 0,
+      failed: 0,
+      details: [] as any[]
+    };
+    
+    for (const propertyNumber of propertyNumbers) {
+      try {
+        // 物件情報を取得
+        const { data: property, error: propertyError } = await supabase
+          .from('property_listings')
+          .select('property_type')
+          .eq('property_number', propertyNumber)
+          .single();
+        
+        if (propertyError || !property) {
+          console.error(`[Batch Sync] Property not found: ${propertyNumber}`);
+          results.failed++;
+          results.details.push({
+            propertyNumber,
+            success: false,
+            error: 'Property not found'
+          });
+          continue;
+        }
+        
+        // AthomeSheetSyncServiceを使用して同期
+        const athomeSheetSyncService = new AthomeSheetSyncService();
+        const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+          propertyNumber,
+          property.property_type as 'land' | 'detached_house' | 'apartment'
+        );
+        
+        if (syncSuccess) {
+          console.log(`[Batch Sync] ✅ ${propertyNumber}: Success`);
+          results.success++;
+          results.details.push({
+            propertyNumber,
+            success: true
+          });
+        } else {
+          console.error(`[Batch Sync] ❌ ${propertyNumber}: Failed`);
+          results.failed++;
+          results.details.push({
+            propertyNumber,
+            success: false,
+            error: 'Failed to sync from spreadsheet'
+          });
+        }
+      } catch (error: any) {
+        console.error(`[Batch Sync] ❌ ${propertyNumber}: ${error.message}`);
+        results.failed++;
+        results.details.push({
+          propertyNumber,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`[Batch Sync] Completed: ${results.success} success, ${results.failed} failed`);
+    
+    res.json({
+      success: results.failed === 0,
+      message: `Synced ${results.success}/${propertyNumbers.length} properties`,
+      results
+    });
+  } catch (error: any) {
+    console.error('[Batch Sync] Error:', error.message);
     res.status(500).json({
       success: false,
       error: error.message
