@@ -12,8 +12,10 @@
 
 ---
 
-### `.kiro/steering/restore-guides/`
-**特定の機能が壊れた時だけ参照する復元ガイド**
+### `.kiro/restore-guides/`（ステアリングディレクトリの外）
+**特定の機能が壊れた時だけ手動で参照する復元ガイド**
+
+復元ガイドは`.kiro/restore-guides/`に保存されています（ステアリングルールとして自動読み込みされません）。
 
 #### 公開物件サイト関連
 - `google-maps-marker-display-fix.md` - 地図のピン表示修正
@@ -33,7 +35,7 @@
 
 ---
 
-### `.kiro/sessions/` (ステアリングディレクトリの外)
+### `.kiro/sessions/`（ステアリングディレクトリの外）
 **過去のセッション記録（参考用）**
 
 セッション記録は`.kiro/sessions/`に保存されています（ステアリングルールとして自動読み込みされません）。
@@ -50,15 +52,15 @@
 ## 🔍 ドキュメントの使い方
 
 ### セッション開始時
-ルートディレクトリ（`.kiro/steering/`）の4つのドキュメントのみが自動的に読み込まれます。
+ルートディレクトリ（`.kiro/steering/`）の4つのドキュメント + README.mdのみが自動的に読み込まれます。
 
 ### 問題が発生した時
-該当する機能の復元ガイド（`.kiro/steering/restore-guides/`）を参照してください。
+該当する機能の復元ガイド（`.kiro/restore-guides/`）を手動で参照してください。
 
 例：
-- 地図のピンが表示されない → `google-maps-marker-display-fix.md`
-- 概算書PDFが生成されない → `estimate-pdf-generation-fix.md`
-- 初回ロードが遅い → `public-property-performance-critical-rules.md`
+- 地図のピンが表示されない → `.kiro/restore-guides/google-maps-marker-display-fix.md`
+- 概算書PDFが生成されない → `.kiro/restore-guides/estimate-pdf-generation-fix.md`
+- 初回ロードが遅い → `.kiro/restore-guides/public-property-performance-critical-rules.md`
 
 ---
 
