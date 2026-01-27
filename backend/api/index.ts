@@ -1403,6 +1403,60 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
   }
 });
 
+// Cron Job: 売主データをスプレッドシートから同期（15分ごとに実行）
+app.get('/api/cron/sync-sellers', async (req, res) => {
+  try {
+    console.log('[Cron] Starting seller sync job...');
+    
+    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
+    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
+    
+    // EnhancedAutoSyncServiceを使用してフル同期を実行
+    const { getEnhancedAutoSyncService } = await import('../src/services/EnhancedAutoSyncService');
+    const syncService = getEnhancedAutoSyncService();
+    await syncService.initialize();
+    
+    console.log('[Cron] Running full sync (addition + update + deletion)...');
+    const result = await syncService.runFullSync('scheduled');
+    
+    const isSuccess = result.status === 'success' || result.status === 'partial_success';
+    
+    console.log(`[Cron] Seller sync job completed:`, {
+      status: result.status,
+      added: result.additionResult.successfullyAdded,
+      updated: result.additionResult.successfullyUpdated,
+      deleted: result.deletionResult.successfullyDeleted,
+      duration: result.totalDurationMs,
+    });
+    
+    res.status(200).json({
+      success: isSuccess,
+      status: result.status,
+      additionResult: {
+        totalProcessed: result.additionResult.totalProcessed,
+        successfullyAdded: result.additionResult.successfullyAdded,
+        successfullyUpdated: result.additionResult.successfullyUpdated,
+        failed: result.additionResult.failed,
+      },
+      deletionResult: {
+        totalDetected: result.deletionResult.totalDetected,
+        successfullyDeleted: result.deletionResult.successfullyDeleted,
+        failedToDelete: result.deletionResult.failedToDelete,
+        requiresManualReview: result.deletionResult.requiresManualReview,
+      },
+      duration: result.totalDurationMs,
+      syncedAt: result.syncedAt,
+    });
+    
+  } catch (error: any) {
+    console.error('[Cron] Error in seller sync job:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
