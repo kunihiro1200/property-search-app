@@ -109,76 +109,23 @@ export function isVisitDayBefore(
 }
 
 /**
- * 当日TEL（未着手）かどうかを判定
+ * 日本時間（JST）で今日の日付を取得
  * 
- * 条件:
- * - 次電日が今日を含めて過去
- * - 状況（当社）に「追客中」を含む
- * - 不通カラムが空欄（is_unreachable が false）
- * - 電話担当（任意）が空欄
- * - 反響日付が2026年1月1日以降
- * 
- * @param seller 売主データ
- * @param today 今日の日付
- * @returns 当日TEL（未着手）かどうか
- * 
- * @example
- * const seller = {
- *   next_call_date: "2026/1/26",
- *   status: "追客中",
- *   is_unreachable: false,
- *   phone_person: null,
- *   inquiry_date: "2026-01-15"
- * };
- * isCallTodayUnstarted(seller, new Date(2026, 0, 27)) // => true
+ * @returns 日本時間の今日の日付（時刻は00:00:00）
  */
-export function isCallTodayUnstarted(
-  seller: Seller,
-  today: Date
-): boolean {
-  // 次電日が今日を含めて過去かチェック
-  const nextCallDate = parseDate(seller.next_call_date);
-  if (!nextCallDate || nextCallDate > today) {
-    return false;
-  }
-
-  // 状況（当社）に「追客中」を含むかチェック
-  // フィールド名は status（situation_company ではない）
-  if (
-    !seller.status ||
-    !seller.status.includes('追客中')
-  ) {
-    return false;
-  }
-
-  // 不通カラムが空欄かチェック（is_unreachableがfalse、またはnot_reachableが空）
-  const isUnreachable = seller.is_unreachable === true || 
-    (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
+function getTodayJST(): Date {
+  // 現在のUTC時刻を取得
+  const now = new Date();
   
-  if (isUnreachable) {
-    return false;
-  }
-
-  // 電話担当（任意）が空欄かチェック
-  if (seller.phone_person && seller.phone_person.trim() !== '') {
-    return false;
-  }
-
-  // 反響日付が2026年1月1日以降かチェック
-  const inquiryDate = parseDate(seller.inquiry_date);
-  if (!inquiryDate) {
-    // 反響日付がない場合は条件を満たさない
-    return false;
-  }
+  // 日本時間（UTC+9）に変換
+  const jstOffset = 9 * 60; // 9時間 = 540分
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const jstTime = new Date(utcTime + (jstOffset * 60000));
   
-  const cutoffDate = new Date(2026, 0, 1); // 2026年1月1日
-  cutoffDate.setHours(0, 0, 0, 0);
+  // 時刻をリセット
+  jstTime.setHours(0, 0, 0, 0);
   
-  if (inquiryDate < cutoffDate) {
-    return false;
-  }
-
-  return true;
+  return jstTime;
 }
 
 /**
@@ -187,9 +134,8 @@ export function isCallTodayUnstarted(
  * 以下の順序でチェックし、全ての条件を満たすステータスを配列で返します：
  * 1. 不通
  * 2. 訪問日前日
- * 3. 当日TEL（担当名）
- * 4. 当日TEL（未着手）
- * 5. Pinrich空欄
+ * 3. 当日TEL / 当日TEL（担当名）
+ * 4. Pinrich空欄
  * 
  * @param seller 売主データ
  * @returns ステータスの配列
@@ -204,8 +150,7 @@ export function isCallTodayUnstarted(
  */
 export function calculateSellerStatus(seller: Seller): string[] {
   const statuses: string[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // 時刻をリセット
+  const today = getTodayJST(); // 日本時間で今日の日付を取得
 
   // 1. 不通チェック（is_unreachableはboolean型）
   // データベースの is_unreachable が true の場合、または
@@ -222,17 +167,28 @@ export function calculateSellerStatus(seller: Seller): string[] {
     statuses.push('訪問日前日');
   }
 
-  // 3. 当日TEL（担当名）チェック
-  if (seller.phone_person && seller.phone_person.trim() !== '') {
-    const nextCallDate = parseDate(seller.next_call_date);
-    if (nextCallDate && nextCallDate <= today) {
-      statuses.push(`当日TEL（${seller.phone_person}）`);
+  // 3. 当日TELチェック
+  const nextCallDate = parseDate(seller.next_call_date);
+  if (nextCallDate && nextCallDate <= today) {
+    // 状況（当社）に「追客中」を含むかチェック
+    if (seller.status && seller.status.includes('追客中')) {
+      // 不通でないかチェック
+      if (!isUnreachable) {
+        // 反響日付が2026年1月1日以降かチェック
+        const inquiryDate = parseDate(seller.inquiry_date);
+        const cutoffDate = new Date(2026, 0, 1);
+        cutoffDate.setHours(0, 0, 0, 0);
+        
+        if (inquiryDate && inquiryDate >= cutoffDate) {
+          // 電話担当に値がある場合は担当名付き、ない場合は「当日TEL」
+          if (seller.phone_person && seller.phone_person.trim() !== '') {
+            statuses.push(`当日TEL（${seller.phone_person}）`);
+          } else {
+            statuses.push('当日TEL');
+          }
+        }
+      }
     }
-  }
-
-  // 4. 当日TEL（未着手）チェック
-  if (isCallTodayUnstarted(seller, today)) {
-    statuses.push('当日TEL（未着手）');
   }
 
   // 5. Pinrich空欄チェック（pinrichStatusまたはpinrichを確認）
