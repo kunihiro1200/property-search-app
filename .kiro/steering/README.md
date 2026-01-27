@@ -33,13 +33,17 @@
 
 ---
 
-### `.kiro/steering/archive/`
+### `.kiro/sessions/` (ステアリングディレクトリの外)
 **過去のセッション記録（参考用）**
+
+セッション記録は`.kiro/sessions/`に保存されています（ステアリングルールとして自動読み込みされません）。
 
 - `session-2026-01-25-manual-refresh-buttons.md`
 - `session-2026-01-25-panorama-estimate-pdf-fix.md`
 - `session-2026-01-25-public-site-buttons-url-fix.md`
 - `session-2026-01-26-storage-location-auto-sync-exclusion.md`
+- `session-2026-01-27-cc6-image-and-scroll-position-fix.md`
+- `session-2026-01-27-encryption-issue-fix.md`
 
 ---
 
