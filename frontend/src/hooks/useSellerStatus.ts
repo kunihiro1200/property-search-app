@@ -38,5 +38,6 @@ export function useSellerStatus(seller: Seller): string[] {
     seller.phone_person,
     seller.pinrichStatus,
     seller.not_reachable,
+    seller.is_unreachable, // boolean型の不通フラグ
   ]);
 }
