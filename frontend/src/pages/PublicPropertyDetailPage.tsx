@@ -134,7 +134,6 @@ const PublicPropertyDetailPage: React.FC = () => {
   console.log('🗺️ [Google Maps] API Key:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NOT SET');
   
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     language: 'ja',
     region: 'JP',
