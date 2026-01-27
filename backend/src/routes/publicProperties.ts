@@ -252,6 +252,79 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
     console.log(`[Complete API] Has athome_data: ${!!property.athome_data}`);
     console.log(`[Complete API] Has property_about: ${!!property.property_about}`);
     
+    // コメントデータがnullまたは空の場合、Athomeシートから自動同期
+    // recommended_commentsが空配列の場合も再同期する（過去の間違ったデータを修正）
+    const needsSync = !property.favorite_comment || 
+                     !property.recommended_comments || 
+                     (Array.isArray(property.recommended_comments) && property.recommended_comments.length === 0);
+    
+    if (needsSync) {
+      console.log(`[Complete API] Comment data is missing or empty, syncing from Athome sheet...`);
+      console.log(`[Complete API] Current state:`, {
+        has_favorite_comment: !!property.favorite_comment,
+        has_recommended_comments: !!property.recommended_comments,
+        recommended_comments_length: Array.isArray(property.recommended_comments) ? property.recommended_comments.length : 'N/A'
+      });
+      
+      try {
+        // 動的インポートでAthomeSheetSyncServiceを読み込む
+        const { AthomeSheetSyncService } = await import('../services/AthomeSheetSyncService');
+        const athomeSheetSyncService = new AthomeSheetSyncService();
+        
+        const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+          property.property_number,
+          property.property_type as 'land' | 'detached_house' | 'apartment'
+        );
+        
+        if (syncSuccess) {
+          console.log(`[Complete API] Successfully synced comments from Athome sheet`);
+          
+          // 同期後のデータを再取得
+          const updatedProperty = await propertyListingService.getPublicPropertyById(id);
+          if (updatedProperty) {
+            property.favorite_comment = updatedProperty.favorite_comment;
+            property.recommended_comments = updatedProperty.recommended_comments;
+            property.athome_data = updatedProperty.athome_data;
+            
+            console.log(`[Complete API] Updated property data:`, {
+              has_favorite_comment: !!property.favorite_comment,
+              has_recommended_comments: !!property.recommended_comments,
+              has_athome_data: !!property.athome_data
+            });
+          }
+        } else {
+          console.error(`[Complete API] Failed to sync comments from Athome sheet`);
+        }
+      } catch (syncError: any) {
+        console.error(`[Complete API] Error syncing comments:`, syncError.message);
+      }
+    }
+    
+    // property_aboutがnullの場合、物件スプレッドシートから取得
+    if (!property.property_about) {
+      console.log(`[Complete API] property_about is null, fetching from property spreadsheet...`);
+      try {
+        const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
+        
+        if (propertyAbout) {
+          // 動的インポートでPropertyDetailsServiceを読み込む
+          const { PropertyDetailsService } = await import('../services/PropertyDetailsService');
+          const propertyDetailsService = new PropertyDetailsService();
+          
+          await propertyDetailsService.upsertPropertyDetails(property.property_number, {
+            property_about: propertyAbout
+          });
+          
+          console.log(`[Complete API] Successfully synced property_about from property spreadsheet`);
+          property.property_about = propertyAbout;
+        } else {
+          console.log(`[Complete API] property_about not found in property spreadsheet`);
+        }
+      } catch (propertyAboutError: any) {
+        console.error(`[Complete API] Error syncing property_about:`, propertyAboutError.message);
+      }
+    }
+    
     // 決済日を取得（成約済みの場合のみ）
     let settlementDate = null;
     const isSold = property.atbb_status === '成約済み' || property.atbb_status === 'sold';

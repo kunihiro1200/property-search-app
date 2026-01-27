@@ -126,7 +126,7 @@ app.get('/api/test/routes', (_req, res) => {
 });
 
 // ⚠️ 重要: publicPropertiesRoutes を先に登録（より具体的なルートを優先）
-// app.use('/api/public', publicPropertiesRoutes); // 一時的にコメントアウト（ルートの重複を回避）
+app.use('/api/public', publicPropertiesRoutes);
 
 // 公開物件一覧取得（全ての物件を取得、atbb_statusはバッジ表示用）
 app.get('/api/public/properties', async (req, res) => {
