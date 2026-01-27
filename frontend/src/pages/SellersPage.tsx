@@ -35,6 +35,8 @@ import PageNavigation from '../components/PageNavigation';
 import { ManualSyncButton } from '../components/ManualSyncButton';
 import { SyncNotification, SyncNotificationData } from '../components/SyncNotification';
 import { useAutoSync } from '../hooks/useAutoSync';
+import { useSellerStatus } from '../hooks/useSellerStatus';
+import SellerStatusBadges from '../components/SellerStatusBadges';
 
 interface Seller {
   id: string;
@@ -97,6 +99,15 @@ const getStatusColor = (status: string | null | undefined): 'default' | 'primary
   
   return 'default';
 };
+
+/**
+ * 売主ステータスセルコンポーネント
+ * useSellerStatusフックを使用してステータスを計算し、バッジで表示
+ */
+function SellerStatusCell({ seller }: { seller: any }) {
+  const statuses = useSellerStatus(seller);
+  return <SellerStatusBadges statuses={statuses} size="small" />;
+}
 
 export default function SellersPage() {
   const navigate = useNavigate();
@@ -548,6 +559,7 @@ export default function SellersPage() {
                 <TableCell>訪問日</TableCell>
                 <TableCell>状況（当社）</TableCell>
                 <TableCell>Pinrich</TableCell>
+                <TableCell>ステータス</TableCell>
                 <TableCell>除外日</TableCell>
                 <TableCell>電話番号</TableCell>
               </TableRow>
@@ -555,13 +567,13 @@ export default function SellersPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={13} align="center">
+                  <TableCell colSpan={14} align="center">
                     読み込み中...
                   </TableCell>
                 </TableRow>
               ) : filteredSellers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} align="center">
+                  <TableCell colSpan={14} align="center">
                     売主が見つかりませんでした
                   </TableCell>
                 </TableRow>
@@ -640,6 +652,9 @@ export default function SellersPage() {
                       />
                     </TableCell>
                     <TableCell>{seller.pinrichStatus || '-'}</TableCell>
+                    <TableCell>
+                      <SellerStatusCell seller={seller} />
+                    </TableCell>
                     <TableCell>
                       {seller.exclusionDate
                         ? new Date(seller.exclusionDate).toLocaleDateString('ja-JP')
