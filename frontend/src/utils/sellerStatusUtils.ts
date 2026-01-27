@@ -116,6 +116,7 @@ export function isVisitDayBefore(
  * - 状況（当社）に「追客中」を含む
  * - 不通カラムが空欄（is_unreachable が false）
  * - 電話担当（任意）が空欄
+ * - 反響日付が2026年1月1日以降
  * 
  * @param seller 売主データ
  * @param today 今日の日付
@@ -126,7 +127,8 @@ export function isVisitDayBefore(
  *   next_call_date: "2026/1/26",
  *   status: "追客中",
  *   is_unreachable: false,
- *   phone_person: null
+ *   phone_person: null,
+ *   inquiry_date: "2026-01-15"
  * };
  * isCallTodayUnstarted(seller, new Date(2026, 0, 27)) // => true
  */
@@ -159,6 +161,20 @@ export function isCallTodayUnstarted(
 
   // 電話担当（任意）が空欄かチェック
   if (seller.phone_person && seller.phone_person.trim() !== '') {
+    return false;
+  }
+
+  // 反響日付が2026年1月1日以降かチェック
+  const inquiryDate = parseDate(seller.inquiry_date);
+  if (!inquiryDate) {
+    // 反響日付がない場合は条件を満たさない
+    return false;
+  }
+  
+  const cutoffDate = new Date(2026, 0, 1); // 2026年1月1日
+  cutoffDate.setHours(0, 0, 0, 0);
+  
+  if (inquiryDate < cutoffDate) {
     return false;
   }
 
