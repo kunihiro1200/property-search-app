@@ -708,26 +708,22 @@ const PublicPropertyDetailPage: React.FC = () => {
                           streetViewControl: false,
                           mapTypeControl: false,
                           fullscreenControl: true,
+                          clickableIcons: false,
                         }}
                         onLoad={(map) => {
                           console.log('🗺️ [Map Loaded] Map instance created');
+                          
+                          // 直接Google Maps APIを使用してマーカーを追加
+                          const marker = new google.maps.Marker({
+                            position: { lat: mapCoordinates.lat, lng: mapCoordinates.lng },
+                            map: map,
+                            title: property.address,
+                          });
+                          
+                          console.log('🗺️ [Direct Marker] Marker created:', marker);
                         }}
                       >
-                        {/* マーカー表示 */}
-                        {console.log('🗺️ [Rendering Marker] position:', { lat: mapCoordinates.lat, lng: mapCoordinates.lng })}
-                        <Marker
-                          position={{
-                            lat: mapCoordinates.lat,
-                            lng: mapCoordinates.lng,
-                          }}
-                          title={property.address}
-                          onLoad={(marker) => {
-                            console.log('🗺️ [Marker Loaded] Marker instance created:', marker);
-                          }}
-                          onClick={() => {
-                            console.log('🗺️ [Marker Clicked] Marker was clicked');
-                          }}
-                        />
+                        {/* マーカーは onLoad で直接追加 */}
                       </GoogleMap>
                     </Box>
                   </>
