@@ -58,14 +58,16 @@ interface Seller {
 
   // ステータス計算に必要なフィールド
   next_call_date: string | null;          // 次電日 (D列)
-  situation_company: string | null;        // 状況（当社） (AH列)
+  status: string | null;                   // 状況（当社） (AH列) ※DBフィールド名
   visit_date: string | null;               // 訪問日 Y/M/D (AB列)
   phone_person: string | null;             // 電話担当（任意） (CQ列)
   pinrich: string | null;                  // Pinrich (BF列)
   not_reachable: string | null;            // 不通 (J列)
+  is_unreachable: boolean | null;          // 不通フラグ（boolean型）
+  inquiry_date: string | null;             // 反響日付
 
   // 計算されたステータス（フロントエンドで追加）
-  status?: string[];                       // ステータスの配列
+  displayStatus?: string[];                // 表示用ステータスの配列
 }
 ```
 
@@ -125,7 +127,7 @@ export function calculateSellerStatus(seller: Seller): string[] {
 ```typescript
 /**
  * 日付文字列をDateオブジェクトに変換
- * @param dateStr 日付文字列 (例: "2026/1/27")
+ * @param dateStr 日付文字列 (例: "2026/1/27" または "2026-01-27")
  * @returns Dateオブジェクト、または null
  */
 export function parseDate(dateStr: string | null): Date | null {
@@ -134,8 +136,11 @@ export function parseDate(dateStr: string | null): Date | null {
   }
 
   try {
-    // "2026/1/27" 形式をパース
-    const parts = dateStr.split('/');
+    // "2026/1/27" 形式または "2026-01-27" 形式をパース
+    const parts = dateStr.includes('/') 
+      ? dateStr.split('/') 
+      : dateStr.split('-');
+    
     if (parts.length !== 3) {
       return null;
     }
@@ -143,6 +148,11 @@ export function parseDate(dateStr: string | null): Date | null {
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // 月は0始まり
     const day = parseInt(parts[2], 10);
+
+    // 数値が有効かチェック
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return null;
+    }
 
     const date = new Date(year, month, day);
     date.setHours(0, 0, 0, 0);
@@ -206,7 +216,9 @@ export function isVisitDayBefore(
  * 条件:
  * - 次電日が今日を含めて過去
  * - 状況（当社）に「追客中」を含む
- * - 不通カラムが空欄
+ * - 不通カラムが空欄（is_unreachableがfalse）
+ * - 電話担当（任意）が空欄
+ * - 反響日付が2026年1月1日以降
  * @param seller 売主データ
  * @param today 今日の日付
  * @returns 当日TEL（未着手）かどうか
@@ -222,15 +234,37 @@ export function isCallTodayUnstarted(
   }
 
   // 状況（当社）に「追客中」を含むかチェック
+  // ※フィールド名は status（DBの実際のカラム名）
   if (
-    !seller.situation_company ||
-    !seller.situation_company.includes('追客中')
+    !seller.status ||
+    !seller.status.includes('追客中')
   ) {
     return false;
   }
 
-  // 不通カラムが空欄かチェック
-  if (seller.not_reachable && seller.not_reachable.trim() !== '') {
+  // 不通カラムが空欄かチェック（is_unreachableがfalse）
+  const isUnreachable = seller.is_unreachable === true || 
+    (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
+  
+  if (isUnreachable) {
+    return false;
+  }
+
+  // 電話担当（任意）が空欄かチェック
+  if (seller.phone_person && seller.phone_person.trim() !== '') {
+    return false;
+  }
+
+  // 反響日付が2026年1月1日以降かチェック
+  const inquiryDate = parseDate(seller.inquiry_date);
+  if (!inquiryDate) {
+    return false;
+  }
+  
+  const cutoffDate = new Date(2026, 0, 1); // 2026年1月1日
+  cutoffDate.setHours(0, 0, 0, 0);
+  
+  if (inquiryDate < cutoffDate) {
     return false;
   }
 
@@ -261,11 +295,13 @@ export function useSellerStatus(seller: Seller): string[] {
     return calculateSellerStatus(seller);
   }, [
     seller.next_call_date,
-    seller.situation_company,
+    seller.status,                    // ※situation_companyではなくstatus
     seller.visit_date,
     seller.phone_person,
     seller.pinrich,
     seller.not_reachable,
+    seller.is_unreachable,
+    seller.inquiry_date,              // 反響日付を追加
   ]);
 }
 ```
@@ -397,11 +433,13 @@ return useMemo(() => {
   return calculateSellerStatus(seller);
 }, [
   seller.next_call_date,
-  seller.situation_company,
+  seller.status,                    // ※situation_companyではなくstatus
   seller.visit_date,
   seller.phone_person,
   seller.pinrich,
   seller.not_reachable,
+  seller.is_unreachable,
+  seller.inquiry_date,              // 反響日付を追加
 ]);
 ```
 
@@ -579,4 +617,4 @@ const sortedSellers = sellers.sort((a, b) => {
 
 **作成日**: 2026年1月27日  
 **最終更新日**: 2026年1月27日  
-**ステータス**: ✅ 設計完了
+**ステータス**: ✅ 設計完了（実装に合わせて更新済み）
