@@ -59,6 +59,62 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// URL短縮リダイレクト解決エンドポイント
+app.get('/api/url-redirect/resolve', async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: 'URL parameter is required' });
+    }
+    
+    console.log('🔗 Resolving shortened URL:', url);
+    
+    // HTTPSリクエストでリダイレクト先を取得
+    const https = await import('https');
+    const urlModule = await import('url');
+    
+    const parsedUrl = urlModule.parse(url);
+    
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.path,
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
+    };
+    
+    const redirectedUrl = await new Promise<string>((resolve, reject) => {
+      const request = https.request(options, (response) => {
+        if (response.statusCode === 301 || response.statusCode === 302) {
+          const location = response.headers.location;
+          if (location) {
+            console.log('✅ Redirected to:', location);
+            resolve(location);
+          } else {
+            reject(new Error('No location header found'));
+          }
+        } else {
+          resolve(url); // リダイレクトがない場合は元のURLを返す
+        }
+      });
+      
+      request.on('error', (error) => {
+        console.error('❌ Error resolving URL:', error);
+        reject(error);
+      });
+      
+      request.end();
+    });
+    
+    res.json({ redirectedUrl });
+  } catch (error: any) {
+    console.error('❌ Failed to resolve URL:', error);
+    res.status(500).json({ error: 'Failed to resolve URL', message: error.message });
+  }
+});
+
 // テスト用：publicPropertiesRoutesが読み込めているか確認
 app.get('/api/test/routes', (_req, res) => {
   res.json({ 
