@@ -10,11 +10,13 @@ const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
 
 // 環境変数から暗号化キーを取得
-const getEncryptionKey = (): Buffer => {
+const getEncryptionKey = (): Buffer | null => {
   const key = process.env.ENCRYPTION_KEY;
   
   if (!key) {
-    throw new Error('ENCRYPTION_KEY environment variable is not set');
+    // 暗号化キーが設定されていない場合はnullを返す（暗号化なしモード）
+    console.warn('⚠️ ENCRYPTION_KEY is not set, encryption/decryption will be skipped');
+    return null;
   }
   
   if (key.length !== KEY_LENGTH) {
@@ -36,6 +38,12 @@ export const encrypt = (text: string): string => {
 
   try {
     const key = getEncryptionKey();
+    
+    // 暗号化キーがない場合は平文を返す
+    if (!key) {
+      return text;
+    }
+    
     const iv = crypto.randomBytes(IV_LENGTH);
     const salt = crypto.randomBytes(SALT_LENGTH);
 
@@ -67,6 +75,12 @@ export const decrypt = (encryptedData: string): string => {
 
   try {
     const key = getEncryptionKey();
+    
+    // 暗号化キーがない場合は平文として返す
+    if (!key) {
+      return encryptedData;
+    }
+    
     const buffer = Buffer.from(encryptedData, 'base64');
 
     // 暗号化されたデータの最小長をチェック（IV + SALT + TAG = 96バイト）
