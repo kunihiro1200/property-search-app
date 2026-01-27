@@ -77,7 +77,10 @@ export interface Seller {
   
   // 追客・連絡情報
   nextCallDate?: string | Date;
-  unreachable?: boolean; // 不通
+  next_call_date?: string | null; // スプレッドシートD列（次電日）
+  unreachable?: boolean; // 不通（旧フィールド名）
+  is_unreachable?: boolean; // 不通（データベースのフィールド名）
+  not_reachable?: string | null; // スプレッドシートJ列（不通）- 文字列形式
   emailSentDate?: string | Date; // E/日付
   mailSentDate?: string | Date; // 郵/日付
   firstCallInitials?: string; // 一番TEL
@@ -91,6 +94,7 @@ export interface Seller {
   // 訪問査定情報
   visitAcquisitionDate?: string | Date;
   visitDate?: string | Date;
+  visit_date?: string | null; // スプレッドシートAB列（訪問日 Y/M/D）
   visitTime?: string;
   visitDayOfWeek?: string;
   visitAssignee?: string; // 営担
@@ -101,11 +105,13 @@ export interface Seller {
   
   // ステータス・進捗
   status: SellerStatus | string; // スプレッドシートから同期された日本語の値も許可
+  situation_company?: string | null; // スプレッドシートAH列（状況（当社））
   assignedTo?: string;
   appointmentDate?: string | Date; // 訪問予定日時
   appointmentNotes?: string; // 訪問予約メモ
   valuationAssignee?: string; // 査定担当
   phoneAssignee?: string; // 電話担当
+  phone_person?: string | null; // スプレッドシートCQ列（電話担当（任意））
   contractYearMonth?: string | Date;
   exclusiveOtherDecisionMeeting?: string; // 専任他決打合せ
   comments?: string;
@@ -119,6 +125,10 @@ export interface Seller {
   
   // Pinrich
   pinrichStatus?: string;
+  pinrich?: string | null; // スプレッドシートBF列（Pinrich）
+  
+  // ステータス（計算されたもの）
+  statusList?: string[]; // 計算されたステータスの配列
   
   // 重複管理
   pastOwnerInfo?: string;

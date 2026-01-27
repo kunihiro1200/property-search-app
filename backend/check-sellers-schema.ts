@@ -1,60 +1,55 @@
-import { createClient } from '@supabase/supabase-js';
+/**
+ * sellersテーブルのスキーマを確認
+ */
 import * as dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
-dotenv.config();
-
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// 環境変数を読み込む
+dotenv.config({ path: '.env.local' });
 
 async function checkSellersSchema() {
-  console.log('🔍 sellersテーブルのスキーマを確認します...\n');
-
   try {
-    // 1. sellersテーブルの1件を取得してカラムを確認
-    console.log('1️⃣ sellersテーブルの最初の1件を取得:');
-    const { data: seller, error } = await supabase
+    console.log('🔍 Checking sellers table schema...\n');
+
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // sellersテーブルから1件取得してカラムを確認
+    const { data, error } = await supabase
       .from('sellers')
       .select('*')
-      .limit(1)
-      .single();
+      .limit(1);
 
     if (error) {
-      console.error('❌ エラー:', error);
-    } else if (seller) {
-      console.log('✅ 取得成功');
-      console.log('\n📋 利用可能なカラム:');
-      const columns = Object.keys(seller).sort();
-      columns.forEach((col, index) => {
-        console.log(`  ${index + 1}. ${col}`);
-      });
+      console.error('❌ Error:', error.message);
+      process.exit(1);
+    }
+
+    if (data && data.length > 0) {
+      const columns = Object.keys(data[0]);
+      console.log('📊 Sellers table columns:');
+      console.log('='.repeat(80));
       
-      console.log('\n🔍 削除関連のカラムを確認:');
-      const deletionColumns = columns.filter(col => 
-        col.includes('delete') || col.includes('removed') || col.includes('archived')
-      );
-      if (deletionColumns.length > 0) {
-        console.log('  見つかった削除関連カラム:', deletionColumns.join(', '));
-      } else {
-        console.log('  ❌ 削除関連のカラムが見つかりません');
-      }
+      columns.sort().forEach((col, index) => {
+        console.log(`${(index + 1).toString().padStart(3, ' ')}. ${col}`);
+      });
+
+      console.log('\n' + '='.repeat(80));
+      console.log(`Total columns: ${columns.length}`);
+
+      // pinrichとnot_reachableの存在を確認
+      console.log('\n' + '='.repeat(80));
+      console.log('Checking for pinrich and not_reachable columns:');
+      console.log('='.repeat(80));
+      console.log(`  pinrich: ${columns.includes('pinrich') ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+      console.log(`  not_reachable: ${columns.includes('not_reachable') ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+      console.log(`  pinrich_status: ${columns.includes('pinrich_status') ? '✅ EXISTS' : '❌ NOT FOUND'}`);
     }
 
-    // 2. 総数を確認（deleted_atなしで）
-    console.log('\n2️⃣ 売主の総数を確認:');
-    const { count, error: countError } = await supabase
-      .from('sellers')
-      .select('*', { count: 'exact', head: true });
-
-    if (countError) {
-      console.error('❌ エラー:', countError);
-    } else {
-      console.log(`✅ 総売主数: ${count}件`);
-    }
-
-  } catch (error) {
-    console.error('❌ エラーが発生しました:', error);
+  } catch (error: any) {
+    console.error('❌ Error:', error.message);
+    process.exit(1);
   }
 }
 

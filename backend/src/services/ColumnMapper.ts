@@ -22,8 +22,8 @@ export interface SellerData {
   phone_assignee?: string;
   status?: string;
   comments?: string;
-  pinrich?: string;
-  not_reachable?: string;
+  pinrich_status?: string;
+  is_unreachable?: string;
   created_at?: Date | string;
   updated_at?: Date | string;
   [key: string]: any;

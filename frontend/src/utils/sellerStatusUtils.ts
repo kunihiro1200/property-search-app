@@ -111,7 +111,7 @@ export function isVisitDayBefore(
  * 条件:
  * - 次電日が今日を含めて過去
  * - 状況（当社）に「追客中」を含む
- * - 不通カラムが空欄
+ * - 不通カラムが空欄（is_unreachable が false）
  * 
  * @param seller 売主データ
  * @param today 今日の日付
@@ -121,7 +121,7 @@ export function isVisitDayBefore(
  * const seller = {
  *   next_call_date: "2026/1/26",
  *   situation_company: "追客中",
- *   not_reachable: null
+ *   is_unreachable: false
  * };
  * isCallTodayUnstarted(seller, new Date(2026, 0, 27)) // => true
  */
@@ -143,8 +143,11 @@ export function isCallTodayUnstarted(
     return false;
   }
 
-  // 不通カラムが空欄かチェック
-  if (seller.not_reachable && seller.not_reachable.trim() !== '') {
+  // 不通カラムが空欄かチェック（is_unreachableがfalse、またはnot_reachableが空）
+  const isUnreachable = seller.is_unreachable === true || 
+    (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
+  
+  if (isUnreachable) {
     return false;
   }
 
@@ -166,8 +169,8 @@ export function isCallTodayUnstarted(
  * 
  * @example
  * const seller = {
- *   not_reachable: "不通",
- *   pinrich: null,
+ *   is_unreachable: true,
+ *   pinrichStatus: null,
  *   // ... その他のフィールド
  * };
  * calculateSellerStatus(seller) // => ["不通", "Pinrich空欄"]
@@ -177,8 +180,13 @@ export function calculateSellerStatus(seller: Seller): string[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // 時刻をリセット
 
-  // 1. 不通チェック
-  if (seller.not_reachable && seller.not_reachable.trim() !== '') {
+  // 1. 不通チェック（is_unreachableはboolean型）
+  // データベースの is_unreachable が true の場合、または
+  // not_reachable（文字列）が空でない場合に「不通」と表示
+  const isUnreachable = seller.is_unreachable === true || 
+    (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
+  
+  if (isUnreachable) {
     statuses.push('不通');
   }
 
@@ -200,8 +208,9 @@ export function calculateSellerStatus(seller: Seller): string[] {
     statuses.push('当日TEL（未着手）');
   }
 
-  // 5. Pinrich空欄チェック
-  if (!seller.pinrich || seller.pinrich.trim() === '') {
+  // 5. Pinrich空欄チェック（pinrichStatusまたはpinrichを確認）
+  const pinrichValue = seller.pinrichStatus || seller.pinrich;
+  if (!pinrichValue || pinrichValue.trim() === '') {
     statuses.push('Pinrich空欄');
   }
 

@@ -36,7 +36,7 @@ export function useSellerStatus(seller: Seller): string[] {
     seller.situation_company,
     seller.visit_date,
     seller.phone_person,
-    seller.pinrich,
+    seller.pinrichStatus,
     seller.not_reachable,
   ]);
 }

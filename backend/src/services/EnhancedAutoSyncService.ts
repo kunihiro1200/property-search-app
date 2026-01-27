@@ -1050,6 +1050,20 @@ export class EnhancedAutoSyncService {
   }
 
   /**
+   * 不通フラグをbooleanに変換
+   * スプレッドシートの「不通」カラムの値:
+   * - 空欄 → false
+   * - 「通電OK」 → false
+   * - その他の値（例: 「不通」） → true
+   */
+  private convertIsUnreachable(value: any): boolean {
+    if (!value || value === '' || String(value).trim() === '' || String(value).trim() === '通電OK') {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * 単一の売主を更新
    */
   private async updateSingleSeller(sellerNumber: string, row: any): Promise<void> {
@@ -1078,8 +1092,8 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
-      pinrich: mappedData.pinrich || null,
-      not_reachable: mappedData.not_reachable || null,
+      pinrich_status: mappedData.pinrich_status || null,
+      is_unreachable: this.convertIsUnreachable(row['不通']),
       updated_at: new Date().toISOString(),
     };
 
@@ -1192,8 +1206,8 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
-      pinrich: mappedData.pinrich || null,
-      not_reachable: mappedData.not_reachable || null,
+      pinrich_status: mappedData.pinrich_status || null,
+      is_unreachable: this.convertIsUnreachable(row['不通']),
     };
 
     // 反響関連フィールドを追加
