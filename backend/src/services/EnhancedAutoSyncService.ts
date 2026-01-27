@@ -1078,6 +1078,8 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
+      pinrich: mappedData.pinrich || null,
+      not_reachable: mappedData.not_reachable || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -1190,6 +1192,8 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
+      pinrich: mappedData.pinrich || null,
+      not_reachable: mappedData.not_reachable || null,
     };
 
     // 反響関連フィールドを追加
