@@ -33,10 +33,19 @@ export class AthomeSheetSyncService {
   private propertyDetailsService: PropertyDetailsService;
 
   constructor() {
-    const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
+    // Vercel環境では環境変数から、ローカル環境ではファイルから認証情報を取得
+    let credentials;
     
-    const fs = require('fs');
-    const credentials = JSON.parse(fs.readFileSync(serviceAccountKeyPath, 'utf-8'));
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+      // Vercel環境：環境変数から取得
+      credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    } else {
+      // ローカル環境：ファイルから取得
+      const fs = require('fs');
+      const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
+      credentials = JSON.parse(fs.readFileSync(serviceAccountKeyPath, 'utf-8'));
+    }
+    
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
