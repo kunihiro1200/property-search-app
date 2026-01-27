@@ -317,10 +317,19 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             has_property_about: !!details.property_about
           });
           
-          // コメントデータがnullの場合、Athomeシートから自動同期
-          const needsSync = !details.favorite_comment && !details.recommended_comments;
+          // コメントデータがnullまたは空の場合、Athomeシートから自動同期
+          // recommended_commentsが空配列の場合も再同期する（過去の間違ったデータを修正）
+          const needsSync = !details.favorite_comment || 
+                           !details.recommended_comments || 
+                           (Array.isArray(details.recommended_comments) && details.recommended_comments.length === 0);
+          
           if (needsSync) {
-            console.log(`[Complete API] Comment data is null, syncing from Athome sheet...`);
+            console.log(`[Complete API] Comment data is missing or empty, syncing from Athome sheet...`);
+            console.log(`[Complete API] Current state:`, {
+              has_favorite_comment: !!details.favorite_comment,
+              has_recommended_comments: !!details.recommended_comments,
+              recommended_comments_length: Array.isArray(details.recommended_comments) ? details.recommended_comments.length : 'N/A'
+            });
             try {
               const athomeSheetSyncService = new AthomeSheetSyncService();
               const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
@@ -338,6 +347,28 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
                   has_athome_data: !!updatedDetails.athome_data,
                   has_property_about: !!updatedDetails.property_about
                 });
+                
+                // property_aboutがまだnullの場合、物件スプレッドシートから取得
+                if (!updatedDetails.property_about) {
+                  console.log(`[Complete API] property_about is still null, fetching from property spreadsheet...`);
+                  try {
+                    const propertyService = new PropertyService();
+                    const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
+                    
+                    if (propertyAbout) {
+                      await propertyDetailsService.upsertPropertyDetails(property.property_number, {
+                        property_about: propertyAbout
+                      });
+                      console.log(`[Complete API] Successfully synced property_about from property spreadsheet`);
+                      updatedDetails.property_about = propertyAbout;
+                    } else {
+                      console.log(`[Complete API] property_about not found in property spreadsheet`);
+                    }
+                  } catch (propertyAboutError: any) {
+                    console.error(`[Complete API] Error syncing property_about:`, propertyAboutError.message);
+                  }
+                }
+                
                 return updatedDetails;
               } else {
                 console.error(`[Complete API] Failed to sync comments from Athome sheet`);
