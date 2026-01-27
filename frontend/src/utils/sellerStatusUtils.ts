@@ -15,12 +15,12 @@ import type { Seller } from '../types/seller';
 /**
  * 日付文字列をDateオブジェクトに変換
  * 
- * @param dateStr 日付文字列 (例: "2026/1/27")
+ * @param dateStr 日付文字列 (例: "2026/1/27" または "2026-01-27")
  * @returns Dateオブジェクト、または null
  * 
  * @example
  * parseDate("2026/1/27") // => Date(2026, 0, 27)
- * parseDate("2026-01-27") // => null (無効な形式)
+ * parseDate("2026-01-27") // => Date(2026, 0, 27)
  * parseDate(null) // => null
  */
 export function parseDate(dateStr: string | null): Date | null {
@@ -29,8 +29,11 @@ export function parseDate(dateStr: string | null): Date | null {
   }
 
   try {
-    // "2026/1/27" 形式をパース
-    const parts = dateStr.split('/');
+    // "2026/1/27" 形式または "2026-01-27" 形式をパース
+    const parts = dateStr.includes('/') 
+      ? dateStr.split('/') 
+      : dateStr.split('-');
+    
     if (parts.length !== 3) {
       return null;
     }
@@ -112,6 +115,7 @@ export function isVisitDayBefore(
  * - 次電日が今日を含めて過去
  * - 状況（当社）に「追客中」を含む
  * - 不通カラムが空欄（is_unreachable が false）
+ * - 電話担当（任意）が空欄
  * 
  * @param seller 売主データ
  * @param today 今日の日付
@@ -120,8 +124,9 @@ export function isVisitDayBefore(
  * @example
  * const seller = {
  *   next_call_date: "2026/1/26",
- *   situation_company: "追客中",
- *   is_unreachable: false
+ *   status: "追客中",
+ *   is_unreachable: false,
+ *   phone_person: null
  * };
  * isCallTodayUnstarted(seller, new Date(2026, 0, 27)) // => true
  */
@@ -136,9 +141,10 @@ export function isCallTodayUnstarted(
   }
 
   // 状況（当社）に「追客中」を含むかチェック
+  // フィールド名は status（situation_company ではない）
   if (
-    !seller.situation_company ||
-    !seller.situation_company.includes('追客中')
+    !seller.status ||
+    !seller.status.includes('追客中')
   ) {
     return false;
   }
@@ -148,6 +154,11 @@ export function isCallTodayUnstarted(
     (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
   
   if (isUnreachable) {
+    return false;
+  }
+
+  // 電話担当（任意）が空欄かチェック
+  if (seller.phone_person && seller.phone_person.trim() !== '') {
     return false;
   }
 
