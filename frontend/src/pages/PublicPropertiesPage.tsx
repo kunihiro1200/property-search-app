@@ -794,18 +794,19 @@ const PublicPropertiesPage: React.FC = () => {
                 )}
               </Box>
               <Button
-                variant="outlined"
+                variant={viewMode === 'map' ? "contained" : "outlined"}
                 startIcon={<LocationOnIcon />}
                 sx={{
                   height: '56px',
                   minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
                   width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
                   borderColor: '#4CAF50',
-                  color: '#4CAF50',
+                  color: viewMode === 'map' ? '#ffffff' : '#4CAF50',
+                  backgroundColor: viewMode === 'map' ? '#4CAF50' : 'transparent',
                   fontWeight: 'bold',
                   '&:hover': {
                     borderColor: '#45A049',
-                    backgroundColor: '#F1F8F4',
+                    backgroundColor: viewMode === 'map' ? '#45A049' : '#F1F8F4',
                   },
                 }}
                 onClick={() => {
@@ -813,7 +814,7 @@ const PublicPropertiesPage: React.FC = () => {
                   setShouldScrollToMap(true); // スクロールフラグを立てる
                 }}
               >
-                地図で検索
+                {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
               </Button>
             </Box>
         </Container>
