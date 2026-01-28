@@ -62,6 +62,10 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       filters: navigationState.filters
     };
     
+    // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
+    sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify(fullNavigationState));
+    console.log('[PublicPropertyCard] Saved state to sessionStorage:', fullNavigationState);
+    
     // canHideパラメータを引き継ぐ
     const targetUrl = canHide === 'true' 
       ? `/public/properties/${property.property_number}?canHide=true`

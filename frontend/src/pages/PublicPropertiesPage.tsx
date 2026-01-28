@@ -145,7 +145,22 @@ const PublicPropertiesPage: React.FC = () => {
   // 詳細画面から戻ってきた時の状態復元
   useEffect(() => {
     // location.stateから保存された状態を取得
-    const savedState = location.state as NavigationState | null;
+    let savedState = location.state as NavigationState | null;
+    
+    // location.stateがnullの場合、sessionStorageから復元を試みる
+    if (!savedState) {
+      const savedStateStr = sessionStorage.getItem('publicPropertiesNavigationState');
+      if (savedStateStr) {
+        try {
+          savedState = JSON.parse(savedStateStr);
+          console.log('🔄 [PublicPropertiesPage] Restored state from sessionStorage:', savedState);
+          // 復元後、sessionStorageをクリア
+          sessionStorage.removeItem('publicPropertiesNavigationState');
+        } catch (e) {
+          console.error('Failed to parse saved state from sessionStorage:', e);
+        }
+      }
+    }
     
     console.log('🔍 [PublicPropertiesPage] useEffect triggered - location.state:', savedState);
     console.log('🔍 [PublicPropertiesPage] location.key:', location.key);
