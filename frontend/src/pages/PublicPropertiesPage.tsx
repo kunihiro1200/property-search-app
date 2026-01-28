@@ -681,6 +681,19 @@ const PublicPropertiesPage: React.FC = () => {
       setError('フィルターのクリアに失敗しました。もう一度お試しください。');
     }
   };
+  
+  // フィルター条件が適用されているかどうかを判定
+  const hasActiveFilters = () => {
+    return (
+      selectedTypes.length > 0 ||
+      minPrice !== '' ||
+      maxPrice !== '' ||
+      minAge !== '' ||
+      maxAge !== '' ||
+      showPublicOnly ||
+      searchQuery.trim() !== ''
+    );
+  };
 
   if (initialLoading) {
     // 初回ロード時のみフルスクリーンローディング表示
@@ -917,21 +930,23 @@ const PublicPropertiesPage: React.FC = () => {
             {/* すべての条件をクリアボタン */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
               <Button
-                variant="outlined"
+                variant={hasActiveFilters() ? "contained" : "outlined"}
                 onClick={handleClearAllFilters}
                 disabled={filterLoading}
                 sx={{
                   mt: 1,
                   borderColor: '#FFC107',
-                  color: '#FFC107',
+                  color: hasActiveFilters() ? '#000' : '#FFC107',
+                  backgroundColor: hasActiveFilters() ? '#FFC107' : 'transparent',
+                  fontWeight: 600,
                   '&:hover': {
                     borderColor: '#FFB300',
-                    bgcolor: 'rgba(255, 193, 7, 0.08)',
+                    bgcolor: hasActiveFilters() ? '#FFB300' : 'rgba(255, 193, 7, 0.08)',
                   },
                 }}
                 aria-label="すべてのフィルター条件をクリア"
               >
-                すべての条件をクリア
+                {hasActiveFilters() ? '✓ 条件をクリア' : 'すべての条件をクリア'}
               </Button>
             </Box>
           </Stack>
