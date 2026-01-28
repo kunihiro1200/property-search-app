@@ -147,6 +147,9 @@ const PublicPropertiesPage: React.FC = () => {
     // location.stateから保存された状態を取得
     const savedState = location.state as NavigationState | null;
     
+    console.log('🔍 [PublicPropertiesPage] useEffect triggered - location.state:', savedState);
+    console.log('🔍 [PublicPropertiesPage] location.key:', location.key);
+    
     // refに保存
     if (savedState) {
       savedNavigationState.current = savedState;
@@ -162,8 +165,11 @@ const PublicPropertiesPage: React.FC = () => {
       // 復元完了フラグを先に立てる（無限ループ防止）
       hasRestoredState.current = true;
       
+      console.log('🔄 [PublicPropertiesPage] Restoring state from detail page:', savedState);
+      
       // ページ番号を復元
       if (savedState.currentPage) {
+        console.log('📄 [PublicPropertiesPage] Restoring currentPage:', savedState.currentPage);
         setCurrentPage(savedState.currentPage);
       }
       
