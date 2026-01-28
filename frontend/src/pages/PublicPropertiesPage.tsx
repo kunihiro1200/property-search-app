@@ -133,6 +133,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 状態復元が完了したかどうかのフラグ
   const [isStateRestored, setIsStateRestored] = useState(false);
   
+  // 状態復元中かどうかのフラグ（setCurrentPage(1)を防ぐため）
+  const isRestoringState = useRef(false);
+  
   // location.stateを保持するref
   const savedNavigationState = useRef<NavigationState | null>(null);
 
@@ -180,6 +183,9 @@ const PublicPropertiesPage: React.FC = () => {
       // 復元完了フラグを先に立てる（無限ループ防止）
       hasRestoredState.current = true;
       
+      // 状態復元中フラグを立てる（setCurrentPage(1)を防ぐため）
+      isRestoringState.current = true;
+      
       console.log('🔄 [PublicPropertiesPage] Restoring state from detail page:', savedState);
       
       // ページ番号を復元
@@ -225,14 +231,19 @@ const PublicPropertiesPage: React.FC = () => {
       console.log('🔄 Restoring state from detail page, forcing viewMode to list');
       setViewMode('list');
       
-      // 状態復元完了
-      setIsStateRestored(true);
+      // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
+      setTimeout(() => {
+        isRestoringState.current = false;
+        setIsStateRestored(true);
+        console.log('✅ [PublicPropertiesPage] State restoration completed');
+      }, 100);
     } else if (!savedState) {
       // location.stateがない場合（新規アクセスなど）
       if (hasRestoredState.current) {
         hasRestoredState.current = false;
       }
       // 状態復元不要なので即座に完了扱い
+      isRestoringState.current = false;
       setIsStateRestored(true);
     }
   }, [location.state, location.key]); // location.keyを依存配列に追加
@@ -630,8 +641,10 @@ const PublicPropertiesPage: React.FC = () => {
         return [...prev, type];
       }
     });
-    // ページを1に戻す
-    setCurrentPage(1);
+    // 状態復元中でない場合のみページを1に戻す
+    if (!isRestoringState.current) {
+      setCurrentPage(1);
+    }
   };
   
   // すべてのフィルターをクリアする処理
@@ -654,8 +667,10 @@ const PublicPropertiesPage: React.FC = () => {
       // 公開中のみ表示フィルターをクリア
       setShowPublicOnly(false);
       
-      // ページを1に戻す
-      setCurrentPage(1);
+      // 状態復元中でない場合のみページを1に戻す
+      if (!isRestoringState.current) {
+        setCurrentPage(1);
+      }
       
       // URLパラメータをクリア
       const newSearchParams = new URLSearchParams();
@@ -877,7 +892,10 @@ const PublicPropertiesPage: React.FC = () => {
                 variant={showPublicOnly ? "contained" : "outlined"}
                 onClick={() => {
                   setShowPublicOnly(!showPublicOnly);
-                  setCurrentPage(1);
+                  // 状態復元中でない場合のみページを1に戻す
+                  if (!isRestoringState.current) {
+                    setCurrentPage(1);
+                  }
                 }}
                 disabled={filterLoading}
                 sx={{
