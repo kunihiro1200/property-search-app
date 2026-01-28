@@ -101,6 +101,15 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
     // 既存の検索パラメータをクリア（検索関連のみ）
     newParams.delete('propertyNumber');
     newParams.delete('location');
+    
+    // 検索実行時はフィルターパラメータもクリア
+    // （検索とフィルターは独立して動作すべき）
+    newParams.delete('types');
+    newParams.delete('minPrice');
+    newParams.delete('maxPrice');
+    newParams.delete('minAge');
+    newParams.delete('maxAge');
+    newParams.delete('showPublicOnly');
 
     // 新しい検索パラメータを設定
     if (value && type) {
@@ -120,7 +129,6 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
       newParams.set('canHide', 'true');
     }
 
-    // 既存のフィルター（types, minPrice, maxPrice, minAge, maxAge, showPublicOnly）は保持される
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
