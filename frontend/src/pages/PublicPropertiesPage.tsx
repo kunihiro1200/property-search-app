@@ -412,6 +412,8 @@ const PublicPropertiesPage: React.FC = () => {
 
   const fetchProperties = async () => {
     try {
+      console.log('🔄 [fetchProperties] Starting fetch with currentPage:', currentPage);
+      
       // 初回ロードかフィルター変更かで異なるローディング状態を設定
       if (!isInitialLoadDone.current) {
         setInitialLoading(true);
@@ -421,6 +423,7 @@ const PublicPropertiesPage: React.FC = () => {
       setError(null);
       
       const offset = (currentPage - 1) * 20;
+      console.log('📊 [fetchProperties] Calculated offset:', offset, 'from currentPage:', currentPage);
       
       // URLパラメータから検索条件を取得
       const propertyNumber = searchParams.get('propertyNumber');
