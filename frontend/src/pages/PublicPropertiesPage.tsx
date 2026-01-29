@@ -1018,7 +1018,25 @@ const PublicPropertiesPage: React.FC = () => {
                   <PropertyMapView 
                     properties={allProperties} 
                     isLoaded={isMapLoaded} 
-                    loadError={mapLoadError} 
+                    loadError={mapLoadError}
+                    navigationState={{
+                      currentPage,
+                      viewMode, // viewModeを渡す
+                      filters: {
+                        propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+                        priceRange: (minPrice || maxPrice) ? {
+                          min: minPrice || undefined,
+                          max: maxPrice || undefined
+                        } : undefined,
+                        buildingAgeRange: (minAge || maxAge) ? {
+                          min: minAge || undefined,
+                          max: maxAge || undefined
+                        } : undefined,
+                        searchQuery: searchQuery || undefined,
+                        searchType: searchType || undefined,
+                        showPublicOnly: showPublicOnly || undefined
+                      }
+                    }}
                   />
                 )}
               </Box>

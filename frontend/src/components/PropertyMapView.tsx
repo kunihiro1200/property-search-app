@@ -1,11 +1,23 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, InfoWindow } from '@react-google-maps/api';
 import { Box, Typography, Button, CircularProgress, Paper, Chip } from '@mui/material';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
+import { NavigationState } from '../types/navigationState';
 import { mapAtbbStatusToDisplayStatus, StatusType } from '../utils/atbbStatusDisplayMapper';
 
 interface PropertyMapViewProps {
   properties: PublicProperty[];
+  isLoaded: boolean;
+  loadError: Error | undefined;
+  // ナビゲーション状態（一覧画面から渡される）
+  navigationState?: Omit<NavigationState, 'scrollPosition'>;
+}
+
+interface PropertyMapViewProps {
+  properties: PublicProperty[];
+  isLoaded: boolean;
+  loadError: Error | undefined;
 }
 
 interface PropertyWithCoordinates extends PublicProperty {
@@ -209,21 +221,13 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
 /**
  * 物件を地図上に表示するコンポーネント
  */
-const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
+const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState }) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    language: 'ja',
-    region: 'JP',
-    onError: (error) => {
-      console.error('❌ Google Maps API読み込みエラー:', error);
-    },
-  });
 
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
@@ -360,8 +364,39 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   };
 
   const handlePropertyClick = (propertyId: string) => {
-    // 新しいタブで物件詳細ページを開く
-    window.open(`/public/properties/${propertyId}`, '_blank', 'noopener,noreferrer');
+    // navigationStateが渡されていない場合は新しいタブで開く
+    if (!navigationState) {
+      window.open(`/public/properties/${propertyId}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    // 現在のスクロール位置を取得
+    const currentScrollPosition = window.scrollY || window.pageYOffset;
+    
+    // ナビゲーション状態にスクロール位置を追加
+    const fullNavigationState: NavigationState = {
+      currentPage: navigationState.currentPage,
+      scrollPosition: currentScrollPosition,
+      viewMode: navigationState.viewMode, // viewModeを保存
+      filters: navigationState.filters
+    };
+    
+    // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
+    sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify(fullNavigationState));
+    console.log('[PropertyMapView] Saved state to sessionStorage:', fullNavigationState);
+    
+    // canHideパラメータを引き継ぐ
+    const canHide = searchParams.get('canHide');
+    const targetUrl = canHide === 'true' 
+      ? `/public/properties/${propertyId}?canHide=true`
+      : `/public/properties/${propertyId}`;
+    
+    console.log('[PropertyMapView] Navigating to (with state):', targetUrl);
+    
+    // 状態を保持してナビゲート
+    navigate(targetUrl, {
+      state: fullNavigationState
+    });
   };
 
   // 価格をフォーマット
