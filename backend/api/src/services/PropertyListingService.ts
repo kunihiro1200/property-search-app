@@ -412,8 +412,10 @@ export class PropertyListingService {
         // 画像取得をスキップ（地図ビュー用）
         console.log('[PropertyListingService] Skipping image fetching (skipImages=true)');
         for (const property of data || []) {
+          const { price: _price, ...propertyWithoutPrice } = property; // priceカラムを除外
           propertiesWithImages.push({
-            ...property,
+            ...propertyWithoutPrice,
+            price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
             property_type: this.convertPropertyTypeToEnglish(property.property_type),
             atbb_status: property.atbb_status,
             badge_type: this.getBadgeType(property.atbb_status),
