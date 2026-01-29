@@ -9,6 +9,10 @@
 - `project-isolation-rule.md` - プロジェクト隔離ルール（本番環境保護）
 - `git-history-first-approach.md` - Git履歴優先アプローチ
 - `file-encoding-protection.md` - ファイルエンコーディング保護
+- `public-property-definition.md` - 公開物件の定義（公開中の条件）
+- `property-listing-sync-rules.md` - 物件リスト同期ルール（**atbb_statusカラム名定義を含む**）
+- `backend-architecture.md` - バックエンドアーキテクチャ定義
+- `environment-definition.md` - 環境定義（本番環境とローカル環境）
 
 ---
 
@@ -52,7 +56,12 @@
 ## 🔍 ドキュメントの使い方
 
 ### セッション開始時
-ルートディレクトリ（`.kiro/steering/`）の4つのドキュメント + README.mdのみが自動的に読み込まれます。
+ルートディレクトリ（`.kiro/steering/`）の8つのドキュメント + README.mdが自動的に読み込まれます。
+
+**重要なドキュメント**:
+- `property-listing-sync-rules.md` - **atbb_statusカラム名定義を含む**（最重要）
+- `public-property-definition.md` - 公開中の物件の定義
+- `backend-architecture.md` - 2つの独立したバックエンドサーバーの定義
 
 ### 問題が発生した時
 該当する機能の復元ガイド（`.kiro/restore-guides/`）を手動で参照してください。
@@ -77,4 +86,5 @@
 
 ---
 
-**最終更新日**: 2026年1月27日
+**最終更新日**: 2026年1月29日  
+**更新内容**: atbb_statusカラム名定義をproperty-listing-sync-rules.mdに統合
