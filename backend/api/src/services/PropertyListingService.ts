@@ -469,6 +469,13 @@ export class PropertyListingService {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
               }
               
+              // デバッグ: 価格フィールドを確認
+              console.log(`[PropertyListingService] Price fields for ${property.property_number}:`, {
+                sales_price: property.sales_price,
+                listing_price: property.listing_price,
+                calculated_price: property.sales_price || property.listing_price || 0
+              });
+              
               return {
                 ...property,
                 price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
