@@ -90,7 +90,8 @@ export class PropertyListingSyncService {
       
       for (const row of rows) {
         if (row['物件番号'] === propertyNumber) {
-          return row['スプシURL'] || null;
+          const url = row['スプシURL'];
+          return url ? String(url) : null;
         }
       }
       
