@@ -24,6 +24,7 @@ import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
+import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -34,20 +35,21 @@ function App() {
   }, [checkAuth]);
   
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      {/* Public routes - no authentication required */}
-      <Route path="/public/properties" element={<PublicPropertiesPage />} />
-      <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <SellersPage />
-          </ProtectedRoute>
-        }
-      />
+    <GoogleMapsProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        {/* Public routes - no authentication required */}
+        <Route path="/public/properties" element={<PublicPropertiesPage />} />
+        <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <SellersPage />
+            </ProtectedRoute>
+          }
+        />
       <Route
         path="/sellers/new"
         element={
@@ -178,6 +180,7 @@ function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </GoogleMapsProvider>
   );
 }
 

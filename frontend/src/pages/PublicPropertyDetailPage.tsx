@@ -29,7 +29,8 @@ import { getBadgeType } from '../utils/propertyStatusUtils';
 import { SEOHead } from '../components/SEOHead';
 import { StructuredData } from '../components/StructuredData';
 import { generatePropertyStructuredData } from '../utils/structuredData';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
+import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 import { useAuthStore } from '../store/authStore';
 import '../styles/print.css';
 
@@ -133,11 +134,7 @@ const PublicPropertyDetailPage: React.FC = () => {
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   console.log('🗺️ [Google Maps] API Key:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NOT SET');
   
-  const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    language: 'ja',
-    region: 'JP',
-  });
+  const { isLoaded: isMapLoaded, loadError } = useGoogleMaps();
   
   console.log('🗺️ [Google Maps] isLoaded:', isMapLoaded, 'loadError:', loadError);
   
