@@ -139,8 +139,12 @@ export class AthomeSheetSyncService {
         }
       });
 
-      // パノラマURLを取得（動的検索）
-      const panoramaUrl = await this.findPanoramaUrl(spreadsheetId, sheetName);
+      // パノラマURLを取得（athomeシートのN1セル）
+      const panoramaResponse = await this.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!N1`,
+      });
+      const panoramaUrl = panoramaResponse.data.values?.[0]?.[0] || null;
 
       console.log(`[AthomeSheetSyncService] Fetched comments from ${spreadsheetId}:`, {
         has_favorite_comment: !!favoriteComment,
@@ -160,47 +164,6 @@ export class AthomeSheetSyncService {
         recommendedComments: [],
         panoramaUrl: null,
       };
-    }
-  }
-
-  /**
-   * パノラマURLを動的に検索
-   */
-  private async findPanoramaUrl(spreadsheetId: string, sheetName: string): Promise<string | null> {
-    try {
-      // 全ての行を取得（A列からN列まで）
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!A:N`,
-      });
-
-      const rows = response.data.values || [];
-      
-      // 「パノラマ」を含むセルを検索
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        for (let j = 0; j < row.length; j++) {
-          const cell = row[j] || '';
-          if (cell.includes('パノラマ')) {
-            // 同じ行または次の行でURLを探す
-            // 同じ行の次のセル
-            if (j + 1 < row.length && row[j + 1] && row[j + 1].includes('http')) {
-              console.log(`[AthomeSheetSyncService] Found panorama URL at row ${i + 1}, col ${j + 2}`);
-              return row[j + 1];
-            }
-            // 次の行のB列
-            if (i + 1 < rows.length && rows[i + 1][1] && rows[i + 1][1].includes('http')) {
-              console.log(`[AthomeSheetSyncService] Found panorama URL at row ${i + 2}, col B`);
-              return rows[i + 1][1];
-            }
-          }
-        }
-      }
-
-      return null;
-    } catch (error: any) {
-      console.error(`[AthomeSheetSyncService] Error finding panorama URL:`, error.message);
-      return null;
     }
   }
 

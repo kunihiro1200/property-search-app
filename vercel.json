@@ -41,7 +41,7 @@
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/cron/sync-sellers",
+      "path": "/api/cron/sync-property-listings",
       "schedule": "*/15 * * * *"
     }
   ]

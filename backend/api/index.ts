@@ -1522,53 +1522,43 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
   }
 });
 
-// Cron Job: 売主データをスプレッドシートから同期（15分ごとに実行）
-app.get('/api/cron/sync-sellers', async (req, res) => {
+// Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
+app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
-    console.log('[Cron] Starting seller sync job...');
+    console.log('[Cron] Starting property listings sync job...');
     
     // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
     // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
-    // EnhancedAutoSyncServiceを使用してフル同期を実行
-    const { getEnhancedAutoSyncService } = await import('../src/services/EnhancedAutoSyncService');
-    const syncService = getEnhancedAutoSyncService();
+    // PropertyListingSyncServiceを使用してフル同期を実行
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+    const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
-    console.log('[Cron] Running full sync (addition + update + deletion)...');
+    console.log('[Cron] Running property listings sync...');
     const result = await syncService.runFullSync('scheduled');
     
-    const isSuccess = result.status === 'success' || result.status === 'partial_success';
-    
-    console.log(`[Cron] Seller sync job completed:`, {
-      status: result.status,
-      added: result.additionResult.successfullyAdded,
-      updated: result.additionResult.successfullyUpdated,
-      deleted: result.deletionResult.successfullyDeleted,
-      duration: result.totalDurationMs,
+    console.log(`[Cron] Property listings sync job completed:`, {
+      success: result.success,
+      added: result.successfullyAdded,
+      updated: result.successfullyUpdated,
+      failed: result.failed,
+      duration: result.endTime.getTime() - result.startTime.getTime(),
     });
     
     res.status(200).json({
-      success: isSuccess,
-      status: result.status,
-      additionResult: {
-        totalProcessed: result.additionResult.totalProcessed,
-        successfullyAdded: result.additionResult.successfullyAdded,
-        successfullyUpdated: result.additionResult.successfullyUpdated,
-        failed: result.additionResult.failed,
-      },
-      deletionResult: {
-        totalDetected: result.deletionResult.totalDetected,
-        successfullyDeleted: result.deletionResult.successfullyDeleted,
-        failedToDelete: result.deletionResult.failedToDelete,
-        requiresManualReview: result.deletionResult.requiresManualReview,
-      },
-      duration: result.totalDurationMs,
-      syncedAt: result.syncedAt,
+      success: result.success,
+      totalProcessed: result.totalProcessed,
+      successfullyAdded: result.successfullyAdded,
+      successfullyUpdated: result.successfullyUpdated,
+      failed: result.failed,
+      errors: result.errors,
+      duration: result.endTime.getTime() - result.startTime.getTime(),
+      syncedAt: result.endTime.toISOString(),
     });
     
   } catch (error: any) {
-    console.error('[Cron] Error in seller sync job:', error);
+    console.error('[Cron] Error in property listings sync job:', error);
     res.status(500).json({
       success: false,
       error: error.message

@@ -899,10 +899,11 @@ export class GoogleDriveService extends BaseRepository {
 
   /**
    * フォルダリストから物件番号にマッチするフォルダを検索
-   * 優先順位:
-   * 1. 物件番号で始まるフォルダ（例: AA13069_xxx）
-   * 2. プレフィックス付きで物件番号を含むフォルダ（例: U_AA13069_xxx）
-   * 3. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+   * 優先順位（完全一致を優先）:
+   * 1. 物件番号_xxx または 物件番号.xxx で始まるフォルダ（例: AA13069_xxx, AA13069.xxx）
+   * 2. プレフィックス_物件番号_xxx で始まるフォルダ（例: U_AA13069_xxx, I_AA13069_xxx）
+   * 3. 物件番号で始まるフォルダ（フォールバック、例: AA13069xxx）
+   * 4. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
    * 
    * @param files フォルダリスト
    * @param normalizedSearchTerm 正規化された検索キーワード
@@ -912,28 +913,53 @@ export class GoogleDriveService extends BaseRepository {
     files: Array<{ id?: string | null; name?: string | null; parents?: string[] | null }>,
     normalizedSearchTerm: string
   ): { id?: string | null; name?: string | null } | undefined {
-    // 1. 物件番号で始まるフォルダを優先
+    // 1. 完全一致を優先: 物件番号_xxx または 物件番号.xxx で始まるフォルダ
+    // これにより、CC10を検索した時にCC100, CC101, CC102などを除外できる
     let matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.startsWith(normalizedSearchTerm + '_') ||
+             normalizedName.startsWith(normalizedSearchTerm + '.');
+    });
+    
+    if (matchingFolder) {
+      console.log(`✅ Found exact match: ${matchingFolder.name}`);
+      return matchingFolder;
+    }
+    
+    // 2. プレフィックス付き完全一致: プレフィックス_物件番号_xxx または プレフィックス_物件番号.xxx
+    // 例: U_AA13069_xxx, I_AA13069_xxx
+    matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      // プレフィックス_物件番号_ または プレフィックス_物件番号. のパターンにマッチ
+      const prefixPattern = new RegExp(`^[A-Z]_${normalizedSearchTerm}[_\\.]`);
+      return prefixPattern.test(normalizedName);
+    });
+    
+    if (matchingFolder) {
+      console.log(`✅ Found prefix match: ${matchingFolder.name}`);
+      return matchingFolder;
+    }
+    
+    // 3. 物件番号で始まるフォルダ（フォールバック）
+    // 注意: これはCC10がCC100にマッチする可能性があるため、最後の手段
+    matchingFolder = files.find(f => {
       const normalizedName = this.normalizePropertyNumber(f.name || '');
       return normalizedName.startsWith(normalizedSearchTerm);
     });
     
-    // 2. プレフィックス付きフォルダを検索（例: U_AA13069, S_AA13069など）
-    if (!matchingFolder) {
-      matchingFolder = files.find(f => {
-        const normalizedName = this.normalizePropertyNumber(f.name || '');
-        // プレフィックス_物件番号 のパターンにマッチ
-        const prefixPattern = new RegExp(`^[A-Z]_${normalizedSearchTerm}`);
-        return prefixPattern.test(normalizedName);
-      });
+    if (matchingFolder) {
+      console.log(`⚠️ Found partial match (may be incorrect): ${matchingFolder.name}`);
+      return matchingFolder;
     }
     
-    // 3. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
-    if (!matchingFolder) {
-      matchingFolder = files.find(f => {
-        const normalizedName = this.normalizePropertyNumber(f.name || '');
-        return normalizedName.includes(normalizedSearchTerm);
-      });
+    // 4. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+    matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.includes(normalizedSearchTerm);
+    });
+    
+    if (matchingFolder) {
+      console.log(`⚠️ Found loose match (may be incorrect): ${matchingFolder.name}`);
     }
     
     return matchingFolder;
