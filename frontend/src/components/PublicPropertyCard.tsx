@@ -68,6 +68,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     const fullNavigationState: NavigationState = {
       currentPage: navigationState.currentPage,
       scrollPosition: currentScrollPosition,
+      viewMode: navigationState.viewMode, // viewModeを保存
       filters: navigationState.filters
     };
     

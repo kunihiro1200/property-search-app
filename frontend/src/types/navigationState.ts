@@ -8,6 +8,9 @@ export interface NavigationState {
   // 現在のページ番号
   currentPage: number;
   
+  // 表示モード（リスト or 地図）
+  viewMode?: 'list' | 'map';
+  
   // フィルター設定
   filters: {
     // 物件タイプフィルター

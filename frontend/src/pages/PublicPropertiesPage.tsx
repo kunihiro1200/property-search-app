@@ -22,6 +22,7 @@ import PropertyMapView from '../components/PropertyMapView';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { SEOHead } from '../components/SEOHead';
+import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 // import { StructuredData } from '../components/StructuredData';
 // import { generatePropertyListStructuredData } from '../utils/structuredData';
 
@@ -36,6 +37,10 @@ interface PaginationInfo {
 const PublicPropertiesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  
+  // Google Maps APIローダー（Context経由で取得）
+  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useGoogleMaps();
+  
   const [properties, setProperties] = useState<PublicProperty[]>([]);
   const [allProperties, setAllProperties] = useState<PublicProperty[]>([]); // 地図用の全物件
   const [isLoadingAllProperties, setIsLoadingAllProperties] = useState(false); // 全件取得中フラグ
@@ -226,10 +231,15 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
-      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
-      // これにより、地図用データの取得useEffectが実行されない
-      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
-      setViewMode('list');
+      // viewModeを復元（保存されている場合）
+      if (savedState.viewMode) {
+        console.log('🔄 Restoring viewMode:', savedState.viewMode);
+        setViewMode(savedState.viewMode);
+      } else {
+        // viewModeが保存されていない場合はデフォルトで'list'
+        console.log('🔄 No viewMode saved, defaulting to list');
+        setViewMode('list');
+      }
       
       // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
       setTimeout(() => {
@@ -1005,7 +1015,11 @@ const PublicPropertiesPage: React.FC = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <PropertyMapView properties={allProperties} />
+                  <PropertyMapView 
+                    properties={allProperties} 
+                    isLoaded={isMapLoaded} 
+                    loadError={mapLoadError} 
+                  />
                 )}
               </Box>
             ) : (
@@ -1033,6 +1047,7 @@ const PublicPropertiesPage: React.FC = () => {
                     // 現在のナビゲーション状態を構築
                     const navigationState: Omit<NavigationState, 'scrollPosition'> = {
                       currentPage,
+                      viewMode, // viewModeを追加
                       filters: {
                         propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
                         priceRange: (minPrice || maxPrice) ? {
