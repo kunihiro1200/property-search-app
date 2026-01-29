@@ -34,7 +34,7 @@ last-verified: 2026-01-25
    - 本番環境で稼働中
    - 絶対に触らない
 
-2. **`C:\Users\kunih\sateituikyaku`** ❌
+2. **`C:\Users\kunih\property-search-app`** ❌
    - 本番環境で稼働中
    - 絶対に触らない
 
@@ -61,7 +61,7 @@ last-verified: 2026-01-25
 以下のパスが含まれている場合は、**絶対に編集しない**：
 
 - `chuukaigyosha`
-- `sateituikyaku`
+- `property-search-app`
 
 ### 確認3: ユーザーに確認
 
@@ -79,7 +79,7 @@ last-verified: 2026-01-25
   - `frontend`
   - `property-site-frontend`
 - [ ] ファイルパスに`chuukaigyosha`が含まれていないか？
-- [ ] ファイルパスに`sateituikyaku`が含まれていないか？
+- [ ] ファイルパスに`property-search-app`が含まれていないか？
 
 **全てのチェックがOKの場合のみ、ファイルを編集してください。**
 
@@ -106,7 +106,7 @@ last-verified: 2026-01-25
 readFile("path/to/file")
 ```
 
-ファイルパスが`property-search-app`に含まれていることを確認。
+ファイルパスが`sateituikyaku`に含まれていることを確認。
 
 ### ステップ2: 編集
 
@@ -125,7 +125,7 @@ readFile("path/to/file")
   - `baikyaku-property-site3`
   - `frontend`
   - `property-site-frontend`
-- **禁止**: `chuukaigyosha`、`sateituikyaku`、その他全てのローカルプロジェクト
+- **禁止**: `chuukaigyosha`、`property-search-app`、その他全てのローカルプロジェクト
 - **確認**: ファイル編集前に必ずプロジェクトを確認
 - **不明な場合**: ユーザーに確認
 

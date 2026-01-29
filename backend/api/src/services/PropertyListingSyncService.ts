@@ -217,12 +217,24 @@ export class PropertyListingSyncService {
           }
 
           // 6. 物件データを準備
-          const propertyData = {
+          const propertyData: any = {
             property_number: propertyNumber,
-            property_address: String(row['物件所在'] || row['住所'] || ''),
+            address: String(row['所在地'] || ''),
+            display_address: String(row['住居表示（ATBB登録住所）'] || ''),
+            property_type: String(row['種別'] || ''),
+            sales_price: row['売買価格'] ? parseFloat(String(row['売買価格']).replace(/,/g, '')) : null,
+            buyer_name: String(row['名前（買主）'] || ''),
+            seller_name: String(row['名前(売主）'] || ''),
+            land_area: row['土地面積'] ? parseFloat(String(row['土地面積'])) : null,
+            building_area: row['建物面積'] ? parseFloat(String(row['建物面積'])) : null,
+            listing_price: row['売出価格'] ? parseFloat(String(row['売出価格']).replace(/,/g, '')) : null,
             atbb_status: atbbStatus,
+            status: String(row['状況'] || ''),
             storage_location: storageLocation,
             spreadsheet_url: spreadsheetUrl,
+            google_map_url: String(row['GoogleMap'] || ''),
+            current_status: String(row['●現況'] || ''),
+            delivery: String(row['引渡し'] || ''),
             updated_at: new Date().toISOString(),
           };
 
