@@ -127,8 +127,8 @@ export class PropertyListingSyncService {
     };
 
     try {
-      // 1. 物件リストスプレッドシートから最後の10行のみを取得（最近追加された物件）
-      console.log('📋 Fetching last 10 non-empty rows from property list spreadsheet...');
+      // 1. 物件リストスプレッドシートから最後の100行のみを取得（最近追加された物件）
+      console.log('📋 Fetching last 100 non-empty rows from property list spreadsheet...');
       
       // まず全体の行数を取得（ヘッダー行を含む）
       const allRows = await this.propertyListSheetsClient.readAll();
@@ -141,13 +141,13 @@ export class PropertyListingSyncService {
         return result;
       }
       
-      // 空行を除外してから最後の10行を取得
+      // 空行を除外してから最後の100行を取得
       const nonEmptyRows = allRows.filter(row => {
         const propertyNumber = row['物件番号'];
         return propertyNumber && String(propertyNumber).trim() !== '';
       });
       
-      const rows = nonEmptyRows.slice(-10);
+      const rows = nonEmptyRows.slice(-100);
       
       if (!rows || rows.length === 0) {
         console.log('⚠️ No non-empty rows found');
