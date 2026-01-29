@@ -56,7 +56,7 @@ app.get('/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '2026-01-29-16:00-final-price-fix-all-paths'
+    version: '2026-01-29-16:30-price-fix-api-endpoint'
   });
 });
 
@@ -64,7 +64,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '2026-01-29-16:00-final-price-fix-all-paths'
+    version: '2026-01-29-16:30-price-fix-api-endpoint'
   });
 });
 
@@ -202,10 +202,49 @@ app.get('/api/public/properties', async (req, res) => {
     });
 
     console.log(`✅ Found ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
+    
+    // 🔧 FIX: PropertyListingServiceが price フィールドを返さない場合、
+    // Supabaseから直接 sales_price と listing_price を取得して price を計算
+    const propertiesWithPrice = await Promise.all(
+      (result.properties || []).map(async (property) => {
+        // すでに price が設定されている場合はスキップ
+        if (property.price !== null && property.price !== undefined) {
+          return property;
+        }
+        
+        // Supabaseから sales_price と listing_price を取得
+        const { data: dbProperty, error } = await supabase
+          .from('property_listings')
+          .select('sales_price, listing_price')
+          .eq('id', property.id)
+          .single();
+        
+        if (error) {
+          console.error(`[API Endpoint] Failed to fetch price for ${property.property_number}:`, error);
+          return property;
+        }
+        
+        // price を計算
+        const calculatedPrice = dbProperty.sales_price || dbProperty.listing_price || 0;
+        
+        console.log(`[API Endpoint] Fixed price for ${property.property_number}:`, {
+          sales_price: dbProperty.sales_price,
+          listing_price: dbProperty.listing_price,
+          calculated_price: calculatedPrice,
+        });
+        
+        return {
+          ...property,
+          price: calculatedPrice,
+          sales_price: dbProperty.sales_price,
+          listing_price: dbProperty.listing_price,
+        };
+      })
+    );
 
     res.json({ 
       success: true, 
-      properties: result.properties || [],
+      properties: propertiesWithPrice,
       pagination: result.pagination
     });
   } catch (error: any) {
