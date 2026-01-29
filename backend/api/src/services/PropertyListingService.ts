@@ -296,7 +296,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -312,11 +312,13 @@ export class PropertyListingService {
       }
       
       if (priceRange?.min !== undefined) {
-        query = query.gte('price', priceRange.min);
+        // sales_priceまたはlisting_priceが最小価格以上
+        query = query.or(`sales_price.gte.${priceRange.min},listing_price.gte.${priceRange.min}`);
       }
       
       if (priceRange?.max !== undefined) {
-        query = query.lte('price', priceRange.max);
+        // sales_priceまたはlisting_priceが最大価格以下
+        query = query.or(`sales_price.lte.${priceRange.max},listing_price.lte.${priceRange.max}`);
       }
       
       // エリアフィルターは一旦無効化（distribution_areasカラムが存在しないため）
@@ -469,6 +471,7 @@ export class PropertyListingService {
               
               return {
                 ...property,
+                price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
                 property_type: this.convertPropertyTypeToEnglish(property.property_type),
                 atbb_status: property.atbb_status,
                 badge_type: this.getBadgeType(property.atbb_status),
@@ -480,6 +483,7 @@ export class PropertyListingService {
               console.error(`[PropertyListingService] Failed to fetch image for ${property.property_number}:`, error.message);
               return {
                 ...property,
+                price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
                 property_type: this.convertPropertyTypeToEnglish(property.property_type),
                 atbb_status: property.atbb_status,
                 badge_type: this.getBadgeType(property.atbb_status),
@@ -518,7 +522,7 @@ export class PropertyListingService {
       // 新しいカラムを除外してSELECT（スキーマキャッシュ問題を回避）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at');
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at');
       
       // UUIDまたはproperty_numberで検索
       if (isUUID) {
@@ -561,6 +565,7 @@ export class PropertyListingService {
       // 物件タイプを英語に変換してフロントエンドに返す
       return {
         ...data,
+        price: data.sales_price || data.listing_price || 0,  // sales_priceを優先、なければlisting_price
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
         // property_detailsテーブルからのデータを含める
@@ -581,7 +586,7 @@ export class PropertyListingService {
       // 新しいカラムを除外してSELECT（スキーマキャッシュ問題を回避）
       const { data, error } = await this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
         .eq('property_number', propertyNumber)
         .single();
       
@@ -617,6 +622,7 @@ export class PropertyListingService {
       // 物件タイプを英語に変換してフロントエンドに返す
       return {
         ...data,
+        price: data.sales_price || data.listing_price || 0,  // sales_priceを優先、なければlisting_price
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
         // property_detailsテーブルからのデータを含める
