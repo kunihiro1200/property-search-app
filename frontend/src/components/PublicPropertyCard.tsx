@@ -23,6 +23,15 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // 🔍 デバッグ: propertyオブジェクトをログ出力
+  console.log('[PublicPropertyCard] Rendering:', {
+    property_number: property.property_number,
+    price: property.price,
+    sales_price: (property as any).sales_price,
+    listing_price: (property as any).listing_price,
+    fullProperty: property,
+  });
+
   // バッジタイプとクリック可能性を判定
   const badgeType = getBadgeType(property.atbb_status);
   const isClickable = property.is_clickable ?? isPropertyClickable(property.atbb_status);
@@ -80,6 +89,16 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   };
 
   const formatPrice = (price: number | undefined) => {
+    // 🔍 デバッグ: priceの値をログ出力
+    console.log('[PublicPropertyCard] formatPrice:', {
+      property_number: property.property_number,
+      price: price,
+      type: typeof price,
+      isUndefined: price === undefined,
+      isNull: price === null,
+      isFalsy: !price,
+    });
+    
     if (!price) return '価格応談';
     return `${(price / 10000).toLocaleString()}万円`;
   };
