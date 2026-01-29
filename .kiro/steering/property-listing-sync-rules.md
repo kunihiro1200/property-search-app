@@ -16,8 +16,96 @@
 
 **重要なカラム**:
 - `物件番号` - 物件の一意識別子
-- `atbb_status` - 公開ステータス（「公開中」「公開前」「非公開（配信メールのみ）」のいずれかを含む）
-- `物件所在` または `住所` - 物件の住所
+- **`atbb成約済み/非公開`** - 公開ステータス（**これが正しいカラム名**）
+- `所在地` - 物件の住所（正しいカラム名）
+- `住居表示（ATBB登録住所）` - 住居表示
+
+---
+
+## 🚨 最重要：atbb_statusの正しいカラム名
+
+### ✅ 唯一の正しいカラム名
+
+物件リストスプレッドシートの`atbb_status`フィールドの**正しいカラム名**は：
+
+**`atbb成約済み/非公開`** ← これが唯一の正しいカラム名
+
+### ❌ 間違ったカラム名（存在しない）
+
+以下のカラム名は**存在しません**：
+
+- ❌ `atbb_status` ← 存在しない
+- ❌ `ATBB_status` ← 存在しない
+- ❌ `ステータス` ← 存在しない
+- ❌ `atbb_statue` ← 存在しない（タイポ）
+
+**これらのカラム名を使用してはいけません。**
+
+### ✅ 正しいコード
+
+```typescript
+// ✅ 正しい（最優先で「atbb成約済み/非公開」を使用）
+const atbbStatus = String(
+  row['atbb成約済み/非公開'] ||  // ← 正しいカラム名（最優先）
+  row['atbb_status'] ||          // ← フォールバック（実際には存在しない）
+  row['ATBB_status'] ||          // ← フォールバック（実際には存在しない）
+  row['ステータス'] ||            // ← フォールバック（実際には存在しない）
+  ''
+);
+```
+
+**重要**: 
+- **`row['atbb成約済み/非公開']`を最優先**にする
+- フォールバックとして他のカラム名を含めるが、実際には存在しない
+
+### 📊 実例：AA12398の問題
+
+**問題**: AA12398が「成約済み」バッジになっている
+
+**原因**: 間違ったカラム名を使用していた
+
+```typescript
+// ❌ 間違ったコード（修正前）
+const atbbStatus = String(
+  row['atbb_status'] ||      // ← 存在しないカラム名
+  row['ATBB_status'] ||      // ← 存在しないカラム名
+  row['ステータス'] ||        // ← 存在しないカラム名
+  ''
+);
+```
+
+**結果**: `atbbStatus`が空文字列になり、「成約済み」バッジが表示される
+
+**解決策**: 正しいカラム名を最優先にする
+
+```typescript
+// ✅ 正しいコード（修正後）
+const atbbStatus = String(
+  row['atbb成約済み/非公開'] ||  // ← 正しいカラム名（最優先）
+  row['atbb_status'] ||          // ← フォールバック（実際には存在しない）
+  row['ATBB_status'] ||          // ← フォールバック（実際には存在しない）
+  row['ステータス'] ||            // ← フォールバック（実際には存在しない）
+  ''
+);
+```
+
+**結果**: `atbbStatus`が`専任・公開前`になり、「公開前」バッジが表示される
+
+### 🔍 カラム名の確認方法
+
+```bash
+# ヘッダー確認スクリプトを実行
+npx ts-node backend/check-property-list-headers.ts
+```
+
+**出力例**:
+```
+📋 Headers:
+  A列: 物件番号
+  B列: 種別
+  C列: atbb成約済み/非公開  ← これが正しいカラム名
+  ...
+```
 
 ### 2. **その物件スプシから`property_listings`テーブルを同期** ← メイン処理
 
@@ -131,7 +219,15 @@ export class PropertyListingSyncService {
     
     for (const row of rows) {
       const propertyNumber = row['物件番号'];
-      const atbbStatus = row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || '';
+      
+      // ✅ 正しいカラム名「atbb成約済み/非公開」を最優先で使用
+      const atbbStatus = String(
+        row['atbb成約済み/非公開'] ||  // ← 正しいカラム名（最優先）
+        row['atbb_status'] ||          // ← フォールバック（実際には存在しない）
+        row['ATBB_status'] ||          // ← フォールバック（実際には存在しない）
+        row['ステータス'] ||            // ← フォールバック（実際には存在しない）
+        ''
+      );
       
       // 2. 基本的に全ての物件を同期（atbb_statusでフィルタリングしない）
       console.log(`📝 Processing ${propertyNumber} (atbb_status: ${atbbStatus})...`);
@@ -360,6 +456,8 @@ await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
 公開物件同期のコードを書く前に、以下を確認してください：
 
 - [ ] 物件リストスプレッドシート（`PROPERTY_LISTING_SPREADSHEET_ID`）からデータを取得しているか？
+- [ ] **正しいカラム名`atbb成約済み/非公開`を使用しているか？**（最重要）
+- [ ] **`atbb成約済み/非公開`を最優先にしているか？**
 - [ ] **基本的に全ての物件を同期しているか？**（公開中のみという制限は過去の一時的な措置）
 - [ ] 業務依頼シートから「スプシURL」を補完しているか？
 - [ ] `property_listings`テーブルに同期しているか？
@@ -480,6 +578,34 @@ git push origin main
 2. `/api/cron/sync-property-listings`を使用しているか確認
 3. 修正してデプロイ
 
+### 問題3: 公開中の物件が「成約済み」バッジになる
+
+**原因**: 間違った`atbb_status`カラム名を使用している
+
+**確認事項**:
+1. `PropertyListingSyncService.ts`で正しいカラム名`atbb成約済み/非公開`を使用しているか？
+2. `atbb成約済み/非公開`を最優先にしているか？
+3. データベースの`atbb_status`が空文字列になっていないか？
+
+**解決策**:
+```typescript
+// ✅ 正しいコード
+const atbbStatus = String(
+  row['atbb成約済み/非公開'] ||  // ← 正しいカラム名（最優先）
+  row['atbb_status'] ||          // ← フォールバック
+  ''
+);
+```
+
+**確認方法**:
+```bash
+# ヘッダー確認
+npx ts-node backend/check-property-list-headers.ts
+
+# 特定物件の確認
+npx ts-node backend/check-aa12398-atbb-status.ts
+```
+
 ### 問題4: コメントデータが表示されない
 
 **確認事項**:
@@ -497,7 +623,7 @@ git push origin main
 2. URLが正しい形式（`http`または`https`で始まる）か？
 3. `AthomeSheetSyncService`が正しく実行されているか？
 
-### 問題3: 環境変数が設定されていない
+### 問題6: 環境変数が設定されていない
 
 **確認方法**:
 ```bash
@@ -527,6 +653,12 @@ git push origin main
 - ❌ 売主データ（`sellers`テーブル）を同期する
 - ❌ 業務依頼シートをメインソースにする
 - ❌ 新規案件を`atbb_status`でフィルタリングする（全て同期すべき）
+- ❌ 間違った`atbb_status`カラム名（`atbb_status`, `ATBB_status`, `ステータス`）を使用する
+
+**正しいカラム名**:
+- ✅ **`atbb成約済み/非公開`** ← これが唯一の正しいカラム名
+- ✅ **`所在地`** ← 物件の住所（`物件所在`ではない）
+- ✅ **`住居表示（ATBB登録住所）`** ← 住居表示
 
 **コメントデータの取得元**:
 - **お気に入り文言**: 個別物件スプレッドシートの`athome`シート（物件種別ごとに異なるセル位置）
