@@ -126,18 +126,31 @@ export class PropertyListingSyncService {
     };
 
     try {
-      // 1. 物件リストスプレッドシートからデータを取得（メインソース）
-      console.log('📋 Fetching data from property list spreadsheet...');
-      const rows = await this.propertyListSheetsClient.readAll();
+      // 1. 物件リストスプレッドシートから最後の10行のみを取得（最近追加された物件）
+      console.log('📋 Fetching last 10 rows from property list spreadsheet...');
       
-      if (!rows || rows.length === 0) {
+      // まず全体の行数を取得（ヘッダー行を含む）
+      const allRows = await this.propertyListSheetsClient.readAll();
+      const totalRows = allRows.length;
+      
+      if (totalRows === 0) {
         console.log('⚠️ No data found in property list spreadsheet');
         result.success = true;
         result.endTime = new Date();
         return result;
       }
+      
+      // 最後の10行のみを取得
+      const rows = allRows.slice(-10);
+      
+      if (!rows || rows.length === 0) {
+        console.log('⚠️ No data found in specified range');
+        result.success = true;
+        result.endTime = new Date();
+        return result;
+      }
 
-      console.log(`📊 Found ${rows.length} rows in property list spreadsheet`);
+      console.log(`📊 Processing last ${rows.length} rows (out of ${totalRows} total)`);
 
       // 2. 各行を処理
       for (const row of rows) {
