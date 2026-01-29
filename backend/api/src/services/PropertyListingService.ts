@@ -473,11 +473,14 @@ export class PropertyListingService {
               console.log(`[PropertyListingService] Price fields for ${property.property_number}:`, {
                 sales_price: property.sales_price,
                 listing_price: property.listing_price,
+                price_from_db: property.price,
                 calculated_price: property.sales_price || property.listing_price || 0
               });
               
+              const { price: _price, ...propertyWithoutPrice } = property; // priceカラムを除外
+              
               return {
-                ...property,
+                ...propertyWithoutPrice,
                 price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
                 property_type: this.convertPropertyTypeToEnglish(property.property_type),
                 atbb_status: property.atbb_status,
@@ -488,8 +491,9 @@ export class PropertyListingService {
               };
             } catch (error: any) {
               console.error(`[PropertyListingService] Failed to fetch image for ${property.property_number}:`, error.message);
+              const { price: _price, ...propertyWithoutPrice } = property; // priceカラムを除外
               return {
-                ...property,
+                ...propertyWithoutPrice,
                 price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
                 property_type: this.convertPropertyTypeToEnglish(property.property_type),
                 atbb_status: property.atbb_status,
@@ -570,8 +574,9 @@ export class PropertyListingService {
       const details = await propertyDetailsService.getPropertyDetails(data.property_number);
       
       // 物件タイプを英語に変換してフロントエンドに返す
+      const { price: _price, ...dataWithoutPrice } = data; // priceカラムを除外
       return {
-        ...data,
+        ...dataWithoutPrice,
         price: data.sales_price || data.listing_price || 0,  // sales_priceを優先、なければlisting_price
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
@@ -627,8 +632,9 @@ export class PropertyListingService {
       const details = await propertyDetailsService.getPropertyDetails(propertyNumber);
       
       // 物件タイプを英語に変換してフロントエンドに返す
+      const { price: _price, ...dataWithoutPrice } = data; // priceカラムを除外
       return {
-        ...data,
+        ...dataWithoutPrice,
         price: data.sales_price || data.listing_price || 0,  // sales_priceを優先、なければlisting_price
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
