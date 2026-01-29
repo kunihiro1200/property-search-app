@@ -1,5 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
-// Force cache clear: 2026-01-24 13:00 - Inquiry form debug
+// Force cache clear: 2026-01-29 15:00 - Price field fix (sales_price/listing_price)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
