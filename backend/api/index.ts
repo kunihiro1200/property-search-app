@@ -1,5 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
-// Force cache clear: 2026-01-29 15:30 - CRITICAL: Price field fix with destructuring
+// Force cache clear: 2026-01-29 16:00 - FINAL FIX: Price field in all code paths
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
@@ -56,7 +56,7 @@ app.get('/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '2026-01-29-15:30-price-fix-with-destructuring'
+    version: '2026-01-29-16:00-final-price-fix-all-paths'
   });
 });
 
@@ -64,7 +64,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '2026-01-29-15:30-price-fix-with-destructuring'
+    version: '2026-01-29-16:00-final-price-fix-all-paths'
   });
 });
 
