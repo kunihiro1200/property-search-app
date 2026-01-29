@@ -171,7 +171,8 @@ export class PropertyListingSyncService {
           }
 
           // atbb_statusを確認（文字列に変換）
-          const atbbStatus = String(row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || '');
+          // 正しいカラム名: 「atbb成約済み/非公開」
+          const atbbStatus = String(row['atbb成約済み/非公開'] || row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || '');
           
           // 基本的に全ての物件を同期（atbb_statusでフィルタリングしない）
           // 公開物件サイトでの表示フィルタリングは別途行う
