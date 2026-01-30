@@ -1,27 +1,26 @@
-import axios from 'axios';
+import { SellerService } from './src/services/SellerService.supabase';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 async function test() {
+  const sellerService = new SellerService();
+  
+  console.log('=== サイドバーカウントAPI テスト ===');
+  console.log('');
+  
   try {
-    // ログインしてトークンを取得
-    const loginResponse = await axios.post('http://localhost:3000/api/auth/login', {
-      email: 'test@example.com',
-      password: 'test123',
-    });
+    const counts = await sellerService.getSidebarCounts();
     
-    const token = loginResponse.data.token;
-    console.log('ログイン成功');
-    
-    // サイドバーカウントを取得
-    const response = await axios.get('http://localhost:3000/api/sellers/sidebar-counts', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    
-    console.log('=== サイドバーカウント ===');
-    console.log(JSON.stringify(response.data, null, 2));
+    console.log('結果:');
+    console.log('  訪問予定:', counts.visitScheduled);
+    console.log('  訪問済み:', counts.visitCompleted);
+    console.log('  当日TEL分:', counts.todayCall);
+    console.log('  当日TEL（内容）:', counts.todayCallWithInfo);
+    console.log('  未査定:', counts.unvaluated);
+    console.log('  査定（郵送）:', counts.mailingPending);
   } catch (error: any) {
-    console.error('Error:', error.response?.data || error.message);
+    console.error('エラー:', error.message);
   }
 }
 

@@ -1294,6 +1294,11 @@ export class SellerService extends BaseRepository {
   /**
    * サイドバー用のカテゴリカウントを取得
    * 各カテゴリの条件に合う売主のみをデータベースから直接カウント
+   * 
+   * 【優先順位】
+   * 1. 訪問予定（営担あり + 訪問日が今日以降）← 最優先
+   * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
+   * 3. 当日TEL分/当日TEL（内容）← 訪問予定/訪問済みでない場合のみ
    */
   async getSidebarCounts(): Promise<{
     todayCall: number;
@@ -1311,41 +1316,7 @@ export class SellerService extends BaseRepository {
     // 未査定の基準日
     const cutoffDate = '2025-12-08';
 
-    // 1. 当日TEL分（追客中 AND 次電日が今日以前 AND コミュニケーション情報が全て空）
-    const { count: todayCallCount } = await this.table('sellers')
-      .select('*', { count: 'exact', head: true })
-      .is('deleted_at', null)
-      .ilike('status', '%追客中%')
-      .lte('next_call_date', todayJST)
-      .or('phone_contact_person.is.null,phone_contact_person.eq.')
-      .or('preferred_contact_time.is.null,preferred_contact_time.eq.')
-      .or('contact_method.is.null,contact_method.eq.');
-
-    // 2. 当日TEL（内容）（追客中 AND 次電日が今日以前 AND コミュニケーション情報のいずれかに入力あり）
-    // まず追客中 AND 次電日が今日以前の全件を取得
-    const { data: todayCallBaseSellers } = await this.table('sellers')
-      .select('id, phone_contact_person, preferred_contact_time, contact_method')
-      .is('deleted_at', null)
-      .ilike('status', '%追客中%')
-      .lte('next_call_date', todayJST);
-
-    // コミュニケーション情報があるものをカウント
-    const todayCallWithInfoCount = (todayCallBaseSellers || []).filter(s => {
-      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
-                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
-                      (s.contact_method && s.contact_method.trim() !== '');
-      return hasInfo;
-    }).length;
-
-    // コミュニケーション情報がないものをカウント（当日TEL分）
-    const todayCallNoInfoCount = (todayCallBaseSellers || []).filter(s => {
-      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
-                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
-                      (s.contact_method && s.contact_method.trim() !== '');
-      return !hasInfo;
-    }).length;
-
-    // 3. 訪問予定（営担に入力あり AND 訪問日が今日以降）
+    // 1. 訪問予定（営担に入力あり AND 訪問日が今日以降）← 最優先
     const { count: visitScheduledCount } = await this.table('sellers')
       .select('*', { count: 'exact', head: true })
       .is('deleted_at', null)
@@ -1353,7 +1324,7 @@ export class SellerService extends BaseRepository {
       .neq('visit_assignee', '')
       .gte('visit_date', todayJST);
 
-    // 4. 訪問済み（営担に入力あり AND 訪問日が昨日以前）
+    // 2. 訪問済み（営担に入力あり AND 訪問日が昨日以前）← 2番目
     const { count: visitCompletedCount } = await this.table('sellers')
       .select('*', { count: 'exact', head: true })
       .is('deleted_at', null)
@@ -1361,7 +1332,42 @@ export class SellerService extends BaseRepository {
       .neq('visit_assignee', '')
       .lt('visit_date', todayJST);
 
-    // 5. 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
+    // 3. 当日TEL分/当日TEL（内容）
+    // 追客中 AND 次電日が今日以前 AND 訪問予定/訪問済みでない売主を取得
+    const { data: todayCallBaseSellers } = await this.table('sellers')
+      .select('id, visit_assignee, visit_date, phone_contact_person, preferred_contact_time, contact_method')
+      .is('deleted_at', null)
+      .ilike('status', '%追客中%')
+      .lte('next_call_date', todayJST);
+
+    // 訪問予定/訪問済みの売主を除外してカウント
+    const filteredTodayCallSellers = (todayCallBaseSellers || []).filter(s => {
+      // 営担に入力があり、訪問日がある場合は訪問予定/訪問済みなので除外
+      const hasVisitAssignee = s.visit_assignee && s.visit_assignee.trim() !== '';
+      const hasVisitDate = s.visit_date && s.visit_date.trim() !== '';
+      if (hasVisitAssignee && hasVisitDate) {
+        return false; // 訪問予定/訪問済みなので当日TELから除外
+      }
+      return true;
+    });
+
+    // コミュニケーション情報があるものをカウント（当日TEL（内容））
+    const todayCallWithInfoCount = filteredTodayCallSellers.filter(s => {
+      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
+                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
+                      (s.contact_method && s.contact_method.trim() !== '');
+      return hasInfo;
+    }).length;
+
+    // コミュニケーション情報がないものをカウント（当日TEL分）
+    const todayCallNoInfoCount = filteredTodayCallSellers.filter(s => {
+      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
+                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
+                      (s.contact_method && s.contact_method.trim() !== '');
+      return !hasInfo;
+    }).length;
+
+    // 4. 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
     const { data: unvaluatedSellers } = await this.table('sellers')
       .select('id, valuation_amount_1, valuation_amount_2, valuation_amount_3, visit_assignee, mailing_status')
       .is('deleted_at', null)
@@ -1376,7 +1382,7 @@ export class SellerService extends BaseRepository {
       return hasNoValuation && !isNotRequired;
     }).length;
 
-    // 6. 査定（郵送）（郵送ステータスが「未」）
+    // 5. 査定（郵送）（郵送ステータスが「未」）
     const { count: mailingPendingCount } = await this.table('sellers')
       .select('*', { count: 'exact', head: true })
       .is('deleted_at', null)

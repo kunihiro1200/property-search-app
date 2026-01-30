@@ -324,9 +324,15 @@ const hasContactInfo = (seller: Seller | any): boolean => {
  * - 状況（当社）に「追客中」が含まれる
  * - 次電日が今日以前
  * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）が**全て空**
+ * - 訪問予定/訪問済みでない（営担に入力があり訪問日がある場合は除外）
  * 
  * 注意: コミュニケーション情報のいずれかに入力がある売主は
  * 「当日TEL分」としてカウントしない → 「当日TEL（内容）」に分類される
+ * 
+ * 【優先順位】
+ * 1. 訪問予定（営担あり + 訪問日が今日以降）← 最優先
+ * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
+ * 3. 当日TEL分/当日TEL（内容）← 訪問予定/訪問済みでない場合のみ
  * 
  * @param seller 売主データ
  * @returns 当日TEL分対象かどうか
@@ -334,6 +340,11 @@ const hasContactInfo = (seller: Seller | any): boolean => {
  * Requirements: 1.2
  */
 export const isTodayCall = (seller: Seller | any): boolean => {
+  // 訪問予定/訪問済みの売主は当日TELから除外（優先順位ルール）
+  if (isVisitScheduled(seller) || isVisitCompleted(seller)) {
+    return false;
+  }
+  
   // 共通条件をチェック
   if (!isTodayCallBase(seller)) {
     return false;
@@ -352,10 +363,16 @@ export const isTodayCall = (seller: Seller | any): boolean => {
  * - 状況（当社）に「追客中」が含まれる
  * - 次電日が今日以前
  * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）の**いずれかに入力がある**
+ * - 訪問予定/訪問済みでない（営担に入力があり訪問日がある場合は除外）
  * 
  * 例:
  * - AA13489: contact_method = "Eメール" → 当日TEL(Eメール)
  * - AA13507: phone_contact_person = "Y" → 当日TEL(Y)
+ * 
+ * 【優先順位】
+ * 1. 訪問予定（営担あり + 訪問日が今日以降）← 最優先
+ * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
+ * 3. 当日TEL分/当日TEL（内容）← 訪問予定/訪問済みでない場合のみ
  * 
  * @param seller 売主データ
  * @returns 当日TEL（内容）対象かどうか
@@ -363,6 +380,11 @@ export const isTodayCall = (seller: Seller | any): boolean => {
  * Requirements: 1.3
  */
 export const isTodayCallWithInfo = (seller: Seller | any): boolean => {
+  // 訪問予定/訪問済みの売主は当日TELから除外（優先順位ルール）
+  if (isVisitScheduled(seller) || isVisitCompleted(seller)) {
+    return false;
+  }
+  
   // 共通条件をチェック
   if (!isTodayCallBase(seller)) {
     return false;
