@@ -1070,6 +1070,7 @@ export class EnhancedAutoSyncService {
     const mappedData = this.columnMapper.mapToDatabase(row);
     
     // 査定額を取得（手入力優先、なければ自動計算）
+    // 🚨 重要: 種別（土地/戸建て/マンション）に関係なく、手動入力査定額を最優先で使用
     const valuation1 = row['査定額1'] || row['査定額1（自動計算）v'];
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
@@ -1198,6 +1199,7 @@ export class EnhancedAutoSyncService {
     const mappedData = this.columnMapper.mapToDatabase(row);
     
     // 査定額を取得（手入力優先、なければ自動計算）
+    // 🚨 重要: 種別（土地/戸建て/マンション）に関係なく、手動入力査定額を最優先で使用
     const valuation1 = row['査定額1'] || row['査定額1（自動計算）v'];
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
