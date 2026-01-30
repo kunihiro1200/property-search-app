@@ -1290,4 +1290,105 @@ export class SellerService extends BaseRepository {
     // 255文字制限
     return value.substring(0, 255);
   }
+
+  /**
+   * サイドバー用のカテゴリカウントを取得
+   * 各カテゴリの条件に合う売主のみをデータベースから直接カウント
+   */
+  async getSidebarCounts(): Promise<{
+    todayCall: number;
+    todayCallWithInfo: number;
+    visitScheduled: number;
+    visitCompleted: number;
+    unvaluated: number;
+    mailingPending: number;
+  }> {
+    // JST今日の日付を取得
+    const now = new Date();
+    const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const todayJST = `${jstTime.getUTCFullYear()}-${String(jstTime.getUTCMonth() + 1).padStart(2, '0')}-${String(jstTime.getUTCDate()).padStart(2, '0')}`;
+    
+    // 未査定の基準日
+    const cutoffDate = '2025-12-08';
+
+    // 1. 当日TEL分（追客中 AND 次電日が今日以前 AND コミュニケーション情報が全て空）
+    const { count: todayCallCount } = await this.table('sellers')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .ilike('status', '%追客中%')
+      .lte('next_call_date', todayJST)
+      .or('phone_contact_person.is.null,phone_contact_person.eq.')
+      .or('preferred_contact_time.is.null,preferred_contact_time.eq.')
+      .or('contact_method.is.null,contact_method.eq.');
+
+    // 2. 当日TEL（内容）（追客中 AND 次電日が今日以前 AND コミュニケーション情報のいずれかに入力あり）
+    // まず追客中 AND 次電日が今日以前の全件を取得
+    const { data: todayCallBaseSellers } = await this.table('sellers')
+      .select('id, phone_contact_person, preferred_contact_time, contact_method')
+      .is('deleted_at', null)
+      .ilike('status', '%追客中%')
+      .lte('next_call_date', todayJST);
+
+    // コミュニケーション情報があるものをカウント
+    const todayCallWithInfoCount = (todayCallBaseSellers || []).filter(s => {
+      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
+                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
+                      (s.contact_method && s.contact_method.trim() !== '');
+      return hasInfo;
+    }).length;
+
+    // コミュニケーション情報がないものをカウント（当日TEL分）
+    const todayCallNoInfoCount = (todayCallBaseSellers || []).filter(s => {
+      const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
+                      (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
+                      (s.contact_method && s.contact_method.trim() !== '');
+      return !hasInfo;
+    }).length;
+
+    // 3. 訪問予定（営担に入力あり AND 訪問日が今日以降）
+    const { count: visitScheduledCount } = await this.table('sellers')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .not('visit_assignee', 'is', null)
+      .neq('visit_assignee', '')
+      .gte('visit_date', todayJST);
+
+    // 4. 訪問済み（営担に入力あり AND 訪問日が昨日以前）
+    const { count: visitCompletedCount } = await this.table('sellers')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .not('visit_assignee', 'is', null)
+      .neq('visit_assignee', '')
+      .lt('visit_date', todayJST);
+
+    // 5. 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
+    const { data: unvaluatedSellers } = await this.table('sellers')
+      .select('id, valuation_amount_1, valuation_amount_2, valuation_amount_3, visit_assignee, mailing_status')
+      .is('deleted_at', null)
+      .ilike('status', '%追客中%')
+      .gte('inquiry_date', cutoffDate)
+      .or('visit_assignee.is.null,visit_assignee.eq.');
+
+    // 査定額が全て空で、郵送ステータスが「不要」でないものをカウント
+    const unvaluatedCount = (unvaluatedSellers || []).filter(s => {
+      const hasNoValuation = !s.valuation_amount_1 && !s.valuation_amount_2 && !s.valuation_amount_3;
+      const isNotRequired = s.mailing_status === '不要';
+      return hasNoValuation && !isNotRequired;
+    }).length;
+
+    // 6. 査定（郵送）（郵送ステータスが「未」）
+    const { count: mailingPendingCount } = await this.table('sellers')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .eq('mailing_status', '未');
+
+    return {
+      todayCall: todayCallNoInfoCount || 0,
+      todayCallWithInfo: todayCallWithInfoCount || 0,
+      visitScheduled: visitScheduledCount || 0,
+      visitCompleted: visitCompletedCount || 0,
+      unvaluated: unvaluatedCount || 0,
+      mailingPending: mailingPendingCount || 0,
+    };
+  }
 }

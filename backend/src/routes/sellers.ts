@@ -132,6 +132,26 @@ router.get(
 );
 
 /**
+ * サイドバー用の売主カテゴリカウントを取得
+ * 各カテゴリの条件に合う売主のみを取得してカウント
+ */
+router.get('/sidebar-counts', async (req: Request, res: Response) => {
+  try {
+    const counts = await sellerService.getSidebarCounts();
+    res.json(counts);
+  } catch (error) {
+    console.error('Get sidebar counts error:', error);
+    res.status(500).json({
+      error: {
+        code: 'SIDEBAR_COUNTS_ERROR',
+        message: 'Failed to get sidebar counts',
+        retryable: true,
+      },
+    });
+  }
+});
+
+/**
  * 売主を検索
  */
 router.get('/search', async (req: Request, res: Response) => {

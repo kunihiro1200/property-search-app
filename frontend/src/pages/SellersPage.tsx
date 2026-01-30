@@ -27,7 +27,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   StatusCategory,
-  getCategoryCounts as getStatusCategoryCounts,
   filterSellersByCategory,
 } from '../utils/sellerStatusFilters';
 import { formatInquiryDate } from '../utils/inquiryDateFormatter';
@@ -115,8 +114,22 @@ export default function SellersPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // サイドバー用の全売主リスト（カテゴリカウント用）
-  const [allSellersForSidebar, setAllSellersForSidebar] = useState<Seller[]>([]);
+  // サイドバー用のカテゴリカウント（APIから直接取得）
+  const [sidebarCounts, setSidebarCounts] = useState<{
+    todayCall: number;
+    todayCallWithInfo: number;
+    visitScheduled: number;
+    visitCompleted: number;
+    unvaluated: number;
+    mailingPending: number;
+  }>({
+    todayCall: 0,
+    todayCallWithInfo: 0,
+    visitScheduled: 0,
+    visitCompleted: 0,
+    unvaluated: 0,
+    mailingPending: 0,
+  });
   const [sidebarLoading, setSidebarLoading] = useState(true);
   
   // ページ状態をsessionStorageから復元
@@ -205,7 +218,7 @@ export default function SellersPage() {
           hasChanges: true,
         });
         fetchSellers();
-        fetchAllSellersForSidebar(); // サイドバーデータも更新
+        fetchSidebarCounts(); // サイドバーカウントも更新
       }
     },
     onSyncError: (error) => {
@@ -213,9 +226,9 @@ export default function SellersPage() {
     },
   });
 
-  // カテゴリ別の売主数をカウント（サイドバー用の全売主データを使用）
+  // カテゴリ別の売主数をカウント（APIから取得したカウントを使用）
   const categoryCounts = {
-    ...getStatusCategoryCounts(allSellersForSidebar),
+    ...sidebarCounts,
     all: total, // ページネーション前の全体件数を使用
   };
 
@@ -224,30 +237,31 @@ export default function SellersPage() {
     return filterSellersByCategory(sellers, selectedCategory);
   };
 
-  // サイドバー用の全売主データを取得（カテゴリカウント用）
-  const fetchAllSellersForSidebar = async () => {
+  // サイドバー用のカテゴリカウントを取得（APIから直接取得）
+  const fetchSidebarCounts = async () => {
     try {
       setSidebarLoading(true);
-      const response = await api.get('/api/sellers', {
-        params: {
-          page: 1,
-          pageSize: 500, // サイドバー用に十分な件数を取得
-          sortBy: 'inquiry_date',
-          sortOrder: 'desc',
-        },
-      });
-      setAllSellersForSidebar(response.data.data || []);
+      const response = await api.get('/api/sellers/sidebar-counts');
+      setSidebarCounts(response.data);
     } catch (error) {
-      console.error('Failed to fetch sellers for sidebar:', error);
-      setAllSellersForSidebar([]);
+      console.error('Failed to fetch sidebar counts:', error);
+      // エラー時はカウントを0にリセット
+      setSidebarCounts({
+        todayCall: 0,
+        todayCallWithInfo: 0,
+        visitScheduled: 0,
+        visitCompleted: 0,
+        unvaluated: 0,
+        mailingPending: 0,
+      });
     } finally {
       setSidebarLoading(false);
     }
   };
 
-  // 初回ロード時にサイドバー用データを取得
+  // 初回ロード時にサイドバーカウントを取得
   useEffect(() => {
-    fetchAllSellersForSidebar();
+    fetchSidebarCounts();
   }, []);
 
   useEffect(() => {
@@ -389,7 +403,7 @@ export default function SellersPage() {
             selectedCategory={selectedCategory}
             onCategorySelect={setSelectedCategory}
             isCallMode={false}
-            sellers={allSellersForSidebar}
+            sellers={sellers}
             loading={sidebarLoading}
           />
 
