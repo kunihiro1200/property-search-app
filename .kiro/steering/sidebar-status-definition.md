@@ -9,9 +9,43 @@
 
 ## 📋 サイドバーステータス一覧
 
-### 1. 「当日TEL分」
+### 1. 「訪問予定（イニシャル）」
 
-**サイドバー表示**: `当日TEL分`
+**サイドバー表示**: `①訪問予定`
+**色**: 緑（success）
+
+**条件**:
+- 営担（visitAssignee）に入力がある
+- 訪問日（visitDate）が今日以降
+
+**表示例**:
+- 訪問予定(Y)
+- 訪問予定(I)
+
+**重要**: 訪問予定は他のステータスより優先される
+
+---
+
+### 2. 「訪問済み（イニシャル）」
+
+**サイドバー表示**: `②訪問済み`
+**色**: 青（primary）
+
+**条件**:
+- 営担（visitAssignee）に入力がある
+- 訪問日（visitDate）が昨日以前
+
+**表示例**:
+- 訪問済み(Y)
+- 訪問済み(I)
+
+**サブステータス**: 訪問済みの売主が「当日TEL分」の条件も満たす場合、サブステータスとして表示
+
+---
+
+### 3. 「当日TEL分」
+
+**サイドバー表示**: `③当日TEL分`
 **色**: 赤（error）
 
 **条件**:
@@ -28,9 +62,9 @@
 
 ---
 
-### 2. 「当日TEL（内容）」
+### 4. 「当日TEL（内容）」
 
-**サイドバー表示**: `当日TEL（内容）`
+**サイドバー表示**: `④当日TEL（内容）`
 **色**: 紫（secondary）
 
 **条件**:
@@ -49,9 +83,9 @@
 
 ---
 
-### 3. 「未査定」
+### 5. 「未査定」
 
-**サイドバー表示**: `未査定`
+**サイドバー表示**: `⑤未査定`
 **色**: オレンジ（warning）
 
 **条件**:
@@ -62,10 +96,10 @@
 
 ---
 
-### 4. 「査定（郵送）」
+### 6. 「査定（郵送）」
 
-**サイドバー表示**: `査定（郵送）`
-**色**: 青（info）
+**サイドバー表示**: `⑥査定（郵送）`
+**色**: 水色（info）
 
 **条件**:
 - 郵送ステータス（mailingStatus）が「未」
@@ -79,6 +113,9 @@
 **ファイル**: `frontend/src/utils/sellerStatusFilters.ts`
 
 **関数**:
+- `isVisitScheduled()` - 訪問予定の判定
+- `isVisitCompleted()` - 訪問済みの判定
+- `getVisitStatusLabel()` - 訪問予定/訪問済みの表示ラベル取得
 - `isTodayCall()` - 当日TEL分の判定
 - `isTodayCallWithInfo()` - 当日TEL（内容）の判定
 - `getTodayCallWithInfoLabel()` - 当日TEL（内容）の表示ラベル取得
@@ -94,10 +131,12 @@
 
 ### サイドバーUI
 
-**ファイル**: `frontend/src/pages/SellersPage.tsx`
+**ファイル**: `frontend/src/components/SellerStatusSidebar.tsx`
 
 **カテゴリ型**: `StatusCategory`
 - `'all'` - 全て
+- `'visitScheduled'` - 訪問予定
+- `'visitCompleted'` - 訪問済み
 - `'todayCall'` - 当日TEL分
 - `'todayCallWithInfo'` - 当日TEL（内容）
 - `'unvaluated'` - 未査定
