@@ -39,11 +39,11 @@ async function checkAA13508FromSheet() {
 
   const rows = dataResponse.data.values || [];
   
-  // AA13508を検索
+  // AA13508を検索（B列が売主番号）
   let aa13508Row: any = null;
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const sellerNumber = row[0]; // A列が売主番号
+    const sellerNumber = row[1]; // B列が売主番号（A列は空列）
     if (sellerNumber === 'AA13508') {
       aa13508Row = {};
       headers.forEach((header: string, index: number) => {
