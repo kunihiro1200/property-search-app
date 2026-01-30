@@ -218,6 +218,10 @@ export class GoogleSheetsClient {
 
   /**
    * すべてのデータを読み取り（ヘッダー行を除く）
+   * 
+   * valueRenderOption: 'UNFORMATTED_VALUE' を使用して、
+   * 日付セルはシリアル値（数値）として取得します。
+   * これにより、表示形式に関係なく正確な年月日を取得できます。
    */
   async readAll(): Promise<SheetRow[]> {
     this.ensureAuthenticated();
@@ -229,6 +233,10 @@ export class GoogleSheetsClient {
       const response = await this.sheets!.spreadsheets.values.get({
         spreadsheetId: this.config.spreadsheetId,
         range,
+        // UNFORMATTED_VALUE: 日付はシリアル値（数値）として返される
+        // これにより表示形式（M/D）に関係なく、正確な年月日を取得できる
+        valueRenderOption: 'UNFORMATTED_VALUE',
+        dateTimeRenderOption: 'SERIAL_NUMBER',
       });
 
       const rows = response.data.values || [];

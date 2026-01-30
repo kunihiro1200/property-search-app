@@ -328,7 +328,13 @@ export class ColumnMapper {
   }
 
   /**
-   * 日付文字列をパース
+   * 日付文字列またはシリアル値をパース
+   * 
+   * Google Sheets APIから取得した日付は以下の形式で返される:
+   * - シリアル値（数値）: Excelシリアル値（1900年1月1日からの日数）
+   * - 文字列: YYYY-MM-DD, YYYY/MM/DD, MM/DD など
+   * 
+   * シリアル値を使用することで、表示形式に関係なく正確な年月日を取得できます。
    */
   private parseDate(value: any): string | null {
     if (!value) return null;
@@ -337,6 +343,23 @@ export class ColumnMapper {
       // 既にDate型の場合
       if (value instanceof Date) {
         return value.toISOString().split('T')[0];
+      }
+
+      // 数値の場合（Excelシリアル値）
+      // Google Sheetsの日付シリアル値は1899年12月30日を基準とする
+      if (typeof value === 'number') {
+        // Excelシリアル値を日付に変換
+        // Google Sheets/Excelの日付シリアル値: 1が1900年1月1日
+        // 基準日を1899年12月31日として計算（シリアル値1 = 1900-01-01）
+        const baseDate = new Date(Date.UTC(1899, 11, 31)); // 1899-12-31 UTC
+        const date = new Date(baseDate.getTime() + (value - 1) * 24 * 60 * 60 * 1000);
+        
+        // YYYY-MM-DD形式で返す（UTCベース）
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
       }
 
       // 文字列の場合
@@ -352,44 +375,28 @@ export class ColumnMapper {
         return str.replace(/\//g, '-');
       }
 
-      // MM/DD形式（年なし）- 現在の年を使用
+      // MM/DD または M/D形式（年なし）- フォールバック
+      // 通常はシリアル値で取得されるため、ここに来ることは稀
       const mmddMatch = str.match(/^(\d{1,2})\/(\d{1,2})$/);
       if (mmddMatch) {
         const month = mmddMatch[1].padStart(2, '0');
         const day = mmddMatch[2].padStart(2, '0');
-        const currentYear = new Date().getFullYear();
         
-        // 月が現在の月より大きい場合は前年とする（例: 現在12月で、入力が1月の場合は来年）
-        const currentMonth = new Date().getMonth() + 1;
+        // JSTで現在日付を取得
+        const now = new Date();
+        const jstOffset = 9 * 60; // JST is UTC+9
+        const jstNow = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60 * 1000);
+        const currentYear = jstNow.getFullYear();
+        const currentMonth = jstNow.getMonth() + 1;
+        const currentDay = jstNow.getDate();
+        
         const inputMonth = parseInt(month);
+        const inputDay = parseInt(day);
         
-        // 反響日付や次電日は通常過去または近い未来なので、
-        // 入力月が現在月より3ヶ月以上先の場合は前年とする
+        // 入力日付が今日より前かどうかを判定
+        // 次電日は将来の予定なので、今日より前の日付は来年と解釈
         let year = currentYear;
-        if (inputMonth > currentMonth + 3) {
-          year = currentYear - 1;
-        } else if (inputMonth < currentMonth - 9) {
-          // 入力月が現在月より9ヶ月以上前の場合は来年とする
-          year = currentYear + 1;
-        }
-        
-        return `${year}-${month}-${day}`;
-      }
-
-      // M/D形式（年なし、ゼロ埋めなし）
-      const mdMatch = str.match(/^(\d{1,2})\/(\d{1,2})$/);
-      if (mdMatch) {
-        const month = mdMatch[1].padStart(2, '0');
-        const day = mdMatch[2].padStart(2, '0');
-        const currentYear = new Date().getFullYear();
-        
-        const currentMonth = new Date().getMonth() + 1;
-        const inputMonth = parseInt(month);
-        
-        let year = currentYear;
-        if (inputMonth > currentMonth + 3) {
-          year = currentYear - 1;
-        } else if (inputMonth < currentMonth - 9) {
+        if (inputMonth < currentMonth || (inputMonth === currentMonth && inputDay < currentDay)) {
           year = currentYear + 1;
         }
         
