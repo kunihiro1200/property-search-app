@@ -162,6 +162,13 @@ export class ColumnMapper {
     const sheetRow: SheetRow = {};
 
     for (const [dbColumn, sheetColumn] of Object.entries(this.dbToSpreadsheet)) {
+      // 「不通」列の特殊処理: unreachable_status を優先
+      // is_unreachable と unreachable_status が同じ「不通」列にマッピングされる場合、
+      // unreachable_status が存在する場合は is_unreachable をスキップ
+      if (dbColumn === 'is_unreachable' && sellerData['unreachable_status']) {
+        continue;
+      }
+
       const value = sellerData[dbColumn];
       
       if (value === null || value === undefined) {
