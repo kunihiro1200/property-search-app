@@ -50,92 +50,122 @@ export interface CategoryCounts {
 }
 
 /**
- * 安全な日付比較ヘルパー関数
- * 無効な日付の場合はfalseを返す
+ * 日本時間（JST）で今日の日付文字列を取得（YYYY-MM-DD形式）
+ * タイムゾーンに依存しない日付比較のため、文字列で比較する
  */
-const safeParseDate = (dateStr: string | Date | undefined | null): Date | null => {
+const getTodayJSTString = (): string => {
+  const now = new Date();
+  // UTCに変換してから9時間足してJSTにする
+  const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  const year = jstTime.getUTCFullYear();
+  const month = String(jstTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(jstTime.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * 日付文字列を正規化（YYYY-MM-DD形式に変換）
+ * タイムゾーンに依存しない日付比較のため
+ */
+const normalizeDateString = (dateStr: string | Date | undefined | null): string | null => {
   if (!dateStr) return null;
+  
   try {
-    // "2026/1/27" 形式または "2026-01-27" 形式をパース
-    if (typeof dateStr === 'string') {
-      const parts = dateStr.includes('/') 
-        ? dateStr.split('/') 
-        : dateStr.split('-');
-      
+    let dateString: string;
+    
+    if (dateStr instanceof Date) {
+      // Dateオブジェクトの場合、ローカル日付を取得
+      const year = dateStr.getFullYear();
+      const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+      const day = String(dateStr.getDate()).padStart(2, '0');
+      dateString = `${year}-${month}-${day}`;
+    } else {
+      dateString = dateStr;
+    }
+    
+    // "2026/1/27" 形式を "2026-01-27" 形式に変換
+    if (dateString.includes('/')) {
+      const parts = dateString.split('/');
       if (parts.length === 3) {
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const day = parseInt(parts[2], 10);
-        
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-          const date = new Date(year, month, day);
-          date.setHours(0, 0, 0, 0);
-          if (!isNaN(date.getTime())) {
-            return date;
-          }
-        }
+        const year = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const day = parts[2].padStart(2, '0');
+        return `${year}-${month}-${day}`;
       }
     }
     
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
-    date.setHours(0, 0, 0, 0);
-    return date;
+    // "2026-01-27" 形式の場合、日付部分のみ抽出
+    if (dateString.includes('-')) {
+      const datePart = dateString.split('T')[0]; // ISO形式の場合、日付部分のみ
+      const parts = datePart.split('-');
+      if (parts.length === 3) {
+        const year = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const day = parts[2].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    }
+    
+    return null;
   } catch {
     return null;
   }
 };
 
 /**
- * 日本時間（JST）で今日の日付を取得
+ * 安全な日付比較ヘルパー関数（後方互換性のため残す）
+ * 無効な日付の場合はnullを返す
+ */
+const safeParseDate = (dateStr: string | Date | undefined | null): Date | null => {
+  const normalized = normalizeDateString(dateStr);
+  if (!normalized) return null;
+  
+  const parts = normalized.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  
+  const date = new Date(year, month, day);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+/**
+ * 日本時間（JST）で今日の日付を取得（後方互換性のため残す）
  */
 const getTodayJST = (): Date => {
-  const now = new Date();
-  const jstOffset = 9 * 60;
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const jstTime = new Date(utcTime + (jstOffset * 60000));
-  jstTime.setHours(0, 0, 0, 0);
-  return jstTime;
+  const todayStr = getTodayJSTString();
+  const parts = todayStr.split('-');
+  const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  date.setHours(0, 0, 0, 0);
+  return date;
 };
 
 /**
- * 日付が今日以前かどうかを判定
+ * 日付が今日以前かどうかを判定（JST基準、文字列比較）
+ * タイムゾーンに依存しない正確な比較
  */
 const isTodayOrBefore = (dateStr: string | Date | undefined | null): boolean => {
-  const date = safeParseDate(dateStr);
-  if (!date) return false;
+  const normalized = normalizeDateString(dateStr);
+  if (!normalized) return false;
   
-  const today = getTodayJST();
-  return date.getTime() <= today.getTime();
+  const todayStr = getTodayJSTString();
+  // 文字列比較（YYYY-MM-DD形式なので辞書順で比較可能）
+  return normalized <= todayStr;
 };
 
 /**
- * 日付が指定日以降かどうかを判定
- */
-const isOnOrAfter = (dateStr: string | Date | undefined | null, targetDate: Date): boolean => {
-  const date = safeParseDate(dateStr);
-  if (!date) return false;
-  
-  const target = new Date(targetDate);
-  target.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-  
-  return date.getTime() >= target.getTime();
-};
-
-/**
- * 日付が昨日以前かどうかを判定
+ * 日付が昨日以前かどうかを判定（JST基準、文字列比較）
+ * タイムゾーンに依存しない正確な比較
  */
 const isYesterdayOrBefore = (dateStr: string | Date | undefined | null): boolean => {
-  const date = safeParseDate(dateStr);
-  if (!date) return false;
+  const normalized = normalizeDateString(dateStr);
+  if (!normalized) return false;
   
-  const today = getTodayJST();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  yesterday.setHours(23, 59, 59, 999);
-  
-  return date.getTime() <= yesterday.getTime();
+  const todayStr = getTodayJSTString();
+  // 文字列比較（YYYY-MM-DD形式なので辞書順で比較可能）
+  // 昨日以前 = 今日より前
+  return normalized < todayStr;
 };
 
 /**
@@ -144,6 +174,19 @@ const isYesterdayOrBefore = (dateStr: string | Date | undefined | null): boolean
 const hasVisitAssignee = (seller: Seller | any): boolean => {
   const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
   return visitAssignee && visitAssignee.trim() !== '';
+};
+
+/**
+ * 日付が今日以降かどうかを判定（JST基準、文字列比較）
+ * タイムゾーンに依存しない正確な比較
+ */
+const isTodayOrAfter = (dateStr: string | Date | undefined | null): boolean => {
+  const normalized = normalizeDateString(dateStr);
+  if (!normalized) return false;
+  
+  const todayStr = getTodayJSTString();
+  // 文字列比較（YYYY-MM-DD形式なので辞書順で比較可能）
+  return normalized >= todayStr;
 };
 
 /**
@@ -168,8 +211,7 @@ export const isVisitScheduled = (seller: Seller | any): boolean => {
     return false;
   }
   
-  const today = getTodayJST();
-  return isOnOrAfter(visitDate, today);
+  return isTodayOrAfter(visitDate);
 };
 
 /**
@@ -390,8 +432,8 @@ const isValuationNotRequired = (seller: Seller | any): boolean => {
  * Requirements: 2.2
  */
 export const isUnvaluated = (seller: Seller | any): boolean => {
-  // 未査定の基準日: 2025/12/8
-  const CUTOFF_DATE = new Date('2025-12-08');
+  // 未査定の基準日: 2025/12/8（文字列比較用）
+  const CUTOFF_DATE_STR = '2025-12-08';
   
   // 査定不要の場合は未査定として表示しない
   if (isValuationNotRequired(seller)) {
@@ -427,11 +469,16 @@ export const isUnvaluated = (seller: Seller | any): boolean => {
     return false;
   }
   
-  // 反響日付が基準日以降かチェック
+  // 反響日付が基準日以降かチェック（文字列比較）
   // inquiryDateまたはinquiryDetailedDatetimeを使用
   const inquiryDate = seller.inquiryDetailedDatetime || seller.inquiryDate || seller.inquiry_date;
+  const normalizedInquiryDate = normalizeDateString(inquiryDate);
   
-  return isOnOrAfter(inquiryDate, CUTOFF_DATE);
+  if (!normalizedInquiryDate) {
+    return false;
+  }
+  
+  return normalizedInquiryDate >= CUTOFF_DATE_STR;
 };
 
 /**
