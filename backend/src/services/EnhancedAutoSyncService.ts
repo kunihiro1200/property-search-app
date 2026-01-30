@@ -849,7 +849,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbSellers, error } = await this.supabase
         .from('sellers')
-        .select('seller_number, status, contract_year_month, visit_assignee, updated_at')
+        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -873,6 +873,10 @@ export class EnhancedAutoSyncService {
           const sheetContractYearMonth = sheetRow['契約年月 他決は分かった時点'];
           const sheetVisitAssignee = sheetRow['営担'];
           const sheetStatus = sheetRow['状況（当社）'];
+          // コミュニケーションフィールドを追加
+          const sheetPhoneContactPerson = sheetRow['電話担当（任意）'];
+          const sheetPreferredContactTime = sheetRow['連絡取りやすい日、時間帯'];
+          const sheetContactMethod = sheetRow['連絡方法'];
 
           // データが異なる場合は更新対象
           let needsUpdate = false;
@@ -896,6 +900,28 @@ export class EnhancedAutoSyncService {
 
           // statusの比較
           if (sheetStatus && sheetStatus !== dbSeller.status) {
+            needsUpdate = true;
+          }
+
+          // コミュニケーションフィールドの比較
+          // phone_contact_personの比較
+          const dbPhoneContact = dbSeller.phone_contact_person || '';
+          const sheetPhoneContact = sheetPhoneContactPerson || '';
+          if (sheetPhoneContact !== dbPhoneContact) {
+            needsUpdate = true;
+          }
+
+          // preferred_contact_timeの比較
+          const dbPreferredTime = dbSeller.preferred_contact_time || '';
+          const sheetPreferredTime = sheetPreferredContactTime || '';
+          if (sheetPreferredTime !== dbPreferredTime) {
+            needsUpdate = true;
+          }
+
+          // contact_methodの比較
+          const dbContactMethod = dbSeller.contact_method || '';
+          const sheetContact = sheetContactMethod || '';
+          if (sheetContact !== dbContactMethod) {
             needsUpdate = true;
           }
 
