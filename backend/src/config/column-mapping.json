@@ -20,9 +20,6 @@
     "査定額1（自動計算）v": "valuation_amount_1",
     "査定額2（自動計算）v": "valuation_amount_2",
     "査定額3（自動計算）v": "valuation_amount_3",
-    "査定額1": "manual_valuation_amount_1",
-    "査定額2": "manual_valuation_amount_2",
-    "査定額3": "manual_valuation_amount_3",
     "訪問取得日\n年/月/日": "visit_acquisition_date",
     "訪問日 \nY/M/D": "visit_date",
     "訪問時間": "visit_time",
@@ -44,7 +41,8 @@
     "専任・他決要因": "exclusive_other_decision_factor",
     "作成日時": "created_at",
     "更新日時": "updated_at",
-    "訪問メモ": "visit_notes"
+    "訪問メモ": "visit_notes",
+    "査定方法": "valuation_method"
   },
   "databaseToSpreadsheet": {
     "seller_number": "売主番号",
@@ -57,9 +55,9 @@
     "inquiry_year": "反響年",
     "inquiry_date": "反響日付",
     "inquiry_detailed_datetime": "反響詳細日時",
-    "valuation_amount_1": "査定額1",
-    "valuation_amount_2": "査定額2",
-    "valuation_amount_3": "査定額3",
+    "valuation_amount_1": "査定額1（自動計算）v",
+    "valuation_amount_2": "査定額2（自動計算）v",
+    "valuation_amount_3": "査定額3（自動計算）v",
     "visit_acquisition_date": "訪問取得日\n年/月/日",
     "visit_date": "訪問日 \nY/M/D",
     "visit_time": "訪問時間",
@@ -83,15 +81,13 @@
     "exclusive_other_decision_factor": "専任・他決要因",
     "created_at": "作成日時",
     "updated_at": "更新日時",
-    "visit_notes": "訪問メモ"
+    "visit_notes": "訪問メモ",
+    "valuation_method": "査定方法"
   },
   "typeConversions": {
     "valuation_amount_1": "number",
     "valuation_amount_2": "number",
     "valuation_amount_3": "number",
-    "manual_valuation_amount_1": "number",
-    "manual_valuation_amount_2": "number",
-    "manual_valuation_amount_3": "number",
     "land_area": "number",
     "building_area": "number",
     "build_year": "number",
