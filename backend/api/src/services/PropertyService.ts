@@ -497,7 +497,11 @@ export class PropertyService {
   
   /**
    * スプレッドシートの計算完了を待機
+   * スプレッドシートの計算完了を待機
    * D11セル（金額セル）の値をポーリングして計算完了を確認
+   * 
+   * 注意: スプレッドシートの計算式は単純なので、通常は2-3秒で完了します。
+   * 初回待機時間は短く設定し、リトライで対応します。
    * 
    * @param sheets Google Sheets APIクライアント
    * @param spreadsheetId スプレッドシートID
@@ -509,13 +513,21 @@ export class PropertyService {
     sheetName: string
   ): Promise<void> {
     const VALIDATION_CELL = 'D11';  // 金額セル
-    const MAX_ATTEMPTS = 20;        // 最大試行回数
-    const RETRY_INTERVAL = 500;     // リトライ間隔（ms）
+    const MAX_ATTEMPTS = 3;         // 最大試行回数（通常は1回で成功）
+    const INITIAL_WAIT = 2000;      // 初回待機時間（ms）- 計算は高速なので2秒で十分
+    const RETRY_INTERVAL = 1000;    // リトライ間隔（ms）- ネットワークエラー対応
     
     console.log(`[waitForCalculationCompletion] Starting validation for cell ${VALIDATION_CELL}`);
+    console.log(`[waitForCalculationCompletion] Configuration: INITIAL_WAIT=${INITIAL_WAIT}ms, MAX_ATTEMPTS=${MAX_ATTEMPTS}, RETRY_INTERVAL=${RETRY_INTERVAL}ms`);
+    
+    // 初回待機（計算完了を待つ - 通常は2秒で十分）
+    console.log(`[waitForCalculationCompletion] Initial wait: ${INITIAL_WAIT}ms`);
+    await new Promise(resolve => setTimeout(resolve, INITIAL_WAIT));
     
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
+        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Reading cell ${VALIDATION_CELL}...`);
+        
         // D11セルの値を読み取り
         const response = await sheets.spreadsheets.values.get({
           spreadsheetId,
@@ -523,27 +535,60 @@ export class PropertyService {
         });
         
         const cellValue = response.data.values?.[0]?.[0];
-        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Cell value = ${cellValue}`);
+        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Cell value = "${cellValue}" (type: ${typeof cellValue})`);
         
         // 値が有効な数値かチェック
         if (this.isValidCalculatedValue(cellValue)) {
-          console.log(`[waitForCalculationCompletion] Calculation completed. Value: ${cellValue}`);
+          const elapsedTime = INITIAL_WAIT + ((attempt - 1) * RETRY_INTERVAL);
+          console.log(`[waitForCalculationCompletion] ✅ Calculation completed successfully!`);
+          console.log(`[waitForCalculationCompletion] Final value: ${cellValue}`);
+          console.log(`[waitForCalculationCompletion] Total elapsed time: ${elapsedTime / 1000} seconds`);
           return;
+        }
+        
+        // 値が無効な理由をログ出力
+        if (cellValue === undefined || cellValue === null || cellValue === '') {
+          console.log(`[waitForCalculationCompletion] ⚠️ Cell is empty or undefined`);
+        } else {
+          const numValue = typeof cellValue === 'number' ? cellValue : parseFloat(cellValue);
+          if (isNaN(numValue)) {
+            console.log(`[waitForCalculationCompletion] ⚠️ Cell value is not a valid number: "${cellValue}"`);
+          } else if (numValue <= 0) {
+            console.log(`[waitForCalculationCompletion] ⚠️ Cell value is not positive: ${numValue}`);
+          }
         }
         
         // 最後の試行でない場合は待機
         if (attempt < MAX_ATTEMPTS) {
+          console.log(`[waitForCalculationCompletion] Waiting ${RETRY_INTERVAL}ms before next attempt...`);
           await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
         }
-      } catch (error) {
-        console.error(`[waitForCalculationCompletion] Error reading cell on attempt ${attempt}:`, error);
-        // エラーが発生しても続行（次の試行へ）
+      } catch (error: any) {
+        console.error(`[waitForCalculationCompletion] ❌ Error reading cell on attempt ${attempt}:`, error);
+        console.error(`[waitForCalculationCompletion] Error details:`, {
+          message: error?.message,
+          code: error?.code,
+          name: error?.name,
+        });
+        
+        // クォータ超過エラーの場合は即座に失敗
+        if (error.code === 429 || error.message?.includes('Quota exceeded')) {
+          throw new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        }
+        
+        // その他のエラーは続行（次の試行へ）
+        if (attempt < MAX_ATTEMPTS) {
+          console.log(`[waitForCalculationCompletion] Continuing to next attempt despite error...`);
+        }
       }
     }
     
     // タイムアウト
-    const timeoutSeconds = (MAX_ATTEMPTS * RETRY_INTERVAL) / 1000;
-    throw new Error(`計算がタイムアウトしました（${timeoutSeconds}秒）。D11セルに値が入力されませんでした。`);
+    const totalTime = INITIAL_WAIT + (MAX_ATTEMPTS * RETRY_INTERVAL);
+    const timeoutSeconds = totalTime / 1000;
+    console.error(`[waitForCalculationCompletion] ❌ Timeout after ${timeoutSeconds} seconds`);
+    console.error(`[waitForCalculationCompletion] D11 cell did not contain a valid calculated value after ${MAX_ATTEMPTS} attempts`);
+    throw new Error(`計算がタイムアウトしました（約${timeoutSeconds}秒）。D11セルに有効な価格が入力されませんでした。スプレッドシートの数式を確認してください。`);
   }
   
   /**
