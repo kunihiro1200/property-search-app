@@ -8,17 +8,48 @@
 
 ---
 
+## 🚨 最重要：売主番号はB列（A列ではない）
+
+**絶対に間違えないでください**：
+
+- ❌ **A列は空列です**（データなし）
+- ✅ **B列が売主番号です**（`売主番号`カラム）
+
+**スプレッドシートで売主番号を検索する際は、必ずB列を検索してください。**
+
+**過去の間違い**：
+- A列で売主番号を検索してしまい、見つからなかった
+- この間違いを2回繰り返した
+
+**正しい検索方法**：
+```typescript
+// ✅ 正しい（B列を検索）
+const rows = await sheets.spreadsheets.values.get({
+  spreadsheetId: SPREADSHEET_ID,
+  range: '売主リスト!B:B', // B列を検索
+});
+
+// ❌ 間違い（A列を検索）
+const rows = await sheets.spreadsheets.values.get({
+  spreadsheetId: SPREADSHEET_ID,
+  range: '売主リスト!A:A', // A列は空列
+});
+```
+
+---
+
 ## 📋 完全なカラムマッピング表
 
 ### スプレッドシート → データベース（spreadsheetToDatabase）
 
 | 列 | スプレッドシートカラム名 | データベースカラム名 | 型 | 説明 |
 |----|---------------------|-------------------|-----|------|
-| A | `売主番号` | `seller_number` | TEXT | 売主の一意識別子 |
-| B | `名前(漢字のみ）` | `name` | TEXT | 売主名 |
-| C | `依頼者住所(物件所在と異なる場合）` | `address` | TEXT | 売主住所 |
-| D | `電話番号\nハイフン不要` | `phone_number` | TEXT | 電話番号 |
-| E | `メールアドレス` | `email` | TEXT | メールアドレス |
+| A | （空列） | - | - | 空列 |
+| B | `売主番号` | `seller_number` | TEXT | 売主の一意識別子 |
+| C | `名前(漢字のみ）` | `name` | TEXT | 売主名 |
+| D | `依頼者住所(物件所在と異なる場合）` | `address` | TEXT | 売主住所 |
+| E | `電話番号\nハイフン不要` | `phone_number` | TEXT | 電話番号 |
+| F | `メールアドレス` | `email` | TEXT | メールアドレス |
 | - | `サイト` | `inquiry_site` | TEXT | 問い合わせサイト |
 | - | `種別` | `property_type` | TEXT | 物件種別 |
 | **R** | **`物件所在地`** | **`property_address`** | **TEXT** | **物件の住所**（ブラウザでは「物件住所」と表示） |

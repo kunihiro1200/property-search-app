@@ -43,6 +43,8 @@ export class SpreadsheetSyncService {
    */
   async syncToSpreadsheet(sellerId: string): Promise<SyncResult> {
     try {
+      console.log(`📝 [SpreadsheetSync] Starting sync for seller ID: ${sellerId}`);
+      
       // Supabaseから売主データを取得
       const { data: seller, error } = await this.supabase
         .from('sellers')
@@ -51,6 +53,7 @@ export class SpreadsheetSyncService {
         .single();
 
       if (error || !seller) {
+        console.error(`❌ [SpreadsheetSync] Seller not found: ${sellerId}`);
         return {
           success: false,
           rowsAffected: 0,
@@ -58,15 +61,20 @@ export class SpreadsheetSyncService {
         };
       }
 
+      console.log(`✅ [SpreadsheetSync] Found seller: ${seller.seller_number}`);
+
       // スプレッドシート形式に変換
       const sheetRow = this.columnMapper.mapToSheet(seller as SellerData);
+      console.log(`📋 [SpreadsheetSync] Converted to sheet row`);
 
       // 売主番号で既存行を検索
       const existingRowIndex = await this.findRowBySellerId(seller.seller_number);
 
       if (existingRowIndex) {
         // 既存行を更新
+        console.log(`📝 [SpreadsheetSync] Updating existing row ${existingRowIndex}`);
         await this.sheetsClient.updateRow(existingRowIndex, sheetRow);
+        console.log(`✅ [SpreadsheetSync] Updated row ${existingRowIndex}`);
         
         // Supabaseの同期時刻を更新
         await this.updateSyncTimestamp(sellerId);
@@ -78,7 +86,9 @@ export class SpreadsheetSyncService {
         };
       } else {
         // 新規行を追加
+        console.log(`➕ [SpreadsheetSync] Adding new row for ${seller.seller_number}`);
         await this.sheetsClient.appendRow(sheetRow);
+        console.log(`✅ [SpreadsheetSync] Added new row`);
         
         // Supabaseの同期時刻を更新
         await this.updateSyncTimestamp(sellerId);
@@ -90,6 +100,7 @@ export class SpreadsheetSyncService {
         };
       }
     } catch (error: any) {
+      console.error(`❌ [SpreadsheetSync] Error:`, error.message);
       return {
         success: false,
         rowsAffected: 0,
@@ -188,9 +199,13 @@ export class SpreadsheetSyncService {
    */
   private async findRowBySellerId(sellerNumber: string): Promise<number | null> {
     try {
-      return await this.sheetsClient.findRowByColumn(this.sellerNumberColumn, sellerNumber);
-    } catch (error) {
+      console.log(`🔍 [SpreadsheetSync] Searching for seller ${sellerNumber}...`);
+      const rowIndex = await this.sheetsClient.findRowByColumn(this.sellerNumberColumn, sellerNumber);
+      console.log(`🔍 [SpreadsheetSync] Found at row index: ${rowIndex}`);
+      return rowIndex;
+    } catch (error: any) {
       // カラムが見つからない場合はnullを返す
+      console.error(`❌ [SpreadsheetSync] Error finding seller ${sellerNumber}:`, error.message);
       return null;
     }
   }

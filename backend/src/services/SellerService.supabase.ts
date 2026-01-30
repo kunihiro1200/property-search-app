@@ -977,6 +977,7 @@ export class SellerService extends BaseRepository {
         inquiryDatetime: seller.inquiry_detailed_datetime ? new Date(seller.inquiry_detailed_datetime) : undefined,
         inquiryDetailedDatetime: seller.inquiry_detailed_datetime ? new Date(seller.inquiry_detailed_datetime) : undefined,
         isUnreachable: seller.is_unreachable || false,
+        unreachableStatus: seller.unreachable_status, // 不通ステータス（文字列）
         unreachableSince: seller.unreachable_since ? new Date(seller.unreachable_since) : undefined,
         firstCallerInitials: seller.first_caller_initials,
         firstCallerEmployeeId: seller.first_caller_employee_id,
@@ -1027,6 +1028,8 @@ export class SellerService extends BaseRepository {
         // Mailing status fields
         mailingStatus: seller.mailing_status,
         mailSentDate: seller.mail_sent_date ? new Date(seller.mail_sent_date) : undefined,
+        // Valuation method field
+        valuationMethod: seller.valuation_method,
         // 内覧前伝達事項と最新状況
         viewingNotes: seller.viewing_notes,
         latestStatus: seller.latest_status,

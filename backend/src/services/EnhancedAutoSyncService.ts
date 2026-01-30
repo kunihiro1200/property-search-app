@@ -55,7 +55,7 @@ export class EnhancedAutoSyncService {
   // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
   private spreadsheetCache: any[] | null = null;
   private spreadsheetCacheExpiry: number = 0;
-  private readonly SPREADSHEET_CACHE_TTL = 15 * 60 * 1000; // 15分間キャッシュ
+  private readonly SPREADSHEET_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（クォータ対策）
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -1122,6 +1122,21 @@ export class EnhancedAutoSyncService {
       updateData.visit_assignee = String(visitAssignee);
     }
 
+    // コミュニケーションフィールドを追加
+    const phoneContactPerson = row['電話担当（任意）'];
+    const preferredContactTime = row['連絡取りやすい日、時間帯'];
+    const contactMethod = row['連絡方法'];
+    
+    if (phoneContactPerson) {
+      updateData.phone_contact_person = String(phoneContactPerson);
+    }
+    if (preferredContactTime) {
+      updateData.preferred_contact_time = String(preferredContactTime);
+    }
+    if (contactMethod) {
+      updateData.contact_method = String(contactMethod);
+    }
+
     // 契約年月を追加
     const contractYearMonth = row['契約年月 他決は分かった時点'];
     if (contractYearMonth && contractYearMonth !== '') {
@@ -1233,6 +1248,21 @@ export class EnhancedAutoSyncService {
     }
     if (visitAssignee) {
       encryptedData.visit_assignee = String(visitAssignee);
+    }
+
+    // コミュニケーションフィールドを追加
+    const phoneContactPerson = row['電話担当（任意）'];
+    const preferredContactTime = row['連絡取りやすい日、時間帯'];
+    const contactMethod = row['連絡方法'];
+    
+    if (phoneContactPerson) {
+      encryptedData.phone_contact_person = String(phoneContactPerson);
+    }
+    if (preferredContactTime) {
+      encryptedData.preferred_contact_time = String(preferredContactTime);
+    }
+    if (contactMethod) {
+      encryptedData.contact_method = String(contactMethod);
     }
 
     // 契約年月を追加
@@ -1937,7 +1967,7 @@ export class EnhancedPeriodicSyncManager {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
 
-  constructor(intervalMinutes: number = 5) {
+  constructor(intervalMinutes: number = 10) {
     this.syncService = getEnhancedAutoSyncService();
     this.intervalMinutes = intervalMinutes;
   }
@@ -1955,16 +1985,21 @@ export class EnhancedPeriodicSyncManager {
       await this.syncService.initialize();
       this.isRunning = true;
 
-      // 初回実行
+      // 初回実行を60秒後に遅延（クォータ制限対策）
       console.log(`🔄 Starting enhanced periodic sync (interval: ${this.intervalMinutes} minutes)`);
-      await this.runSync();
-
-      // 定期実行を設定
-      this.intervalId = setInterval(async () => {
+      console.log('⏰ First sync will run in 60 seconds (quota limit protection)');
+      
+      setTimeout(async () => {
         await this.runSync();
-      }, this.intervalMinutes * 60 * 1000);
+        
+        // 定期実行を設定
+        this.intervalId = setInterval(async () => {
+          await this.runSync();
+        }, this.intervalMinutes * 60 * 1000);
+        
+        console.log(`✅ Enhanced periodic sync started (every ${this.intervalMinutes} minutes)`);
+      }, 60 * 1000); // 60秒後に初回実行
 
-      console.log(`✅ Enhanced periodic sync started (every ${this.intervalMinutes} minutes)`);
     } catch (error: any) {
       console.error('❌ Failed to start enhanced periodic sync:', error.message);
       // エラーでも再試行のためにisRunningはtrueのまま

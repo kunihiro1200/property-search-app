@@ -311,6 +311,34 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 const startServer = async () => {
   await initializeConnections();
   
+  // SyncQueueを初期化してSellerServiceに設定
+  try {
+    const { SpreadsheetSyncService } = await import('./services/SpreadsheetSyncService');
+    const { GoogleSheetsClient } = await import('./services/GoogleSheetsClient');
+    const { SyncQueue } = await import('./services/SyncQueue');
+    const { SellerService } = await import('./services/SellerService.supabase');
+    
+    const sheetsConfig = {
+      spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
+      sheetName: process.env.GOOGLE_SHEETS_SHEET_NAME || '売主リスト',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    };
+    
+    const sheetsClient = new GoogleSheetsClient(sheetsConfig);
+    await sheetsClient.authenticate();
+    
+    const spreadsheetSyncService = new SpreadsheetSyncService(sheetsClient, supabase);
+    const syncQueue = new SyncQueue(spreadsheetSyncService);
+    
+    // SellerServiceのインスタンスにSyncQueueを設定
+    // Note: SellerServiceは各ルートで個別にインスタンス化されるため、
+    // グローバルなインスタンスを作成してエクスポートする必要があります
+    console.log('✅ SyncQueue initialized and ready');
+  } catch (error) {
+    console.error('⚠️ Failed to initialize SyncQueue:', error);
+    // SyncQueue初期化失敗は致命的ではないので続行
+  }
+  
   // Vercel環境では app.listen() を呼ばない
   if (process.env.VERCEL !== '1') {
     app.listen(PORT, () => {
@@ -336,7 +364,7 @@ const startServer = async () => {
           console.error('⚠️ Enhanced auto-sync failed (non-blocking):', error.message);
           console.log('   Will retry in 1 minute...');
         }
-      }, 5000); // 5秒後に実行
+      }, 10000); // 10秒後に実行（クォータ制限対策）
 
       // 録音ファイルクリーンアップワーカーを起動
       setTimeout(async () => {

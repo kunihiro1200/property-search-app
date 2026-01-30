@@ -86,8 +86,9 @@ export interface Seller {
   firstCallInitials?: string; // 一番TEL
   firstCallPerson?: string; // 1番電話
   secondCallAfterUnreachable?: boolean;
-  contactMethod?: string; // Email、Smail、電話
-  preferredContactTime?: string; // 連絡取りやすい時間帯
+  phoneContactPerson?: string; // 電話担当（任意）
+  preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  contactMethod?: string; // 連絡方法
   mailingStatus?: string; // 郵送（未、済）
   alternativeMailingAddress?: string;
   

@@ -84,13 +84,15 @@ export interface Seller {
   // 追客・連絡情報
   nextCallDate?: Date;
   unreachable?: boolean; // 不通
+  unreachableStatus?: string | null; // 不通ステータス（「不通」など）
   emailSentDate?: Date; // E/日付
   mailSentDate?: Date; // 郵/日付
   firstCallInitials?: string; // 一番TEL
   firstCallPerson?: string; // 1番電話
   secondCallAfterUnreachable?: boolean;
-  contactMethod?: string; // Email、Smail、電話
-  preferredContactTime?: string; // 連絡取りやすい時間帯
+  phoneContactPerson?: string; // 電話担当（任意）
+  preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  contactMethod?: string; // 連絡方法
   mailingStatus?: string; // 郵送（未、済）
   alternativeMailingAddress?: string;
   
@@ -382,6 +384,9 @@ export interface UpdateSellerRequest {
   exclusionAction?: string; // 除外アクション
   viewingNotes?: string; // 内覧前伝達事項
   latestStatus?: string; // 最新状況
+  phoneContactPerson?: string; // 電話担当（任意）
+  preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  contactMethod?: string; // 連絡方法
   // Phase 1 fields
   inquirySource?: string;
   inquiryYear?: number;

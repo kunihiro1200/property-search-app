@@ -28,6 +28,8 @@
 
 **管理者モードURL**: `http://localhost:5173/public/properties?canHide=true`
 
+**プロジェクトパス**: `c:\Users\kunih\sateituikyaku`
+
 **特徴**:
 - ローカルマシンで実行されている開発環境
 - Viteの開発サーバーが`npm run dev`で起動
@@ -37,6 +39,7 @@
 **確認方法**:
 - URLが`http://localhost:5173`で始まる
 - ブラウザのアドレスバーに`localhost:5173`が含まれる
+- プロセスが`c:\Users\kunih\sateituikyaku\frontend`で実行されている
 
 ---
 
@@ -64,10 +67,17 @@ http://localhost:5173/public/properties
 - ローカルマシンで実行されている開発環境を指す
 - URL: `http://localhost:5173`
 
-### ルール4: ポート番号で判断する
+### ルール4: プロジェクトパスで判断する
+
+- **`c:\Users\kunih\sateituikyaku`** = 正しい作業対象プロジェクト ✅
+- **`c:\Users\kunih\property-search-app`** = 間違ったプロジェクト（絶対に触ってはいけない）❌
+- **`c:\Users\kunih\chuukaigyosha`** = 本番稼働中のプロジェクト（絶対に触ってはいけない）❌
+
+### ルール5: ポート番号で判断する
 
 - **ポート5173** = ローカル環境（Vite開発サーバー）
-- **ポート5174** = 別のプロジェクト（`sateituikyaku`など）← **触ってはいけない**
+  - ただし、**プロジェクトパスが`sateituikyaku`であることを必ず確認**
+- **ポート5174** = 別のプロジェクト ← **触ってはいけない**
 
 ---
 
@@ -85,10 +95,18 @@ http://localhost:5173/public/properties
 - `localhost:5173` → ローカル環境
 - `property-site-frontend-kappa.vercel.app` → 本番環境
 
-### 方法3: ユーザーに確認
+### 方法3: プロジェクトパスを確認
+
+実行中のプロセスのパスを確認：
+- `c:\Users\kunih\sateituikyaku\frontend` → 正しいローカル環境 ✅
+- `c:\Users\kunih\property-search-app\frontend` → 間違った環境 ❌
+- `c:\Users\kunih\chuukaigyosha\frontend` → 間違った環境（本番稼働中）❌
+
+### 方法4: ユーザーに確認
 
 不明な場合は、必ずユーザーに確認：
 - 「これは本番環境（Vercel）ですか？ローカル環境（localhost:5173）ですか？」
+- 「プロジェクトパスは`sateituikyaku`ですか？」
 
 ---
 
@@ -120,7 +138,18 @@ http://localhost:5173/public/properties
 **URL**: `http://localhost:5174/public/properties`
 
 **判断**: ⚠️ **間違った環境！** ポート5174は別のプロジェクト
-**対応**: ユーザーに確認して、正しい環境（localhost:5173）で作業
+**対応**: ユーザーに確認して、正しい環境（localhost:5173、プロジェクトパス`sateituikyaku`）で作業
+
+---
+
+### 例4: プロジェクトパスの確認
+
+**ユーザー**: 「ローカルで画面が崩れてる」
+**URL**: `http://localhost:5173/public/properties`
+**プロセス**: `c:\Users\kunih\property-search-app\frontend`
+
+**判断**: ⚠️ **間違ったプロジェクト！** `property-search-app`は触ってはいけない
+**対応**: ユーザーに確認して、正しいプロジェクト（`sateituikyaku`）で作業
 
 ---
 
@@ -204,11 +233,13 @@ URL: 不明
 **ローカル環境**:
 - URL: `http://localhost:5173/public/properties`
 - ポート番号: `5173`
+- プロジェクトパス: `c:\Users\kunih\sateituikyaku`
 - Vite開発サーバー
 
 **絶対に触ってはいけない環境**:
-- `http://localhost:5174` ← 別のプロジェクト（`sateituikyaku`）
-- `c:\Users\kunih\sateituikyaku` ← 本番稼働中のプロジェクト
+- `http://localhost:5174` ← 別のプロジェクト
+- `c:\Users\kunih\property-search-app` ← 間違ったプロジェクト
+- `c:\Users\kunih\chuukaigyosha` ← 本番稼働中のプロジェクト
 
 **このルールを徹底することで、環境の混同を完全に防止できます。**
 

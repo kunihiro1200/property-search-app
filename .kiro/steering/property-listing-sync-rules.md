@@ -289,12 +289,73 @@ export class AthomeSheetSyncService {
 
 ---
 
+## 🚨 最重要：コメントデータ同期の必須性
+
+### ⚠️ 絶対に忘れてはいけないこと
+
+**`PropertyListingSyncService`は`property_listings`テーブルのみを同期します。**
+**コメントデータ（`property_details`テーブル）は別途`AthomeSheetSyncService`で同期が必要です。**
+
+### 新規物件追加時のチェックリスト
+
+新しい物件を追加する際は、**必ず以下の2つの同期を実行**してください：
+
+- [ ] **ステップ1**: `PropertyListingSyncService`で`property_listings`テーブルを同期
+  - 基本情報（物件番号、住所、価格、atbb_statusなど）
+  - 自動的に15分ごとに実行される
+
+- [ ] **ステップ2**: `AthomeSheetSyncService`で`property_details`テーブルを同期
+  - コメントデータ（お気に入り文言、アピールポイント、パノラマURL）
+  - **手動で実行する必要がある**（自動同期されない）
+
+### ❌ よくある間違い
+
+**間違い**: `PropertyListingSyncService`だけを実行して、コメントデータ同期を忘れる
+
+**結果**:
+- 物件一覧には表示される ✅
+- 詳細画面で基本情報は表示される ✅
+- **おすすめコメントが表示されない** ❌
+- **お気に入り文言が表示されない** ❌
+- **パノラマURLが表示されない** ❌
+
+**解決策**: 必ず`AthomeSheetSyncService`も実行する
+
+### 📝 コメントデータ同期の実行方法
+
+#### 方法1: 個別物件のコメントデータを同期（推奨）
+
+```bash
+# 例: CC105のコメントデータを同期
+npx ts-node backend/sync-cc105-comments.ts
+```
+
+**スクリプトの内容**:
+1. 業務依頼シートから個別物件スプレッドシートのIDを取得
+2. 物件タイプに応じてセル位置を決定
+3. `athome`シートからコメントデータを取得
+4. `property_details`テーブルに保存
+
+#### 方法2: `AthomeSheetSyncService`を直接使用
+
+```typescript
+import { AthomeSheetSyncService } from './backend/src/services/AthomeSheetSyncService';
+
+const athomeService = new AthomeSheetSyncService();
+
+// 物件タイプを指定して同期
+await athomeService.syncPropertyComments('CC105', 'land');
+```
+
+---
+
 ## 📊 コメントデータとパノラマURLの取得元
 
 ### コメントデータの取得フロー
 
 **ソース**: 個別物件スプレッドシートの`athome`シート
 **取得方法**: `AthomeSheetSyncService`を使用
+**重要**: **`PropertyListingSyncService`では同期されない**
 
 ### 1. **お気に入り文言（favorite_comment）**
 
@@ -455,6 +516,8 @@ await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
 
 公開物件同期のコードを書く前に、以下を確認してください：
 
+### 基本情報同期（`PropertyListingSyncService`）
+
 - [ ] 物件リストスプレッドシート（`PROPERTY_LISTING_SPREADSHEET_ID`）からデータを取得しているか？
 - [ ] **正しいカラム名`atbb成約済み/非公開`を使用しているか？**（最重要）
 - [ ] **`atbb成約済み/非公開`を最優先にしているか？**
@@ -462,24 +525,28 @@ await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
 - [ ] 業務依頼シートから「スプシURL」を補完しているか？
 - [ ] `property_listings`テーブルに同期しているか？
 - [ ] 売主データ（`sellers`テーブル）を同期していないか？
+
+### コメントデータ同期（`AthomeSheetSyncService`）
+
+- [ ] **新規物件のコメントデータを同期したか？**（最重要）
 - [ ] コメントデータは個別物件スプレッドシートの`athome`シートから取得しているか？
-- [ ] パノラマURLは動的検索で取得しているか？
+- [ ] 物件タイプに応じて正しいセル位置を使用しているか？
+- [ ] パノラマURLは`athome`シートの`N1`セルから取得しているか？
+- [ ] `property_details`テーブルに保存しているか？
 
 ---
 
 ## 🎯 実例：CC105の同期
 
-### 問題
+### 問題1: CC105が物件リストに表示されない
 
 CC105はスプレッドシート（業務依頼シート）には存在するが、ブラウザの物件リストには表示されない（同期できていない）
 
-### 原因
-
+**原因**:
 1. **間違った同期フロー**: 売主データ（`sellers`テーブル）を同期していた ❌
 2. **正しい同期フロー**: 物件リスト（`property_listings`テーブル）を同期すべき ✅
 
-### 解決策
-
+**解決策**:
 1. **`PropertyListingSyncService`を作成** ✅
    - 物件リストスプレッドシートから物件データを取得
    - 業務依頼シートから「スプシURL」を補完
@@ -491,6 +558,40 @@ CC105はスプレッドシート（業務依頼シート）には存在するが
    - 物件データの同期を開始
 
 3. **15分後にCC105が同期される** ✅
+
+---
+
+### 問題2: CC105のおすすめコメントが表示されない
+
+CC105は物件一覧に表示されるが、詳細画面でおすすめコメント、お気に入り文言、パノラマURLが表示されない
+
+**原因**:
+1. **`PropertyListingSyncService`は`property_listings`テーブルのみを同期**
+   - 基本情報（物件番号、住所、価格など）のみ
+   - コメントデータは同期しない
+
+2. **コメントデータは別途`AthomeSheetSyncService`で同期が必要**
+   - 個別物件スプレッドシートの`athome`シートから取得
+   - `property_details`テーブルに保存
+   - CC105については実行されていなかった
+
+**解決策**:
+1. **`sync-cc105-comments.ts`スクリプトを作成** ✅
+   - 業務依頼シートから個別物件スプレッドシートのIDを取得
+   - 物件タイプに応じてセル位置を決定
+   - `athome`シートからコメントデータを取得（9件のおすすめコメント）
+   - `property_details`テーブルに保存
+
+2. **スクリプトを実行** ✅
+   ```bash
+   npx ts-node backend/sync-cc105-comments.ts
+   ```
+
+3. **CC105のおすすめコメントが表示される** ✅
+
+**教訓**: 新規物件を追加する際は、必ず以下の2つの同期を実行すること
+1. `PropertyListingSyncService`で基本情報を同期
+2. `AthomeSheetSyncService`でコメントデータを同期
 
 ---
 
@@ -608,13 +709,40 @@ npx ts-node backend/check-aa12398-atbb-status.ts
 
 ### 問題4: コメントデータが表示されない
 
+**症状**: 物件一覧には表示されるが、詳細画面でおすすめコメント、お気に入り文言、パノラマURLが表示されない
+
+**原因**: `property_details`テーブルにコメントデータが同期されていない
+
 **確認事項**:
-1. 個別物件スプレッドシートに`athome`シートが存在するか？
-2. `athome`シートの正しいセル位置にデータが入力されているか？
+1. `property_details`テーブルに該当物件のレコードが存在するか？
+2. `recommended_comments`、`favorite_comment`、`athome_data`が空になっていないか？
+3. 個別物件スプレッドシートに`athome`シートが存在するか？
+4. `athome`シートの正しいセル位置にデータが入力されているか？
    - 土地: お気に入り文言（B53）、アピールポイント（B63:L79）
    - 戸建て: お気に入り文言（B142）、アピールポイント（B152:L166）
    - マンション: お気に入り文言（B150）、アピールポイント（B149:L163）
-3. `AthomeSheetSyncService`が正しく実行されているか？
+5. 業務依頼シートに個別物件スプレッドシートのURLが登録されているか？
+
+**解決策**:
+```bash
+# 1. データベースを確認
+npx ts-node backend/check-<property-number>-comments.ts
+
+# 2. コメントデータを同期
+npx ts-node backend/sync-<property-number>-comments.ts
+```
+
+**スクリプト例**（`backend/sync-<property-number>-comments.ts`）:
+```typescript
+import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
+
+const athomeService = new AthomeSheetSyncService();
+
+// 物件タイプを指定して同期
+await athomeService.syncPropertyComments('<property-number>', 'land');
+```
+
+**重要**: 新規物件を追加する際は、必ず`AthomeSheetSyncService`でコメントデータも同期してください。
 
 ### 問題5: パノラマURLが表示されない
 
@@ -646,14 +774,15 @@ npx ts-node backend/check-aa12398-atbb-status.ts
 1. ✅ 物件スプシ（物件リストスプレッドシート）に新規列が追加される
 2. ✅ その物件スプシから`property_listings`テーブルを同期（**基本的に全ての物件**）
 3. ✅ 業務依頼シートから「スプシURL」を取得して補完
-4. ✅ 個別物件スプレッドシートの`athome`シートからコメントデータを取得
-5. ✅ パノラマURLを動的検索で取得
+4. ✅ **個別物件スプレッドシートの`athome`シートからコメントデータを取得**（最重要）
+5. ✅ パノラマURLを`athome`シートの`N1`セルから取得
 
 **絶対にやってはいけないこと**:
 - ❌ 売主データ（`sellers`テーブル）を同期する
 - ❌ 業務依頼シートをメインソースにする
 - ❌ 新規案件を`atbb_status`でフィルタリングする（全て同期すべき）
 - ❌ 間違った`atbb_status`カラム名（`atbb_status`, `ATBB_status`, `ステータス`）を使用する
+- ❌ **コメントデータ同期を忘れる**（最重要）
 
 **正しいカラム名**:
 - ✅ **`atbb成約済み/非公開`** ← これが唯一の正しいカラム名
@@ -664,6 +793,10 @@ npx ts-node backend/check-aa12398-atbb-status.ts
 - **お気に入り文言**: 個別物件スプレッドシートの`athome`シート（物件種別ごとに異なるセル位置）
 - **アピールポイント**: 個別物件スプレッドシートの`athome`シート（物件種別ごとに異なるセル範囲）
 - **パノラマURL**: 個別物件スプレッドシートの`athome`シートの`N1`セル（全ての物件種別で共通）
+
+**新規物件追加時の必須チェックリスト**:
+1. ✅ `PropertyListingSyncService`で`property_listings`テーブルを同期
+2. ✅ **`AthomeSheetSyncService`で`property_details`テーブルを同期**（絶対に忘れない）
 
 **この順番が重要です！絶対に間違えないでください。**
 
