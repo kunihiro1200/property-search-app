@@ -226,11 +226,10 @@ export class SellerService extends BaseRepository {
       .select('*')
       .eq('id', sellerId);
     
-    // TODO: deleted_atカラムが追加されたら有効化する（マイグレーション051）
     // デフォルトで削除済みを除外
-    // if (!includeDeleted) {
-    //   query = query.is('deleted_at', null);
-    // }
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
     
     const { data: seller, error: sellerError } = await query.single();
 
@@ -243,11 +242,10 @@ export class SellerService extends BaseRepository {
       .select('*')
       .eq('seller_id', sellerId);
     
-    // TODO: deleted_atカラムが追加されたら有効化する（マイグレーション051）
     // デフォルトで削除済み物件を除外
-    // if (!includeDeleted) {
-    //   propertyQuery = propertyQuery.is('deleted_at', null);
-    // }
+    if (!includeDeleted) {
+      propertyQuery = propertyQuery.is('deleted_at', null);
+    }
     
     const { data: properties, error: propertyError } = await propertyQuery;
 
@@ -726,11 +724,10 @@ export class SellerService extends BaseRepository {
     // クエリを構築（物件情報も含める）
     let query = this.table<Seller>('sellers').select('*, properties(*)', { count: 'exact' });
 
-    // TODO: deleted_atカラムが追加されたら有効化する（マイグレーション051）
-    // デフォルトで削除済みを除外
-    // if (!includeDeleted) {
-    //   query = query.is('deleted_at', null);
-    // }
+    // デフォルトで削除済みを除外（マイグレーション051で追加済み）
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
 
     // フィルタ条件を適用
     if (status) {
@@ -850,11 +847,10 @@ export class SellerService extends BaseRepository {
         .ilike('seller_number', `%${lowerQuery}%`)
         .limit(50);
       
-      // TODO: deleted_atカラムが追加されたら有効化する（マイグレーション051）
-      // デフォルトで削除済みを除外
-      // if (!includeDeleted) {
-      //   sellerQuery = sellerQuery.is('deleted_at', null);
-      // }
+      // デフォルトで削除済みを除外（マイグレーション051で追加済み）
+      if (!includeDeleted) {
+        sellerQuery = sellerQuery.is('deleted_at', null);
+      }
       
       const { data: sellers, error } = await sellerQuery;
 
