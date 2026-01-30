@@ -700,7 +700,16 @@ export class SellerService extends BaseRepository {
       sortBy = 'inquiry_date',
       sortOrder = 'desc',
       includeDeleted = false, // デフォルトで削除済みを除外
+      statusCategory, // サイドバーカテゴリフィルター
     } = params;
+
+    // JST今日の日付を取得
+    const now = new Date();
+    const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    const todayJST = `${jstTime.getUTCFullYear()}-${String(jstTime.getUTCMonth() + 1).padStart(2, '0')}-${String(jstTime.getUTCDate()).padStart(2, '0')}`;
+    
+    // 未査定の基準日
+    const cutoffDate = '2025-12-08';
 
     // キャッシュキーを生成
     const cacheKey = CacheHelper.generateKey(
@@ -711,7 +720,8 @@ export class SellerService extends BaseRepository {
       assignedTo || 'all',
       sortBy,
       sortOrder,
-      includeDeleted ? 'with-deleted' : 'active-only'
+      includeDeleted ? 'with-deleted' : 'active-only',
+      statusCategory || 'all'
     );
 
     // キャッシュをチェック
@@ -727,6 +737,63 @@ export class SellerService extends BaseRepository {
     // デフォルトで削除済みを除外（マイグレーション051で追加済み）
     if (!includeDeleted) {
       query = query.is('deleted_at', null);
+    }
+
+    // サイドバーカテゴリフィルターを適用
+    if (statusCategory && statusCategory !== 'all') {
+      switch (statusCategory) {
+        case 'visitScheduled':
+          // 訪問予定（営担に入力あり AND 訪問日が今日以降）
+          query = query
+            .not('visit_assignee', 'is', null)
+            .neq('visit_assignee', '')
+            .gte('visit_date', todayJST);
+          break;
+        case 'visitCompleted':
+          // 訪問済み（営担に入力あり AND 訪問日が昨日以前）
+          query = query
+            .not('visit_assignee', 'is', null)
+            .neq('visit_assignee', '')
+            .lt('visit_date', todayJST);
+          break;
+        case 'todayCall':
+          // 当日TEL分（追客中 AND 次電日が今日以前 AND コミュニケーション情報なし AND 訪問予定/訪問済みでない）
+          query = query
+            .ilike('status', '%追客中%')
+            .lte('next_call_date', todayJST)
+            // コミュニケーション情報が全て空
+            .or('phone_contact_person.is.null,phone_contact_person.eq.')
+            .or('preferred_contact_time.is.null,preferred_contact_time.eq.')
+            .or('contact_method.is.null,contact_method.eq.')
+            // 訪問予定/訪問済みでない（営担が空 OR 訪問日が空）
+            .or('visit_assignee.is.null,visit_assignee.eq.,visit_date.is.null,visit_date.eq.');
+          break;
+        case 'todayCallWithInfo':
+          // 当日TEL（内容）（追客中 AND 次電日が今日以前 AND コミュニケーション情報あり AND 訪問予定/訪問済みでない）
+          query = query
+            .ilike('status', '%追客中%')
+            .lte('next_call_date', todayJST)
+            // コミュニケーション情報のいずれかに入力あり
+            .or('phone_contact_person.neq.,preferred_contact_time.neq.,contact_method.neq.')
+            // 訪問予定/訪問済みでない（営担が空 OR 訪問日が空）
+            .or('visit_assignee.is.null,visit_assignee.eq.,visit_date.is.null,visit_date.eq.');
+          break;
+        case 'unvaluated':
+          // 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
+          query = query
+            .ilike('status', '%追客中%')
+            .gte('inquiry_date', cutoffDate)
+            .or('visit_assignee.is.null,visit_assignee.eq.')
+            .is('valuation_amount_1', null)
+            .is('valuation_amount_2', null)
+            .is('valuation_amount_3', null)
+            .neq('mailing_status', '不要');
+          break;
+        case 'mailingPending':
+          // 査定（郵送）（郵送ステータスが「未」）
+          query = query.eq('mailing_status', '未');
+          break;
+      }
     }
 
     // フィルタ条件を適用

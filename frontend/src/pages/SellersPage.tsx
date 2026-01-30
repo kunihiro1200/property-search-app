@@ -266,7 +266,7 @@ export default function SellersPage() {
 
   useEffect(() => {
     fetchSellers();
-  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly]);
+  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory]);
 
   const fetchSellers = async () => {
     try {
@@ -287,6 +287,11 @@ export default function SellersPage() {
       }
       if (showUnreachableOnly) {
         params.isUnreachable = true;
+      }
+      
+      // サイドバーカテゴリフィルター
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.statusCategory = selectedCategory;
       }
       
       const response = await api.get('/api/sellers', { params });
@@ -328,7 +333,8 @@ export default function SellersPage() {
     setPage(0);
   };
 
-  const filteredSellers = getFilteredSellers();
+  // バックエンドでフィルタリングするため、sellersをそのまま使用
+  const filteredSellers = sellers;
 
   return (
     <Container maxWidth="xl">
@@ -401,7 +407,10 @@ export default function SellersPage() {
           <SellerStatusSidebar
             categoryCounts={categoryCounts}
             selectedCategory={selectedCategory}
-            onCategorySelect={setSelectedCategory}
+            onCategorySelect={(category) => {
+              setSelectedCategory(category);
+              setPage(0); // カテゴリが変わったらページを0にリセット
+            }}
             isCallMode={false}
             sellers={sellers}
             loading={sidebarLoading}

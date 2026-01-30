@@ -417,6 +417,8 @@ export interface ListSellersParams {
   duplicateConfirmed?: boolean;
   // Deletion sync filter
   includeDeleted?: boolean; // Default: false (exclude deleted sellers)
+  // サイドバーカテゴリフィルター
+  statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
 }
 
 export interface PaginatedResult<T> {
