@@ -34,6 +34,9 @@ export function useSellerStatus(seller: Seller): string[] {
     // 依存配列: ステータス計算に必要なフィールドのみ
     seller.next_call_date,
     seller.visit_date,
+    seller.visitDate, // camelCase版
+    seller.visit_assignee, // 営担（snake_case）
+    seller.visitAssignee, // 営担（camelCase）
     seller.phone_person,
     seller.phone_contact_person, // 電話担当（任意）
     seller.phoneContactPerson, // camelCase版
@@ -47,5 +50,7 @@ export function useSellerStatus(seller: Seller): string[] {
     seller.inquiryDate, // 反響日付（camelCase）
     seller.pinrichStatus,
     seller.pinrich,
+    seller.status, // 状況（当社）
+    seller.situation_company, // 状況（当社）snake_case
   ]);
 }

@@ -34,13 +34,17 @@ import { Seller } from '../types';
 // ステータスカテゴリの型定義
 // todayCall: コミュニケーション情報が全て空の当日TEL
 // todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL
-export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'unvaluated' | 'mailingPending';
+// visitScheduled: 訪問予定（営担に入力あり、訪問日が今日以降）
+// visitCompleted: 訪問済み（営担に入力あり、訪問日が昨日以前）
+export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
 
 // カテゴリカウントのインターフェース
 export interface CategoryCounts {
   all: number;
   todayCall: number;           // 当日TEL分（コミュニケーション情報なし）
   todayCallWithInfo: number;   // 当日TEL（内容）（コミュニケーション情報あり）
+  visitScheduled: number;      // 訪問予定（営担に入力あり、訪問日が今日以降）
+  visitCompleted: number;      // 訪問済み（営担に入力あり、訪問日が昨日以前）
   unvaluated: number;
   mailingPending: number;
 }
@@ -117,6 +121,98 @@ const isOnOrAfter = (dateStr: string | Date | undefined | null, targetDate: Date
   date.setHours(0, 0, 0, 0);
   
   return date.getTime() >= target.getTime();
+};
+
+/**
+ * 日付が昨日以前かどうかを判定
+ */
+const isYesterdayOrBefore = (dateStr: string | Date | undefined | null): boolean => {
+  const date = safeParseDate(dateStr);
+  if (!date) return false;
+  
+  const today = getTodayJST();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(23, 59, 59, 999);
+  
+  return date.getTime() <= yesterday.getTime();
+};
+
+/**
+ * 営担（visitAssignee）に入力があるかどうかを判定
+ */
+const hasVisitAssignee = (seller: Seller | any): boolean => {
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  return visitAssignee && visitAssignee.trim() !== '';
+};
+
+/**
+ * 訪問予定判定（営担に入力あり、訪問日が今日以降）
+ * 
+ * 【サイドバー表示】「訪問予定（イニシャル）」
+ * 
+ * 条件:
+ * - 営担（visitAssignee）に入力がある
+ * - 訪問日（visitDate）が今日以降
+ * 
+ * @param seller 売主データ
+ * @returns 訪問予定対象かどうか
+ */
+export const isVisitScheduled = (seller: Seller | any): boolean => {
+  if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  const visitDate = seller.visitDate || seller.visit_date;
+  if (!visitDate) {
+    return false;
+  }
+  
+  const today = getTodayJST();
+  return isOnOrAfter(visitDate, today);
+};
+
+/**
+ * 訪問済み判定（営担に入力あり、訪問日が昨日以前）
+ * 
+ * 【サイドバー表示】「訪問済み（イニシャル）」
+ * 
+ * 条件:
+ * - 営担（visitAssignee）に入力がある
+ * - 訪問日（visitDate）が昨日以前
+ * 
+ * @param seller 売主データ
+ * @returns 訪問済み対象かどうか
+ */
+export const isVisitCompleted = (seller: Seller | any): boolean => {
+  if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  const visitDate = seller.visitDate || seller.visit_date;
+  if (!visitDate) {
+    return false;
+  }
+  
+  return isYesterdayOrBefore(visitDate);
+};
+
+/**
+ * 訪問予定/訪問済みの表示ラベルを取得
+ * 
+ * @param seller 売主データ
+ * @param type 'scheduled' | 'completed'
+ * @returns 表示ラベル（例: "訪問予定(Y)"、"訪問済み(I)"）
+ */
+export const getVisitStatusLabel = (seller: Seller | any, type: 'scheduled' | 'completed'): string => {
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  const prefix = type === 'scheduled' ? '訪問予定' : '訪問済み';
+  
+  if (visitAssignee && visitAssignee.trim() !== '') {
+    return `${prefix}(${visitAssignee})`;
+  }
+  
+  return prefix;
 };
 
 /**
@@ -282,10 +378,11 @@ const isValuationNotRequired = (seller: Seller | any): boolean => {
  * 未査定判定
  * 
  * 条件:
- * - 査定額1, 2, 3が全て空欄（null, undefined, 0）
+ * - 査定額1, 2, 3が全て空欄（自動計算と手動入力の両方）
  * - 反響日付が2025/12/8以降
  * - 査定不要ではない
  * - 営担（visitAssignee）が空欄
+ * - 状況（当社）に「追客中」が含まれる
  * 
  * @param seller 売主データ
  * @returns 未査定対象かどうか
@@ -293,11 +390,18 @@ const isValuationNotRequired = (seller: Seller | any): boolean => {
  * Requirements: 2.2
  */
 export const isUnvaluated = (seller: Seller | any): boolean => {
-  // 未査定の基準日
+  // 未査定の基準日: 2025/12/8
   const CUTOFF_DATE = new Date('2025-12-08');
   
   // 査定不要の場合は未査定として表示しない
   if (isValuationNotRequired(seller)) {
+    return false;
+  }
+  
+  // 状況（当社）に「追客中」が含まれるかチェック
+  const status = seller.status || seller.situation_company || '';
+  const isFollowingUp = typeof status === 'string' && status.includes('追客中');
+  if (!isFollowingUp) {
     return false;
   }
   
@@ -309,10 +413,15 @@ export const isUnvaluated = (seller: Seller | any): boolean => {
     return false;
   }
   
-  // 査定額が全て空欄かチェック
+  // 査定額が全て空欄かチェック（自動計算と手動入力の両方）
+  // valuationAmount1/2/3: 通常の査定額（手動入力優先、なければ自動計算）
+  // manualValuationAmount1/2/3: 手動入力査定額（存在する場合）
   const hasNoValuation = !seller.valuationAmount1 && 
                          !seller.valuationAmount2 && 
-                         !seller.valuationAmount3;
+                         !seller.valuationAmount3 &&
+                         !seller.manualValuationAmount1 &&
+                         !seller.manualValuationAmount2 &&
+                         !seller.manualValuationAmount3;
   
   if (!hasNoValuation) {
     return false;
@@ -320,7 +429,7 @@ export const isUnvaluated = (seller: Seller | any): boolean => {
   
   // 反響日付が基準日以降かチェック
   // inquiryDateまたはinquiryDetailedDatetimeを使用
-  const inquiryDate = seller.inquiryDetailedDatetime || seller.inquiryDate;
+  const inquiryDate = seller.inquiryDetailedDatetime || seller.inquiryDate || seller.inquiry_date;
   
   return isOnOrAfter(inquiryDate, CUTOFF_DATE);
 };
@@ -353,6 +462,8 @@ export const getCategoryCounts = (sellers: (Seller | any)[]): CategoryCounts => 
     all: sellers.length,
     todayCall: sellers.filter(isTodayCall).length,
     todayCallWithInfo: sellers.filter(isTodayCallWithInfo).length,
+    visitScheduled: sellers.filter(isVisitScheduled).length,
+    visitCompleted: sellers.filter(isVisitCompleted).length,
     unvaluated: sellers.filter(isUnvaluated).length,
     mailingPending: sellers.filter(isMailingPending).length,
   };
@@ -376,6 +487,10 @@ export const filterSellersByCategory = (
       return sellers.filter(isTodayCall);
     case 'todayCallWithInfo':
       return sellers.filter(isTodayCallWithInfo);
+    case 'visitScheduled':
+      return sellers.filter(isVisitScheduled);
+    case 'visitCompleted':
+      return sellers.filter(isVisitCompleted);
     case 'unvaluated':
       return sellers.filter(isUnvaluated);
     case 'mailingPending':

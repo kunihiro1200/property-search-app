@@ -141,6 +141,8 @@ function getTodayJST(): Date {
  * ※「追客中」「除外後追客中」「他決→追客中」など、「追客中」という文言を含む全ての状況が対象
  * 
  * 以下の順序でチェックし、全ての条件を満たすステータスを配列で返します：
+ * 0. 訪問予定 - 営担に入力あり AND 訪問日が今日以降
+ * 0. 訪問済み - 営担に入力あり AND 訪問日が昨日以前
  * 1. 当日TEL - 次電日が今日以前の場合
  *    - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）のいずれかに入力あり → 当日TEL(内容)
  *    - どれも入力なし → 当日TEL分
@@ -162,6 +164,25 @@ export function calculateSellerStatus(seller: Seller): string[] {
   // 追客中でない場合は、ステータスを表示しない
   if (!isFollowingUp) {
     return statuses;
+  }
+
+  // 営担（visitAssignee）を取得
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  const hasVisitAssignee = visitAssignee && visitAssignee.trim() !== '';
+  
+  // 訪問日を取得
+  const visitDateStr = seller.visit_date || seller.visitDate;
+  const visitDate = parseDate(visitDateStr as string | null);
+
+  // 0. 訪問予定/訪問済みチェック（営担に入力がある場合のみ）
+  if (hasVisitAssignee && visitDate) {
+    if (visitDate >= today) {
+      // 訪問日が今日以降 → 訪問予定
+      statuses.push(`訪問予定(${visitAssignee})`);
+    } else {
+      // 訪問日が昨日以前 → 訪問済み
+      statuses.push(`訪問済み(${visitAssignee})`);
+    }
   }
 
   // 次電日を取得（複数箇所で使用）

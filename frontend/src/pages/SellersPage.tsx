@@ -115,6 +115,10 @@ export default function SellersPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // サイドバー用の全売主リスト（カテゴリカウント用）
+  const [allSellersForSidebar, setAllSellersForSidebar] = useState<Seller[]>([]);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+  
   // ページ状態をsessionStorageから復元
   const [page, setPage] = useState(() => {
     const saved = sessionStorage.getItem('sellersPage');
@@ -201,6 +205,7 @@ export default function SellersPage() {
           hasChanges: true,
         });
         fetchSellers();
+        fetchAllSellersForSidebar(); // サイドバーデータも更新
       }
     },
     onSyncError: (error) => {
@@ -208,10 +213,9 @@ export default function SellersPage() {
     },
   });
 
-  // カテゴリ別の売主数をカウント（ユーティリティ関数を使用）
-  // 注意: sellersは現在のページのデータのみなので、Allカウントはtotalを使用
+  // カテゴリ別の売主数をカウント（サイドバー用の全売主データを使用）
   const categoryCounts = {
-    ...getStatusCategoryCounts(sellers),
+    ...getStatusCategoryCounts(allSellersForSidebar),
     all: total, // ページネーション前の全体件数を使用
   };
 
@@ -219,6 +223,32 @@ export default function SellersPage() {
   const getFilteredSellers = () => {
     return filterSellersByCategory(sellers, selectedCategory);
   };
+
+  // サイドバー用の全売主データを取得（カテゴリカウント用）
+  const fetchAllSellersForSidebar = async () => {
+    try {
+      setSidebarLoading(true);
+      const response = await api.get('/api/sellers', {
+        params: {
+          page: 1,
+          pageSize: 500, // サイドバー用に十分な件数を取得
+          sortBy: 'inquiry_date',
+          sortOrder: 'desc',
+        },
+      });
+      setAllSellersForSidebar(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch sellers for sidebar:', error);
+      setAllSellersForSidebar([]);
+    } finally {
+      setSidebarLoading(false);
+    }
+  };
+
+  // 初回ロード時にサイドバー用データを取得
+  useEffect(() => {
+    fetchAllSellersForSidebar();
+  }, []);
 
   useEffect(() => {
     fetchSellers();
@@ -359,7 +389,8 @@ export default function SellersPage() {
             selectedCategory={selectedCategory}
             onCategorySelect={setSelectedCategory}
             isCallMode={false}
-            sellers={sellers}
+            sellers={allSellersForSidebar}
+            loading={sidebarLoading}
           />
 
           {/* メインコンテンツ */}
