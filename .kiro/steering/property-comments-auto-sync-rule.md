@@ -37,8 +37,8 @@
 ### Phase 4.5/4.6: property_listings同期
 
 **同期内容**:
-- `property_about` - **こちらの物件について**（物件リストスプレッドシートのBQ列から）
-- その他の物件基本情報
+- 物件基本情報（物件番号、住所、価格など）
+- **注意**: `property_about`はPhase 4.5/4.6では同期されない（Phase 4.7で同期）
 
 ### Phase 4.7: property_details同期
 
@@ -53,6 +53,8 @@
 - `recommended_comments` - アピールポイント（配列）（個別物件スプレッドシートのathomeシートから）
 - `athome_data` - パノラマURL（配列）（個別物件スプレッドシートのathomeシートから）
 - **`property_about` - こちらの物件について（物件リストスプレッドシートのBQ列から）** ← **2026年1月30日追加**
+
+**🚨 重要**: `property_about`は`AthomeSheetSyncService`ではなく、`PropertyService.getPropertyAbout()`を使用して物件リストスプレッドシートのBQ列から取得します。
 
 ---
 
@@ -93,6 +95,20 @@ for (const propertyNumber of propertyListingsNumbers) {
   if (!propertyDetailsNumbers.has(propertyNumber) || emptyCommentsPropertyNumbers.has(propertyNumber)) {
     missingPropertyNumbers.push(propertyNumber);
   }
+}
+
+// 🚨 重要: property_aboutは物件リストスプレッドシートのBQ列から取得
+// AthomeSheetSyncServiceではなく、PropertyService.getPropertyAbout()を使用
+const { PropertyService } = await import('./PropertyService');
+const propertyService = new PropertyService();
+const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
+
+if (propertyAbout) {
+  await this.supabase
+    .from('property_details')
+    .update({ property_about: propertyAbout })
+    .eq('property_number', propertyNumber);
+  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
 }
 ```
 
@@ -195,6 +211,22 @@ npx ts-node backend/sync-<property-number>-comments.ts
 
 **解決策**: スプレッドシートの`N1`セルにパノラマURLを入力する
 
+### 問題3: 「こちらの物件について」（property_about）が同期されない
+
+**原因**: 物件リストスプレッドシートのBQ列（●内覧前伝達事項）にデータが入力されていない
+
+**⚠️ 注意**: 
+- ❌ athomeシートを確認しても意味がない（取得元が違う）
+- ✅ 物件リストスプレッドシートのBQ列を確認する
+
+**解決策**: 
+1. 物件リストスプレッドシートのBQ列（●内覧前伝達事項）にデータを入力
+2. 5分後に自動同期される
+3. 緊急時は手動同期スクリプトを実行:
+   ```bash
+   npx ts-node backend/sync-<property-number>-property-about.ts
+   ```
+
 ---
 
 ## 📊 自動同期のタイミング
@@ -220,6 +252,15 @@ npx ts-node backend/sync-<property-number>-comments.ts
 4. ✅ **`property_about`も自動同期する**（2026年1月30日追加）
 5. ✅ **手動同期は不要**
 
+**🚨 最重要：取得元の違い**:
+
+| フィールド | 取得元 | 取得方法 |
+|-----------|--------|---------|
+| お気に入り文言 | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
+| アピールポイント | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
+| パノラマURL | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
+| **こちらの物件について** | **物件リストスプレッドシートのBQ列** | **`PropertyService.getPropertyAbout()`** |
+
 **このルールを徹底することで、コメントデータの同期漏れを完全に防止できます。**
 
 ---
@@ -229,3 +270,4 @@ npx ts-node backend/sync-<property-number>-comments.ts
 **更新履歴**: 
 - 2026年1月30日: Phase 4.7を改善して、コメントデータが空のレコードも同期対象にする
 - 2026年1月30日: Phase 4.7に`property_about`の自動同期を追加（物件リストスプレッドシートのBQ列から取得）
+- 2026年1月30日: 取得元の違いを明確化（athomeシート vs 物件リストスプレッドシートBQ列）

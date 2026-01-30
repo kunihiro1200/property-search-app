@@ -1,7 +1,30 @@
 # コメントデータ同期失敗の防止策
 
 **作成日**: 2026年1月28日  
+**最終更新日**: 2026年1月30日  
 **目的**: スプレッドシートにデータが存在するのに同期できない問題を防ぐ
+
+---
+
+## 🚨 最重要：コメントデータの取得元定義
+
+### 「こちらの物件について」（property_about）
+
+**⚠️ 絶対に間違えないこと**:
+- ❌ 個別物件スプレッドシートのathomeシートから取得 ← **間違い**
+- ✅ **物件リストスプレッドシートのBQ列（●内覧前伝達事項）から取得** ← **正しい**
+
+| フィールド | データベースカラム | 取得元 | 列位置 | ヘッダー名 |
+|-----------|------------------|--------|--------|-----------|
+| **こちらの物件について** | `property_about` | **物件リストスプレッドシート** | **BQ列** | **●内覧前伝達事項** |
+
+### その他のコメントデータ
+
+| フィールド | データベースカラム | 取得元 | セル位置（物件種別ごと） |
+|-----------|------------------|--------|------------------------|
+| お気に入り文言 | `favorite_comment` | 個別物件スプレッドシートの`athome`シート | 土地: B53, 戸建て: B142, マンション: B150 |
+| アピールポイント | `recommended_comments` | 個別物件スプレッドシートの`athome`シート | 土地: B63:L79, 戸建て: B152:L166, マンション: B149:L163 |
+| パノラマURL | `athome_data` | 個別物件スプレッドシートの`athome`シート | 全種別共通: N1 |
 
 ---
 
@@ -74,6 +97,7 @@ if (propertyError || !property) {
 }
 
 // AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
+// （お気に入り文言、アピールポイント、パノラマURL）
 const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
 const athomeSheetSyncService = new AthomeSheetSyncService();
 
@@ -89,12 +113,27 @@ if (syncSuccess) {
   console.error(`❌ ${propertyNumber}: Failed to sync comments from spreadsheet`);
   failed++;
 }
+
+// 🚨 重要: property_aboutは物件リストスプレッドシートのBQ列から取得
+// （athomeシートからではない）
+const { PropertyService } = await import('./PropertyService');
+const propertyService = new PropertyService();
+const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
+
+if (propertyAbout) {
+  await this.supabase
+    .from('property_details')
+    .update({ property_about: propertyAbout })
+    .eq('property_number', propertyNumber);
+  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
+}
 ```
 
 **効果**:
 - ✅ 新規物件が追加されたとき、自動的にスプレッドシートからコメントデータを取得
 - ✅ 空のレコードを作成しない
 - ✅ ユーザーはすぐにコメントを見ることができる
+- ✅ **`property_about`は物件リストスプレッドシートのBQ列から取得**（2026年1月30日追加）
 
 ### 対策2: `/complete`エンドポイントの自動同期
 
@@ -138,11 +177,16 @@ if (needsSync) {
 
 ```
 1. 新規物件がproperty_listingsに追加される
-2. EnhancedAutoSyncServiceが実行される
+2. EnhancedAutoSyncServiceが実行される（5分ごと）
 3. property_detailsに物件が存在しないことを検出
 4. AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
-5. property_detailsに保存（データあり）
-6. ユーザーは公開物件サイトでコメントを見ることができる
+   - お気に入り文言（athomeシートから）
+   - アピールポイント（athomeシートから）
+   - パノラマURL（athomeシートから）
+5. PropertyService.getPropertyAbout()を使用してproperty_aboutを取得
+   - 🚨 物件リストスプレッドシートのBQ列（●内覧前伝達事項）から取得
+6. property_detailsに保存（データあり）
+7. ユーザーは公開物件サイトでコメントを見ることができる
 ```
 
 ### フロー2: 既存物件でコメントがnullの場合
@@ -152,8 +196,10 @@ if (needsSync) {
 2. /completeエンドポイントが呼ばれる
 3. property_detailsを確認 → コメントデータがnull
 4. AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
-5. property_detailsを更新（データあり）
-6. ユーザーはコメントを見ることができる
+5. PropertyService.getPropertyAbout()を使用してproperty_aboutを取得
+   - 🚨 物件リストスプレッドシートのBQ列（●内覧前伝達事項）から取得
+6. property_detailsを更新（データあり）
+7. ユーザーはコメントを見ることができる
 ```
 
 ---
@@ -162,10 +208,16 @@ if (needsSync) {
 
 ### 第1層: `EnhancedAutoSyncService`
 
-**タイミング**: 新規物件追加時（自動、15分ごと）  
+**タイミング**: 新規物件追加時（自動、5分ごと）  
 **役割**: スプレッドシートからコメントデータを取得して保存  
 **効果**: 新規物件のコメントデータが確実に同期される  
 **リトライ**: 3回まで自動リトライ（1秒間隔）
+
+**同期内容**:
+- `favorite_comment` - お気に入り文言（athomeシートから）
+- `recommended_comments` - アピールポイント（athomeシートから）
+- `athome_data` - パノラマURL（athomeシートから）
+- **`property_about` - こちらの物件について（物件リストスプレッドシートのBQ列から）** ← 2026年1月30日追加
 
 ### 第2層: `/complete`エンドポイントの自動同期
 
@@ -265,10 +317,15 @@ npx ts-node backend/monitor-comment-sync-status.ts
    WHERE property_number = 'AA13453';
    ```
 
+4. **「こちらの物件について」が同期されない場合**:
+   - 物件リストスプレッドシートのBQ列（●内覧前伝達事項）にデータがあるか確認
+   - ❌ athomeシートを確認しても意味がない（取得元が違う）
+
 **解決策**:
 - スプレッドシートにデータがない → スプレッドシートを更新
 - 業務リストに物件がない → 業務リストに追加
 - 物件種別が間違っている → `property_listings`を更新
+- **「こちらの物件について」がない → 物件リストスプレッドシートのBQ列を確認**
 
 ### 問題2: 同期が遅い
 
@@ -300,7 +357,11 @@ npx ts-node backend/monitor-comment-sync-status.ts
 - [ ] `property_listings`に物件を追加
 - [ ] 業務リストに物件を追加（`スプシURL`を設定）
 - [ ] 個別物件スプレッドシートの`athome`シートにコメントデータを入力
-- [ ] `EnhancedAutoSyncService`が自動実行される（15分ごと）
+  - お気に入り文言
+  - アピールポイント
+  - パノラマURL（N1セル）
+- [ ] **物件リストスプレッドシートのBQ列（●内覧前伝達事項）に「こちらの物件について」を入力**
+- [ ] `EnhancedAutoSyncService`が自動実行される（5分ごと）
 - [ ] `property_details`にコメントデータが保存されたことを確認
 
 ### 既存物件でコメントがnullの場合
@@ -367,12 +428,14 @@ COMMENT_SYNC_FAILURE_PREVENTION.md参照。
 1. ✅ `EnhancedAutoSyncService`を修正（スプレッドシートからデータを取得）
 2. ✅ `/complete`エンドポイントに自動同期を追加（セーフティネット）
 3. ✅ 多層防御戦略を実装（第1層 + 第2層）
+4. ✅ **`property_about`の自動同期を追加（物件リストスプレッドシートのBQ列から）**（2026年1月30日）
 
 ### 効果
 
 - ✅ 新規物件のコメントデータが確実に同期される
 - ✅ 既存物件でコメントがnullの場合も自動修正される
 - ✅ ユーザーは常にコメントを見ることができる
+- ✅ **「こちらの物件について」も自動同期される**
 
 ### 今後の改善
 
@@ -385,8 +448,11 @@ COMMENT_SYNC_FAILURE_PREVENTION.md参照。
 
 ---
 
-**最終更新日**: 2026年1月28日  
+**最終更新日**: 2026年1月30日  
 **ステータス**: ✅ 対策実装完了
+**更新履歴**:
+- 2026年1月28日: 初版作成
+- 2026年1月30日: `property_about`の取得元を明記（物件リストスプレッドシートのBQ列）、Phase 4.7に自動同期を追加
 
 
 ---
