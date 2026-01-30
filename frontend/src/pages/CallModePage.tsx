@@ -874,16 +874,6 @@ const CallModePage = () => {
       setEditedManualValuationAmount3('');
       console.log('査定額を査定計算セクションに表示');
 
-      // 郵送ステータスの初期化
-      setEditedMailingStatus(sellerData.mailingStatus || '');
-      if (sellerData.mailSentDate) {
-        const mailSentDateObj = new Date(sellerData.mailSentDate);
-        const formattedMailSentDate = mailSentDateObj.toISOString().split('T')[0];
-        setEditedMailSentDate(formattedMailSentDate);
-      } else {
-        setEditedMailSentDate('');
-      }
-
       // 査定方法の初期化
       setEditedValuationMethod(sellerData.valuationMethod || '');
 
@@ -1506,55 +1496,6 @@ const CallModePage = () => {
       setError(err.response?.data?.error?.message || '手入力査定額のクリアに失敗しました');
     } finally {
       setSavingManualValuation(false);
-    }
-  };
-
-  // 郵送ステータス更新ハンドラー
-  const handleMailingStatusChange = async (status: '未' | '済' | '不要') => {
-    try {
-      setSavingMailingStatus(true);
-      setError(null);
-
-      // 同じステータスをクリックした場合は解除（空文字に）
-      const newStatus = editedMailingStatus === status ? '' : status;
-
-      const updateData: { mailingStatus: string; mailSentDate?: string | null } = {
-        mailingStatus: newStatus,
-      };
-
-      // 「済」の場合は郵送日を今日の日付で設定、解除の場合はクリア
-      if (newStatus === '済') {
-        const today = new Date().toISOString().split('T')[0];
-        updateData.mailSentDate = today;
-      } else if (newStatus === '') {
-        updateData.mailSentDate = null;
-      }
-
-      await api.put(`/api/sellers/${id}`, updateData);
-
-      // ローカル状態を更新
-      setEditedMailingStatus(newStatus);
-      if (newStatus === '済') {
-        const today = new Date().toISOString().split('T')[0];
-        setEditedMailSentDate(today);
-      } else if (newStatus === '') {
-        setEditedMailSentDate('');
-      }
-
-      if (newStatus === '') {
-        setSuccessMessage('ステータスを解除しました');
-      } else {
-        setSuccessMessage(`「${newStatus}」に更新しました`);
-      }
-      
-      // 3秒後にメッセージをクリア
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'ステータスの更新に失敗しました');
-    } finally {
-      setSavingMailingStatus(false);
     }
   };
 
