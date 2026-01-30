@@ -342,6 +342,7 @@ export class EnhancedAutoSyncService {
       };
 
       // 1. アクティブな契約をチェック
+      // 専任契約中・一般契約中の売主は削除をブロック
       const activeContractStatuses = ['専任契約中', '一般契約中'];
       if (activeContractStatuses.includes(seller.status)) {
         details.hasActiveContract = true;
@@ -353,43 +354,12 @@ export class EnhancedAutoSyncService {
         };
       }
 
-      // 2. 最近のアクティビティをチェック
-      const recentActivityDays = config.recentActivityDays;
-      const recentDate = new Date();
-      recentDate.setDate(recentDate.getDate() - recentActivityDays);
+      // 注意: 以下のチェックは削除済み（2026-01-31）
+      // - 最近のアクティビティチェック（7日以内の更新）
+      // - 将来の電話予定チェック
+      // スプレッドシートから削除されたら即座に削除同期する
 
-      // updated_atまたはnext_call_dateをチェック
-      const lastActivityDate = seller.updated_at ? new Date(seller.updated_at) : null;
-      const nextCallDate = seller.next_call_date ? new Date(seller.next_call_date) : null;
-
-      if (lastActivityDate && lastActivityDate > recentDate) {
-        details.hasRecentActivity = true;
-        details.lastActivityDate = lastActivityDate;
-        
-        if (config.strictValidation) {
-          return {
-            canDelete: false,
-            reason: `Recent activity within ${recentActivityDays} days`,
-            requiresManualReview: true,
-            details,
-          };
-        }
-      }
-
-      if (nextCallDate && nextCallDate > new Date()) {
-        details.hasRecentActivity = true;
-        
-        if (config.strictValidation) {
-          return {
-            canDelete: false,
-            reason: 'Future call scheduled',
-            requiresManualReview: true,
-            details,
-          };
-        }
-      }
-
-      // 3. アクティブな物件リストをチェック
+      // 2. アクティブな物件リストをチェック
       const { data: propertyListings, error: listingsError } = await this.supabase
         .from('property_listings')
         .select('id')
