@@ -54,7 +54,8 @@ export interface Seller {
   
   // 反響情報
   inquiryYear: number;
-  // inquiry_date は削除（DBに存在しない）
+  inquiryDate?: string | Date; // 反響日付（camelCase）
+  inquiry_date?: string | null; // 反響日付（snake_case）- ステータス計算用
   inquiryDetailedDateTime?: string | Date;
   inquiryDetailedDatetime?: string | Date; // バックエンド互換用（小文字t）
   inquirySite?: string; // サイト（ウ、L等）
@@ -72,6 +73,7 @@ export interface Seller {
   valuationAmount3?: number;
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuation_method?: string | null; // 査定方法 - snake_case版
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
   
@@ -87,8 +89,11 @@ export interface Seller {
   firstCallPerson?: string; // 1番電話
   secondCallAfterUnreachable?: boolean;
   phoneContactPerson?: string; // 電話担当（任意）
+  phone_contact_person?: string | null; // 電話担当（任意）- snake_case版
   preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  preferred_contact_time?: string | null; // 連絡取りやすい日、時間帯 - snake_case版
   contactMethod?: string; // 連絡方法
+  contact_method?: string | null; // 連絡方法 - snake_case版
   mailingStatus?: string; // 郵送（未、済）
   alternativeMailingAddress?: string;
   
@@ -127,6 +132,7 @@ export interface Seller {
   // Pinrich
   pinrichStatus?: string;
   pinrich?: string | null; // スプレッドシートBF列（Pinrich）
+  pinrich_status?: string | null; // Pinrichステータス - snake_case版
   
   // ステータス（計算されたもの）
   statusList?: string[]; // 計算されたステータスの配列
@@ -167,7 +173,6 @@ export interface Seller {
   // Phase 1 backward compatibility
   inquirySource?: string; // alias for inquirySite
   inquiryDatetime?: string | Date; // alias for inquiryDetailedDateTime
-  // inquiry_date は削除（DBに存在しない）
   isUnreachable?: boolean; // alias for unreachable
   unreachableSince?: string | Date;
   firstCallerInitials?: string; // alias for firstCallInitials

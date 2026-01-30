@@ -1138,6 +1138,12 @@ export class EnhancedAutoSyncService {
       updateData.contact_method = String(contactMethod);
     }
 
+    // 査定方法を追加
+    const valuationMethod = row['査定方法'];
+    if (valuationMethod) {
+      updateData.valuation_method = String(valuationMethod);
+    }
+
     // 契約年月を追加
     const contractYearMonth = row['契約年月 他決は分かった時点'];
     if (contractYearMonth && contractYearMonth !== '') {
@@ -1265,6 +1271,12 @@ export class EnhancedAutoSyncService {
     }
     if (contactMethod) {
       encryptedData.contact_method = String(contactMethod);
+    }
+
+    // 査定方法を追加
+    const valuationMethod = row['査定方法'];
+    if (valuationMethod) {
+      encryptedData.valuation_method = String(valuationMethod);
     }
 
     // 契約年月を追加
@@ -1568,15 +1580,16 @@ export class EnhancedAutoSyncService {
 
       console.log(`📊 Total properties in property_listings: ${propertyListingsNumbers.size}`);
 
-      // 2. property_detailsから全物件番号を取得
+      // 2. property_detailsから全物件番号を取得（コメントデータが空かどうかも確認）
       const propertyDetailsNumbers = new Set<string>();
+      const emptyCommentsPropertyNumbers = new Set<string>(); // コメントデータが空の物件
       offset = 0;
       hasMore = true;
 
       while (hasMore) {
         const { data: details, error } = await this.supabase
           .from('property_details')
-          .select('property_number')
+          .select('property_number, recommended_comments')
           .range(offset, offset + pageSize - 1);
 
         if (error) {
@@ -1589,6 +1602,14 @@ export class EnhancedAutoSyncService {
           for (const detail of details) {
             if (detail.property_number) {
               propertyDetailsNumbers.add(detail.property_number);
+              
+              // recommended_commentsが空または未設定の場合、更新対象に追加
+              const hasComments = detail.recommended_comments && 
+                                  Array.isArray(detail.recommended_comments) && 
+                                  detail.recommended_comments.length > 0;
+              if (!hasComments) {
+                emptyCommentsPropertyNumbers.add(detail.property_number);
+              }
             }
           }
           offset += pageSize;
@@ -1600,16 +1621,18 @@ export class EnhancedAutoSyncService {
       }
 
       console.log(`📊 Total properties in property_details: ${propertyDetailsNumbers.size}`);
+      console.log(`📊 Properties with empty comments: ${emptyCommentsPropertyNumbers.size}`);
 
-      // 3. 差分を計算（property_listingsにあってproperty_detailsにないもの）
+      // 3. 差分を計算（property_listingsにあってproperty_detailsにないもの + コメントが空のもの）
       const missingPropertyNumbers: string[] = [];
       for (const propertyNumber of propertyListingsNumbers) {
-        if (!propertyDetailsNumbers.has(propertyNumber)) {
+        // property_detailsに存在しない、またはコメントデータが空の場合は同期対象
+        if (!propertyDetailsNumbers.has(propertyNumber) || emptyCommentsPropertyNumbers.has(propertyNumber)) {
           missingPropertyNumbers.push(propertyNumber);
         }
       }
 
-      console.log(`🆕 Missing property_details: ${missingPropertyNumbers.length}`);
+      console.log(`🆕 Properties to sync (missing or empty comments): ${missingPropertyNumbers.length}`);
 
       if (missingPropertyNumbers.length === 0) {
         const duration_ms = Date.now() - startTime;
@@ -1660,6 +1683,30 @@ export class EnhancedAutoSyncService {
               propertyNumber,
               property.property_type as 'land' | 'detached_house' | 'apartment'
             );
+
+            // PropertyServiceを使用して物件リストスプレッドシートのBQ列（●内覧前伝達事項）からproperty_aboutを取得
+            const { PropertyService } = await import('./PropertyService');
+            const propertyService = new PropertyService();
+            
+            try {
+              const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
+              
+              if (propertyAbout) {
+                // property_detailsテーブルにproperty_aboutを保存
+                const { error: updateError } = await this.supabase
+                  .from('property_details')
+                  .update({ property_about: propertyAbout })
+                  .eq('property_number', propertyNumber);
+                
+                if (updateError) {
+                  console.warn(`⚠️ ${propertyNumber}: Failed to update property_about: ${updateError.message}`);
+                } else {
+                  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
+                }
+              }
+            } catch (aboutError: any) {
+              console.warn(`⚠️ ${propertyNumber}: Failed to get property_about: ${aboutError.message}`);
+            }
 
             if (syncSuccess) {
               console.log(`✅ ${propertyNumber}: Synced comments from spreadsheet`);

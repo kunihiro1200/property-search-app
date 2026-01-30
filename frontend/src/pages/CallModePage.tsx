@@ -48,6 +48,7 @@ import {
 import { emailTemplates } from '../utils/emailTemplates';
 import SenderAddressSelector from '../components/SenderAddressSelector';
 import { getActiveEmployees, Employee } from '../services/employeeService';
+import SellerStatusSidebar from '../components/SellerStatusSidebar';
 import { getSenderAddress, saveSenderAddress } from '../utils/senderAddressStorage';
 import { useCallModeQuickButtonState } from '../hooks/useCallModeQuickButtonState';
 
@@ -110,6 +111,10 @@ const CallModePage = () => {
   const [property, setProperty] = useState<PropertyInfo | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [callSummary, setCallSummary] = useState<string>('');
+  
+  // サイドバー用の売主リスト
+  const [sidebarSellers, setSidebarSellers] = useState<any[]>([]);
+  const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
 
   // 通話メモ入力状態
   const [callMemo, setCallMemo] = useState<string>('');
@@ -693,6 +698,91 @@ const CallModePage = () => {
 
     return () => clearTimeout(timeoutId);
   }, [editedPhoneContactPerson, editedPreferredContactTime, editedContactMethod, seller?.phoneContactPerson, seller?.preferredContactTime, seller?.contactMethod, id]);
+
+  // サイドバー用の売主リストを取得する関数
+  const fetchSidebarSellers = useCallback(async () => {
+    console.log('=== サイドバー売主リスト取得開始 ===');
+    console.log('現在時刻:', new Date().toISOString());
+    
+    // 認証トークンを確認
+    const sessionToken = localStorage.getItem('session_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    console.log('認証トークン (session_token):', sessionToken ? `存在する (長さ: ${sessionToken.length})` : '❌ 存在しない');
+    console.log('リフレッシュトークン (refresh_token):', refreshToken ? '存在する' : '存在しない');
+    
+    // 認証トークンが存在しない場合でもAPIを呼び出す（インターセプターがリフレッシュを試みる）
+    // ただし、両方のトークンがない場合は警告を表示
+    if (!sessionToken && !refreshToken) {
+      console.warn('⚠️ 認証トークンが存在しません。ログインが必要です。');
+      console.warn('⚠️ ログインページにリダイレクトされる可能性があります。');
+      setSidebarLoading(false);
+      return;
+    }
+    
+    try {
+      console.log('📡 APIリクエスト送信中... /api/sellers');
+      // 最新の売主リストを取得（ページネーションなし、最大200件）
+      const response = await api.get('/api/sellers', {
+        params: {
+          page: 1,
+          pageSize: 200,
+          sortBy: 'inquiry_date',
+          sortOrder: 'desc',
+        },
+      });
+      
+      console.log('=== APIレスポンス受信 ===');
+      console.log('response.status:', response.status);
+      console.log('response.data keys:', Object.keys(response.data || {}));
+      console.log('response.data.data exists:', !!response.data?.data);
+      console.log('response.data.data length:', response.data?.data?.length);
+      
+      const sellers = response.data?.data || [];
+      console.log('=== サイドバー売主リスト取得完了 ===');
+      console.log('取得件数:', sellers.length);
+      
+      if (sellers.length > 0) {
+        console.log('サンプル売主データ (最初の1件):', JSON.stringify(sellers[0], null, 2));
+        // フィルタリングに必要なフィールドを確認
+        const sample = sellers[0];
+        console.log('フィルタリング用フィールド:', {
+          sellerNumber: sample.sellerNumber,
+          status: sample.status,
+          nextCallDate: sample.nextCallDate,
+          contactMethod: sample.contactMethod,
+          preferredContactTime: sample.preferredContactTime,
+          phoneContactPerson: sample.phoneContactPerson,
+        });
+      } else {
+        console.warn('⚠️ 売主リストが空です');
+        console.warn('response.data全体:', JSON.stringify(response.data, null, 2));
+      }
+      
+      console.log('✅ setSidebarSellers呼び出し:', sellers.length, '件');
+      setSidebarSellers(sellers);
+    } catch (error: any) {
+      console.error('❌ サイドバー売主リスト取得エラー:', error);
+      console.error('エラー詳細:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      // エラーが発生しても空の配列を設定（UIが壊れないように）
+      setSidebarSellers([]);
+    } finally {
+      setSidebarLoading(false);
+    }
+  }, []);
+
+  // サイドバー用の売主リストを取得（sellerが読み込まれた後に実行）
+  useEffect(() => {
+    // sellerが読み込まれた後にサイドバーデータを取得
+    // これにより、認証が確実に完了した後にAPIを呼び出す
+    if (seller) {
+      fetchSidebarSellers();
+    }
+  }, [seller, fetchSidebarSellers]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -2265,8 +2355,20 @@ HP：https://ifoo-oita.com/
         </Alert>
       )}
 
-      {/* メインコンテンツ（左右2分割） */}
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+      {/* メインコンテンツ（サイドバー + 左右2分割） */}
+      <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+        {/* サイドバー */}
+        <Box sx={{ flexShrink: 0, overflow: 'auto', borderRight: 1, borderColor: 'divider' }}>
+          <SellerStatusSidebar
+            currentSeller={seller}
+            isCallMode={true}
+            sellers={sidebarSellers}
+            loading={sidebarLoading}
+          />
+        </Box>
+        
+        {/* メインコンテンツエリア */}
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* 左側：情報表示エリア（50%） */}
           <Grid
@@ -4617,6 +4719,7 @@ HP：https://ifoo-oita.com/
             </Box>
           </Grid>
         </Grid>
+      </Box>
       </Box>
 
       {/* 確認ダイアログ */}

@@ -3,14 +3,20 @@
  * 
  * 売主リストのステータス表示ロジックを提供します。
  * 以下のステータスを判定します：
- * - 不通
+ * - 当日TEL（コミュニケーション情報あり）/ 当日TEL分（コミュニケーション情報なし）
  * - 訪問日前日
- * - 当日TEL（担当名）
- * - 当日TEL（未着手）
+ * - 未査定
  * - Pinrich空欄
+ * 
+ * 【当日TELの判定ロジック】
+ * 次電日が今日以前の場合、コミュニケーション情報の3つのフィールドをチェック：
+ * 1. 連絡方法に入力あり → 当日TEL(連絡方法の内容)
+ * 2. 連絡取りやすい時間に入力あり → 当日TEL(連絡取りやすい時間の内容)
+ * 3. 電話担当に入力あり → 当日TEL(電話担当の内容)
+ * 4. どれも入力なし → 当日TEL分
  */
 
-import type { Seller } from '../types/seller';
+import type { Seller } from '../types';
 
 /**
  * 日付文字列をDateオブジェクトに変換
@@ -131,68 +137,85 @@ function getTodayJST(): Date {
 /**
  * 売主のステータスを計算する
  * 
+ * 【共通条件】状況（当社）に「追客中」が含まれること
+ * ※「追客中」「除外後追客中」「他決→追客中」など、「追客中」という文言を含む全ての状況が対象
+ * 
  * 以下の順序でチェックし、全ての条件を満たすステータスを配列で返します：
- * 1. 不通
+ * 1. 当日TEL - 次電日が今日以前の場合
+ *    - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）のいずれかに入力あり → 当日TEL(内容)
+ *    - どれも入力なし → 当日TEL分
  * 2. 訪問日前日
- * 3. 当日TEL / 当日TEL（担当名）
- * 4. Pinrich空欄
+ * 3. 未査定（査定方法が空 AND 反響日付が2026年1月1日以降）
+ * 4. Pinrich空欄 - Pinrichフィールドが空欄の場合のみ
  * 
  * @param seller 売主データ
  * @returns ステータスの配列
- * 
- * @example
- * const seller = {
- *   is_unreachable: true,
- *   pinrichStatus: null,
- *   // ... その他のフィールド
- * };
- * calculateSellerStatus(seller) // => ["不通", "Pinrich空欄"]
  */
 export function calculateSellerStatus(seller: Seller): string[] {
   const statuses: string[] = [];
   const today = getTodayJST(); // 日本時間で今日の日付を取得
 
-  // 1. 不通チェック（is_unreachableはboolean型）
-  // データベースの is_unreachable が true の場合、または
-  // not_reachable（文字列）が空でない場合に「不通」と表示
-  const isUnreachable = seller.is_unreachable === true || 
-    (seller.not_reachable && seller.not_reachable.trim() !== '' && seller.not_reachable !== '通電OK');
+  // 【共通条件】状況（当社）に「追客中」が含まれているかチェック
+  const situationCompany = seller.situation_company || seller.status || '';
+  const isFollowingUp = typeof situationCompany === 'string' && situationCompany.includes('追客中');
   
-  if (isUnreachable) {
-    statuses.push('不通');
+  // 追客中でない場合は、ステータスを表示しない
+  if (!isFollowingUp) {
+    return statuses;
   }
 
-  // 2. 訪問日前日チェック
-  if (isVisitDayBefore(seller.visit_date, today)) {
-    statuses.push('訪問日前日');
-  }
+  // 次電日を取得（複数箇所で使用）
+  const nextCallDate = parseDate(seller.next_call_date ?? null);
+  const isNextCallDateToday = nextCallDate && nextCallDate <= today;
 
-  // 3. 当日TELチェック
-  const nextCallDate = parseDate(seller.next_call_date);
-  if (nextCallDate && nextCallDate <= today) {
-    // 状況（当社）に「追客中」を含むかチェック
-    if (seller.status && seller.status.includes('追客中')) {
-      // 不通でないかチェック
-      if (!isUnreachable) {
-        // 反響日付が2026年1月1日以降かチェック
-        const inquiryDate = parseDate(seller.inquiry_date);
-        const cutoffDate = new Date(2026, 0, 1);
-        cutoffDate.setHours(0, 0, 0, 0);
-        
-        if (inquiryDate && inquiryDate >= cutoffDate) {
-          // 電話担当に値がある場合は担当名付き、ない場合は「当日TEL」
-          if (seller.phone_person && seller.phone_person.trim() !== '') {
-            statuses.push(`当日TEL（${seller.phone_person}）`);
-          } else {
-            statuses.push('当日TEL');
-          }
-        }
-      }
+  // コミュニケーション情報の3つのフィールドを取得
+  const phoneContactPerson = seller.phoneContactPerson || seller.phone_contact_person || seller.phone_person;
+  const contactMethod = seller.contactMethod || seller.contact_method;
+  const preferredContactTime = seller.preferredContactTime || seller.preferred_contact_time;
+
+  // 1. 当日TEL チェック（次電日が今日以前の場合）
+  // コミュニケーション情報の3つのフィールドのいずれかに入力がある場合は「当日TEL(内容)」
+  // どれも入力がない場合は「当日TEL分」
+  if (isNextCallDateToday) {
+    // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+    if (contactMethod && contactMethod.trim() !== '') {
+      statuses.push(`当日TEL(${contactMethod})`);
+    } else if (preferredContactTime && preferredContactTime.trim() !== '') {
+      statuses.push(`当日TEL(${preferredContactTime})`);
+    } else if (phoneContactPerson && phoneContactPerson.trim() !== '') {
+      statuses.push(`当日TEL(${phoneContactPerson})`);
+    } else {
+      // どのコミュニケーション情報も入力がない場合のみ「当日TEL分」
+      statuses.push('当日TEL分');
     }
   }
 
-  // 5. Pinrich空欄チェック（pinrichStatusまたはpinrichを確認）
-  const pinrichValue = seller.pinrichStatus || seller.pinrich;
+  // 2. 訪問日前日チェック
+  if (isVisitDayBefore(seller.visit_date ?? null, today)) {
+    statuses.push('訪問日前日');
+  }
+
+  // 査定方法の値を取得
+  const valuationMethod = seller.valuationMethod || seller.valuation_method;
+  const hasValuationMethod = valuationMethod && valuationMethod.trim() !== '';
+
+  // 3. 未査定チェック
+  // 条件: 査定方法に入力がない AND 反響日付が2026年1月1日以降
+  if (!hasValuationMethod) {
+    // inquiry_date（snake_case）またはinquiryDate（camelCase）を取得
+    const inquiryDateStr = seller.inquiry_date || 
+      (seller.inquiryDate ? (typeof seller.inquiryDate === 'string' ? seller.inquiryDate : seller.inquiryDate.toISOString().split('T')[0]) : null);
+    const inquiryDate = parseDate(inquiryDateStr as string | null);
+    const cutoffDate = new Date(2026, 0, 1);
+    cutoffDate.setHours(0, 0, 0, 0);
+    
+    if (inquiryDate && inquiryDate >= cutoffDate) {
+      statuses.push('未査定');
+    }
+  }
+
+  // 4. Pinrich空欄チェック（Pinrichフィールドが空欄の場合のみ）
+  const pinrichValue = seller.pinrichStatus || seller.pinrich_status || seller.pinrich;
   if (!pinrichValue || pinrichValue.trim() === '') {
     statuses.push('Pinrich空欄');
   }

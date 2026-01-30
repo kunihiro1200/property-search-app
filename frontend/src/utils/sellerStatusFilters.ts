@@ -3,8 +3,28 @@
  * 
  * 売主リストのサイドバーステータスフィルター用のユーティリティ関数
  * 
+ * 【サイドバーステータス定義】
+ * 
+ * 1. 「当日TEL分」
+ *    - 条件: 状況（当社）に「追客中」が含まれる AND 次電日が今日以前
+ *    - 追加条件: コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）が**全て空**
+ *    - 表示: コミュニケーション情報が全て空の売主のみ
+ * 
+ * 2. 「当日TEL（内容）」
+ *    - 条件: 状況（当社）に「追客中」が含まれる AND 次電日が今日以前
+ *    - 追加条件: コミュニケーション情報のいずれかに入力がある
+ *    - 表示: 当日TEL(Eメール)、当日TEL(Y)など、内容付きで表示
+ *    - 例: AA13489（Eメール）、AA13507（Y）
+ * 
+ * 3. 「未査定」
+ *    - 条件: 査定額1,2,3が全て空 AND 反響日付が2025/12/8以降 AND 営担が空
+ * 
+ * 4. 「査定（郵送）」
+ *    - 条件: 郵送ステータスが「未」
+ * 
  * Requirements:
- * - 1.2: 当日TEL フィルター
+ * - 1.2: 当日TEL フィルター（コミュニケーション情報なし）
+ * - 1.3: 当日TEL（内容）フィルター（コミュニケーション情報あり）
  * - 2.2: 未査定 フィルター
  * - 3.2: 査定（郵送） フィルター
  */
@@ -12,12 +32,15 @@
 import { Seller } from '../types';
 
 // ステータスカテゴリの型定義
-export type StatusCategory = 'all' | 'todayCall' | 'unvaluated' | 'mailingPending';
+// todayCall: コミュニケーション情報が全て空の当日TEL
+// todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL
+export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'unvaluated' | 'mailingPending';
 
 // カテゴリカウントのインターフェース
 export interface CategoryCounts {
   all: number;
-  todayCall: number;
+  todayCall: number;           // 当日TEL分（コミュニケーション情報なし）
+  todayCallWithInfo: number;   // 当日TEL（内容）（コミュニケーション情報あり）
   unvaluated: number;
   mailingPending: number;
 }
@@ -29,8 +52,30 @@ export interface CategoryCounts {
 const safeParseDate = (dateStr: string | Date | undefined | null): Date | null => {
   if (!dateStr) return null;
   try {
+    // "2026/1/27" 形式または "2026-01-27" 形式をパース
+    if (typeof dateStr === 'string') {
+      const parts = dateStr.includes('/') 
+        ? dateStr.split('/') 
+        : dateStr.split('-');
+      
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          const date = new Date(year, month, day);
+          date.setHours(0, 0, 0, 0);
+          if (!isNaN(date.getTime())) {
+            return date;
+          }
+        }
+      }
+    }
+    
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
     return date;
   } catch {
     return null;
@@ -38,17 +83,26 @@ const safeParseDate = (dateStr: string | Date | undefined | null): Date | null =
 };
 
 /**
- * 日付が今日かどうかを判定
+ * 日本時間（JST）で今日の日付を取得
  */
-const isToday = (dateStr: string | Date | undefined | null): boolean => {
+const getTodayJST = (): Date => {
+  const now = new Date();
+  const jstOffset = 9 * 60;
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const jstTime = new Date(utcTime + (jstOffset * 60000));
+  jstTime.setHours(0, 0, 0, 0);
+  return jstTime;
+};
+
+/**
+ * 日付が今日以前かどうかを判定
+ */
+const isTodayOrBefore = (dateStr: string | Date | undefined | null): boolean => {
   const date = safeParseDate(dateStr);
   if (!date) return false;
   
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-  
-  return today.getTime() === date.getTime();
+  const today = getTodayJST();
+  return date.getTime() <= today.getTime();
 };
 
 /**
@@ -66,50 +120,148 @@ const isOnOrAfter = (dateStr: string | Date | undefined | null, targetDate: Date
 };
 
 /**
- * ステータスが「追客中」かどうかを判定
- * 英語のenum値と日本語の値の両方に対応
+ * 当日TELの共通条件を判定
+ * 
+ * 共通条件:
+ * - 状況（当社）に「追客中」が含まれる
+ * - 次電日が今日以前
+ * 
+ * @param seller 売主データ
+ * @returns 当日TELの共通条件を満たすかどうか
  */
-const isFollowingUpStatus = (status: string | undefined | null): boolean => {
-  if (!status) return false;
+const isTodayCallBase = (seller: Seller | any): boolean => {
+  // ステータスが追客中かチェック（状況（当社）に「追客中」が含まれる）
+  const status = seller.status || seller.situation_company || '';
+  const isFollowingUp = typeof status === 'string' && status.includes('追客中');
   
-  // 英語のenum値
-  if (status === 'following_up') return true;
+  // 次電日が今日以前かチェック
+  const nextCallDate = seller.nextCallDate || seller.next_call_date;
+  const isNextCallTodayOrBefore = isTodayOrBefore(nextCallDate);
   
-  // 日本語の値（部分一致）
-  if (status.includes('追客')) return true;
+  // デバッグログ（最初の5件のみ）
+  if (seller.sellerNumber && (seller.sellerNumber.includes('AA13507') || seller.sellerNumber.includes('AA13489'))) {
+    console.log(`=== isTodayCallBase: ${seller.sellerNumber} ===`);
+    console.log('status:', status);
+    console.log('isFollowingUp:', isFollowingUp);
+    console.log('nextCallDate:', nextCallDate);
+    console.log('isNextCallTodayOrBefore:', isNextCallTodayOrBefore);
+  }
   
-  return false;
+  if (!isFollowingUp) {
+    return false;
+  }
+  
+  return isNextCallTodayOrBefore;
 };
 
 /**
- * 当日TEL判定
+ * コミュニケーション情報があるかどうかを判定
  * 
- * 条件:
- * - 次電日が当日
- * - 状況（当社）が「追客中」または「following_up」
- * - 営担（visitAssignee）が空欄
+ * コミュニケーション情報の3つのフィールド:
+ * 1. 連絡方法 (contact_method)
+ * 2. 連絡取りやすい時間 (preferred_contact_time)
+ * 3. 電話担当 (phone_contact_person)
  * 
  * @param seller 売主データ
- * @returns 当日TEL対象かどうか
+ * @returns コミュニケーション情報のいずれかに入力があるかどうか
+ */
+const hasContactInfo = (seller: Seller | any): boolean => {
+  const contactMethod = seller.contactMethod || seller.contact_method || '';
+  const preferredContactTime = seller.preferredContactTime || seller.preferred_contact_time || '';
+  const phoneContactPerson = seller.phoneContactPerson || seller.phone_contact_person || '';
+  
+  return (
+    (contactMethod && contactMethod.trim() !== '') ||
+    (preferredContactTime && preferredContactTime.trim() !== '') ||
+    (phoneContactPerson && phoneContactPerson.trim() !== '')
+  );
+};
+
+/**
+ * 当日TEL分判定（コミュニケーション情報が全て空の売主のみ）
+ * 
+ * 【サイドバー表示】「当日TEL分」
+ * 
+ * 条件:
+ * - 状況（当社）に「追客中」が含まれる
+ * - 次電日が今日以前
+ * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）が**全て空**
+ * 
+ * 注意: コミュニケーション情報のいずれかに入力がある売主は
+ * 「当日TEL分」としてカウントしない → 「当日TEL（内容）」に分類される
+ * 
+ * @param seller 売主データ
+ * @returns 当日TEL分対象かどうか
  * 
  * Requirements: 1.2
  */
 export const isTodayCall = (seller: Seller | any): boolean => {
-  // 次電日が当日かチェック
-  if (!isToday(seller.nextCallDate)) {
+  // 共通条件をチェック
+  if (!isTodayCallBase(seller)) {
     return false;
   }
   
-  // ステータスが追客中かチェック
-  if (!isFollowingUpStatus(seller.status)) {
+  // コミュニケーション情報が全て空の場合のみ「当日TEL分」としてカウント
+  return !hasContactInfo(seller);
+};
+
+/**
+ * 当日TEL（内容）判定（コミュニケーション情報のいずれかに入力がある売主）
+ * 
+ * 【サイドバー表示】「当日TEL（内容）」
+ * 
+ * 条件:
+ * - 状況（当社）に「追客中」が含まれる
+ * - 次電日が今日以前
+ * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）の**いずれかに入力がある**
+ * 
+ * 例:
+ * - AA13489: contact_method = "Eメール" → 当日TEL(Eメール)
+ * - AA13507: phone_contact_person = "Y" → 当日TEL(Y)
+ * 
+ * @param seller 売主データ
+ * @returns 当日TEL（内容）対象かどうか
+ * 
+ * Requirements: 1.3
+ */
+export const isTodayCallWithInfo = (seller: Seller | any): boolean => {
+  // 共通条件をチェック
+  if (!isTodayCallBase(seller)) {
     return false;
   }
   
-  // 営担が空欄かチェック
-  const hasNoAssignee = !seller.visitAssignee || 
-                        (typeof seller.visitAssignee === 'string' && seller.visitAssignee.trim() === '');
+  // コミュニケーション情報のいずれかに入力がある場合「当日TEL（内容）」としてカウント
+  return hasContactInfo(seller);
+};
+
+/**
+ * 当日TEL（内容）の表示ラベルを取得
+ * 
+ * コミュニケーション情報の優先順位:
+ * 1. 連絡方法 (contact_method) → 当日TEL(Eメール)
+ * 2. 連絡取りやすい時間 (preferred_contact_time) → 当日TEL(午前中)
+ * 3. 電話担当 (phone_contact_person) → 当日TEL(Y)
+ * 
+ * @param seller 売主データ
+ * @returns 表示ラベル（例: "当日TEL(Eメール)"）
+ */
+export const getTodayCallWithInfoLabel = (seller: Seller | any): string => {
+  const contactMethod = seller.contactMethod || seller.contact_method || '';
+  const preferredContactTime = seller.preferredContactTime || seller.preferred_contact_time || '';
+  const phoneContactPerson = seller.phoneContactPerson || seller.phone_contact_person || '';
   
-  return hasNoAssignee;
+  // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+  if (contactMethod && contactMethod.trim() !== '') {
+    return `当日TEL(${contactMethod})`;
+  }
+  if (preferredContactTime && preferredContactTime.trim() !== '') {
+    return `当日TEL(${preferredContactTime})`;
+  }
+  if (phoneContactPerson && phoneContactPerson.trim() !== '') {
+    return `当日TEL(${phoneContactPerson})`;
+  }
+  
+  return '当日TEL（内容）';
 };
 
 /**
@@ -200,6 +352,7 @@ export const getCategoryCounts = (sellers: (Seller | any)[]): CategoryCounts => 
   return {
     all: sellers.length,
     todayCall: sellers.filter(isTodayCall).length,
+    todayCallWithInfo: sellers.filter(isTodayCallWithInfo).length,
     unvaluated: sellers.filter(isUnvaluated).length,
     mailingPending: sellers.filter(isMailingPending).length,
   };
@@ -221,6 +374,8 @@ export const filterSellersByCategory = (
   switch (category) {
     case 'todayCall':
       return sellers.filter(isTodayCall);
+    case 'todayCallWithInfo':
+      return sellers.filter(isTodayCallWithInfo);
     case 'unvaluated':
       return sellers.filter(isUnvaluated);
     case 'mailingPending':

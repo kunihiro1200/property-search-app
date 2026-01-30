@@ -1017,6 +1017,10 @@ export class SellerService extends BaseRepository {
         visitValuationAcquirer: visitValuationAcquirerFullName || seller.visit_valuation_acquirer || undefined,
         valuationAssignee: seller.valuation_assignee,
         phoneAssignee: seller.phone_assignee,
+        // Communication fields
+        phoneContactPerson: seller.phone_contact_person,
+        preferredContactTime: seller.preferred_contact_time,
+        contactMethod: seller.contact_method,
         // New call mode fields (migration 032)
         inquiryMedium: seller.inquiry_medium,
         inquiryContent: seller.inquiry_content,
@@ -1033,6 +1037,8 @@ export class SellerService extends BaseRepository {
         // 内覧前伝達事項と最新状況
         viewingNotes: seller.viewing_notes,
         latestStatus: seller.latest_status,
+        // Pinrich status
+        pinrichStatus: seller.pinrich_status,
       };
       
       return decrypted;

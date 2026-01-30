@@ -1,61 +1,67 @@
-import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { SellerService } from './src/services/SellerService.supabase';
+import { createClient } from '@supabase/supabase-js';
 
-dotenv.config({ path: path.resolve(__dirname, '.env.local') });
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// .env.localを読み込む
+dotenv.config({ path: path.join(__dirname, '.env.local') });
 
 async function testAA13507SellerService() {
-  console.log('🔍 AA13507のデータベースデータをテスト...\n');
+  console.log('🧪 AA13507のSellerServiceをテスト中...\n');
 
   try {
-    // 売主番号でデータを取得
-    const { data: seller, error } = await supabase
+    // 1. まずSupabaseでIDを取得
+    console.log('📋 ステップ1: AA13507のIDを取得...');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+
+    const { data: sellerData, error: fetchError } = await supabase
       .from('sellers')
-      .select('*')
+      .select('id, seller_number')
       .eq('seller_number', 'AA13507')
       .single();
 
-    if (error || !seller) {
-      console.log('❌ AA13507が見つかりません:', error?.message);
+    if (fetchError || !sellerData) {
+      console.log('❌ AA13507が見つかりません:', fetchError?.message);
       return;
     }
 
-    console.log(`✅ 売主ID: ${seller.id}\n`);
+    console.log('✅ ID:', sellerData.id, '\n');
 
-    console.log('📝 データベースのデータ:');
-    console.log(`  sellerNumber: ${seller.seller_number}`);
-    console.log(`  name: ${seller.name ? '(暗号化済み)' : '(null)'}`);
-    console.log(`  property_address: ${seller.property_address || '(null)'}`);
-    console.log(`  comments: ${seller.comments ? seller.comments.substring(0, 50) + '...' : '(null)'}`);
-    console.log(`  unreachable_status: ${seller.unreachable_status || '(null)'}`);
-    console.log(`  valuation_method: ${seller.valuation_method || '(null)'}`);
-    console.log(`  visit_assignee: ${seller.visit_assignee || '(null)'}`);
-    console.log(`  visit_valuation_acquirer: ${seller.visit_valuation_acquirer || '(null)'}`);
-    console.log(`  status: ${seller.status || '(null)'}`);
+    // 2. SellerServiceで取得
+    console.log('📋 ステップ2: SellerServiceで取得...');
+    const sellerService = new SellerService();
+    const seller = await sellerService.getSeller(sellerData.id);
 
-    console.log('\n✅ 検証結果:');
-    
-    const checks = [
-      { field: 'property_address', value: seller.property_address, expected: '大分市田中町1丁目4-13' },
-      { field: 'comments', value: seller.comments, expected: 'R1/30' },
-      { field: 'unreachable_status', value: seller.unreachable_status, expected: '不通' },
-      { field: 'valuation_method', value: seller.valuation_method, expected: '机上査定（不通）' },
-      { field: 'status', value: seller.status, expected: '追客中' },
-    ];
+    if (!seller) {
+      console.log('❌ SellerServiceで取得できませんでした');
+      return;
+    }
 
-    checks.forEach(({ field, value, expected }) => {
-      const exists = value && String(value).includes(expected);
-      console.log(`  ${field}: ${exists ? '✅ 正常' : '❌ 未設定'}`);
-    });
+    console.log('✅ 売主データを取得しました\n');
+
+    // 3. データを確認
+    console.log('📊 SellerServiceのレスポンス:');
+    console.log('売主番号:', seller.sellerNumber);
+    console.log('名前:', seller.name);
+    console.log('電話担当（任意）:', seller.phoneContactPerson || '【空】');
+    console.log('連絡取りやすい日、時間帯:', seller.preferredContactTime || '【空】');
+    console.log('連絡方法:', seller.contactMethod || '【空】');
+    console.log('');
+
+    // 4. 判定
+    if (seller.phoneContactPerson) {
+      console.log('✅ phoneContactPersonが正しく返されています');
+      console.log(`   値: "${seller.phoneContactPerson}"`);
+    } else {
+      console.log('❌ phoneContactPersonが返されていません');
+    }
 
   } catch (error: any) {
     console.error('❌ エラー:', error.message);
-    console.error('スタック:', error.stack);
+    console.error('スタックトレース:', error.stack);
   }
 }
 
