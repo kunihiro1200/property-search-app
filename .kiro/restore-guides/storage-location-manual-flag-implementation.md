@@ -36,7 +36,29 @@
 
 ## 実装内容
 
-### 修正ファイル
+### 🚨 重要：除外ルールは全ての同期処理に適用する必要がある
+
+**同期処理は2箇所に存在します。両方に除外ルールを適用してください。**
+
+| ファイル | 用途 | `storage_location`除外 |
+|---------|------|----------------------|
+| `PropertyListingSyncService.ts` | 定期自動同期（5分ごと） | ✅ 除外済み |
+| `sync-property-listings-via-rest.ts` | 手動同期スクリプト | ✅ 除外済み（2026年1月31日追加） |
+
+### 過去の問題（2026年1月31日）
+
+**問題**: CC6の画像が間違ったものを取得していた
+
+**原因**: 
+- `PropertyListingSyncService.ts`には`storage_location`除外を追加していた
+- しかし、`sync-property-listings-via-rest.ts`には除外を追加していなかった
+- 配信日同期のために`sync-property-listings-via-rest.ts`を実行した際、CC6の`storage_location`が上書きされた
+
+**教訓**: **同じフィールドの除外ルールは、全ての同期処理に適用する必要がある**
+
+---
+
+### 修正ファイル1: PropertyListingSyncService.ts
 
 **`backend/src/services/PropertyListingSyncService.ts`**
 
@@ -231,6 +253,7 @@ npm run type-check
 ### 実装完了
 
 - ✅ `PropertyListingSyncService.detectChanges()`を修正
+- ✅ `sync-property-listings-via-rest.ts`から`storage_location`を除外（2026年1月31日追加）
 - ✅ `image_url`を自動同期から除外
 - ✅ `storage_location`を自動同期から除外（2026年1月26日追加）
 - ✅ 手動更新ボタンは変更なし
@@ -250,5 +273,5 @@ npm run type-check
 
 ---
 
-**最終更新日**: 2026年1月26日  
-**ステータス**: ✅ 実装完了（`image_url`と`storage_location`の両方を自動同期から除外）
+**最終更新日**: 2026年1月31日  
+**ステータス**: ✅ 実装完了（`image_url`と`storage_location`の両方を全ての同期処理から除外）
