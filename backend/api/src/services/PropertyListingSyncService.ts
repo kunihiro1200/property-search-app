@@ -7,7 +7,6 @@
  * 1. 物件スプシ（物件リストスプレッドシート）から物件データを取得 ← メインソース
  * 2. property_listingsテーブルに同期
  * 3. 業務依頼シートから「スプシURL」を取得して補完 ← 補助情報
- * 4. Google Map URLから座標（latitude/longitude）を抽出して保存 ← 地図検索に必須
  * 
  * 同期トリガー:
  * - Vercel Cron Job（15分ごと）
@@ -16,7 +15,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from '../../../src/services/GoogleSheetsClient';
 import { PropertyImageService } from '../../../src/services/PropertyImageService';
-import axios from 'axios';
 
 export interface PropertyListingSyncResult {
   success: boolean;
@@ -40,92 +38,6 @@ export class PropertyListingSyncService {
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
     this.propertyImageService = new PropertyImageService();
-  }
-
-  /**
-   * Google Map URLから座標を抽出
-   * 
-   * 地図検索機能には latitude と longitude が必須です。
-   * google_map_url だけでは地図検索に表示されません。
-   * 
-   * 対応パターン:
-   * - /search/lat,lng または /search/lat,+lng
-   * - @lat,lng,zoom
-   * - /place/.../@lat,lng
-   * - ?q=lat,lng
-   * - !3dlat!4dlng（Google Mapsの新しいフォーマット）
-   */
-  private async extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: number; lng: number } | null> {
-    if (!url) return null;
-    
-    try {
-      let finalUrl = url;
-      
-      // 短縮URLの場合、リダイレクト先を取得
-      if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
-        try {
-          const response = await axios.get(url, {
-            maxRedirects: 5,
-            validateStatus: () => true,
-            timeout: 10000, // 10秒タイムアウト
-          });
-          finalUrl = response.request?.res?.responseUrl || url;
-        } catch (error) {
-          console.warn(`  ⚠️ URL展開に失敗: ${url}`);
-        }
-      }
-      
-      // パターン1: /search/lat,lng または /search/lat,+lng
-      const searchMatch = finalUrl.match(/\/search\/(-?\d+\.?\d*),\+?(-?\d+\.?\d*)/);
-      if (searchMatch) {
-        return {
-          lat: parseFloat(searchMatch[1]),
-          lng: parseFloat(searchMatch[2]),
-        };
-      }
-      
-      // パターン2: @lat,lng,zoom
-      const atMatch = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+),/);
-      if (atMatch) {
-        return {
-          lat: parseFloat(atMatch[1]),
-          lng: parseFloat(atMatch[2]),
-        };
-      }
-      
-      // パターン3: /place/.../@lat,lng
-      const placeMatch = finalUrl.match(/place\/[^/]+\/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-      if (placeMatch) {
-        return {
-          lat: parseFloat(placeMatch[1]),
-          lng: parseFloat(placeMatch[2]),
-        };
-      }
-      
-      // パターン4: ?q=lat,lng
-      const qMatch = finalUrl.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-      if (qMatch) {
-        return {
-          lat: parseFloat(qMatch[1]),
-          lng: parseFloat(qMatch[2]),
-        };
-      }
-      
-      // パターン5: !3dlat!4dlng（Google Mapsの新しいフォーマット）
-      // 例: https://www.google.com/maps/...!3d33.3089653!4d131.4838042...
-      const dataMatch = finalUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-      if (dataMatch) {
-        return {
-          lat: parseFloat(dataMatch[1]),
-          lng: parseFloat(dataMatch[2]),
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error(`  ❌ 座標抽出エラー: ${url}`);
-      return null;
-    }
   }
 
   /**
@@ -269,7 +181,7 @@ export class PropertyListingSyncService {
           // 3. 既存の物件を確認
           const { data: existing, error: fetchError } = await this.supabase
             .from('property_listings')
-            .select('id, property_number, atbb_status, storage_location, spreadsheet_url, latitude, longitude')
+            .select('id, property_number, atbb_status, storage_location, spreadsheet_url')
             .eq('property_number', propertyNumber)
             .single();
 
@@ -306,23 +218,6 @@ export class PropertyListingSyncService {
           }
 
           // 6. 物件データを準備
-          const googleMapUrl = String(row['GoogleMap'] || '');
-          
-          // 7. Google Map URLから座標を抽出（地図検索に必須）
-          let latitude: number | null = null;
-          let longitude: number | null = null;
-          
-          if (googleMapUrl) {
-            const coords = await this.extractCoordinatesFromGoogleMapUrl(googleMapUrl);
-            if (coords) {
-              latitude = coords.lat;
-              longitude = coords.lng;
-              console.log(`  📍 座標抽出成功: (${latitude}, ${longitude})`);
-            } else {
-              console.log(`  ⚠️ 座標抽出失敗: ${googleMapUrl}`);
-            }
-          }
-          
           const propertyData: any = {
             property_number: propertyNumber,
             address: String(row['所在地'] || ''),
@@ -338,26 +233,13 @@ export class PropertyListingSyncService {
             status: String(row['状況'] || ''),
             storage_location: storageLocation,
             spreadsheet_url: spreadsheetUrl,
-            google_map_url: googleMapUrl,
-            latitude: latitude,
-            longitude: longitude,
+            google_map_url: String(row['GoogleMap'] || ''),
             current_status: String(row['●現況'] || ''),
             delivery: String(row['引渡し'] || ''),
             updated_at: new Date().toISOString(),
           };
 
           if (existing) {
-            // 既存物件の座標が未設定の場合は更新
-            if (!existing.latitude || !existing.longitude) {
-              if (latitude && longitude) {
-                console.log(`  📍 既存物件の座標を更新: (${latitude}, ${longitude})`);
-              }
-            } else if (latitude === null && longitude === null) {
-              // 既存の座標を保持
-              propertyData.latitude = existing.latitude;
-              propertyData.longitude = existing.longitude;
-            }
-            
             // 更新
             const { error: updateError } = await this.supabase
               .from('property_listings')
