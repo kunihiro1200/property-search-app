@@ -3700,7 +3700,7 @@ HP：https://ifoo-oita.com/
                 )}
               </Box>
               <Paper sx={{ p: 2 }}>
-                {!property && (
+                {!property && !editedValuationAmount1 && (
                   <Alert severity="info">
                     物件情報が登録されていないため、査定を実行できません
                   </Alert>
