@@ -103,6 +103,13 @@ const CallModePage = () => {
     return formatCurrentStatusDetailed(situation);
   };
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // データ状態
+  const [seller, setSeller] = useState<Seller | null>(null);
+  const [property, setProperty] = useState<PropertyInfo | null>(null);
+
   /**
    * 物件情報を取得するヘルパー関数
    * propertyオブジェクトがある場合はそれを使用し、ない場合はsellerの直接フィールドを使用
@@ -152,13 +159,6 @@ const CallModePage = () => {
       hasData: false,
     };
   }, [property, seller]);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // データ状態
-  const [seller, setSeller] = useState<Seller | null>(null);
-  const [property, setProperty] = useState<PropertyInfo | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [callSummary, setCallSummary] = useState<string>('');
   
