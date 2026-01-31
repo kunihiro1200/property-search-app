@@ -1385,6 +1385,8 @@ export class SellerService extends BaseRepository {
    * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
    * 3. 当日TEL（担当）（営担あり + 次電日が今日以前）← 3番目
    * 4. 当日TEL分/当日TEL（内容）← 営担なしの場合のみ
+   * 5. 当日TEL_未着手（当日TEL分 + 不通が空欄 + 反響日付が2026/1/1以降）
+   * 6. Pinrich空欄（当日TEL分 + Pinrichが空欄）
    */
   async getSidebarCounts(): Promise<{
     todayCall: number;
@@ -1394,6 +1396,8 @@ export class SellerService extends BaseRepository {
     visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
+    todayCallNotStarted: number;
+    pinrichEmpty: number;
   }> {
     // JST今日の日付を取得
     const now = new Date();
@@ -1444,7 +1448,7 @@ export class SellerService extends BaseRepository {
     // 4. 当日TEL分/当日TEL（内容）
     // 追客中 AND 次電日が今日以前 AND 営担なしの売主を取得
     const { data: todayCallBaseSellers } = await this.table('sellers')
-      .select('id, visit_assignee, phone_contact_person, preferred_contact_time, contact_method')
+      .select('id, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, unreachable_status, pinrich_status, inquiry_date')
       .is('deleted_at', null)
       .ilike('status', '%追客中%')
       .lte('next_call_date', todayJST);
@@ -1464,11 +1468,34 @@ export class SellerService extends BaseRepository {
     }).length;
 
     // コミュニケーション情報がないものをカウント（当日TEL分）
-    const todayCallNoInfoCount = filteredTodayCallSellers.filter(s => {
+    const todayCallNoInfoSellers = filteredTodayCallSellers.filter(s => {
       const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
                       (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
                       (s.contact_method && s.contact_method.trim() !== '');
       return !hasInfo;
+    });
+    const todayCallNoInfoCount = todayCallNoInfoSellers.length;
+
+    // 7. 当日TEL_未着手（当日TEL分 + 不通が空欄 + 反響日付が2026/1/1以降）
+    const todayCallNotStartedCutoff = '2026-01-01';
+    const todayCallNotStartedCount = todayCallNoInfoSellers.filter(s => {
+      // 不通が空欄かチェック
+      const unreachableStatus = s.unreachable_status || '';
+      if (unreachableStatus && unreachableStatus.trim() !== '') {
+        return false;
+      }
+      // 反響日付が2026/1/1以降かチェック
+      const inquiryDate = s.inquiry_date || '';
+      if (!inquiryDate) {
+        return false;
+      }
+      return inquiryDate >= todayCallNotStartedCutoff;
+    }).length;
+
+    // 8. Pinrich空欄（当日TEL分 + Pinrichが空欄）
+    const pinrichEmptyCount = todayCallNoInfoSellers.filter(s => {
+      const pinrichStatus = s.pinrich_status || '';
+      return !pinrichStatus || pinrichStatus.trim() === '';
     }).length;
 
     // 5. 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
@@ -1500,6 +1527,8 @@ export class SellerService extends BaseRepository {
       visitCompleted: visitCompletedCount || 0,
       unvaluated: unvaluatedCount || 0,
       mailingPending: mailingPendingCount || 0,
+      todayCallNotStarted: todayCallNotStartedCount || 0,
+      pinrichEmpty: pinrichEmptyCount || 0,
     };
   }
 }

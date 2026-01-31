@@ -1,73 +1,72 @@
-/**
- * AA18物件の現在の状態を確認するスクリプト
- */
-
-import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-config();
+dotenv.config({ path: path.join(__dirname, '.env.local') });
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
 
-async function main() {
-  console.log('🔍 AA18物件の現在の状態を確認中...\n');
-
-  try {
-    // property_listingsテーブルからAA18を検索
-    const { data: properties, error } = await supabase
-      .from('property_listings')
-      .select('*')
-      .ilike('property_number', '%AA18%');
-
-    if (error) {
-      console.error('❌ エラー:', error.message);
-      return;
-    }
-
-    console.log(`✅ 検索結果: ${properties?.length || 0}件\n`);
-
-    if (!properties || properties.length === 0) {
-      console.log('❌ AA18物件が見つかりませんでした');
-      console.log('\n💡 確認事項:');
-      console.log('   1. property_listingsテーブルにAA18が存在するか');
-      console.log('   2. property_numberの値を確認（大文字小文字、スペースなど）');
-      return;
-    }
-
-    // 見つかった物件を表示
-    properties.forEach((prop, index) => {
-      console.log(`\n物件 ${index + 1}:`);
-      console.log(`  property_number: "${prop.property_number}"`);
-      console.log(`  storage_location: ${prop.storage_location || '(未設定)'}`);
-      console.log(`  site_display: ${prop.site_display || '(未設定)'}`);
-      console.log(`  property_type: ${prop.property_type || '(未設定)'}`);
-      console.log(`  address: ${prop.address || '(未設定)'}`);
-      console.log(`  created_at: ${prop.created_at}`);
-    });
-
-    // storage_locationが未設定の場合
-    const needsStorageLocation = properties.filter(p => !p.storage_location);
-    if (needsStorageLocation.length > 0) {
-      console.log('\n\n⚠️ storage_locationが未設定の物件:');
-      needsStorageLocation.forEach(prop => {
-        console.log(`  - ${prop.property_number}`);
-      });
-      
-      console.log('\n💡 次のステップ:');
-      console.log('   1. Google DriveでAA18のフォルダを探す');
-      console.log('   2. フォルダURLを取得');
-      console.log('   3. 以下のSQLで設定:');
-      console.log(`\n   UPDATE property_listings`);
-      console.log(`   SET storage_location = 'YOUR_FOLDER_URL'`);
-      console.log(`   WHERE property_number = 'AA18';`);
-    }
-
-  } catch (error: any) {
-    console.error('\n❌ エラーが発生しました:', error.message);
-    console.error(error.stack);
+async function checkAA18CurrentState() {
+  console.log('\n=== AA18 の現在の状態を確認 ===\n');
+  
+  // AA18のデータを取得
+  const { data: aa18, error: aa18Error } = await supabase
+    .from('property_listings')
+    .select('*')
+    .eq('property_number', 'AA18')
+    .single();
+  
+  if (aa18Error) {
+    console.log(`❌ AA18 エラー: ${aa18Error.message}`);
+    return;
   }
+  
+  console.log('AA18 のデータ:');
+  console.log(`  - id: ${aa18.id}`);
+  console.log(`  - property_number: ${aa18.property_number}`);
+  console.log(`  - address: "${aa18.address || '(空)'}"`);
+  console.log(`  - distribution_date: ${aa18.distribution_date || '(null)'}`);
+  console.log(`  - created_at: ${aa18.created_at}`);
+  console.log(`  - updated_at: ${aa18.updated_at}`);
+  console.log(`  - atbb_status: ${aa18.atbb_status}`);
+  console.log(`  - property_type: ${aa18.property_type}`);
+  console.log(`  - price: ${aa18.price}`);
+  console.log(`  - sales_price: ${aa18.sales_price}`);
+  console.log(`  - listing_price: ${aa18.listing_price}`);
+  
+  // 配信日でソートした上位10件を取得
+  console.log('\n=== 配信日でソートした上位10件 ===\n');
+  
+  const { data: topProperties, error: topError } = await supabase
+    .from('property_listings')
+    .select('property_number, address, distribution_date, created_at, atbb_status')
+    .order('distribution_date', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(10);
+  
+  if (topError) {
+    console.log(`❌ エラー: ${topError.message}`);
+    return;
+  }
+  
+  topProperties?.forEach((prop, index) => {
+    console.log(`${index + 1}. ${prop.property_number}`);
+    console.log(`   配信日: ${prop.distribution_date || '(null)'}`);
+    console.log(`   住所: ${prop.address ? prop.address.substring(0, 30) + '...' : '(空)'}`);
+    console.log(`   ステータス: ${prop.atbb_status}`);
+    console.log('');
+  });
+  
+  // 配信日がnullの物件数を確認
+  const { count: nullCount } = await supabase
+    .from('property_listings')
+    .select('*', { count: 'exact', head: true })
+    .is('distribution_date', null);
+  
+  console.log(`\n配信日がnullの物件数: ${nullCount}`);
 }
 
-main();
+checkAA18CurrentState().catch(console.error);

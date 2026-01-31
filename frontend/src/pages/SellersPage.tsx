@@ -59,6 +59,10 @@ interface Seller {
   confidenceLevel?: string;
   firstCallerInitials?: string;
   isUnreachable?: boolean;
+  // 訪問予定/訪問済み用フィールド
+  visitAssignee?: string;
+  visitDate?: string;
+  propertyAddress?: string;
 }
 
 const statusLabels: Record<string, string> = {
@@ -118,17 +122,23 @@ export default function SellersPage() {
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
     todayCallWithInfo: number;
+    todayCallAssigned: number;
     visitScheduled: number;
     visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
+    todayCallNotStarted: number;
+    pinrichEmpty: number;
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
+    todayCallAssigned: 0,
     visitScheduled: 0,
     visitCompleted: 0,
     unvaluated: 0,
     mailingPending: 0,
+    todayCallNotStarted: 0,
+    pinrichEmpty: 0,
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
   
@@ -249,10 +259,13 @@ export default function SellersPage() {
       setSidebarCounts({
         todayCall: 0,
         todayCallWithInfo: 0,
+        todayCallAssigned: 0,
         visitScheduled: 0,
         visitCompleted: 0,
         unvaluated: 0,
         mailingPending: 0,
+        todayCallNotStarted: 0,
+        pinrichEmpty: 0,
       });
     } finally {
       setSidebarLoading(false);
@@ -295,8 +308,31 @@ export default function SellersPage() {
       }
       
       const response = await api.get('/api/sellers', { params });
+      
+      // デバッグ: APIレスポンスの内容を確認
+      console.log('[SellersPage] APIレスポンス:', {
+        total: response.data.total,
+        dataLength: response.data.data?.length,
+        firstSeller: response.data.data?.[0] ? {
+          sellerNumber: response.data.data[0].sellerNumber,
+          visitDate: response.data.data[0].visitDate,
+          visitAssignee: response.data.data[0].visitAssignee,
+          visit_date: response.data.data[0].visit_date,
+          visit_assignee: response.data.data[0].visit_assignee,
+        } : null,
+        sellersWithVisitDate: response.data.data?.filter((s: any) => s.visitDate || s.visit_date).length,
+        sellersWithVisitAssignee: response.data.data?.filter((s: any) => s.visitAssignee || s.visit_assignee).length,
+      });
+      
       setSellers(response.data.data);
       setTotal(response.data.total);
+      
+      // デバッグ: setSellers後のデータを確認
+      console.log('[SellersPage] setSellers後:', {
+        dataLength: response.data.data?.length,
+        firstSellerVisitDate: response.data.data?.[0]?.visitDate,
+        firstSellerVisitAssignee: response.data.data?.[0]?.visitAssignee,
+      });
     } catch (error) {
       console.error('Failed to fetch sellers:', error);
     } finally {
@@ -404,6 +440,17 @@ export default function SellersPage() {
         {/* サイドバーとメインコンテンツのレイアウト */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           {/* 左側サイドバー - SellerStatusSidebarコンポーネントを使用 */}
+          {/* デバッグ: サイドバーに渡すsellersデータを確認 */}
+          {console.log('[SellersPage] サイドバーに渡すsellers:', {
+            sellersLength: sellers.length,
+            sellersWithVisitDate: sellers.filter(s => s.visitDate || (s as any).visit_date).length,
+            sellersWithVisitAssignee: sellers.filter(s => s.visitAssignee || (s as any).visit_assignee).length,
+            firstSeller: sellers[0] ? {
+              sellerNumber: sellers[0].sellerNumber,
+              visitDate: sellers[0].visitDate,
+              visitAssignee: sellers[0].visitAssignee,
+            } : null,
+          })}
           <SellerStatusSidebar
             categoryCounts={categoryCounts}
             selectedCategory={selectedCategory}

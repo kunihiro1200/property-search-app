@@ -104,6 +104,7 @@ async function syncPropertyListingsViaRest() {
               building_area: property.building_area,
               property_type: property.property_type,
               status: property.status,
+              distribution_date: property.distribution_date, // 配信日を追加
               updated_at: new Date().toISOString()
             })
             .eq('property_number', property.property_number);
