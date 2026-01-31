@@ -129,52 +129,6 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * 日付文字列をISO形式に変換
-   * 対応フォーマット:
-   * - YYYY/MM/DD
-   * - YYYY-MM-DD
-   * - MM/DD/YYYY
-   * - DD/MM/YYYY
-   * - Excelシリアル値
-   */
-  private parseDate(dateStr: string): string | null {
-    if (!dateStr || dateStr.trim() === '') return null;
-    
-    const trimmed = dateStr.trim();
-    
-    // Excelシリアル値の場合（数値のみ）
-    if (/^\d+$/.test(trimmed)) {
-      const serial = parseInt(trimmed, 10);
-      // Excelの日付シリアル値は1900年1月1日を1とする
-      // ただし、1900年2月29日のバグがあるため、60以上の場合は1日引く
-      const excelEpoch = new Date(1899, 11, 30); // 1899年12月30日
-      const date = new Date(excelEpoch.getTime() + serial * 24 * 60 * 60 * 1000);
-      return date.toISOString().split('T')[0];
-    }
-    
-    // YYYY/MM/DD または YYYY-MM-DD
-    const isoMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-    if (isoMatch) {
-      const year = parseInt(isoMatch[1], 10);
-      const month = parseInt(isoMatch[2], 10);
-      const day = parseInt(isoMatch[3], 10);
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-    
-    // MM/DD/YYYY
-    const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (usMatch) {
-      const month = parseInt(usMatch[1], 10);
-      const day = parseInt(usMatch[2], 10);
-      const year = parseInt(usMatch[3], 10);
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-    
-    console.warn(`  ⚠️ 日付パース失敗: ${dateStr}`);
-    return null;
-  }
-
-  /**
    * Google Sheets クライアントを初期化
    */
   async initialize(): Promise<void> {
@@ -389,8 +343,6 @@ export class PropertyListingSyncService {
             longitude: longitude,
             current_status: String(row['●現況'] || ''),
             delivery: String(row['引渡し'] || ''),
-            // 配信日（公開日）を追加 - AD列「配信日【公開）」
-            distribution_date: row['配信日【公開）'] ? this.parseDate(String(row['配信日【公開）'])) : null,
             updated_at: new Date().toISOString(),
           };
 
