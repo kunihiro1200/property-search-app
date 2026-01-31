@@ -232,29 +232,30 @@ Google Sheets APIのクォータ制限を回避するため、スプレッドシ
 
 ### 設定
 
-**キャッシュTTL**: **15分**
+**キャッシュTTL**: **5分**
 
 ```typescript
 // backend/src/services/EnhancedAutoSyncService.ts
-private readonly SPREADSHEET_CACHE_TTL = 15 * 60 * 1000; // 15分間キャッシュ
+private readonly SPREADSHEET_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
 ```
 
 ### 動作
 
 1. **初回取得**: スプレッドシートからデータを取得してキャッシュ
-2. **キャッシュ有効**: 15分以内は、キャッシュからデータを取得
-3. **キャッシュ無効**: 15分経過後、スプレッドシートから再取得
+2. **キャッシュ有効**: 5分以内は、キャッシュからデータを取得
+3. **キャッシュ無効**: 5分経過後、スプレッドシートから再取得
+4. **手動同期時**: キャッシュを自動的にクリアして最新データを取得
 
 **ログ例**:
 ```
-📦 Using cached spreadsheet data (valid for 847 seconds)
+📦 Using cached spreadsheet data (valid for 247 seconds)
 ```
 
 または
 
 ```
 🔄 Fetching fresh spreadsheet data...
-✅ Spreadsheet data cached (1234 rows, valid for 15 minutes)
+✅ Spreadsheet data cached (1234 rows, valid for 5 minutes)
 ```
 
 ---

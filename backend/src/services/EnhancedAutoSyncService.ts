@@ -55,7 +55,7 @@ export class EnhancedAutoSyncService {
   // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
   private spreadsheetCache: any[] | null = null;
   private spreadsheetCacheExpiry: number = 0;
-  private readonly SPREADSHEET_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（クォータ対策）
+  private readonly SPREADSHEET_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ（新規売主を早く検出するため短縮）
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -89,13 +89,13 @@ export class EnhancedAutoSyncService {
 
   /**
    * スプレッドシートデータを取得（キャッシュ対応）
-   * Google Sheets APIクォータ対策のため、15分間キャッシュします
+   * Google Sheets APIクォータ対策のため、5分間キャッシュします
    */
-  private async getSpreadsheetData(): Promise<any[]> {
+  private async getSpreadsheetData(forceRefresh: boolean = false): Promise<any[]> {
     const now = Date.now();
 
-    // キャッシュが有効な場合は使用
-    if (this.spreadsheetCache && now < this.spreadsheetCacheExpiry) {
+    // 強制リフレッシュでない場合、キャッシュが有効なら使用
+    if (!forceRefresh && this.spreadsheetCache && now < this.spreadsheetCacheExpiry) {
       console.log('📦 Using cached spreadsheet data (valid for', Math.round((this.spreadsheetCacheExpiry - now) / 1000), 'seconds)');
       return this.spreadsheetCache;
     }
@@ -110,8 +110,17 @@ export class EnhancedAutoSyncService {
     this.spreadsheetCache = allRows;
     this.spreadsheetCacheExpiry = now + this.SPREADSHEET_CACHE_TTL;
     
-    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 15 minutes)`);
+    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 5 minutes)`);
     return allRows;
+  }
+
+  /**
+   * スプレッドシートキャッシュをクリア
+   */
+  public clearSpreadsheetCache(): void {
+    this.spreadsheetCache = null;
+    this.spreadsheetCacheExpiry = 0;
+    console.log('🗑️ Spreadsheet cache cleared');
   }
 
   /**
@@ -1850,12 +1859,17 @@ export class EnhancedAutoSyncService {
    * detectMissingSellersとsyncMissingSellersを組み合わせて実行
    * 更新同期と削除同期も含む
    */
-  async runFullSync(triggeredBy: 'scheduled' | 'manual' = 'scheduled'): Promise<CompleteSyncResult> {
+  async runFullSync(triggeredBy: 'scheduled' | 'manual' = 'scheduled', clearCache: boolean = false): Promise<CompleteSyncResult> {
     const startTime = new Date();
     console.log(`🔄 Starting full sync (triggered by: ${triggeredBy})`);
     
+    // 手動トリガーまたは明示的にキャッシュクリアが指定された場合、キャッシュをクリア
+    if (clearCache || triggeredBy === 'manual') {
+      this.clearSpreadsheetCache();
+    }
+    
     try {
-      // Phase 1: 追加同期 - 不足売主を検出して追加
+      // Phase 1: 追加同期 - 不足売主を検出して追加（最優先）
       console.log('📥 Phase 1: Seller Addition Sync');
       const missingSellers = await this.detectMissingSellers();
       
