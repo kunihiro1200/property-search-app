@@ -37,7 +37,9 @@ import { Seller } from '../types';
 // todayCallAssigned: 営担あり + 訪問日なし + 次電日が今日以前
 // visitScheduled: 訪問予定（営担に入力あり、訪問日が今日以降）
 // visitCompleted: 訪問済み（営担に入力あり、訪問日が昨日以前）
-export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
+// todayCallNotStarted: 当日TEL_未着手（不通が空欄 + 反響日付が2026/1/1以降）
+// pinrichEmpty: Pinrich空欄（Pinrichカラムが空欄）
+export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending' | 'todayCallNotStarted' | 'pinrichEmpty';
 
 // カテゴリカウントのインターフェース
 export interface CategoryCounts {
@@ -49,6 +51,8 @@ export interface CategoryCounts {
   visitCompleted: number;      // 訪問済み（営担に入力あり、訪問日が昨日以前）
   unvaluated: number;
   mailingPending: number;
+  todayCallNotStarted: number; // 当日TEL_未着手（不通が空欄 + 反響日付が2026/1/1以降）
+  pinrichEmpty: number;        // Pinrich空欄（Pinrichカラムが空欄）
 }
 
 /**
@@ -594,6 +598,64 @@ export const isMailingPending = (seller: Seller | any): boolean => {
 };
 
 /**
+ * 当日TEL_未着手判定
+ * 
+ * 条件:
+ * - 不通カラム（unreachableStatus）が空欄
+ * - 反響日付が2026/1/1以降
+ * - 当日TEL分の条件を満たす（追客中 + 次電日が今日以前 + コミュニケーション情報が全て空 + 営担なし）
+ * 
+ * @param seller 売主データ
+ * @returns 当日TEL_未着手対象かどうか
+ */
+export const isTodayCallNotStarted = (seller: Seller | any): boolean => {
+  // 当日TEL分の基準日: 2026/1/1（文字列比較用）
+  const CUTOFF_DATE_STR = '2026-01-01';
+  
+  // まず当日TEL分の条件を満たすかチェック
+  if (!isTodayCall(seller)) {
+    return false;
+  }
+  
+  // 不通カラムが空欄かチェック
+  const unreachableStatus = seller.unreachableStatus || seller.unreachable_status || '';
+  if (unreachableStatus && unreachableStatus.trim() !== '') {
+    return false;
+  }
+  
+  // 反響日付が2026/1/1以降かチェック
+  const inquiryDate = seller.inquiryDetailedDatetime || seller.inquiryDate || seller.inquiry_date;
+  const normalizedInquiryDate = normalizeDateString(inquiryDate);
+  
+  if (!normalizedInquiryDate) {
+    return false;
+  }
+  
+  return normalizedInquiryDate >= CUTOFF_DATE_STR;
+};
+
+/**
+ * Pinrich空欄判定
+ * 
+ * 条件:
+ * - Pinrichカラム（pinrichStatus）が空欄
+ * - 当日TEL分の条件を満たす（追客中 + 次電日が今日以前 + コミュニケーション情報が全て空 + 営担なし）
+ * 
+ * @param seller 売主データ
+ * @returns Pinrich空欄対象かどうか
+ */
+export const isPinrichEmpty = (seller: Seller | any): boolean => {
+  // まず当日TEL分の条件を満たすかチェック
+  if (!isTodayCall(seller)) {
+    return false;
+  }
+  
+  // Pinrichカラムが空欄かチェック
+  const pinrichStatus = seller.pinrichStatus || seller.pinrich_status || '';
+  return !pinrichStatus || pinrichStatus.trim() === '';
+};
+
+/**
  * カテゴリ別の売主数をカウント
  * 
  * @param sellers 売主リスト
@@ -611,6 +673,8 @@ export const getCategoryCounts = (sellers: (Seller | any)[]): CategoryCounts => 
     visitCompleted: sellers.filter(isVisitCompleted).length,
     unvaluated: sellers.filter(isUnvaluated).length,
     mailingPending: sellers.filter(isMailingPending).length,
+    todayCallNotStarted: sellers.filter(isTodayCallNotStarted).length,
+    pinrichEmpty: sellers.filter(isPinrichEmpty).length,
   };
 };
 
@@ -642,6 +706,10 @@ export const filterSellersByCategory = (
       return sellers.filter(isUnvaluated);
     case 'mailingPending':
       return sellers.filter(isMailingPending);
+    case 'todayCallNotStarted':
+      return sellers.filter(isTodayCallNotStarted);
+    case 'pinrichEmpty':
+      return sellers.filter(isPinrichEmpty);
     case 'all':
     default:
       return sellers;

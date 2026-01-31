@@ -130,6 +130,37 @@
 
 ---
 
+### 7. 「当日TEL_未着手」
+
+**サイドバー表示**: `⑦当日TEL_未着手`
+**色**: オレンジ（#ff9800）
+
+**条件**:
+- **不通カラム（unreachableStatus）が空欄**
+- **反響日付が2026/1/1以降**
+- 当日TEL分の条件を満たす（追客中 + 次電日が今日以前 + コミュニケーション情報が全て空 + 営担なし）
+
+**重要**: 
+- 当日TEL分のサブセット（当日TEL分の条件を満たす売主の中で、さらに不通が空欄かつ反響日付が2026/1/1以降の売主）
+- 不通カラムに何か入力がある場合は対象外
+
+---
+
+### 8. 「Pinrich空欄」
+
+**サイドバー表示**: `⑧Pinrich空欄`
+**色**: ブラウン（#795548）
+
+**条件**:
+- **Pinrichカラム（pinrichStatus）が空欄**
+- 当日TEL分の条件を満たす（追客中 + 次電日が今日以前 + コミュニケーション情報が全て空 + 営担なし）
+
+**重要**: 
+- 当日TEL分のサブセット（当日TEL分の条件を満たす売主の中で、さらにPinrichが空欄の売主）
+- Pinrichカラムに何か入力がある場合は対象外
+
+---
+
 ## 🔍 実装ファイル
 
 ### フィルタリングロジック
@@ -145,6 +176,8 @@
 - `getTodayCallWithInfoLabel()` - 当日TEL（内容）の表示ラベル取得
 - `isUnvaluated()` - 未査定の判定
 - `isMailingPending()` - 査定（郵送）の判定
+- `isTodayCallNotStarted()` - 当日TEL_未着手の判定
+- `isPinrichEmpty()` - Pinrich空欄の判定
 
 ### ステータス表示ロジック
 
@@ -161,10 +194,13 @@
 - `'all'` - 全て
 - `'visitScheduled'` - 訪問予定
 - `'visitCompleted'` - 訪問済み
+- `'todayCallAssigned'` - 当日TEL（担当）
 - `'todayCall'` - 当日TEL分
 - `'todayCallWithInfo'` - 当日TEL（内容）
 - `'unvaluated'` - 未査定
 - `'mailingPending'` - 査定（郵送）
+- `'todayCallNotStarted'` - 当日TEL_未着手
+- `'pinrichEmpty'` - Pinrich空欄
 
 ---
 
@@ -254,6 +290,8 @@ categoryCounts.todayCallWithInfo = sellers.filter(isTodayCallWithInfo).length;  
 | 当日TEL（内容） | 追客中 + 次電日が今日以前 + コミュニケーション情報のいずれかに入力あり + **営担なし** | 紫 |
 | 未査定 | 追客中 + 査定額が全て空（自動・手動両方） + 反響日付が2025/12/8以降 + 営担が空 + 査定不要ではない | オレンジ |
 | 査定（郵送） | 郵送ステータスが「未」 | 青 |
+| 当日TEL_未着手 | 当日TEL分の条件 + 不通が空欄 + 反響日付が2026/1/1以降 | オレンジ |
+| Pinrich空欄 | 当日TEL分の条件 + Pinrichが空欄 | ブラウン |
 
 **このルールを徹底することで、ステータスの混同を完全に防止できます。**
 
@@ -262,4 +300,5 @@ categoryCounts.todayCallWithInfo = sellers.filter(isTodayCallWithInfo).length;  
 **最終更新日**: 2026年1月31日  
 **作成理由**: サイドバーステータスの定義を明確化し、同じ間違いを繰り返さないため
 **更新履歴**:
+- 2026年1月31日: 「当日TEL_未着手」「Pinrich空欄」カテゴリを追加
 - 2026年1月31日: 「当日TEL（担当）」カテゴリを追加（営担あり + 次電日が今日以前）
