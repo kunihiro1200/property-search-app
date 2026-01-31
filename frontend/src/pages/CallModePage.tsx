@@ -103,6 +103,56 @@ const CallModePage = () => {
     return formatCurrentStatusDetailed(situation);
   };
 
+  /**
+   * 物件情報を取得するヘルパー関数
+   * propertyオブジェクトがある場合はそれを使用し、ない場合はsellerの直接フィールドを使用
+   */
+  const getPropertyInfo = useCallback(() => {
+    if (property) {
+      return {
+        address: property.address,
+        propertyType: property.propertyType,
+        landArea: property.landArea,
+        buildingArea: property.buildingArea,
+        buildYear: property.buildYear,
+        floorPlan: property.floorPlan,
+        structure: property.structure,
+        currentStatus: property.currentStatus || property.sellerSituation,
+        hasData: true,
+      };
+    }
+    
+    // propertyがない場合、sellerの直接フィールドを使用
+    if (seller) {
+      const hasAnyData = seller.propertyAddress || seller.propertyType || 
+                         seller.landArea || seller.buildingArea || 
+                         seller.buildYear || seller.floorPlan || seller.structure;
+      return {
+        address: seller.propertyAddress,
+        propertyType: seller.propertyType,
+        landArea: seller.landArea,
+        buildingArea: seller.buildingArea,
+        buildYear: seller.buildYear,
+        floorPlan: seller.floorPlan,
+        structure: seller.structure,
+        currentStatus: seller.currentStatus,
+        hasData: !!hasAnyData,
+      };
+    }
+    
+    return {
+      address: undefined,
+      propertyType: undefined,
+      landArea: undefined,
+      buildingArea: undefined,
+      buildYear: undefined,
+      floorPlan: undefined,
+      structure: undefined,
+      currentStatus: undefined,
+      hasData: false,
+    };
+  }, [property, seller]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -2488,6 +2538,7 @@ HP：https://ifoo-oita.com/
                   </Typography>
                 )}
               </Box>
+              {/* 編集ボタン: propertyオブジェクトがある場合のみ表示（編集はpropertiesテーブルに対して行うため） */}
               {property && (
                 <Button
                   size="small"
@@ -2511,13 +2562,86 @@ HP：https://ifoo-oita.com/
               )}
             </Box>
             <Paper sx={{ p: 2, mb: 3 }}>
-              {property ? (
-                <>
-                  {!editingProperty ? (
-                    // 表示モード
+              {/* 物件情報の表示: propertyオブジェクトまたはsellerの直接フィールドから取得 */}
+              {(() => {
+                const propInfo = getPropertyInfo();
+                if (!propInfo.hasData) {
+                  return (
+                    <Typography variant="body2" color="text.secondary">
+                      物件情報が登録されていません
+                    </Typography>
+                  );
+                }
+                
+                // propertyオブジェクトがある場合は編集モードも表示
+                if (property) {
+                  return !editingProperty ? (
+                    // 表示モード（propertyオブジェクトあり）
                     <>
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
+                          物件住所
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {propInfo.address}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          物件種別
+                        </Typography>
+                        <Typography variant="body1">{getPropertyTypeLabel(propInfo.propertyType || '')}</Typography>
+                      </Box>
+                      {propInfo.landArea && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            土地面積
+                          </Typography>
+                          <Typography variant="body1">{propInfo.landArea} m²</Typography>
+                        </Box>
+                      )}
+                      {propInfo.buildingArea && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            建物面積
+                          </Typography>
+                          <Typography variant="body1">{propInfo.buildingArea} m²</Typography>
+                        </Box>
+                      )}
+                      {propInfo.buildYear && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            築年
+                          </Typography>
+                          <Typography variant="body1">{propInfo.buildYear}年</Typography>
+                        </Box>
+                      )}
+                      {propInfo.floorPlan && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            間取り
+                          </Typography>
+                          <Typography variant="body1">{propInfo.floorPlan}</Typography>
+                        </Box>
+                      )}
+                      {propInfo.structure && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            構造
+                          </Typography>
+                          <Typography variant="body1">{propInfo.structure}</Typography>
+                        </Box>
+                      )}
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          状況（売主）
+                        </Typography>
+                        <Typography variant="body1">
+                          {propInfo.currentStatus ? getSellerSituationLabel(propInfo.currentStatus) : '未設定'}
+                        </Typography>
+                      </Box>
+                    </>
+                  ) : (
                           物件住所
                         </Typography>
                         <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
@@ -2533,54 +2657,6 @@ HP：https://ifoo-oita.com/
                       {property.landArea && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="body2" color="text.secondary">
-                            土地面積
-                          </Typography>
-                          <Typography variant="body1">{property.landArea} m²</Typography>
-                        </Box>
-                      )}
-                      {property.buildingArea && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            建物面積
-                          </Typography>
-                          <Typography variant="body1">{property.buildingArea} m²</Typography>
-                        </Box>
-                      )}
-                      {property.buildYear && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            築年
-                          </Typography>
-                          <Typography variant="body1">{property.buildYear}年</Typography>
-                        </Box>
-                      )}
-                      {property.floorPlan && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            間取り
-                          </Typography>
-                          <Typography variant="body1">{property.floorPlan}</Typography>
-                        </Box>
-                      )}
-                      {property.structure && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            構造
-                          </Typography>
-                          <Typography variant="body1">{property.structure}</Typography>
-                        </Box>
-                      )}
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          状況（売主）
-                        </Typography>
-                        <Typography variant="body1">
-                          {property.currentStatus ? getSellerSituationLabel(property.currentStatus) : 
-                           property.sellerSituation ? getSellerSituationLabel(property.sellerSituation) : '未設定'}
-                        </Typography>
-                      </Box>
-                    </>
-                  ) : (
                     // 編集モード
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
@@ -2696,13 +2772,83 @@ HP：https://ifoo-oita.com/
                         </Button>
                       </Grid>
                     </Grid>
-                  )}
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  物件情報が登録されていません
-                </Typography>
-              )}
+                  );
+                }
+                
+                // propertyオブジェクトがない場合は、sellerの直接フィールドから表示（読み取り専用）
+                return (
+                  <>
+                    {propInfo.address && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          物件住所
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {propInfo.address}
+                        </Typography>
+                      </Box>
+                    )}
+                    {propInfo.propertyType && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          物件種別
+                        </Typography>
+                        <Typography variant="body1">{getPropertyTypeLabel(propInfo.propertyType)}</Typography>
+                      </Box>
+                    )}
+                    {propInfo.landArea && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          土地面積
+                        </Typography>
+                        <Typography variant="body1">{propInfo.landArea} m²</Typography>
+                      </Box>
+                    )}
+                    {propInfo.buildingArea && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          建物面積
+                        </Typography>
+                        <Typography variant="body1">{propInfo.buildingArea} m²</Typography>
+                      </Box>
+                    )}
+                    {propInfo.buildYear && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          築年
+                        </Typography>
+                        <Typography variant="body1">{propInfo.buildYear}年</Typography>
+                      </Box>
+                    )}
+                    {propInfo.floorPlan && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          間取り
+                        </Typography>
+                        <Typography variant="body1">{propInfo.floorPlan}</Typography>
+                      </Box>
+                    )}
+                    {propInfo.structure && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          構造
+                        </Typography>
+                        <Typography variant="body1">{propInfo.structure}</Typography>
+                      </Box>
+                    )}
+                    {propInfo.currentStatus && (
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          状況（売主）
+                        </Typography>
+                        <Typography variant="body1">
+                          {getSellerSituationLabel(propInfo.currentStatus)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </>
+                );
+              })()}
             </Paper>
 
             {/* 売主情報 */}
