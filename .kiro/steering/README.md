@@ -7,7 +7,9 @@
 
 - `japanese-language.md` - 日本語応答設定
 - `project-isolation-rule.md` - プロジェクト隔離ルール（本番環境保護）
+- `system-isolation-rule.md` - **システム隔離ルール（5つの独立システム）** ← **最重要**
 - `git-history-first-approach.md` - Git履歴優先アプローチ
+- `selective-revert-rule.md` - **選択的リバートルール（ファイル単位で復元）** ← **重要**
 - `file-encoding-protection.md` - ファイルエンコーディング保護
 - `backend-architecture.md` - バックエンドアーキテクチャ定義
 - `environment-definition.md` - 環境定義（本番環境とローカル環境）
@@ -74,7 +76,9 @@
 **常に読み込まれるドキュメント**:
 - `japanese-language.md` - 日本語応答設定
 - `project-isolation-rule.md` - プロジェクト隔離ルール
+- `system-isolation-rule.md` - **システム隔離ルール（5つの独立システム）** ← **最重要**
 - `git-history-first-approach.md` - Git履歴優先アプローチ
+- `selective-revert-rule.md` - **選択的リバートルール（ファイル単位で復元）** ← **重要**
 - `file-encoding-protection.md` - ファイルエンコーディング保護
 - `backend-architecture.md` - バックエンドアーキテクチャ定義
 - `environment-definition.md` - 環境定義
@@ -115,5 +119,6 @@
 
 **最終更新日**: 2026年1月31日  
 **更新内容**: 
+- `system-isolation-rule.md`を追加（5つの独立システムの隔離ルール）
 - 物件関連のステアリングドキュメントを手動読み込み（`inclusion: manual`）に変更
 - 売主関連の作業時にコンテキストを軽量化
