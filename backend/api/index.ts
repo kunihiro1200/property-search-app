@@ -1,5 +1,5 @@
 // 公開物件サイト専用のエントリーポイント
-// Force cache clear: 2026-01-29 16:00 - FINAL FIX: Price field in all code paths
+// Force cache clear: 2026-01-31 17:00 - Restore working state
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
