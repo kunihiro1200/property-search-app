@@ -38,6 +38,29 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 // PropertyListingServiceの初期化（ローカル環境と同じ）
 const propertyListingService = new PropertyListingService();
 
+/**
+ * 日本語の物件種別を英語に変換
+ * 
+ * @param japaneseType - 日本語の物件種別（例: "土地", "戸建", "マンション"）
+ * @returns 英語の物件種別（例: "land", "detached_house", "apartment"）
+ */
+function convertPropertyTypeToEnglish(japaneseType: string | null | undefined): 'land' | 'detached_house' | 'apartment' | null {
+  if (!japaneseType) return null;
+  
+  const typeMapping: Record<string, 'land' | 'detached_house' | 'apartment'> = {
+    '戸建': 'detached_house',
+    '戸建て': 'detached_house',
+    'マンション': 'apartment',
+    '土地': 'land',
+    // 英語の値もそのまま返す
+    'land': 'land',
+    'detached_house': 'detached_house',
+    'apartment': 'apartment',
+  };
+  
+  return typeMapping[japaneseType] || null;
+}
+
 // Middleware
 app.use(helmet());
 app.use(cors({
@@ -379,10 +402,17 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             });
             try {
               const athomeSheetSyncService = new AthomeSheetSyncService();
-              const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
-                property.property_number,
-                property.property_type as 'land' | 'detached_house' | 'apartment'
-              );
+              // 日本語の物件種別を英語に変換
+              const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+              console.log(`[Complete API] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+              
+              if (!englishPropertyType) {
+                console.error(`[Complete API] Invalid property type: "${property.property_type}"`);
+              } else {
+                const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+                  property.property_number,
+                  englishPropertyType
+                );
               
               if (syncSuccess) {
                 console.log(`[Complete API] Successfully synced comments from Athome sheet`);
@@ -419,6 +449,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
                 return updatedDetails;
               } else {
                 console.error(`[Complete API] Failed to sync comments from Athome sheet`);
+              }
               }
             } catch (syncError: any) {
               console.error(`[Complete API] Error syncing comments:`, syncError.message);
@@ -1638,9 +1669,22 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
     
     // AthomeSheetSyncServiceを使用して同期
     const athomeSheetSyncService = new AthomeSheetSyncService();
+    // 日本語の物件種別を英語に変換
+    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+    console.log(`[Manual Sync] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+    
+    if (!englishPropertyType) {
+      console.error(`[Manual Sync] Invalid property type: "${property.property_type}"`);
+      return res.status(400).json({
+        success: false,
+        error: `Invalid property type: "${property.property_type}"`,
+        propertyNumber
+      });
+    }
+    
     const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
       propertyNumber,
-      property.property_type as 'land' | 'detached_house' | 'apartment'
+      englishPropertyType
     );
     
     if (syncSuccess) {
@@ -1709,9 +1753,24 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
         
         // AthomeSheetSyncServiceを使用して同期
         const athomeSheetSyncService = new AthomeSheetSyncService();
+        // 日本語の物件種別を英語に変換
+        const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+        console.log(`[Batch Sync] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+        
+        if (!englishPropertyType) {
+          console.error(`[Batch Sync] ❌ ${propertyNumber}: Invalid property type "${property.property_type}"`);
+          results.failed++;
+          results.details.push({
+            propertyNumber,
+            success: false,
+            error: `Invalid property type: "${property.property_type}"`
+          });
+          continue;
+        }
+        
         const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
           propertyNumber,
-          property.property_type as 'land' | 'detached_house' | 'apartment'
+          englishPropertyType
         );
         
         if (syncSuccess) {
