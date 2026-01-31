@@ -403,29 +403,11 @@ export class PropertyListingService {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
-      const { data: rawData, error, count } = await query;
+      const { data, error, count } = await query;
       
       if (error) {
         throw new Error(`Supabase query error: ${error.message}`);
       }
-      
-      // JavaScriptでソート（SupabaseのnullsFirst: falseが正しく動作しない場合の対策）
-      // distribution_dateがある物件を先に、NULLの物件を後に配置
-      const data = (rawData || []).sort((a, b) => {
-        const aDate = a.distribution_date;
-        const bDate = b.distribution_date;
-        
-        // 両方NULLの場合はcreated_atで比較
-        if (!aDate && !bDate) {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }
-        // aがNULLの場合、bを先に
-        if (!aDate) return 1;
-        // bがNULLの場合、aを先に
-        if (!bDate) return -1;
-        // 両方日付がある場合は降順
-        return new Date(bDate).getTime() - new Date(aDate).getTime();
-      });
       
       // 画像取得：image_url → storage_location
       // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
