@@ -3794,7 +3794,7 @@ HP：https://ifoo-oita.com/
                       )}
                       {seller?.valuationText && (
                         <Chip 
-                          label="📝 テキスト" 
+                          label="当時査定額" 
                           color="info" 
                           size="medium"
                         />
