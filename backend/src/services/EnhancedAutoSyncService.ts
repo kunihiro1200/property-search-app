@@ -55,7 +55,7 @@ export class EnhancedAutoSyncService {
   // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
   private spreadsheetCache: any[] | null = null;
   private spreadsheetCacheExpiry: number = 0;
-  private readonly SPREADSHEET_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ（新規売主を早く検出するため短縮）
+  private readonly SPREADSHEET_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（Google Sheets APIクォータ対策）
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -110,7 +110,7 @@ export class EnhancedAutoSyncService {
     this.spreadsheetCache = allRows;
     this.spreadsheetCacheExpiry = now + this.SPREADSHEET_CACHE_TTL;
     
-    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 5 minutes)`);
+    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 30 minutes)`);
     return allRows;
   }
 
