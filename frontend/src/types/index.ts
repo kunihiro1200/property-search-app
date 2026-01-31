@@ -184,6 +184,21 @@ export interface Seller {
   duplicateConfirmedAt?: string | Date;
   duplicateConfirmedBy?: string;
   lastCallDate?: string;
+  
+  // 物件関連フィールド（sellersテーブルに直接保存）
+  propertyAddress?: string; // 物件所在地
+  property_address?: string | null; // 物件所在地 - snake_case版
+  propertyType?: string; // 種別（土地、戸建、マンション等）
+  property_type?: string | null; // 種別 - snake_case版
+  landArea?: number; // 土地面積（㎡）
+  land_area?: number | null; // 土地面積 - snake_case版
+  buildingArea?: number; // 建物面積（㎡）
+  building_area?: number | null; // 建物面積 - snake_case版
+  buildYear?: number; // 築年
+  build_year?: number | null; // 築年 - snake_case版
+  structure?: string; // 構造
+  floorPlan?: string; // 間取り
+  floor_plan?: string | null; // 間取り - snake_case版
 }
 
 export interface DuplicateMatch {

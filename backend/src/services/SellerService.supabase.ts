@@ -1112,6 +1112,14 @@ export class SellerService extends BaseRepository {
         latestStatus: seller.latest_status,
         // Pinrich status
         pinrichStatus: seller.pinrich_status,
+        // Property fields (物件関連フィールド)
+        propertyAddress: seller.property_address,
+        propertyType: seller.property_type,
+        landArea: seller.land_area,
+        buildingArea: seller.building_area,
+        buildYear: seller.build_year,
+        structure: seller.structure,
+        floorPlan: seller.floor_plan,
       };
       
       return decrypted;

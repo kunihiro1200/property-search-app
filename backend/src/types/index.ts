@@ -173,6 +173,15 @@ export interface Seller {
   
   // 物件情報（オプション）
   property?: PropertyInfo;
+  
+  // 物件関連フィールド（sellersテーブルに直接保存）
+  propertyAddress?: string; // 物件所在地
+  propertyType?: string; // 種別（土地、戸建、マンション等）
+  landArea?: number; // 土地面積（㎡）
+  buildingArea?: number; // 建物面積（㎡）
+  buildYear?: number; // 築年
+  structure?: string; // 構造
+  floorPlan?: string; // 間取り
 }
 
 export interface PropertyInfo {

@@ -1082,6 +1082,22 @@ export class EnhancedAutoSyncService {
     const visitValuationAcquirer = row['訪問査定取得者'];
     const visitAssignee = row['営担'];
 
+    // 物件関連フィールドを取得
+    const propertyAddress = row['物件所在地'];
+    let propertyType = row['種別'];
+    if (propertyType) {
+      const typeStr = String(propertyType).trim();
+      const typeMapping: Record<string, string> = {
+        '土': '土地', '戸': '戸建', 'マ': 'マンション', '事': '事業用',
+      };
+      propertyType = typeMapping[typeStr] || typeStr;
+    }
+    const landArea = row['土（㎡）'];
+    const buildingArea = row['建（㎡）'];
+    const buildYear = row['築年'];
+    const structure = row['構造'];
+    const floorPlan = row['間取り'];
+
     const updateData: any = {
       name: mappedData.name ? encrypt(mappedData.name) : null,
       address: mappedData.address ? encrypt(mappedData.address) : null,
@@ -1093,6 +1109,32 @@ export class EnhancedAutoSyncService {
       is_unreachable: this.convertIsUnreachable(row['不通']),
       updated_at: new Date().toISOString(),
     };
+
+    // 物件関連フィールドを追加
+    if (propertyAddress) {
+      updateData.property_address = String(propertyAddress);
+    }
+    if (propertyType) {
+      updateData.property_type = String(propertyType);
+    }
+    const parsedLandArea = this.parseNumeric(landArea);
+    if (parsedLandArea !== null) {
+      updateData.land_area = parsedLandArea;
+    }
+    const parsedBuildingArea = this.parseNumeric(buildingArea);
+    if (parsedBuildingArea !== null) {
+      updateData.building_area = parsedBuildingArea;
+    }
+    const parsedBuildYear = this.parseNumeric(buildYear);
+    if (parsedBuildYear !== null) {
+      updateData.build_year = parsedBuildYear;
+    }
+    if (structure) {
+      updateData.structure = String(structure);
+    }
+    if (floorPlan) {
+      updateData.floor_plan = String(floorPlan);
+    }
 
     // 反響関連フィールドを追加
     if (inquiryYear) {
@@ -1224,6 +1266,22 @@ export class EnhancedAutoSyncService {
     const visitValuationAcquirer = row['訪問査定取得者'];
     const visitAssignee = row['営担'];
 
+    // 物件関連フィールドを取得
+    const propertyAddress = row['物件所在地'];
+    let propertyType = row['種別'];
+    if (propertyType) {
+      const typeStr = String(propertyType).trim();
+      const typeMapping: Record<string, string> = {
+        '土': '土地', '戸': '戸建', 'マ': 'マンション', '事': '事業用',
+      };
+      propertyType = typeMapping[typeStr] || typeStr;
+    }
+    const landArea = row['土（㎡）'];
+    const buildingArea = row['建（㎡）'];
+    const buildYear = row['築年'];
+    const structure = row['構造'];
+    const floorPlan = row['間取り'];
+
     const encryptedData: any = {
       seller_number: sellerNumber,
       name: mappedData.name ? encrypt(mappedData.name) : null,
@@ -1235,6 +1293,32 @@ export class EnhancedAutoSyncService {
       pinrich_status: mappedData.pinrich_status || null,
       is_unreachable: this.convertIsUnreachable(row['不通']),
     };
+
+    // 物件関連フィールドを追加
+    if (propertyAddress) {
+      encryptedData.property_address = String(propertyAddress);
+    }
+    if (propertyType) {
+      encryptedData.property_type = String(propertyType);
+    }
+    const parsedLandArea = this.parseNumeric(landArea);
+    if (parsedLandArea !== null) {
+      encryptedData.land_area = parsedLandArea;
+    }
+    const parsedBuildingArea = this.parseNumeric(buildingArea);
+    if (parsedBuildingArea !== null) {
+      encryptedData.building_area = parsedBuildingArea;
+    }
+    const parsedBuildYear = this.parseNumeric(buildYear);
+    if (parsedBuildYear !== null) {
+      encryptedData.build_year = parsedBuildYear;
+    }
+    if (structure) {
+      encryptedData.structure = String(structure);
+    }
+    if (floorPlan) {
+      encryptedData.floor_plan = String(floorPlan);
+    }
 
     // 反響関連フィールドを追加
     if (inquiryYear) {
