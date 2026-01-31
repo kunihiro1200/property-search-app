@@ -54,7 +54,8 @@ export interface Seller {
   
   // 反響情報
   inquiryYear: number;
-  // inquiry_date は削除（DBに存在しない）
+  inquiryDate?: string | Date; // 反響日付（camelCase）
+  inquiry_date?: string | null; // 反響日付（snake_case）- ステータス計算用
   inquiryDetailedDateTime?: string | Date;
   inquiryDetailedDatetime?: string | Date; // バックエンド互換用（小文字t）
   inquirySite?: string; // サイト（ウ、L等）
@@ -72,6 +73,9 @@ export interface Seller {
   valuationAmount3?: number;
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuation_method?: string | null; // 査定方法 - snake_case版
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
+  valuation_text?: string | null; // I列「査定額」テキスト形式 - snake_case版
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
   
@@ -86,8 +90,12 @@ export interface Seller {
   firstCallInitials?: string; // 一番TEL
   firstCallPerson?: string; // 1番電話
   secondCallAfterUnreachable?: boolean;
-  contactMethod?: string; // Email、Smail、電話
-  preferredContactTime?: string; // 連絡取りやすい時間帯
+  phoneContactPerson?: string; // 電話担当（任意）
+  phone_contact_person?: string | null; // 電話担当（任意）- snake_case版
+  preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  preferred_contact_time?: string | null; // 連絡取りやすい日、時間帯 - snake_case版
+  contactMethod?: string; // 連絡方法
+  contact_method?: string | null; // 連絡方法 - snake_case版
   mailingStatus?: string; // 郵送（未、済）
   alternativeMailingAddress?: string;
   
@@ -126,6 +134,7 @@ export interface Seller {
   // Pinrich
   pinrichStatus?: string;
   pinrich?: string | null; // スプレッドシートBF列（Pinrich）
+  pinrich_status?: string | null; // Pinrichステータス - snake_case版
   
   // ステータス（計算されたもの）
   statusList?: string[]; // 計算されたステータスの配列
@@ -166,7 +175,6 @@ export interface Seller {
   // Phase 1 backward compatibility
   inquirySource?: string; // alias for inquirySite
   inquiryDatetime?: string | Date; // alias for inquiryDetailedDateTime
-  // inquiry_date は削除（DBに存在しない）
   isUnreachable?: boolean; // alias for unreachable
   unreachableSince?: string | Date;
   firstCallerInitials?: string; // alias for firstCallInitials
@@ -176,6 +184,21 @@ export interface Seller {
   duplicateConfirmedAt?: string | Date;
   duplicateConfirmedBy?: string;
   lastCallDate?: string;
+  
+  // 物件関連フィールド（sellersテーブルに直接保存）
+  propertyAddress?: string; // 物件所在地
+  property_address?: string | null; // 物件所在地 - snake_case版
+  propertyType?: string; // 種別（土地、戸建、マンション等）
+  property_type?: string | null; // 種別 - snake_case版
+  landArea?: number; // 土地面積（㎡）
+  land_area?: number | null; // 土地面積 - snake_case版
+  buildingArea?: number; // 建物面積（㎡）
+  building_area?: number | null; // 建物面積 - snake_case版
+  buildYear?: number; // 築年
+  build_year?: number | null; // 築年 - snake_case版
+  structure?: string; // 構造
+  floorPlan?: string; // 間取り
+  floor_plan?: string | null; // 間取り - snake_case版
 }
 
 export interface DuplicateMatch {
@@ -305,6 +328,7 @@ export interface ValuationInfo {
   valuationAmount3?: number;
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
 }

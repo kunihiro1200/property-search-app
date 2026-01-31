@@ -48,6 +48,7 @@ import {
 import { emailTemplates } from '../utils/emailTemplates';
 import SenderAddressSelector from '../components/SenderAddressSelector';
 import { getActiveEmployees, Employee } from '../services/employeeService';
+import SellerStatusSidebar from '../components/SellerStatusSidebar';
 import { getSenderAddress, saveSenderAddress } from '../utils/senderAddressStorage';
 import { useCallModeQuickButtonState } from '../hooks/useCallModeQuickButtonState';
 
@@ -108,12 +109,87 @@ const CallModePage = () => {
   // データ状態
   const [seller, setSeller] = useState<Seller | null>(null);
   const [property, setProperty] = useState<PropertyInfo | null>(null);
+
+  /**
+   * 物件情報を取得するヘルパー関数
+   * propertyオブジェクトがある場合はそれを使用し、ない場合はsellerの直接フィールドを使用
+   */
+  const getPropertyInfo = useCallback(() => {
+    if (property) {
+      return {
+        address: property.address,
+        propertyType: property.propertyType,
+        landArea: property.landArea,
+        buildingArea: property.buildingArea,
+        buildYear: property.buildYear,
+        floorPlan: property.floorPlan,
+        structure: property.structure,
+        currentStatus: property.currentStatus || property.sellerSituation,
+        hasData: true,
+      };
+    }
+    
+    // propertyがない場合、sellerの直接フィールドを使用
+    if (seller) {
+      const hasAnyData = seller.propertyAddress || seller.propertyType || 
+                         seller.landArea || seller.buildingArea || 
+                         seller.buildYear || seller.floorPlan || seller.structure;
+      return {
+        address: seller.propertyAddress,
+        propertyType: seller.propertyType,
+        landArea: seller.landArea,
+        buildingArea: seller.buildingArea,
+        buildYear: seller.buildYear,
+        floorPlan: seller.floorPlan,
+        structure: seller.structure,
+        currentStatus: seller.currentStatus,
+        hasData: !!hasAnyData,
+      };
+    }
+    
+    return {
+      address: undefined,
+      propertyType: undefined,
+      landArea: undefined,
+      buildingArea: undefined,
+      buildYear: undefined,
+      floorPlan: undefined,
+      structure: undefined,
+      currentStatus: undefined,
+      hasData: false,
+    };
+  }, [property, seller]);
+
   const [activities, setActivities] = useState<Activity[]>([]);
   const [callSummary, setCallSummary] = useState<string>('');
+  
+  // サイドバー用の売主リスト
+  const [sidebarSellers, setSidebarSellers] = useState<any[]>([]);
+  const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
+  
+  // サイドバー用のカテゴリカウント（APIから直接取得）
+  const [sidebarCounts, setSidebarCounts] = useState<{
+    todayCall: number;
+    todayCallWithInfo: number;
+    todayCallAssigned: number;
+    visitScheduled: number;
+    visitCompleted: number;
+    unvaluated: number;
+    mailingPending: number;
+  }>({
+    todayCall: 0,
+    todayCallWithInfo: 0,
+    todayCallAssigned: 0,
+    visitScheduled: 0,
+    visitCompleted: 0,
+    unvaluated: 0,
+    mailingPending: 0,
+  });
 
   // 通話メモ入力状態
   const [callMemo, setCallMemo] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [unreachableStatus, setUnreachableStatus] = useState<string | null>(null);
 
   // ステータス更新用の状態
   const [editedStatus, setEditedStatus] = useState<string>('追客中');
@@ -233,10 +309,16 @@ const CallModePage = () => {
   const [isManualValuation, setIsManualValuation] = useState<boolean>(false);
   const [savingManualValuation, setSavingManualValuation] = useState(false);
 
-  // 郵送ステータス用の状態
-  const [editedMailingStatus, setEditedMailingStatus] = useState<string>('');
-  const [editedMailSentDate, setEditedMailSentDate] = useState<string>('');
-  const [savingMailingStatus, setSavingMailingStatus] = useState(false);
+  // 査定方法用の状態
+  const [editedValuationMethod, setEditedValuationMethod] = useState<string>('');
+  const [savingValuationMethod, setSavingValuationMethod] = useState(false);
+
+  // コミュニケーションフィールド用の状態
+  const [editedPhoneContactPerson, setEditedPhoneContactPerson] = useState<string>('');
+  const [editedPreferredContactTime, setEditedPreferredContactTime] = useState<string>('');
+  const [editedContactMethod, setEditedContactMethod] = useState<string>('');
+  const [savingCommunication, setSavingCommunication] = useState(false);
+  const isInitialLoadRef = useRef(true); // 初回ロードフラグ
 
   // サイトオプション
   const siteOptions = [
@@ -578,6 +660,31 @@ const CallModePage = () => {
     initializeSenderAddress();
   }, []);
 
+  // スタッフイニシャル一覧を取得
+  useEffect(() => {
+    const fetchActiveInitials = async () => {
+      try {
+        const response = await fetch('/api/employees/active-initials', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setActiveEmployees(data.initials || []);
+          console.log('✅ Loaded active staff initials:', data.initials);
+        } else {
+          console.error('Failed to fetch active staff initials');
+        }
+      } catch (error) {
+        console.error('Error fetching active staff initials:', error);
+      }
+    };
+    
+    fetchActiveInitials();
+  }, []);
+
   // 訪問統計をロード（visitDateまたはappointmentDateがある場合）
   useEffect(() => {
     const visitDateValue = (seller as any)?.visitDate || seller?.appointmentDate;
@@ -606,6 +713,177 @@ const CallModePage = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [callMemo, saving]);
+
+  // sellerが変更されたときにコミュニケーションフィールドを初期化
+  useEffect(() => {
+    if (seller) {
+      setEditedPhoneContactPerson(seller.phoneContactPerson || '');
+      setEditedPreferredContactTime(seller.preferredContactTime || '');
+      setEditedContactMethod(seller.contactMethod || '');
+      isInitialLoadRef.current = true; // 初回ロードフラグをリセット
+    }
+  }, [seller?.id]); // seller.idが変更されたときのみ実行
+
+  // コミュニケーションフィールドの自動保存
+  useEffect(() => {
+    // 初回ロード時はスキップ
+    if (!seller) return;
+    
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
+
+    // 変更がない場合はスキップ
+    const hasChanges = 
+      editedPhoneContactPerson !== (seller.phoneContactPerson || '') ||
+      editedPreferredContactTime !== (seller.preferredContactTime || '') ||
+      editedContactMethod !== (seller.contactMethod || '');
+
+    if (!hasChanges) return;
+
+    // 保存中の場合はスキップ
+    if (savingCommunication) return;
+
+    // デバウンス処理（1秒後に保存）
+    const timeoutId = setTimeout(async () => {
+      try {
+        setSavingCommunication(true);
+        console.log('🔄 コミュニケーションフィールドを自動保存中...');
+
+        await api.put(`/api/sellers/${id}`, {
+          phoneContactPerson: editedPhoneContactPerson || null,
+          preferredContactTime: editedPreferredContactTime || null,
+          contactMethod: editedContactMethod || null,
+        });
+
+        console.log('✅ コミュニケーションフィールドを自動保存しました');
+      } catch (err: any) {
+        console.error('❌ 自動保存に失敗:', err);
+        setError('自動保存に失敗しました');
+      } finally {
+        setSavingCommunication(false);
+      }
+    }, 1000); // 1秒のデバウンス
+
+    return () => clearTimeout(timeoutId);
+  }, [editedPhoneContactPerson, editedPreferredContactTime, editedContactMethod, seller?.phoneContactPerson, seller?.preferredContactTime, seller?.contactMethod, id]);
+
+  // サイドバー用のカテゴリカウントを取得（APIから直接取得）
+  const fetchSidebarCounts = useCallback(async () => {
+    try {
+      console.log('📊 サイドバーカウント取得開始...');
+      const response = await api.get('/api/sellers/sidebar-counts');
+      console.log('✅ サイドバーカウント取得完了:', response.data);
+      setSidebarCounts(response.data);
+    } catch (error) {
+      console.error('❌ サイドバーカウント取得エラー:', error);
+      // エラー時はカウントを0にリセット
+      setSidebarCounts({
+        todayCall: 0,
+        todayCallWithInfo: 0,
+        todayCallAssigned: 0,
+        visitScheduled: 0,
+        visitCompleted: 0,
+        unvaluated: 0,
+        mailingPending: 0,
+      });
+    }
+  }, []);
+
+  // サイドバー用の売主リストを取得する関数
+  // サイドバーに表示されるカテゴリの売主のみを取得（全売主ではない）
+  const fetchSidebarSellers = useCallback(async () => {
+    console.log('=== サイドバー売主リスト取得開始 ===');
+    console.log('現在時刻:', new Date().toISOString());
+    
+    // 認証トークンを確認
+    const sessionToken = localStorage.getItem('session_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (!sessionToken && !refreshToken) {
+      console.warn('⚠️ 認証トークンが存在しません。ログインが必要です。');
+      setSidebarLoading(false);
+      return;
+    }
+    
+    try {
+      // サイドバーに表示される各カテゴリの売主を並列で取得
+      const categories = [
+        'visitScheduled',      // 訪問予定
+        'visitCompleted',      // 訪問済み
+        'todayCallAssigned',   // 当日TEL（担当）
+        'todayCall',           // 当日TEL分
+        'todayCallWithInfo',   // 当日TEL（内容）
+        'unvaluated',          // 未査定
+        'mailingPending',      // 査定（郵送）
+      ];
+      
+      console.log('📡 各カテゴリの売主を並列取得中...');
+      
+      const responses = await Promise.all(
+        categories.map(category =>
+          api.get('/api/sellers', {
+            params: {
+              page: 1,
+              pageSize: 500, // バックエンドの最大値は500
+              sortBy: 'next_call_date',
+              sortOrder: 'asc',
+              statusCategory: category,
+            },
+          }).catch(err => {
+            console.error(`❌ ${category}の取得エラー:`, err);
+            return { data: { data: [] } };
+          })
+        )
+      );
+      
+      // 全カテゴリの売主を結合（重複を除去）
+      const allSellersMap = new Map<string, any>();
+      responses.forEach((response, index) => {
+        const sellers = response.data?.data || [];
+        console.log(`✅ ${categories[index]}: ${sellers.length}件`);
+        // AA376が含まれているか確認
+        const hasAA376 = sellers.some((s: any) => s.sellerNumber === 'AA376' || s.seller_number === 'AA376');
+        if (hasAA376) {
+          console.log(`  → AA376が${categories[index]}に含まれています`);
+        }
+        sellers.forEach((seller: any) => {
+          if (seller.id && !allSellersMap.has(seller.id)) {
+            allSellersMap.set(seller.id, seller);
+          }
+        });
+      });
+      
+      const allSellers = Array.from(allSellersMap.values());
+      console.log('=== サイドバー売主リスト取得完了 ===');
+      console.log('合計取得件数（重複除去後）:', allSellers.length);
+      
+      setSidebarSellers(allSellers);
+      
+      // サイドバーカウントも取得
+      await fetchSidebarCounts();
+    } catch (error: any) {
+      console.error('❌ サイドバー売主リスト取得エラー:', error);
+      setSidebarSellers([]);
+    } finally {
+      setSidebarLoading(false);
+    }
+  }, [fetchSidebarCounts]);
+
+  // サイドバー用の売主リストを取得（sellerが読み込まれた後に実行）
+  useEffect(() => {
+    // sellerが読み込まれた後にサイドバーデータを取得
+    // これにより、認証が確実に完了した後にAPIを呼び出す
+    console.log('=== サイドバーuseEffect実行 ===');
+    console.log('seller:', seller ? seller.sellerNumber : 'null');
+    if (seller) {
+      console.log('→ fetchSidebarSellers を呼び出します');
+      fetchSidebarSellers();
+    } else {
+      console.log('→ sellerがnullのため、fetchSidebarSellersをスキップ');
+    }
+  }, [seller, fetchSidebarSellers]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -653,6 +931,7 @@ const CallModePage = () => {
       }
       
       setSeller(sellerData);
+      setUnreachableStatus(sellerData.unreachableStatus || null);
       
       // 物件データを設定（sellerDataに含まれていない場合は別途取得）
       let propertyData = sellerData.property || null;
@@ -769,40 +1048,30 @@ const CallModePage = () => {
       setEditedValuationAmount3(sellerData.valuationAmount3?.toString() || '');
       setValuationAssignee(sellerData.valuationAssignee || '');
       
-      // 手入力査定額の初期化
-      // valuationAmount1が存在し、fixedAssetTaxRoadPriceが存在しない場合は手入力とみなす
+      // 査定額の初期化
+      // valuationAmount1は常に「査定計算」セクションに表示
+      // 手入力査定額は別途manualValuationAmount1を使用（将来的に実装予定）
       const hasValuation = sellerData.valuationAmount1;
       const hasRoadPrice = sellerData.fixedAssetTaxRoadPrice;
       
       console.log('hasValuation:', hasValuation);
       console.log('hasRoadPrice:', hasRoadPrice);
-      console.log('判定結果 - 手入力:', hasValuation && !hasRoadPrice);
       
-      if (hasValuation && !hasRoadPrice) {
-        setIsManualValuation(true);
-        // 円を万円に変換して表示
-        setEditedManualValuationAmount1(sellerData.valuationAmount1 ? (sellerData.valuationAmount1 / 10000).toString() : '');
-        setEditedManualValuationAmount2(sellerData.valuationAmount2 ? (sellerData.valuationAmount2 / 10000).toString() : '');
-        setEditedManualValuationAmount3(sellerData.valuationAmount3 ? (sellerData.valuationAmount3 / 10000).toString() : '');
-        console.log('手入力モードに設定');
-      } else {
-        // 自動計算の場合はフラグをfalseに
-        setIsManualValuation(false);
-        setEditedManualValuationAmount1('');
-        setEditedManualValuationAmount2('');
-        setEditedManualValuationAmount3('');
-        console.log('自動計算モードに設定');
-      }
+      // 常に自動計算モードとして扱う
+      // （手入力査定額は将来的にmanualValuationAmount1を使用）
+      setIsManualValuation(false);
+      setEditedManualValuationAmount1('');
+      setEditedManualValuationAmount2('');
+      setEditedManualValuationAmount3('');
+      console.log('査定額を査定計算セクションに表示');
 
-      // 郵送ステータスの初期化
-      setEditedMailingStatus(sellerData.mailingStatus || '');
-      if (sellerData.mailSentDate) {
-        const mailSentDateObj = new Date(sellerData.mailSentDate);
-        const formattedMailSentDate = mailSentDateObj.toISOString().split('T')[0];
-        setEditedMailSentDate(formattedMailSentDate);
-      } else {
-        setEditedMailSentDate('');
-      }
+      // 査定方法の初期化
+      setEditedValuationMethod(sellerData.valuationMethod || '');
+
+      // コミュニケーションフィールドの初期化
+      setEditedPhoneContactPerson(sellerData.phoneContactPerson || '');
+      setEditedPreferredContactTime(sellerData.preferredContactTime || '');
+      setEditedContactMethod(sellerData.contactMethod || '');
 
       // 活動履歴を設定
       const convertedActivities = activitiesResponse.data.map((activity: any) => ({
@@ -969,7 +1238,10 @@ const CallModePage = () => {
   };
 
   const handleSaveAndExit = async () => {
-    if (!callMemo.trim()) {
+    // バリデーション：通話メモまたは不通ステータスが必要
+    const hasInquiryDate2026 = seller?.inquiryDate && new Date(seller.inquiryDate) >= new Date('2026-01-01');
+    
+    if (!callMemo.trim() && (!hasInquiryDate2026 || !unreachableStatus)) {
       setError('通話メモを入力してください');
       return;
     }
@@ -978,17 +1250,34 @@ const CallModePage = () => {
       setSaving(true);
       setError(null);
 
-      await api.post(`/api/sellers/${id}/activities`, {
-        type: 'phone_call',
-        content: callMemo,
-        result: 'completed',
+      // 通話メモがある場合は活動ログを保存
+      if (callMemo.trim()) {
+        await api.post(`/api/sellers/${id}/activities`, {
+          type: 'phone_call',
+          content: callMemo,
+          result: 'completed',
+        });
+      }
+
+      // 不通ステータスがある場合は売主データを更新
+      if (hasInquiryDate2026 && unreachableStatus) {
+        await api.put(`/api/sellers/${id}`, {
+          unreachableStatus: unreachableStatus,
+        });
+      }
+
+      // コミュニケーションフィールドを保存
+      await api.put(`/api/sellers/${id}`, {
+        phoneContactPerson: editedPhoneContactPerson || null,
+        preferredContactTime: editedPreferredContactTime || null,
+        contactMethod: editedContactMethod || null,
       });
 
       // クイックボタンの状態を永続化（pending → persisted）
       handleQuickButtonSave();
 
       // 保存成功メッセージを表示（メモ欄はクリアしない）
-      setSuccessMessage('通話メモを保存しました');
+      setSuccessMessage('保存しました');
       
       // データを再読み込み
       await loadAllData();
@@ -998,7 +1287,7 @@ const CallModePage = () => {
         setSuccessMessage(null);
       }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || '通話メモの保存に失敗しました');
+      setError(err.response?.data?.error?.message || '保存に失敗しました');
     } finally {
       setSaving(false);
     }
@@ -1401,42 +1690,26 @@ const CallModePage = () => {
     }
   };
 
-  // 郵送ステータス更新ハンドラー
-  const handleMailingStatusChange = async (status: '未' | '済' | '不要') => {
+  // 査定方法更新ハンドラー
+  const handleValuationMethodChange = async (method: string) => {
     try {
-      setSavingMailingStatus(true);
+      setSavingValuationMethod(true);
       setError(null);
 
-      // 同じステータスをクリックした場合は解除（空文字に）
-      const newStatus = editedMailingStatus === status ? '' : status;
+      // 同じ査定方法をクリックした場合は解除（空文字に）
+      const newMethod = editedValuationMethod === method ? '' : method;
 
-      const updateData: { mailingStatus: string; mailSentDate?: string | null } = {
-        mailingStatus: newStatus,
-      };
-
-      // 「済」の場合は郵送日を今日の日付で設定、解除の場合はクリア
-      if (newStatus === '済') {
-        const today = new Date().toISOString().split('T')[0];
-        updateData.mailSentDate = today;
-      } else if (newStatus === '') {
-        updateData.mailSentDate = null;
-      }
-
-      await api.put(`/api/sellers/${id}`, updateData);
+      await api.put(`/api/sellers/${id}`, {
+        valuationMethod: newMethod,
+      });
 
       // ローカル状態を更新
-      setEditedMailingStatus(newStatus);
-      if (newStatus === '済') {
-        const today = new Date().toISOString().split('T')[0];
-        setEditedMailSentDate(today);
-      } else if (newStatus === '') {
-        setEditedMailSentDate('');
-      }
+      setEditedValuationMethod(newMethod);
 
-      if (newStatus === '') {
-        setSuccessMessage('ステータスを解除しました');
+      if (newMethod === '') {
+        setSuccessMessage('査定方法を解除しました');
       } else {
-        setSuccessMessage(`「${newStatus}」に更新しました`);
+        setSuccessMessage(`査定方法を「${newMethod}」に更新しました`);
       }
       
       // 3秒後にメッセージをクリア
@@ -1444,9 +1717,9 @@ const CallModePage = () => {
         setSuccessMessage(null);
       }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'ステータスの更新に失敗しました');
+      setError(err.response?.data?.error?.message || '査定方法の更新に失敗しました');
     } finally {
-      setSavingMailingStatus(false);
+      setSavingValuationMethod(false);
     }
   };
 
@@ -2017,8 +2290,30 @@ HP：https://ifoo-oita.com/
         </Box>
 
         {/* 査定額表示（中央） */}
+        {/* 優先順位: 1. valuationText（I列テキスト）がある場合はそれを表示 */}
+        {/*          2. 手入力または自動計算の数値査定額がある場合はそれを表示 */}
+        {/*          3. どちらもない場合は「査定額未設定」 */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mx: 2 }}>
-          {seller?.valuationAmount1 ? (
+          {seller?.valuationText ? (
+            // I列「査定額」テキスト形式がある場合（例：「1900～2200万円」）を最優先
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  {seller.valuationText}
+                </Typography>
+                <Chip 
+                  label="当時査定額" 
+                  color="secondary" 
+                  size="small"
+                />
+              </Box>
+              {seller.valuationAssignee && (
+                <Typography variant="caption" color="text.secondary">
+                  査定担当: {seller.valuationAssignee}
+                </Typography>
+              )}
+            </Box>
+          ) : seller?.valuationAmount1 ? (
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
@@ -2183,8 +2478,24 @@ HP：https://ifoo-oita.com/
         </Alert>
       )}
 
-      {/* メインコンテンツ（左右2分割） */}
-      <Box sx={{ flex: 1, overflow: 'hidden' }}>
+      {/* メインコンテンツ（サイドバー + 左右2分割） */}
+      <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+        {/* サイドバー */}
+        <Box sx={{ flexShrink: 0, overflow: 'auto', borderRight: 1, borderColor: 'divider' }}>
+          <SellerStatusSidebar
+            currentSeller={seller}
+            isCallMode={true}
+            sellers={sidebarSellers}
+            loading={sidebarLoading}
+            categoryCounts={{
+              all: sidebarSellers.length,
+              ...sidebarCounts,
+            }}
+          />
+        </Box>
+        
+        {/* メインコンテンツエリア */}
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <Grid container sx={{ height: '100%' }}>
           {/* 左側：情報表示エリア（50%） */}
           <Grid
@@ -2251,76 +2562,19 @@ HP：https://ifoo-oita.com/
               )}
             </Box>
             <Paper sx={{ p: 2, mb: 3 }}>
-              {property ? (
-                <>
-                  {!editingProperty ? (
-                    // 表示モード
-                    <>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          物件住所
-                        </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {property.address}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          物件種別
-                        </Typography>
-                        <Typography variant="body1">{getPropertyTypeLabel(property.propertyType)}</Typography>
-                      </Box>
-                      {property.landArea && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            土地面積
-                          </Typography>
-                          <Typography variant="body1">{property.landArea} m²</Typography>
-                        </Box>
-                      )}
-                      {property.buildingArea && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            建物面積
-                          </Typography>
-                          <Typography variant="body1">{property.buildingArea} m²</Typography>
-                        </Box>
-                      )}
-                      {property.buildYear && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            築年
-                          </Typography>
-                          <Typography variant="body1">{property.buildYear}年</Typography>
-                        </Box>
-                      )}
-                      {property.floorPlan && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            間取り
-                          </Typography>
-                          <Typography variant="body1">{property.floorPlan}</Typography>
-                        </Box>
-                      )}
-                      {property.structure && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            構造
-                          </Typography>
-                          <Typography variant="body1">{property.structure}</Typography>
-                        </Box>
-                      )}
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          状況（売主）
-                        </Typography>
-                        <Typography variant="body1">
-                          {property.currentStatus ? getSellerSituationLabel(property.currentStatus) : 
-                           property.sellerSituation ? getSellerSituationLabel(property.sellerSituation) : '未設定'}
-                        </Typography>
-                      </Box>
-                    </>
-                  ) : (
+              {(() => {
+                const propInfo = getPropertyInfo();
+                if (!propInfo.hasData) {
+                  return (
+                    <Typography variant="body2" color="text.secondary">
+                      物件情報が登録されていません
+                    </Typography>
+                  );
+                }
+                
+                // 編集モードはpropertyオブジェクトがある場合のみ
+                if (property && editingProperty) {
+                  return (
                     // 編集モード
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
@@ -2436,13 +2690,77 @@ HP：https://ifoo-oita.com/
                         </Button>
                       </Grid>
                     </Grid>
-                  )}
-                </>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  物件情報が登録されていません
-                </Typography>
-              )}
+                  );
+                }
+                
+                // 表示モード（propertyまたはsellerの直接フィールドから表示）
+                return (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        物件住所
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {propInfo.address}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        物件種別
+                      </Typography>
+                      <Typography variant="body1">{getPropertyTypeLabel(propInfo.propertyType || '')}</Typography>
+                    </Box>
+                    {propInfo.landArea && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          土地面積
+                        </Typography>
+                        <Typography variant="body1">{propInfo.landArea} m²</Typography>
+                      </Box>
+                    )}
+                    {propInfo.buildingArea && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          建物面積
+                        </Typography>
+                        <Typography variant="body1">{propInfo.buildingArea} m²</Typography>
+                      </Box>
+                    )}
+                    {propInfo.buildYear && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          築年
+                        </Typography>
+                        <Typography variant="body1">{propInfo.buildYear}年</Typography>
+                      </Box>
+                    )}
+                    {propInfo.floorPlan && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          間取り
+                        </Typography>
+                        <Typography variant="body1">{propInfo.floorPlan}</Typography>
+                      </Box>
+                    )}
+                    {propInfo.structure && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          構造
+                        </Typography>
+                        <Typography variant="body1">{propInfo.structure}</Typography>
+                      </Box>
+                    )}
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        状況（売主）
+                      </Typography>
+                      <Typography variant="body1">
+                        {propInfo.currentStatus ? getSellerSituationLabel(propInfo.currentStatus) : '未設定'}
+                      </Typography>
+                    </Box>
+                  </>
+                );
+              })()}
             </Paper>
 
             {/* 売主情報 */}
@@ -3382,7 +3700,7 @@ HP：https://ifoo-oita.com/
                 )}
               </Box>
               <Paper sx={{ p: 2 }}>
-                {!property && (
+                {!property && !editedValuationAmount1 && (
                   <Alert severity="info">
                     物件情報が登録されていないため、査定を実行できません
                   </Alert>
@@ -3391,12 +3709,74 @@ HP：https://ifoo-oita.com/
                 {/* 査定額が設定されていて、編集モードでない場合：簡潔な表示 */}
                 {editedValuationAmount1 && !editingValuation && (
                   <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <Typography variant="h5">
-                        {Math.round(parseInt(editedValuationAmount1) / 10000)}万円 ～{' '}
-                        {editedValuationAmount2 ? Math.round(parseInt(editedValuationAmount2) / 10000) : '-'}万円 ～{' '}
-                        {editedValuationAmount3 ? Math.round(parseInt(editedValuationAmount3) / 10000) : '-'}万円
+                    {/* 査定方法ボタン - 一番上に配置 */}
+                    <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        査定方法
                       </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                          variant={editedValuationMethod === '机上査定（メール希望）' ? 'contained' : 'outlined'}
+                          color={editedValuationMethod === '机上査定（メール希望）' ? 'primary' : 'inherit'}
+                          size="small"
+                          onClick={() => handleValuationMethodChange('机上査定（メール希望）')}
+                          disabled={savingValuationMethod}
+                        >
+                          メール希望
+                        </Button>
+                        <Button
+                          variant={editedValuationMethod === '机上査定（不通）' ? 'contained' : 'outlined'}
+                          color={editedValuationMethod === '机上査定（不通）' ? 'warning' : 'inherit'}
+                          size="small"
+                          onClick={() => handleValuationMethodChange('机上査定（不通）')}
+                          disabled={savingValuationMethod}
+                        >
+                          不通
+                        </Button>
+                        <Button
+                          variant={editedValuationMethod === '机上査定（郵送）' ? 'contained' : 'outlined'}
+                          color={editedValuationMethod === '机上査定（郵送）' ? 'info' : 'inherit'}
+                          size="small"
+                          onClick={() => handleValuationMethodChange('机上査定（郵送）')}
+                          disabled={savingValuationMethod}
+                        >
+                          郵送
+                        </Button>
+                        <Button
+                          variant={editedValuationMethod === '机上査定（電話）' ? 'contained' : 'outlined'}
+                          color={editedValuationMethod === '机上査定（電話）' ? 'success' : 'inherit'}
+                          size="small"
+                          onClick={() => handleValuationMethodChange('机上査定（電話）')}
+                          disabled={savingValuationMethod}
+                        >
+                          電話
+                        </Button>
+                        <Button
+                          variant={editedValuationMethod === '不要' ? 'contained' : 'outlined'}
+                          color={editedValuationMethod === '不要' ? 'secondary' : 'inherit'}
+                          size="small"
+                          onClick={() => handleValuationMethodChange('不要')}
+                          disabled={savingValuationMethod}
+                        >
+                          不要
+                        </Button>
+                        {savingValuationMethod && <CircularProgress size={20} />}
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      {/* valuationTextがある場合はそれを表示、なければ数値から計算 */}
+                      {seller?.valuationText ? (
+                        <Typography variant="h5">
+                          {seller.valuationText}
+                        </Typography>
+                      ) : (
+                        <Typography variant="h5">
+                          {Math.round(parseInt(editedValuationAmount1) / 10000)}万円 ～{' '}
+                          {editedValuationAmount2 ? Math.round(parseInt(editedValuationAmount2) / 10000) : '-'}万円 ～{' '}
+                          {editedValuationAmount3 ? Math.round(parseInt(editedValuationAmount3) / 10000) : '-'}万円
+                        </Typography>
+                      )}
                       {isManualValuation && (
                         <Chip 
                           label="✍️ 手入力" 
@@ -3412,6 +3792,13 @@ HP：https://ifoo-oita.com/
                           size="medium"
                         />
                       )}
+                      {seller?.valuationText && (
+                        <Chip 
+                          label="当時査定額" 
+                          color="info" 
+                          size="medium"
+                        />
+                      )}
                     </Box>
                     {valuationAssignee && (
                       <Typography variant="caption" color="text.secondary">
@@ -3423,45 +3810,6 @@ HP：https://ifoo-oita.com/
                         手入力された査定額が使用されています。メール・SMS送信時もこの金額が使用されます。
                       </Alert>
                     )}
-
-                    {/* 郵送・不要ボタン */}
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Button
-                          variant={editedMailingStatus === '未' ? 'contained' : 'outlined'}
-                          color={editedMailingStatus === '未' ? 'warning' : 'inherit'}
-                          size="small"
-                          onClick={() => handleMailingStatusChange('未')}
-                          disabled={savingMailingStatus}
-                        >
-                          郵送
-                        </Button>
-                        <Button
-                          variant={editedMailingStatus === '済' ? 'contained' : 'outlined'}
-                          color={editedMailingStatus === '済' ? 'success' : 'inherit'}
-                          size="small"
-                          onClick={() => handleMailingStatusChange('済')}
-                          disabled={savingMailingStatus}
-                        >
-                          済
-                        </Button>
-                        <Button
-                          variant={editedMailingStatus === '不要' ? 'contained' : 'outlined'}
-                          color={editedMailingStatus === '不要' ? 'secondary' : 'inherit'}
-                          size="small"
-                          onClick={() => handleMailingStatusChange('不要')}
-                          disabled={savingMailingStatus}
-                        >
-                          不要
-                        </Button>
-                        {editedMailingStatus === '済' && editedMailSentDate && (
-                          <Typography variant="body2" color="text.secondary">
-                            郵送日: {new Date(editedMailSentDate).toLocaleDateString('ja-JP')}
-                          </Typography>
-                        )}
-                        {savingMailingStatus && <CircularProgress size={20} />}
-                      </Box>
-                    </Box>
                   </Box>
                 )}
 
@@ -3469,6 +3817,63 @@ HP：https://ifoo-oita.com/
                 {(!editedValuationAmount1 || editingValuation) && property && (
                   <Box>
                     <Grid container spacing={3}>
+                      {/* 査定方法ボタン（編集モード） - 一番上に配置 */}
+                      <Grid item xs={12}>
+                        <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            査定方法
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Button
+                              variant={editedValuationMethod === '机上査定（メール希望）' ? 'contained' : 'outlined'}
+                              color={editedValuationMethod === '机上査定（メール希望）' ? 'primary' : 'inherit'}
+                              size="small"
+                              onClick={() => handleValuationMethodChange('机上査定（メール希望）')}
+                              disabled={savingValuationMethod}
+                            >
+                              メール希望
+                            </Button>
+                            <Button
+                              variant={editedValuationMethod === '机上査定（不通）' ? 'contained' : 'outlined'}
+                              color={editedValuationMethod === '机上査定（不通）' ? 'warning' : 'inherit'}
+                              size="small"
+                              onClick={() => handleValuationMethodChange('机上査定（不通）')}
+                              disabled={savingValuationMethod}
+                            >
+                              不通
+                            </Button>
+                            <Button
+                              variant={editedValuationMethod === '机上査定（郵送）' ? 'contained' : 'outlined'}
+                              color={editedValuationMethod === '机上査定（郵送）' ? 'info' : 'inherit'}
+                              size="small"
+                              onClick={() => handleValuationMethodChange('机上査定（郵送）')}
+                              disabled={savingValuationMethod}
+                            >
+                              郵送
+                            </Button>
+                            <Button
+                              variant={editedValuationMethod === '机上査定（電話）' ? 'contained' : 'outlined'}
+                              color={editedValuationMethod === '机上査定（電話）' ? 'success' : 'inherit'}
+                              size="small"
+                              onClick={() => handleValuationMethodChange('机上査定（電話）')}
+                              disabled={savingValuationMethod}
+                            >
+                              電話
+                            </Button>
+                            <Button
+                              variant={editedValuationMethod === '不要' ? 'contained' : 'outlined'}
+                              color={editedValuationMethod === '不要' ? 'secondary' : 'inherit'}
+                              size="small"
+                              onClick={() => handleValuationMethodChange('不要')}
+                              disabled={savingValuationMethod}
+                            >
+                              不要
+                            </Button>
+                            {savingValuationMethod && <CircularProgress size={20} />}
+                          </Box>
+                        </Box>
+                      </Grid>
+
                       {/* 査定額表示エリア（編集モード時） */}
                       {editedValuationAmount1 && (
                         <>
@@ -3653,47 +4058,6 @@ HP：https://ifoo-oita.com/
                               手入力査定額をクリア
                             </Button>
                           )}
-                        </Box>
-                      </Grid>
-
-                      {/* 郵送・不要ボタン（編集モード） */}
-                      <Grid item xs={12}>
-                        <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Button
-                              variant={editedMailingStatus === '未' ? 'contained' : 'outlined'}
-                              color={editedMailingStatus === '未' ? 'warning' : 'inherit'}
-                              size="small"
-                              onClick={() => handleMailingStatusChange('未')}
-                              disabled={savingMailingStatus}
-                            >
-                              郵送
-                            </Button>
-                            <Button
-                              variant={editedMailingStatus === '済' ? 'contained' : 'outlined'}
-                              color={editedMailingStatus === '済' ? 'success' : 'inherit'}
-                              size="small"
-                              onClick={() => handleMailingStatusChange('済')}
-                              disabled={savingMailingStatus}
-                            >
-                              済
-                            </Button>
-                            <Button
-                              variant={editedMailingStatus === '不要' ? 'contained' : 'outlined'}
-                              color={editedMailingStatus === '不要' ? 'secondary' : 'inherit'}
-                              size="small"
-                              onClick={() => handleMailingStatusChange('不要')}
-                              disabled={savingMailingStatus}
-                            >
-                              不要
-                            </Button>
-                            {editedMailingStatus === '済' && editedMailSentDate && (
-                              <Typography variant="body2" color="text.secondary">
-                                郵送日: {new Date(editedMailSentDate).toLocaleDateString('ja-JP')}
-                              </Typography>
-                            )}
-                            {savingMailingStatus && <CircularProgress size={20} />}
-                          </Box>
                         </Box>
                       </Grid>
 
@@ -4224,6 +4588,28 @@ HP：https://ifoo-oita.com/
                     }),
                   }}
                 />
+                <Chip
+                  label="不通"
+                  onClick={() => {
+                    handleQuickButtonClick('call-memo-unreachable');
+                    setCallMemo(callMemo + (callMemo ? '\n' : '') + '不通');
+                  }}
+                  size="small"
+                  clickable
+                  disabled={isButtonDisabled('call-memo-unreachable')}
+                  sx={{
+                    ...(getButtonState('call-memo-unreachable') === 'pending' && {
+                      backgroundColor: '#fff9c4',
+                      textDecoration: 'line-through',
+                      color: 'text.secondary',
+                    }),
+                    ...(getButtonState('call-memo-unreachable') === 'persisted' && {
+                      backgroundColor: '#e0e0e0',
+                      textDecoration: 'line-through',
+                      color: 'text.disabled',
+                    }),
+                  }}
+                />
               </Box>
             </Box>
 
@@ -4239,12 +4625,60 @@ HP：https://ifoo-oita.com/
               sx={{ mb: 2 }}
             />
 
+            {/* 不通フィールド（inquiry_date >= 2026-01-01の売主のみ表示） */}
+            {seller?.inquiryDate && new Date(seller.inquiryDate) >= new Date('2026-01-01') && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  不通 <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant={unreachableStatus === '不通' ? 'contained' : 'outlined'}
+                    color="error"
+                    size="small"
+                    onClick={() => setUnreachableStatus('不通')}
+                    sx={{ 
+                      minWidth: 100,
+                      maxWidth: 150,
+                    }}
+                  >
+                    不通
+                  </Button>
+                  <Button
+                    variant={unreachableStatus === '通電OK' ? 'contained' : 'outlined'}
+                    color="primary"
+                    size="small"
+                    onClick={() => setUnreachableStatus('通電OK')}
+                    sx={{ 
+                      minWidth: 100,
+                      maxWidth: 150,
+                    }}
+                  >
+                    通電OK
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
             {/* 保存ボタン */}
             <Button
               fullWidth
               variant="contained"
               size="large"
-              disabled={saving || !callMemo.trim()}
+              disabled={
+                saving || 
+                (
+                  !callMemo.trim() && 
+                  !editedPhoneContactPerson &&
+                  !editedPreferredContactTime &&
+                  !editedContactMethod &&
+                  (
+                    !seller?.inquiryDate || 
+                    new Date(seller.inquiryDate) < new Date('2026-01-01') || 
+                    !unreachableStatus
+                  )
+                )
+              }
               onClick={handleSaveAndExit}
               sx={{ mb: 3 }}
             >
@@ -4360,12 +4794,80 @@ HP：https://ifoo-oita.com/
               )}
             </Box>
 
+            {/* コミュニケーション情報セクション */}
+            <Box sx={{ mt: 3, mb: 3 }}>
+              {/* 自動保存成功メッセージ */}
+              {savingCommunication && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  保存中...
+                </Alert>
+              )}
+              {successMessage && successMessage.includes('自動保存') && (
+                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
+                  {successMessage}
+                </Alert>
+              )}
+              
+              <Typography variant="h6" gutterBottom>
+                📞 コミュニケーション情報
+              </Typography>
+              <Paper sx={{ p: 2 }}>
+                <Grid container spacing={2}>
+                  {/* 電話担当（任意） */}
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>電話担当（任意）</InputLabel>
+                      <Select
+                        value={editedPhoneContactPerson}
+                        onChange={(e) => setEditedPhoneContactPerson(e.target.value)}
+                        label="電話担当（任意）"
+                      >
+                        <MenuItem value="">
+                          <em>未選択</em>
+                        </MenuItem>
+                        {activeEmployees.map((employee) => (
+                          <MenuItem key={employee.id} value={employee.initials || employee.name}>
+                            {employee.initials || employee.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* 連絡取りやすい日、時間帯 */}
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="連絡取りやすい日、時間帯"
+                      value={editedPreferredContactTime}
+                      onChange={(e) => setEditedPreferredContactTime(e.target.value)}
+                      placeholder="例: 平日午前中"
+                    />
+                  </Grid>
+
+                  {/* 連絡方法 */}
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="連絡方法"
+                      value={editedContactMethod}
+                      onChange={(e) => setEditedContactMethod(e.target.value)}
+                      placeholder="例: Email、SMS、電話"
+                    />
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
+
             {/* 実績セクション */}
             <Box sx={{ mt: 3 }}>
               <PerformanceMetricsSection />
             </Box>
           </Grid>
         </Grid>
+      </Box>
       </Box>
 
       {/* 確認ダイアログ */}
