@@ -296,7 +296,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -395,15 +395,37 @@ export class PropertyListingService {
       
       // ソートとページネーション
       // 配信日（公開）の最新日順に並べ替え
+      // distribution_dateがNULLの物件は最後に表示
+      // 注意: nullsFirst: falseはascending: falseの場合、NULLを最後に配置するはずだが
+      // 正しく動作しない場合があるため、2段階ソートを使用
       query = query
         .order('distribution_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
-      const { data, error, count } = await query;
+      const { data: rawData, error, count } = await query;
       
       if (error) {
         throw new Error(`Supabase query error: ${error.message}`);
       }
+      
+      // JavaScriptでソート（SupabaseのnullsFirst: falseが正しく動作しない場合の対策）
+      // distribution_dateがある物件を先に、NULLの物件を後に配置
+      const data = (rawData || []).sort((a, b) => {
+        const aDate = a.distribution_date;
+        const bDate = b.distribution_date;
+        
+        // 両方NULLの場合はcreated_atで比較
+        if (!aDate && !bDate) {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        // aがNULLの場合、bを先に
+        if (!aDate) return 1;
+        // bがNULLの場合、aを先に
+        if (!bDate) return -1;
+        // 両方日付がある場合は降順
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      });
       
       // 画像取得：image_url → storage_location
       // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
