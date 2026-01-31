@@ -395,8 +395,10 @@ export class PropertyListingService {
       
       // ソートとページネーション
       // 配信日（公開）の最新日順に並べ替え
+      // nullの場合は作成日でソート（セカンダリソート）
       query = query
         .order('distribution_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
       
       const { data, error, count } = await query;
