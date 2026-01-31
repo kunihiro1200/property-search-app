@@ -1,27 +1,41 @@
 /**
- * AA376のAPIレスポンスを確認するスクリプト
+ * AA376のAPIレスポンスを確認
  */
 
-import fetch from 'node-fetch';
+import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-async function main() {
-  console.log('=== AA376 APIレスポンス確認 ===\n');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-  const response = await fetch('http://localhost:3000/api/sellers/by-number/AA376');
-  const data = await response.json();
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
 
-  console.log('APIレスポンス:');
-  console.log(JSON.stringify(data, null, 2));
+async function testAA376ApiResponse() {
+  // データベースから直接取得
+  const { data: seller, error } = await supabase
+    .from('sellers')
+    .select('seller_number, property_address, property_type, land_area, building_area, build_year, structure, floor_plan, valuation_text')
+    .eq('seller_number', 'AA376')
+    .single();
 
-  if (data.seller) {
-    console.log('\n📊 査定関連フィールド:');
-    console.log(`  valuationAmount1: ${data.seller.valuationAmount1}`);
-    console.log(`  valuationAmount2: ${data.seller.valuationAmount2}`);
-    console.log(`  valuationAmount3: ${data.seller.valuationAmount3}`);
-    console.log(`  valuationText: ${data.seller.valuationText}`);
-    console.log(`  fixedAssetTaxRoadPrice: ${data.seller.fixedAssetTaxRoadPrice}`);
-    console.log(`  manualValuationAmount1: ${data.seller.manualValuationAmount1}`);
+  if (error) {
+    console.log('Error:', error.message);
+    return;
   }
+
+  console.log('=== AA376のデータベース値 ===');
+  console.log('seller_number:', seller.seller_number);
+  console.log('property_address:', seller.property_address);
+  console.log('property_type:', seller.property_type);
+  console.log('land_area:', seller.land_area);
+  console.log('building_area:', seller.building_area);
+  console.log('build_year:', seller.build_year);
+  console.log('structure:', seller.structure);
+  console.log('floor_plan:', seller.floor_plan);
+  console.log('valuation_text:', seller.valuation_text);
 }
 
-main().catch(console.error);
+testAA376ApiResponse().catch(console.error);
