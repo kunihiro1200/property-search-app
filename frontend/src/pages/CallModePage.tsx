@@ -115,6 +115,25 @@ const CallModePage = () => {
   // サイドバー用の売主リスト
   const [sidebarSellers, setSidebarSellers] = useState<any[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
+  
+  // サイドバー用のカテゴリカウント（APIから直接取得）
+  const [sidebarCounts, setSidebarCounts] = useState<{
+    todayCall: number;
+    todayCallWithInfo: number;
+    todayCallAssigned: number;
+    visitScheduled: number;
+    visitCompleted: number;
+    unvaluated: number;
+    mailingPending: number;
+  }>({
+    todayCall: 0,
+    todayCallWithInfo: 0,
+    todayCallAssigned: 0,
+    visitScheduled: 0,
+    visitCompleted: 0,
+    unvaluated: 0,
+    mailingPending: 0,
+  });
 
   // 通話メモ入力状態
   const [callMemo, setCallMemo] = useState<string>('');
@@ -699,7 +718,30 @@ const CallModePage = () => {
     return () => clearTimeout(timeoutId);
   }, [editedPhoneContactPerson, editedPreferredContactTime, editedContactMethod, seller?.phoneContactPerson, seller?.preferredContactTime, seller?.contactMethod, id]);
 
+  // サイドバー用のカテゴリカウントを取得（APIから直接取得）
+  const fetchSidebarCounts = useCallback(async () => {
+    try {
+      console.log('📊 サイドバーカウント取得開始...');
+      const response = await api.get('/api/sellers/sidebar-counts');
+      console.log('✅ サイドバーカウント取得完了:', response.data);
+      setSidebarCounts(response.data);
+    } catch (error) {
+      console.error('❌ サイドバーカウント取得エラー:', error);
+      // エラー時はカウントを0にリセット
+      setSidebarCounts({
+        todayCall: 0,
+        todayCallWithInfo: 0,
+        todayCallAssigned: 0,
+        visitScheduled: 0,
+        visitCompleted: 0,
+        unvaluated: 0,
+        mailingPending: 0,
+      });
+    }
+  }, []);
+
   // サイドバー用の売主リストを取得する関数
+  // サイドバーに表示されるカテゴリの売主のみを取得（全売主ではない）
   const fetchSidebarSellers = useCallback(async () => {
     console.log('=== サイドバー売主リスト取得開始 ===');
     console.log('現在時刻:', new Date().toISOString());
@@ -707,80 +749,88 @@ const CallModePage = () => {
     // 認証トークンを確認
     const sessionToken = localStorage.getItem('session_token');
     const refreshToken = localStorage.getItem('refresh_token');
-    console.log('認証トークン (session_token):', sessionToken ? `存在する (長さ: ${sessionToken.length})` : '❌ 存在しない');
-    console.log('リフレッシュトークン (refresh_token):', refreshToken ? '存在する' : '存在しない');
     
-    // 認証トークンが存在しない場合でもAPIを呼び出す（インターセプターがリフレッシュを試みる）
-    // ただし、両方のトークンがない場合は警告を表示
     if (!sessionToken && !refreshToken) {
       console.warn('⚠️ 認証トークンが存在しません。ログインが必要です。');
-      console.warn('⚠️ ログインページにリダイレクトされる可能性があります。');
       setSidebarLoading(false);
       return;
     }
     
     try {
-      console.log('📡 APIリクエスト送信中... /api/sellers');
-      // 最新の売主リストを取得（ページネーションなし、最大200件）
-      const response = await api.get('/api/sellers', {
-        params: {
-          page: 1,
-          pageSize: 200,
-          sortBy: 'inquiry_date',
-          sortOrder: 'desc',
-        },
+      // サイドバーに表示される各カテゴリの売主を並列で取得
+      const categories = [
+        'visitScheduled',      // 訪問予定
+        'visitCompleted',      // 訪問済み
+        'todayCallAssigned',   // 当日TEL（担当）
+        'todayCall',           // 当日TEL分
+        'todayCallWithInfo',   // 当日TEL（内容）
+        'unvaluated',          // 未査定
+        'mailingPending',      // 査定（郵送）
+      ];
+      
+      console.log('📡 各カテゴリの売主を並列取得中...');
+      
+      const responses = await Promise.all(
+        categories.map(category =>
+          api.get('/api/sellers', {
+            params: {
+              page: 1,
+              pageSize: 500, // バックエンドの最大値は500
+              sortBy: 'next_call_date',
+              sortOrder: 'asc',
+              statusCategory: category,
+            },
+          }).catch(err => {
+            console.error(`❌ ${category}の取得エラー:`, err);
+            return { data: { data: [] } };
+          })
+        )
+      );
+      
+      // 全カテゴリの売主を結合（重複を除去）
+      const allSellersMap = new Map<string, any>();
+      responses.forEach((response, index) => {
+        const sellers = response.data?.data || [];
+        console.log(`✅ ${categories[index]}: ${sellers.length}件`);
+        // AA376が含まれているか確認
+        const hasAA376 = sellers.some((s: any) => s.sellerNumber === 'AA376' || s.seller_number === 'AA376');
+        if (hasAA376) {
+          console.log(`  → AA376が${categories[index]}に含まれています`);
+        }
+        sellers.forEach((seller: any) => {
+          if (seller.id && !allSellersMap.has(seller.id)) {
+            allSellersMap.set(seller.id, seller);
+          }
+        });
       });
       
-      console.log('=== APIレスポンス受信 ===');
-      console.log('response.status:', response.status);
-      console.log('response.data keys:', Object.keys(response.data || {}));
-      console.log('response.data.data exists:', !!response.data?.data);
-      console.log('response.data.data length:', response.data?.data?.length);
-      
-      const sellers = response.data?.data || [];
+      const allSellers = Array.from(allSellersMap.values());
       console.log('=== サイドバー売主リスト取得完了 ===');
-      console.log('取得件数:', sellers.length);
+      console.log('合計取得件数（重複除去後）:', allSellers.length);
       
-      if (sellers.length > 0) {
-        console.log('サンプル売主データ (最初の1件):', JSON.stringify(sellers[0], null, 2));
-        // フィルタリングに必要なフィールドを確認
-        const sample = sellers[0];
-        console.log('フィルタリング用フィールド:', {
-          sellerNumber: sample.sellerNumber,
-          status: sample.status,
-          nextCallDate: sample.nextCallDate,
-          contactMethod: sample.contactMethod,
-          preferredContactTime: sample.preferredContactTime,
-          phoneContactPerson: sample.phoneContactPerson,
-        });
-      } else {
-        console.warn('⚠️ 売主リストが空です');
-        console.warn('response.data全体:', JSON.stringify(response.data, null, 2));
-      }
+      setSidebarSellers(allSellers);
       
-      console.log('✅ setSidebarSellers呼び出し:', sellers.length, '件');
-      setSidebarSellers(sellers);
+      // サイドバーカウントも取得
+      await fetchSidebarCounts();
     } catch (error: any) {
       console.error('❌ サイドバー売主リスト取得エラー:', error);
-      console.error('エラー詳細:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-      // エラーが発生しても空の配列を設定（UIが壊れないように）
       setSidebarSellers([]);
     } finally {
       setSidebarLoading(false);
     }
-  }, []);
+  }, [fetchSidebarCounts]);
 
   // サイドバー用の売主リストを取得（sellerが読み込まれた後に実行）
   useEffect(() => {
     // sellerが読み込まれた後にサイドバーデータを取得
     // これにより、認証が確実に完了した後にAPIを呼び出す
+    console.log('=== サイドバーuseEffect実行 ===');
+    console.log('seller:', seller ? seller.sellerNumber : 'null');
     if (seller) {
+      console.log('→ fetchSidebarSellers を呼び出します');
       fetchSidebarSellers();
+    } else {
+      console.log('→ sellerがnullのため、fetchSidebarSellersをスキップ');
     }
   }, [seller, fetchSidebarSellers]);
 
@@ -2189,8 +2239,30 @@ HP：https://ifoo-oita.com/
         </Box>
 
         {/* 査定額表示（中央） */}
+        {/* 優先順位: 1. valuationText（I列テキスト）がある場合はそれを表示 */}
+        {/*          2. 手入力または自動計算の数値査定額がある場合はそれを表示 */}
+        {/*          3. どちらもない場合は「査定額未設定」 */}
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mx: 2 }}>
-          {seller?.valuationAmount1 ? (
+          {seller?.valuationText ? (
+            // I列「査定額」テキスト形式がある場合（例：「1900～2200万円」）を最優先
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  {seller.valuationText}
+                </Typography>
+                <Chip 
+                  label="テキスト" 
+                  color="secondary" 
+                  size="small"
+                />
+              </Box>
+              {seller.valuationAssignee && (
+                <Typography variant="caption" color="text.secondary">
+                  査定担当: {seller.valuationAssignee}
+                </Typography>
+              )}
+            </Box>
+          ) : seller?.valuationAmount1 ? (
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
@@ -2364,6 +2436,10 @@ HP：https://ifoo-oita.com/
             isCallMode={true}
             sellers={sidebarSellers}
             loading={sidebarLoading}
+            categoryCounts={{
+              all: sidebarSellers.length,
+              ...sidebarCounts,
+            }}
           />
         </Box>
         

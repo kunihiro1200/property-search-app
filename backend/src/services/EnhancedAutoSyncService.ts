@@ -1140,6 +1140,13 @@ export class EnhancedAutoSyncService {
       updateData.valuation_method = String(valuationMethod);
     }
 
+    // I列「査定額」（テキスト形式）を追加
+    // 例: "1900～2200万円", "2000万円前後"
+    const valuationText = row['査定額'];
+    if (valuationText) {
+      updateData.valuation_text = String(valuationText);
+    }
+
     // 契約年月を追加
     const contractYearMonth = row['契約年月 他決は分かった時点'];
     if (contractYearMonth && contractYearMonth !== '') {
@@ -1273,6 +1280,13 @@ export class EnhancedAutoSyncService {
     const valuationMethod = row['査定方法'];
     if (valuationMethod) {
       encryptedData.valuation_method = String(valuationMethod);
+    }
+
+    // I列「査定額」（テキスト形式）を追加
+    // 例: "1900～2200万円", "2000万円前後"
+    const valuationText = row['査定額'];
+    if (valuationText) {
+      encryptedData.valuation_text = String(valuationText);
     }
 
     // 契約年月を追加

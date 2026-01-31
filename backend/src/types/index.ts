@@ -78,6 +78,7 @@ export interface Seller {
   valuationAssignedBy?: string; // 査定担当者名
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
   
@@ -290,6 +291,7 @@ export interface ValuationInfo {
   valuationAmount3?: number;
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
 }
@@ -418,7 +420,7 @@ export interface ListSellersParams {
   // Deletion sync filter
   includeDeleted?: boolean; // Default: false (exclude deleted sellers)
   // サイドバーカテゴリフィルター
-  statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
+  statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
 }
 
 export interface PaginatedResult<T> {

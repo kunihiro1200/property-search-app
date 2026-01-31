@@ -32,17 +32,19 @@
 import { Seller } from '../types';
 
 // ステータスカテゴリの型定義
-// todayCall: コミュニケーション情報が全て空の当日TEL
-// todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL
+// todayCall: コミュニケーション情報が全て空の当日TEL（営担なし）
+// todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL（営担なし）
+// todayCallAssigned: 営担あり + 訪問日なし + 次電日が今日以前
 // visitScheduled: 訪問予定（営担に入力あり、訪問日が今日以降）
 // visitCompleted: 訪問済み（営担に入力あり、訪問日が昨日以前）
-export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
+export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
 
 // カテゴリカウントのインターフェース
 export interface CategoryCounts {
   all: number;
-  todayCall: number;           // 当日TEL分（コミュニケーション情報なし）
-  todayCallWithInfo: number;   // 当日TEL（内容）（コミュニケーション情報あり）
+  todayCall: number;           // 当日TEL分（コミュニケーション情報なし、営担なし）
+  todayCallWithInfo: number;   // 当日TEL（内容）（コミュニケーション情報あり、営担なし）
+  todayCallAssigned: number;   // 当日TEL（担当）（営担あり、訪問日なし、次電日が今日以前）
   visitScheduled: number;      // 訪問予定（営担に入力あり、訪問日が今日以降）
   visitCompleted: number;      // 訪問済み（営担に入力あり、訪問日が昨日以前）
   unvaluated: number;
@@ -169,11 +171,16 @@ const isYesterdayOrBefore = (dateStr: string | Date | undefined | null): boolean
 };
 
 /**
- * 営担（visitAssignee）に入力があるかどうかを判定
+ * 営担（visitAssignee）に有効な入力があるかどうかを判定
+ * 「外す」は担当なしと同じ扱い
  */
 const hasVisitAssignee = (seller: Seller | any): boolean => {
   const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
-  return visitAssignee && visitAssignee.trim() !== '';
+  // 空文字または「外す」の場合は担当なしとみなす
+  if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') {
+    return false;
+  }
+  return true;
 };
 
 /**
@@ -258,6 +265,85 @@ export const getVisitStatusLabel = (seller: Seller | any, type: 'scheduled' | 'c
 };
 
 /**
+ * 担当分判定（営担に入力あり、訪問日なし）
+ * 
+ * 【サイドバー表示】「担当分（イニシャル）」
+ * 
+ * 条件:
+ * - 営担（visitAssignee）に入力がある
+ * - 訪問日（visitDate）が空
+ * 
+ * @param seller 売主データ
+ * @returns 担当分対象かどうか
+ */
+export const isAssignedNoVisitDate = (seller: Seller | any): boolean => {
+  if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  const visitDate = seller.visitDate || seller.visit_date;
+  // 訪問日が空の場合のみ「担当分」
+  return !visitDate || (typeof visitDate === 'string' && visitDate.trim() === '');
+};
+
+/**
+ * 担当分の表示ラベルを取得
+ * 
+ * @param seller 売主データ
+ * @returns 表示ラベル（例: "担当分(Y)"、"担当分(I)"）
+ */
+export const getAssignedNoVisitDateLabel = (seller: Seller | any): string => {
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  
+  if (visitAssignee && visitAssignee.trim() !== '') {
+    return `担当分(${visitAssignee})`;
+  }
+  
+  return '担当分';
+};
+
+/**
+ * 当日TEL（担当）判定（営担あり + 次電日が今日以前）
+ * 
+ * 【サイドバー表示】「当日TEL（イニシャル）」
+ * 
+ * 条件:
+ * - 営担（visitAssignee）に入力がある
+ * - 次電日が今日以前
+ * 
+ * 注意: 訪問日の有無に関係なく、次電日が今日以前であれば対象
+ * 
+ * @param seller 売主データ
+ * @returns 当日TEL（担当）対象かどうか
+ */
+export const isTodayCallAssigned = (seller: Seller | any): boolean => {
+  // 営担がない場合は対象外
+  if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  // 次電日が今日以前かチェック
+  const nextCallDate = seller.nextCallDate || seller.next_call_date;
+  return isTodayOrBefore(nextCallDate);
+};
+
+/**
+ * 当日TEL（担当）の表示ラベルを取得
+ * 
+ * @param seller 売主データ
+ * @returns 表示ラベル（例: "当日TEL(Y)"、"当日TEL(I)"）
+ */
+export const getTodayCallAssignedLabel = (seller: Seller | any): string => {
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  
+  if (visitAssignee && visitAssignee.trim() !== '') {
+    return `当日TEL(${visitAssignee})`;
+  }
+  
+  return '当日TEL（担当）';
+};
+
+/**
  * 当日TELの共通条件を判定
  * 
  * 共通条件:
@@ -275,15 +361,6 @@ const isTodayCallBase = (seller: Seller | any): boolean => {
   // 次電日が今日以前かチェック
   const nextCallDate = seller.nextCallDate || seller.next_call_date;
   const isNextCallTodayOrBefore = isTodayOrBefore(nextCallDate);
-  
-  // デバッグログ（最初の5件のみ）
-  if (seller.sellerNumber && (seller.sellerNumber.includes('AA13507') || seller.sellerNumber.includes('AA13489'))) {
-    console.log(`=== isTodayCallBase: ${seller.sellerNumber} ===`);
-    console.log('status:', status);
-    console.log('isFollowingUp:', isFollowingUp);
-    console.log('nextCallDate:', nextCallDate);
-    console.log('isNextCallTodayOrBefore:', isNextCallTodayOrBefore);
-  }
   
   if (!isFollowingUp) {
     return false;
@@ -324,15 +401,14 @@ const hasContactInfo = (seller: Seller | any): boolean => {
  * - 状況（当社）に「追客中」が含まれる
  * - 次電日が今日以前
  * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）が**全て空**
- * - 訪問予定/訪問済みでない（営担に入力があり訪問日がある場合は除外）
+ * - 営担（visitAssignee）が空（営業担当が設定されている売主は除外）
  * 
  * 注意: コミュニケーション情報のいずれかに入力がある売主は
  * 「当日TEL分」としてカウントしない → 「当日TEL（内容）」に分類される
  * 
  * 【優先順位】
- * 1. 訪問予定（営担あり + 訪問日が今日以降）← 最優先
- * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
- * 3. 当日TEL分/当日TEL（内容）← 訪問予定/訪問済みでない場合のみ
+ * 1. 営担あり → 当日TEL分から除外（訪問日の有無に関係なく）
+ * 2. 当日TEL分/当日TEL（内容）← 営担が空の場合のみ
  * 
  * @param seller 売主データ
  * @returns 当日TEL分対象かどうか
@@ -340,8 +416,8 @@ const hasContactInfo = (seller: Seller | any): boolean => {
  * Requirements: 1.2
  */
 export const isTodayCall = (seller: Seller | any): boolean => {
-  // 訪問予定/訪問済みの売主は当日TELから除外（優先順位ルール）
-  if (isVisitScheduled(seller) || isVisitCompleted(seller)) {
+  // 営担に入力がある売主は当日TELから除外（訪問日の有無に関係なく）
+  if (hasVisitAssignee(seller)) {
     return false;
   }
   
@@ -363,16 +439,15 @@ export const isTodayCall = (seller: Seller | any): boolean => {
  * - 状況（当社）に「追客中」が含まれる
  * - 次電日が今日以前
  * - コミュニケーション情報（連絡方法/連絡取りやすい時間/電話担当）の**いずれかに入力がある**
- * - 訪問予定/訪問済みでない（営担に入力があり訪問日がある場合は除外）
+ * - 営担（visitAssignee）が空（営業担当が設定されている売主は除外）
  * 
  * 例:
  * - AA13489: contact_method = "Eメール" → 当日TEL(Eメール)
  * - AA13507: phone_contact_person = "Y" → 当日TEL(Y)
  * 
  * 【優先順位】
- * 1. 訪問予定（営担あり + 訪問日が今日以降）← 最優先
- * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
- * 3. 当日TEL分/当日TEL（内容）← 訪問予定/訪問済みでない場合のみ
+ * 1. 営担あり → 当日TEL（内容）から除外（訪問日の有無に関係なく）
+ * 2. 当日TEL分/当日TEL（内容）← 営担が空の場合のみ
  * 
  * @param seller 売主データ
  * @returns 当日TEL（内容）対象かどうか
@@ -380,8 +455,8 @@ export const isTodayCall = (seller: Seller | any): boolean => {
  * Requirements: 1.3
  */
 export const isTodayCallWithInfo = (seller: Seller | any): boolean => {
-  // 訪問予定/訪問済みの売主は当日TELから除外（優先順位ルール）
-  if (isVisitScheduled(seller) || isVisitCompleted(seller)) {
+  // 営担に入力がある売主は当日TELから除外（訪問日の有無に関係なく）
+  if (hasVisitAssignee(seller)) {
     return false;
   }
   
@@ -531,6 +606,7 @@ export const getCategoryCounts = (sellers: (Seller | any)[]): CategoryCounts => 
     all: sellers.length,
     todayCall: sellers.filter(isTodayCall).length,
     todayCallWithInfo: sellers.filter(isTodayCallWithInfo).length,
+    todayCallAssigned: sellers.filter(isTodayCallAssigned).length,
     visitScheduled: sellers.filter(isVisitScheduled).length,
     visitCompleted: sellers.filter(isVisitCompleted).length,
     unvaluated: sellers.filter(isUnvaluated).length,
@@ -556,6 +632,8 @@ export const filterSellersByCategory = (
       return sellers.filter(isTodayCall);
     case 'todayCallWithInfo':
       return sellers.filter(isTodayCallWithInfo);
+    case 'todayCallAssigned':
+      return sellers.filter(isTodayCallAssigned);
     case 'visitScheduled':
       return sellers.filter(isVisitScheduled);
     case 'visitCompleted':

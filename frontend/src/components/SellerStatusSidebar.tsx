@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SellerStatusSidebar - 売主ステータスサイドバーコンポーネント
  * 
  * 売主リストページと通話モードページで共通で使用するサイドバー
@@ -405,7 +405,7 @@ export default function SellerStatusSidebar({
                   border: 1,
                   borderColor: 'grey.300',
                   borderTop: 0,
-                  maxHeight: 400,
+                  maxHeight: 'calc(100vh - 300px)',
                   overflow: 'auto',
                   mb: 0.5,
                 }}>
@@ -514,7 +514,7 @@ export default function SellerStatusSidebar({
             border: 1,
             borderColor: 'grey.300',
             borderTop: 0,
-            maxHeight: 400,
+            maxHeight: 'calc(100vh - 300px)',
             overflow: 'auto',
           }}>
             {/* カテゴリサブヘッダー */}
@@ -706,7 +706,7 @@ export default function SellerStatusSidebar({
           border: 1,
           borderColor: 'grey.300',
           borderTop: 0,
-          maxHeight: 400,
+          maxHeight: 'calc(100vh - 300px)',
           overflow: 'auto',
           mb: 0.5,
         }}>

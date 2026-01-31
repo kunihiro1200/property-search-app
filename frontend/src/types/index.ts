@@ -74,6 +74,8 @@ export interface Seller {
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
   valuation_method?: string | null; // 査定方法 - snake_case版
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
+  valuation_text?: string | null; // I列「査定額」テキスト形式 - snake_case版
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
   
@@ -311,6 +313,7 @@ export interface ValuationInfo {
   valuationAmount3?: number;
   postVisitValuationAmount1?: number;
   valuationMethod?: string;
+  valuationText?: string; // I列「査定額」テキスト形式（例: "1900～2200万円"）
   valuationPdfUrl?: string;
   fixedAssetTaxRoadPrice?: number;
 }
