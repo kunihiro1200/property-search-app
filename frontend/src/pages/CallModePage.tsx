@@ -3765,11 +3765,18 @@ HP：https://ifoo-oita.com/
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <Typography variant="h5">
-                        {Math.round(parseInt(editedValuationAmount1) / 10000)}万円 ～{' '}
-                        {editedValuationAmount2 ? Math.round(parseInt(editedValuationAmount2) / 10000) : '-'}万円 ～{' '}
-                        {editedValuationAmount3 ? Math.round(parseInt(editedValuationAmount3) / 10000) : '-'}万円
-                      </Typography>
+                      {/* valuationTextがある場合はそれを表示、なければ数値から計算 */}
+                      {seller?.valuationText ? (
+                        <Typography variant="h5">
+                          {seller.valuationText}
+                        </Typography>
+                      ) : (
+                        <Typography variant="h5">
+                          {Math.round(parseInt(editedValuationAmount1) / 10000)}万円 ～{' '}
+                          {editedValuationAmount2 ? Math.round(parseInt(editedValuationAmount2) / 10000) : '-'}万円 ～{' '}
+                          {editedValuationAmount3 ? Math.round(parseInt(editedValuationAmount3) / 10000) : '-'}万円
+                        </Typography>
+                      )}
                       {isManualValuation && (
                         <Chip 
                           label="✍️ 手入力" 
@@ -3782,6 +3789,13 @@ HP：https://ifoo-oita.com/
                         <Chip 
                           label="🤖 自動計算" 
                           color="default" 
+                          size="medium"
+                        />
+                      )}
+                      {seller?.valuationText && (
+                        <Chip 
+                          label="📝 テキスト" 
+                          color="info" 
                           size="medium"
                         />
                       )}
