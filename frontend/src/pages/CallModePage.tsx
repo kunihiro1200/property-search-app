@@ -2302,7 +2302,7 @@ HP：https://ifoo-oita.com/
                   {seller.valuationText}
                 </Typography>
                 <Chip 
-                  label="テキスト" 
+                  label="当時査定額" 
                   color="secondary" 
                   size="small"
                 />
