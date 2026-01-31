@@ -27,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   StatusCategory,
+  getCategoryCounts as getStatusCategoryCounts,
   filterSellersByCategory,
 } from '../utils/sellerStatusFilters';
 import { formatInquiryDate } from '../utils/inquiryDateFormatter';
@@ -36,7 +37,6 @@ import { SyncNotification, SyncNotificationData } from '../components/SyncNotifi
 import { useAutoSync } from '../hooks/useAutoSync';
 import { useSellerStatus } from '../hooks/useSellerStatus';
 import SellerStatusBadges from '../components/SellerStatusBadges';
-import SellerStatusSidebar from '../components/SellerStatusSidebar';
 
 interface Seller {
   id: string;
@@ -114,24 +114,6 @@ export default function SellersPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // サイドバー用のカテゴリカウント（APIから直接取得）
-  const [sidebarCounts, setSidebarCounts] = useState<{
-    todayCall: number;
-    todayCallWithInfo: number;
-    visitScheduled: number;
-    visitCompleted: number;
-    unvaluated: number;
-    mailingPending: number;
-  }>({
-    todayCall: 0,
-    todayCallWithInfo: 0,
-    visitScheduled: 0,
-    visitCompleted: 0,
-    unvaluated: 0,
-    mailingPending: 0,
-  });
-  const [sidebarLoading, setSidebarLoading] = useState(true);
-  
   // ページ状態をsessionStorageから復元
   const [page, setPage] = useState(() => {
     const saved = sessionStorage.getItem('sellersPage');
@@ -152,15 +134,7 @@ export default function SellersPage() {
   const [showFilters, setShowFilters] = useState(false);
   
   // Status category filter
-  const [selectedCategory, setSelectedCategory] = useState<StatusCategory>(() => {
-    // 通話モードページから戻ってきた場合、sessionStorageからカテゴリを復元
-    const savedCategory = sessionStorage.getItem('selectedStatusCategory');
-    if (savedCategory) {
-      sessionStorage.removeItem('selectedStatusCategory'); // 一度使ったら削除
-      return savedCategory as StatusCategory;
-    }
-    return 'all';
-  });
+  const [selectedCategory, setSelectedCategory] = useState<StatusCategory>('all');
 
   // 自動同期の通知データ
   const [syncNotificationData, setSyncNotificationData] = useState<SyncNotificationData | null>(null);
@@ -218,7 +192,6 @@ export default function SellersPage() {
           hasChanges: true,
         });
         fetchSellers();
-        fetchSidebarCounts(); // サイドバーカウントも更新
       }
     },
     onSyncError: (error) => {
@@ -226,9 +199,10 @@ export default function SellersPage() {
     },
   });
 
-  // カテゴリ別の売主数をカウント（APIから取得したカウントを使用）
+  // カテゴリ別の売主数をカウント（ユーティリティ関数を使用）
+  // 注意: sellersは現在のページのデータのみなので、Allカウントはtotalを使用
   const categoryCounts = {
-    ...sidebarCounts,
+    ...getStatusCategoryCounts(sellers),
     all: total, // ページネーション前の全体件数を使用
   };
 
@@ -237,36 +211,9 @@ export default function SellersPage() {
     return filterSellersByCategory(sellers, selectedCategory);
   };
 
-  // サイドバー用のカテゴリカウントを取得（APIから直接取得）
-  const fetchSidebarCounts = async () => {
-    try {
-      setSidebarLoading(true);
-      const response = await api.get('/api/sellers/sidebar-counts');
-      setSidebarCounts(response.data);
-    } catch (error) {
-      console.error('Failed to fetch sidebar counts:', error);
-      // エラー時はカウントを0にリセット
-      setSidebarCounts({
-        todayCall: 0,
-        todayCallWithInfo: 0,
-        visitScheduled: 0,
-        visitCompleted: 0,
-        unvaluated: 0,
-        mailingPending: 0,
-      });
-    } finally {
-      setSidebarLoading(false);
-    }
-  };
-
-  // 初回ロード時にサイドバーカウントを取得
-  useEffect(() => {
-    fetchSidebarCounts();
-  }, []);
-
   useEffect(() => {
     fetchSellers();
-  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory]);
+  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly]);
 
   const fetchSellers = async () => {
     try {
@@ -287,11 +234,6 @@ export default function SellersPage() {
       }
       if (showUnreachableOnly) {
         params.isUnreachable = true;
-      }
-      
-      // サイドバーカテゴリフィルター
-      if (selectedCategory && selectedCategory !== 'all') {
-        params.statusCategory = selectedCategory;
       }
       
       const response = await api.get('/api/sellers', { params });
@@ -333,8 +275,7 @@ export default function SellersPage() {
     setPage(0);
   };
 
-  // バックエンドでフィルタリングするため、sellersをそのまま使用
-  const filteredSellers = sellers;
+  const filteredSellers = getFilteredSellers();
 
   return (
     <Container maxWidth="xl">
@@ -403,18 +344,95 @@ export default function SellersPage() {
 
         {/* サイドバーとメインコンテンツのレイアウト */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {/* 左側サイドバー - SellerStatusSidebarコンポーネントを使用 */}
-          <SellerStatusSidebar
-            categoryCounts={categoryCounts}
-            selectedCategory={selectedCategory}
-            onCategorySelect={(category) => {
-              setSelectedCategory(category);
-              setPage(0); // カテゴリが変わったらページを0にリセット
-            }}
-            isCallMode={false}
-            sellers={sellers}
-            loading={sidebarLoading}
-          />
+          {/* 左側サイドバー */}
+          <Paper sx={{ width: 250, flexShrink: 0, p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              売主リスト
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {/* All */}
+              <Button
+                variant={selectedCategory === 'all' ? 'contained' : 'text'}
+                onClick={() => setSelectedCategory('all')}
+                sx={{ justifyContent: 'space-between', textAlign: 'left' }}
+              >
+                <span>All</span>
+                <Chip label={categoryCounts.all} size="small" />
+              </Button>
+              
+              {/* 当日TEL - 件数が0の場合は非表示 */}
+              {categoryCounts.todayCall > 0 && (
+                <Button
+                  variant={selectedCategory === 'todayCall' ? 'contained' : 'text'}
+                  onClick={() => setSelectedCategory('todayCall')}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    color: selectedCategory === 'todayCall' ? 'white' : 'error.main',
+                    bgcolor: selectedCategory === 'todayCall' ? 'error.main' : 'transparent',
+                    '&:hover': {
+                      bgcolor: selectedCategory === 'todayCall' ? 'error.dark' : 'error.light',
+                    }
+                  }}
+                >
+                  <span>当日TEL</span>
+                  <Chip 
+                    label={categoryCounts.todayCall} 
+                    size="small"
+                    color={selectedCategory === 'todayCall' ? 'default' : 'error'}
+                  />
+                </Button>
+              )}
+              
+              {/* 未査定 - 件数が0の場合は非表示 */}
+              {categoryCounts.unvaluated > 0 && (
+                <Button
+                  variant={selectedCategory === 'unvaluated' ? 'contained' : 'text'}
+                  onClick={() => setSelectedCategory('unvaluated')}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    color: selectedCategory === 'unvaluated' ? 'white' : 'warning.main',
+                    bgcolor: selectedCategory === 'unvaluated' ? 'warning.main' : 'transparent',
+                    '&:hover': {
+                      bgcolor: selectedCategory === 'unvaluated' ? 'warning.dark' : 'warning.light',
+                    }
+                  }}
+                >
+                  <span>未査定</span>
+                  <Chip 
+                    label={categoryCounts.unvaluated} 
+                    size="small"
+                    color={selectedCategory === 'unvaluated' ? 'default' : 'warning'}
+                  />
+                </Button>
+              )}
+              
+              {/* 査定（郵送） - 件数が0の場合は非表示 */}
+              {categoryCounts.mailingPending > 0 && (
+                <Button
+                  variant={selectedCategory === 'mailingPending' ? 'contained' : 'text'}
+                  onClick={() => setSelectedCategory('mailingPending')}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    color: selectedCategory === 'mailingPending' ? 'white' : 'info.main',
+                    bgcolor: selectedCategory === 'mailingPending' ? 'info.main' : 'transparent',
+                    '&:hover': {
+                      bgcolor: selectedCategory === 'mailingPending' ? 'info.dark' : 'info.light',
+                    }
+                  }}
+                >
+                  <span>査定（郵送）</span>
+                  <Chip 
+                    label={categoryCounts.mailingPending} 
+                    size="small"
+                    color={selectedCategory === 'mailingPending' ? 'default' : 'info'}
+                  />
+                </Button>
+              )}
+            </Box>
+          </Paper>
 
           {/* メインコンテンツ */}
           <Box sx={{ flex: 1 }}>
