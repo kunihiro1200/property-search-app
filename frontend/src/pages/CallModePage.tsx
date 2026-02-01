@@ -2303,7 +2303,18 @@ HP：https://ifoo-oita.com/
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="h5">通話モード - {seller?.name || '読み込み中...'}</Typography>
             {seller?.sellerNumber && (
-              <Chip label={seller.sellerNumber} size="small" color="primary" />
+              <Chip 
+                label={seller.sellerNumber} 
+                size="small" 
+                color="primary"
+                onClick={() => {
+                  navigator.clipboard.writeText(seller.sellerNumber || '');
+                  setSuccessMessage(`${seller.sellerNumber} をコピーしました`);
+                  setTimeout(() => setSuccessMessage(null), 2000);
+                }}
+                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                title="クリックでコピー"
+              />
             )}
             {/* 重複インジケーター */}
             {!duplicatesLoading && duplicates.length > 0 && (
