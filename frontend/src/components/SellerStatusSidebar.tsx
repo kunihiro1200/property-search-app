@@ -28,6 +28,8 @@ import {
   isVisitCompleted,
   isUnvaluated,
   isMailingPending,
+  isTodayCallNotStarted,
+  isPinrichEmpty,
   getVisitStatusLabel,
 } from '../utils/sellerStatusFilters';
 import { Seller } from '../types';
@@ -87,6 +89,10 @@ const filterSellersByCategory = (sellers: any[], category: StatusCategory): any[
       return sellers.filter(isUnvaluated);
     case 'mailingPending':
       return sellers.filter(isMailingPending);
+    case 'todayCallNotStarted':
+      return sellers.filter(isTodayCallNotStarted);
+    case 'pinrichEmpty':
+      return sellers.filter(isPinrichEmpty);
     default:
       return sellers;
   }
@@ -109,6 +115,10 @@ const getCategoryLabel = (category: StatusCategory): string => {
       return '⑤未査定';
     case 'mailingPending':
       return '⑥査定（郵送）';
+    case 'todayCallNotStarted':
+      return '⑦当日TEL_未着手';
+    case 'pinrichEmpty':
+      return '⑧Pinrich空欄';
     case 'all':
       return 'All';
     default:
@@ -163,6 +173,10 @@ const getCategoryColor = (category: StatusCategory): string => {
       return 'warning.main';
     case 'mailingPending':
       return 'info.main';
+    case 'todayCallNotStarted':
+      return '#ff9800';  // オレンジ
+    case 'pinrichEmpty':
+      return '#795548';  // ブラウン
     default:
       return 'text.primary';
   }
@@ -640,6 +654,8 @@ export default function SellerStatusSidebar({
       {renderCategoryButton('todayCallWithInfo', '④当日TEL（内容）', '#9c27b0')}
       {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
       {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}
+      {renderCategoryButton('todayCallNotStarted', '⑦当日TEL_未着手', '#ff9800')}
+      {renderCategoryButton('pinrichEmpty', '⑧Pinrich空欄', '#795548')}
     </Box>
   );};
 
@@ -664,7 +680,9 @@ export default function SellerStatusSidebar({
           color === 'error.main' ? '#d32f2f' :
           color === 'secondary.main' ? '#9c27b0' :
           color === 'warning.main' ? '#ed6c02' :
-          color === 'info.main' ? '#0288d1' : '#000'
+          color === 'info.main' ? '#0288d1' :
+          color === '#ff9800' ? '#ff9800' :
+          color === '#795548' ? '#795548' : '#000'
         )}
       </Box>
     );
