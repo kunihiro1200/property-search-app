@@ -193,89 +193,8 @@ export default function SellerStatusSidebar({
   // 訪問予定/訪問済みは展開せず、クリックでメインテーブルにフィルタリング結果を表示するため、
   // expandedVisitKeyは廃止（展開機能を削除）
   
-  // デバッグログ - コンポーネントがレンダリングされるたびに出力
-  // ※ useStateの後に配置（変数宣言後でないとアクセスできない）
-  console.log('=== SellerStatusSidebar レンダリング ===');
-  console.log('レンダリング時刻:', new Date().toISOString());
-  console.log('isCallMode:', isCallMode);
-  console.log('loading:', loading);
-  console.log('sellers prop received:', sellers);
-  console.log('sellers count:', sellers?.length ?? 'undefined/null');
-  console.log('sellers type:', typeof sellers);
-  console.log('sellers is array:', Array.isArray(sellers));
-  console.log('expandedCategory (from state):', expandedCategory);
-  console.log('sessionStorage expandedCategory:', typeof window !== 'undefined' ? sessionStorage.getItem('sidebarExpandedCategory') : 'N/A');
-  
   // sellersが有効な配列かどうかを確認
   const validSellers = Array.isArray(sellers) ? sellers : [];
-  console.log('validSellers count:', validSellers.length);
-  
-  if (validSellers.length > 0) {
-    console.log('サンプル売主 (最初の1件):', validSellers[0]);
-    
-    // フィルタリング結果を確認
-    const todayCallCount = validSellers.filter(isTodayCall).length;
-    const todayCallWithInfoCount = validSellers.filter(isTodayCallWithInfo).length;
-    const unvaluatedCount = validSellers.filter(isUnvaluated).length;
-    const mailingPendingCount = validSellers.filter(isMailingPending).length;
-    const visitScheduledCount = validSellers.filter(isVisitScheduled).length;
-    const visitCompletedCount = validSellers.filter(isVisitCompleted).length;
-    console.log('=== フィルタリング結果 ===');
-    console.log('訪問予定:', visitScheduledCount);
-    console.log('訪問済み:', visitCompletedCount);
-    console.log('当日TEL分:', todayCallCount);
-    console.log('当日TEL（内容）:', todayCallWithInfoCount);
-    console.log('未査定:', unvaluatedCount);
-    console.log('査定（郵送）:', mailingPendingCount);
-    
-    // 訪問予定/訪問済みの売主を詳細確認
-    if (visitScheduledCount > 0) {
-      console.log('=== 訪問予定の売主 ===');
-      validSellers.filter(isVisitScheduled).forEach((s: any) => {
-        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
-      });
-    }
-    if (visitCompletedCount > 0) {
-      console.log('=== 訪問済みの売主（最初の5件） ===');
-      validSellers.filter(isVisitCompleted).slice(0, 5).forEach((s: any) => {
-        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
-      });
-    }
-    
-    // visitDateとvisitAssigneeを持つ売主を確認
-    const sellersWithVisitData = validSellers.filter((s: any) => {
-      const visitDate = s.visitDate || s.visit_date;
-      const visitAssignee = s.visitAssignee || s.visit_assignee;
-      return visitDate || visitAssignee;
-    });
-    console.log('visitDateまたはvisitAssigneeを持つ売主:', sellersWithVisitData.length);
-    if (sellersWithVisitData.length > 0 && sellersWithVisitData.length <= 10) {
-      sellersWithVisitData.forEach((s: any) => {
-        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate || s.visit_date}, visitAssignee=${s.visitAssignee || s.visit_assignee}`);
-      });
-    }
-    
-    // 追客中の売主を確認
-    const followingUpSellers = validSellers.filter((s: any) => {
-      const status = s.status || '';
-      return typeof status === 'string' && status.includes('追客中');
-    });
-    console.log('追客中の売主:', followingUpSellers.length);
-    
-    // 次電日が今日以前の売主を確認
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayOrBeforeSellers = validSellers.filter((s: any) => {
-      const nextCallDate = s.nextCallDate || s.next_call_date;
-      if (!nextCallDate) return false;
-      const date = new Date(nextCallDate);
-      date.setHours(0, 0, 0, 0);
-      return date.getTime() <= today.getTime();
-    });
-    console.log('次電日が今日以前の売主:', todayOrBeforeSellers.length);
-  } else {
-    console.warn('⚠️ sellers配列が空です - CallModePageからデータが渡されていない可能性があります');
-  }
   
   // expandedCategoryが変更されたらsessionStorageに保存
   useEffect(() => {
@@ -351,6 +270,39 @@ export default function SellerStatusSidebar({
     return filterSellersByCategory(sellers, category).length;
   };
 
+  // 通話モードページで現在の売主の営担イニシャルを取得
+  const currentSellerVisitAssignee = isCallMode && currentSeller 
+    ? (currentSeller.visitAssignee || currentSeller.visit_assignee || '').trim()
+    : '';
+
+  /**
+   * 営担イニシャルが一致するかどうかを判定
+   * 
+   * 注意: APIレスポンスでは、visitAssigneeがイニシャルからフルネームに変換される場合がある
+   * 例: '生' → '生野'
+   * そのため、完全一致だけでなく、先頭文字での一致もチェックする
+   * 
+   * @param assignee 現在の売主の営担（フルネームの場合あり）
+   * @param initial サイドバーに表示されるイニシャル
+   * @returns 一致するかどうか
+   */
+  const isMatchingAssignee = (assignee: string, initial: string): boolean => {
+    if (!assignee || !initial) return false;
+    
+    // 完全一致をチェック
+    if (assignee === initial) return true;
+    
+    // 先頭文字での一致をチェック（フルネームの場合）
+    // 例: assignee='生野', initial='生' → true
+    if (assignee.charAt(0) === initial) return true;
+    
+    // イニシャルが先頭文字と一致するかチェック（逆方向）
+    // 例: assignee='生', initial='生野' → true（通常はこのケースはないが念のため）
+    if (initial.charAt(0) === assignee) return true;
+    
+    return false;
+  };
+
   // 訪問予定/訪問済みのイニシャル別ボタンをレンダリング
   // クリックでメインテーブルにフィルタリング結果を表示（展開機能は廃止）
   const renderVisitCategoryButtons = (
@@ -368,8 +320,13 @@ export default function SellerStatusSidebar({
         <Box key={category}>
           {byAssigneeData.map(({ initial, count }) => {
             const visitKey = `${category}-${initial}`;
-            // 選択状態の判定: カテゴリとイニシャルの両方が一致する場合
-            const isSelected = selectedCategory === category && selectedVisitAssignee === initial;
+            // 選択状態の判定: 
+            // - 売主リストページ: カテゴリとイニシャルの両方が一致する場合
+            // - 通話モードページ: 現在の売主のカテゴリとイニシャルが一致する場合
+            // 注意: currentSellerVisitAssigneeはフルネームの場合があるため、isMatchingAssigneeで比較
+            const isSelected = isCallMode
+              ? (currentSellerCategory === category && isMatchingAssignee(currentSellerVisitAssignee, initial))
+              : (selectedCategory === category && selectedVisitAssignee === initial);
             const label = `${prefix}(${initial})`;
             
             return (
@@ -436,8 +393,13 @@ export default function SellerStatusSidebar({
       <Box key={category}>
         {visitData.map(({ initial, count }) => {
           const visitKey = `${category}-${initial}`;
-          // 選択状態の判定: カテゴリとイニシャルの両方が一致する場合
-          const isSelected = selectedCategory === category && selectedVisitAssignee === initial;
+          // 選択状態の判定: 
+          // - 売主リストページ: カテゴリとイニシャルの両方が一致する場合
+          // - 通話モードページ: 現在の売主のカテゴリとイニシャルが一致する場合
+          // 注意: currentSellerVisitAssigneeはフルネームの場合があるため、isMatchingAssigneeで比較
+          const isSelected = isCallMode
+            ? (currentSellerCategory === category && isMatchingAssignee(currentSellerVisitAssignee, initial))
+            : (selectedCategory === category && selectedVisitAssignee === initial);
           const label = `${prefix}(${initial})`;
           
           return (
@@ -633,12 +595,18 @@ export default function SellerStatusSidebar({
   };
 
   // 全カテゴリ表示モード（展開中のカテゴリがない場合）
-  const renderAllCategories = () => (
+  const renderAllCategories = () => {
+    // 通話モードページで、現在の売主がどのカテゴリにも属さない場合は「All」をハイライト
+    const isAllActive = isCallMode 
+      ? (currentSellerCategory === null)  // どのカテゴリにも属さない場合
+      : isActive('all');
+    
+    return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       {/* All */}
       <Button
         fullWidth
-        variant={isActive('all') ? 'contained' : 'text'}
+        variant={isAllActive ? 'contained' : 'text'}
         onClick={() => {
           setExpandedCategory(null);
           if (!isCallMode) {
@@ -673,7 +641,7 @@ export default function SellerStatusSidebar({
       {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
       {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}
     </Box>
-  );
+  );};
 
   // 訪問予定/訪問済みのボタンは展開せず、クリックでメインテーブルにフィルタリング結果を表示
   // renderExpandedVisitCategory関数は削除（展開機能を廃止）

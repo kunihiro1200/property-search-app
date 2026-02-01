@@ -42,14 +42,34 @@ export const NORMAL_STAFF_INITIALS = ['K', 'Y', 'I', '林', '生', 'U', 'R', '�
 
 /**
  * 通常スタッフかどうかを判定
- * @param visitAssignee 営担のイニシャル
+ * 
+ * 注意: APIレスポンスでは、visitAssigneeがイニシャルからフルネームに変換される場合がある
+ * 例: '生' → '生野'
+ * そのため、完全一致だけでなく、先頭文字での一致もチェックする
+ * 
+ * @param visitAssignee 営担のイニシャルまたはフルネーム
  * @returns 通常スタッフかどうか
  */
 export const isNormalStaff = (visitAssignee: string | null | undefined): boolean => {
   if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') {
     return false;
   }
-  return NORMAL_STAFF_INITIALS.includes(visitAssignee.trim());
+  
+  const trimmed = visitAssignee.trim();
+  
+  // 完全一致をチェック
+  if (NORMAL_STAFF_INITIALS.includes(trimmed)) {
+    return true;
+  }
+  
+  // 先頭文字での一致をチェック（フルネームの場合）
+  // 例: '生野' の先頭文字 '生' が NORMAL_STAFF_INITIALS に含まれるか
+  const firstChar = trimmed.charAt(0);
+  if (NORMAL_STAFF_INITIALS.includes(firstChar)) {
+    return true;
+  }
+  
+  return false;
 };
 
 // ステータスカテゴリの型定義
