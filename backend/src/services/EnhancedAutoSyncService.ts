@@ -858,7 +858,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbSellers, error } = await this.supabase
         .from('sellers')
-        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, next_call_date, updated_at')
+        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, next_call_date, seller_situation, inquiry_date, inquiry_year, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -948,6 +948,28 @@ export class EnhancedAutoSyncService {
             }
           } else if (dbSeller.next_call_date !== null) {
             // スプレッドシートで次電日が空になった場合も更新対象
+            needsUpdate = true;
+          }
+
+          // seller_situationの比較（状況売主）
+          const sheetSellerSituation = sheetRow['状況（売主）'] || '';
+          const dbSellerSituation = (dbSeller as any).seller_situation || '';
+          if (sheetSellerSituation !== dbSellerSituation) {
+            needsUpdate = true;
+          }
+
+          // inquiry_dateの比較（反響日付）
+          const sheetInquiryDate = sheetRow['反響日付'];
+          const sheetInquiryYear = sheetRow['反響年'];
+          const dbInquiryDate = (dbSeller as any).inquiry_date ? String((dbSeller as any).inquiry_date).substring(0, 10) : null;
+          
+          if (sheetInquiryDate) {
+            const formattedInquiryDate = this.formatInquiryDate(sheetInquiryYear, sheetInquiryDate);
+            if (formattedInquiryDate !== dbInquiryDate) {
+              needsUpdate = true;
+            }
+          } else if (sheetInquiryYear && !dbInquiryDate) {
+            // 反響日付が空でも反響年がある場合、inquiry_dateがnullなら更新対象
             needsUpdate = true;
           }
 
@@ -1270,12 +1292,22 @@ export class EnhancedAutoSyncService {
       if (!formattedInquiryDate) {
         console.log(`⚠️ [updateSingleSeller] ${sellerNumber}: inquiry_date is null after formatting (inquiryYear=${inquiryYear}, inquiryDate=${inquiryDate})`);
       }
-    } else {
-      // デバッグログ: inquiryDateが取得できなかった場合
-      console.log(`⚠️ [updateSingleSeller] ${sellerNumber}: inquiryDate is empty/null from spreadsheet`);
+    } else if (inquiryYear) {
+      // 反響日付が空でも反響年がある場合、年の1月1日を設定
+      const year = this.parseNumeric(inquiryYear);
+      if (year) {
+        updateData.inquiry_date = `${year}-01-01`;
+        console.log(`ℹ️ [updateSingleSeller] ${sellerNumber}: inquiry_date set to ${year}-01-01 (inquiryDate was empty, using inquiryYear)`);
+      }
     }
     if (inquirySite) {
       updateData.inquiry_site = String(inquirySite);
+    }
+
+    // 状況（売主）を追加
+    const sellerSituation = row['状況（売主）'];
+    if (sellerSituation) {
+      updateData.seller_situation = String(sellerSituation);
     }
 
     // 訪問関連フィールドを追加
@@ -1462,12 +1494,22 @@ export class EnhancedAutoSyncService {
       if (!formattedInquiryDate) {
         console.log(`⚠️ [syncSingleSeller] ${sellerNumber}: inquiry_date is null after formatting (inquiryYear=${inquiryYear}, inquiryDate=${inquiryDate})`);
       }
-    } else {
-      // デバッグログ: inquiryDateが取得できなかった場合
-      console.log(`⚠️ [syncSingleSeller] ${sellerNumber}: inquiryDate is empty/null from spreadsheet`);
+    } else if (inquiryYear) {
+      // 反響日付が空でも反響年がある場合、年の1月1日を設定
+      const year = this.parseNumeric(inquiryYear);
+      if (year) {
+        encryptedData.inquiry_date = `${year}-01-01`;
+        console.log(`ℹ️ [syncSingleSeller] ${sellerNumber}: inquiry_date set to ${year}-01-01 (inquiryDate was empty, using inquiryYear)`);
+      }
     }
     if (inquirySite) {
       encryptedData.inquiry_site = String(inquirySite);
+    }
+
+    // 状況（売主）を追加
+    const sellerSituation = row['状況（売主）'];
+    if (sellerSituation) {
+      encryptedData.seller_situation = String(sellerSituation);
     }
 
     // 訪問関連フィールドを追加
