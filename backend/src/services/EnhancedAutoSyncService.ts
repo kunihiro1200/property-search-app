@@ -858,7 +858,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbSellers, error } = await this.supabase
         .from('sellers')
-        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, updated_at')
+        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, next_call_date, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -934,6 +934,23 @@ export class EnhancedAutoSyncService {
             needsUpdate = true;
           }
 
+          // next_call_dateの比較（次電日）
+          const sheetNextCallDate = sheetRow['次電日'];
+          if (sheetNextCallDate !== undefined && sheetNextCallDate !== null && sheetNextCallDate !== '') {
+            // スプレッドシートの次電日をパース（シリアル値または文字列）
+            const formattedNextCallDate = this.columnMapper.getMappingConfig().typeConversions['next_call_date'] === 'date'
+              ? this.parseNextCallDate(sheetNextCallDate)
+              : null;
+            // DBの値は YYYY-MM-DD 形式の文字列として比較
+            const dbNextCallDate = dbSeller.next_call_date ? String(dbSeller.next_call_date).substring(0, 10) : null;
+            if (formattedNextCallDate !== dbNextCallDate) {
+              needsUpdate = true;
+            }
+          } else if (dbSeller.next_call_date !== null) {
+            // スプレッドシートで次電日が空になった場合も更新対象
+            needsUpdate = true;
+          }
+
           if (needsUpdate) {
             updatedSellers.push(sellerNumber);
           }
@@ -988,6 +1005,89 @@ export class EnhancedAutoSyncService {
     }
     
     return null;
+  }
+
+  /**
+   * 次電日を YYYY-MM-DD 形式にパース
+   * 
+   * Google Sheets APIから取得した日付は以下の形式で返される:
+   * - シリアル値（数値）: Excelシリアル値（1899年12月30日からの日数）
+   * - 文字列: YYYY-MM-DD, YYYY/MM/DD, MM/DD など
+   * 
+   * シリアル値を使用することで、表示形式に関係なく正確な年月日を取得できます。
+   */
+  private parseNextCallDate(value: any): string | null {
+    if (!value && value !== 0) return null;
+
+    try {
+      // 数値の場合（Excelシリアル値）
+      // Google Sheetsの日付シリアル値は1899年12月30日を基準とする
+      if (typeof value === 'number') {
+        // Excelシリアル値を日付に変換
+        // 基準日を1899年12月31日として計算（シリアル値1 = 1900-01-01）
+        const baseDate = new Date(Date.UTC(1899, 11, 31)); // 1899-12-31 UTC
+        const date = new Date(baseDate.getTime() + (value - 1) * 24 * 60 * 60 * 1000);
+        
+        // YYYY-MM-DD形式で返す（UTCベース）
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+      }
+
+      // 文字列の場合
+      const str = String(value).trim();
+      if (!str) return null;
+      
+      // YYYY-MM-DD形式
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        return str;
+      }
+
+      // YYYY/MM/DD形式
+      if (/^\d{4}\/\d{2}\/\d{2}$/.test(str)) {
+        return str.replace(/\//g, '-');
+      }
+
+      // MM/DD または M/D形式（年なし）- フォールバック
+      // 通常はシリアル値で取得されるため、ここに来ることは稀
+      const mmddMatch = str.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (mmddMatch) {
+        const month = mmddMatch[1].padStart(2, '0');
+        const day = mmddMatch[2].padStart(2, '0');
+        
+        // JSTで現在日付を取得
+        const now = new Date();
+        const jstOffset = 9 * 60; // JST is UTC+9
+        const jstNow = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60 * 1000);
+        const currentYear = jstNow.getFullYear();
+        const currentMonth = jstNow.getMonth() + 1;
+        const currentDay = jstNow.getDate();
+        
+        const inputMonth = parseInt(month);
+        const inputDay = parseInt(day);
+        
+        // 入力日付が今日より前かどうかを判定
+        // 次電日は将来の予定なので、今日より前の日付は来年と解釈
+        let year = currentYear;
+        if (inputMonth < currentMonth || (inputMonth === currentMonth && inputDay < currentDay)) {
+          year = currentYear + 1;
+        }
+        
+        return `${year}-${month}-${day}`;
+      }
+
+      // その他の形式はDateオブジェクトでパース
+      const date = new Date(str);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**
