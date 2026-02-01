@@ -858,7 +858,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbSellers, error } = await this.supabase
         .from('sellers')
-        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, next_call_date, seller_situation, inquiry_date, inquiry_year, updated_at')
+        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, next_call_date, current_status, inquiry_date, inquiry_year, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -951,9 +951,9 @@ export class EnhancedAutoSyncService {
             needsUpdate = true;
           }
 
-          // seller_situationの比較（状況売主）
+          // current_statusの比較（状況売主）
           const sheetSellerSituation = sheetRow['状況（売主）'] || '';
-          const dbSellerSituation = (dbSeller as any).seller_situation || '';
+          const dbSellerSituation = (dbSeller as any).current_status || '';
           if (sheetSellerSituation !== dbSellerSituation) {
             needsUpdate = true;
           }
@@ -1307,7 +1307,7 @@ export class EnhancedAutoSyncService {
     // 状況（売主）を追加
     const sellerSituation = row['状況（売主）'];
     if (sellerSituation) {
-      updateData.seller_situation = String(sellerSituation);
+      updateData.current_status = String(sellerSituation);
     }
 
     // 訪問関連フィールドを追加
@@ -1509,7 +1509,7 @@ export class EnhancedAutoSyncService {
     // 状況（売主）を追加
     const sellerSituation = row['状況（売主）'];
     if (sellerSituation) {
-      encryptedData.seller_situation = String(sellerSituation);
+      encryptedData.current_status = String(sellerSituation);
     }
 
     // 訪問関連フィールドを追加

@@ -1153,6 +1153,8 @@ export class SellerService extends BaseRepository {
         buildYear: seller.build_year,
         structure: seller.structure,
         floorPlan: seller.floor_plan,
+        // Current status (状況売主)
+        currentStatus: seller.current_status,
       };
       
       return decrypted;
