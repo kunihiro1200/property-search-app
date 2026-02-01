@@ -744,16 +744,20 @@ export class SellerService extends BaseRepository {
       switch (statusCategory) {
         case 'visitScheduled':
           // 訪問予定（営担に入力あり AND 訪問日が今日以降）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
           query = query
             .not('visit_assignee', 'is', null)
             .neq('visit_assignee', '')
+            .neq('visit_assignee', '外す')
             .gte('visit_date', todayJST);
           break;
         case 'visitCompleted':
           // 訪問済み（営担に入力あり AND 訪問日が昨日以前）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
           query = query
             .not('visit_assignee', 'is', null)
             .neq('visit_assignee', '')
+            .neq('visit_assignee', '外す')
             .lt('visit_date', todayJST);
           break;
         case 'todayCallAssigned':
@@ -788,14 +792,16 @@ export class SellerService extends BaseRepository {
           break;
         case 'unvaluated':
           // 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
+          // 注意: mailing_statusがnullの場合も含めるため、.or()を使用
           query = query
             .ilike('status', '%追客中%')
             .gte('inquiry_date', cutoffDate)
-            .or('visit_assignee.is.null,visit_assignee.eq.')
+            .or('visit_assignee.is.null,visit_assignee.eq.,visit_assignee.eq.外す')
             .is('valuation_amount_1', null)
             .is('valuation_amount_2', null)
             .is('valuation_amount_3', null)
-            .neq('mailing_status', '不要');
+            .or('mailing_status.is.null,mailing_status.eq.,mailing_status.neq.不要');
           break;
         case 'mailingPending':
           // 査定（郵送）（郵送ステータスが「未」）
