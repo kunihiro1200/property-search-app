@@ -190,6 +190,7 @@ const CallModePage = () => {
   const [callMemo, setCallMemo] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [unreachableStatus, setUnreachableStatus] = useState<string | null>(null);
+  const [copiedSellerNumber, setCopiedSellerNumber] = useState(false); // 売主番号コピー完了フラグ
 
   // ステータス更新用の状態
   const [editedStatus, setEditedStatus] = useState<string>('追客中');
@@ -2303,18 +2304,23 @@ HP：https://ifoo-oita.com/
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="h5">通話モード - {seller?.name || '読み込み中...'}</Typography>
             {seller?.sellerNumber && (
-              <Chip 
-                label={seller.sellerNumber} 
-                size="small" 
-                color="primary"
-                onClick={() => {
-                  navigator.clipboard.writeText(seller.sellerNumber || '');
-                  setSuccessMessage(`${seller.sellerNumber} をコピーしました`);
-                  setTimeout(() => setSuccessMessage(null), 2000);
-                }}
-                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
-                title="クリックでコピー"
-              />
+              <>
+                <Chip 
+                  label={seller.sellerNumber} 
+                  size="small" 
+                  color="primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(seller.sellerNumber || '');
+                    setCopiedSellerNumber(true);
+                    setTimeout(() => setCopiedSellerNumber(false), 1500);
+                  }}
+                  sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                  title="クリックでコピー"
+                />
+                {copiedSellerNumber && (
+                  <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>✓</Typography>
+                )}
+              </>
             )}
             {/* 重複インジケーター */}
             {!duplicatesLoading && duplicates.length > 0 && (
