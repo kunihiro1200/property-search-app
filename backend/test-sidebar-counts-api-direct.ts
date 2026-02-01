@@ -1,33 +1,29 @@
 /**
- * サイドバーカウントAPIを直接テスト
+ * サイドバーカウントAPIの直接テスト
  */
-
+import 'dotenv/config';
 import { SellerService } from './src/services/SellerService.supabase';
-import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
-
-async function testSidebarCountsAPI() {
-  console.log('=== サイドバーカウントAPIテスト ===');
-  console.log('現在時刻:', new Date().toISOString());
+async function testSidebarCountsApiDirect() {
+  console.log('=== サイドバーカウントAPI直接テスト ===\n');
+  
+  const sellerService = new SellerService();
   
   try {
-    const sellerService = new SellerService();
     const counts = await sellerService.getSidebarCounts();
     
-    console.log('\n--- サイドバーカウント結果 ---');
-    console.log('当日TEL分:', counts.todayCall);
-    console.log('当日TEL（内容）:', counts.todayCallWithInfo);
-    console.log('当日TEL（担当）:', counts.todayCallAssigned);
-    console.log('訪問予定:', counts.visitScheduled);
-    console.log('訪問済み:', counts.visitCompleted);
-    console.log('未査定:', counts.unvaluated);
-    console.log('査定（郵送）:', counts.mailingPending);
+    // APIレスポンスと同じ形式で出力
+    console.log('APIレスポンス:');
+    console.log(JSON.stringify(counts, null, 2));
+    
+    console.log('\n=== 確認 ===');
+    console.log('visitScheduledByAssignee:', counts.visitScheduledByAssignee);
+    console.log('visitCompletedByAssignee:', counts.visitCompletedByAssignee);
     
     console.log('\n=== テスト完了 ===');
   } catch (error) {
-    console.error('❌ エラー:', error);
+    console.error('エラー:', error);
   }
 }
 
-testSidebarCountsAPI().catch(console.error);
+testSidebarCountsApiDirect();

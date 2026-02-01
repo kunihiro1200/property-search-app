@@ -39,8 +39,10 @@ interface SellerStatusSidebarProps {
   categoryCounts?: CategoryCounts;
   /** 選択中のカテゴリ（売主リストページで使用） */
   selectedCategory?: StatusCategory;
+  /** 選択中の営担イニシャル（訪問予定/訪問済みで使用） */
+  selectedVisitAssignee?: string;
   /** カテゴリ選択時のコールバック（売主リストページで使用） */
-  onCategorySelect?: (category: StatusCategory) => void;
+  onCategorySelect?: (category: StatusCategory, visitAssignee?: string) => void;
   /** 通話モードページかどうか */
   isCallMode?: boolean;
   /** 売主リスト（展開時に表示する売主データ） */
@@ -170,6 +172,7 @@ export default function SellerStatusSidebar({
   currentSeller,
   categoryCounts,
   selectedCategory,
+  selectedVisitAssignee,
   onCategorySelect,
   isCallMode = false,
   sellers = [],
@@ -187,14 +190,8 @@ export default function SellerStatusSidebar({
     return null;
   });
   
-  // 展開中の訪問カテゴリ+イニシャル（例: "visitScheduled-Y"）
-  // sessionStorageから復元（リロード時に状態を維持）
-  const [expandedVisitKey, setExpandedVisitKey] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('sidebarExpandedVisitKey');
-    }
-    return null;
-  });
+  // 訪問予定/訪問済みは展開せず、クリックでメインテーブルにフィルタリング結果を表示するため、
+  // expandedVisitKeyは廃止（展開機能を削除）
   
   // デバッグログ - コンポーネントがレンダリングされるたびに出力
   // ※ useStateの後に配置（変数宣言後でないとアクセスできない）
@@ -207,9 +204,7 @@ export default function SellerStatusSidebar({
   console.log('sellers type:', typeof sellers);
   console.log('sellers is array:', Array.isArray(sellers));
   console.log('expandedCategory (from state):', expandedCategory);
-  console.log('expandedVisitKey (from state):', expandedVisitKey);
   console.log('sessionStorage expandedCategory:', typeof window !== 'undefined' ? sessionStorage.getItem('sidebarExpandedCategory') : 'N/A');
-  console.log('sessionStorage expandedVisitKey:', typeof window !== 'undefined' ? sessionStorage.getItem('sidebarExpandedVisitKey') : 'N/A');
   
   // sellersが有効な配列かどうかを確認
   const validSellers = Array.isArray(sellers) ? sellers : [];
@@ -223,11 +218,42 @@ export default function SellerStatusSidebar({
     const todayCallWithInfoCount = validSellers.filter(isTodayCallWithInfo).length;
     const unvaluatedCount = validSellers.filter(isUnvaluated).length;
     const mailingPendingCount = validSellers.filter(isMailingPending).length;
+    const visitScheduledCount = validSellers.filter(isVisitScheduled).length;
+    const visitCompletedCount = validSellers.filter(isVisitCompleted).length;
     console.log('=== フィルタリング結果 ===');
+    console.log('訪問予定:', visitScheduledCount);
+    console.log('訪問済み:', visitCompletedCount);
     console.log('当日TEL分:', todayCallCount);
     console.log('当日TEL（内容）:', todayCallWithInfoCount);
     console.log('未査定:', unvaluatedCount);
     console.log('査定（郵送）:', mailingPendingCount);
+    
+    // 訪問予定/訪問済みの売主を詳細確認
+    if (visitScheduledCount > 0) {
+      console.log('=== 訪問予定の売主 ===');
+      validSellers.filter(isVisitScheduled).forEach((s: any) => {
+        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
+      });
+    }
+    if (visitCompletedCount > 0) {
+      console.log('=== 訪問済みの売主（最初の5件） ===');
+      validSellers.filter(isVisitCompleted).slice(0, 5).forEach((s: any) => {
+        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
+      });
+    }
+    
+    // visitDateとvisitAssigneeを持つ売主を確認
+    const sellersWithVisitData = validSellers.filter((s: any) => {
+      const visitDate = s.visitDate || s.visit_date;
+      const visitAssignee = s.visitAssignee || s.visit_assignee;
+      return visitDate || visitAssignee;
+    });
+    console.log('visitDateまたはvisitAssigneeを持つ売主:', sellersWithVisitData.length);
+    if (sellersWithVisitData.length > 0 && sellersWithVisitData.length <= 10) {
+      sellersWithVisitData.forEach((s: any) => {
+        console.log(`  ${s.sellerNumber}: visitDate=${s.visitDate || s.visit_date}, visitAssignee=${s.visitAssignee || s.visit_assignee}`);
+      });
+    }
     
     // 追客中の売主を確認
     const followingUpSellers = validSellers.filter((s: any) => {
@@ -260,15 +286,6 @@ export default function SellerStatusSidebar({
     }
   }, [expandedCategory]);
   
-  // expandedVisitKeyが変更されたらsessionStorageに保存
-  useEffect(() => {
-    if (expandedVisitKey) {
-      sessionStorage.setItem('sidebarExpandedVisitKey', expandedVisitKey);
-    } else {
-      sessionStorage.removeItem('sidebarExpandedVisitKey');
-    }
-  }, [expandedVisitKey]);
-  
   // 通話モードページの場合、現在の売主のカテゴリを判定
   const currentSellerCategory = isCallMode ? getSellerCategory(currentSeller) : null;
   
@@ -278,9 +295,8 @@ export default function SellerStatusSidebar({
     if (isCallMode && currentSellerCategory) {
       // sessionStorageに展開状態が保存されていない場合のみ、現在の売主のカテゴリを自動展開
       const savedCategory = sessionStorage.getItem('sidebarExpandedCategory');
-      const savedVisitKey = sessionStorage.getItem('sidebarExpandedVisitKey');
       
-      if (!savedCategory && !savedVisitKey) {
+      if (!savedCategory) {
         setExpandedCategory(currentSellerCategory);
       }
     }
@@ -316,7 +332,6 @@ export default function SellerStatusSidebar({
   // 「売主リスト」タイトルクリック時の処理
   const handleTitleClick = () => {
     setExpandedCategory(null);
-    setExpandedVisitKey(null);
     if (!isCallMode) {
       onCategorySelect?.('all');
     }
@@ -337,11 +352,80 @@ export default function SellerStatusSidebar({
   };
 
   // 訪問予定/訪問済みのイニシャル別ボタンをレンダリング
+  // クリックでメインテーブルにフィルタリング結果を表示（展開機能は廃止）
   const renderVisitCategoryButtons = (
     category: 'visitScheduled' | 'visitCompleted',
     prefix: string,
     color: string
   ) => {
+    // categoryCountsからイニシャル別カウントを取得（APIから取得したデータを優先）
+    const byAssigneeKey = category === 'visitScheduled' ? 'visitScheduledByAssignee' : 'visitCompletedByAssignee';
+    const byAssigneeData = categoryCounts?.[byAssigneeKey] || [];
+    
+    // APIからイニシャル別カウントが取得できた場合はそれを使用
+    if (byAssigneeData.length > 0) {
+      return (
+        <Box key={category}>
+          {byAssigneeData.map(({ initial, count }) => {
+            const visitKey = `${category}-${initial}`;
+            // 選択状態の判定: カテゴリとイニシャルの両方が一致する場合
+            const isSelected = selectedCategory === category && selectedVisitAssignee === initial;
+            const label = `${prefix}(${initial})`;
+            
+            return (
+              <Box key={visitKey}>
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    if (isSelected) {
+                      // 既に選択中の場合は選択解除
+                      if (!isCallMode) {
+                        onCategorySelect?.('all', undefined);
+                      }
+                    } else {
+                      // 新しいカテゴリを選択してメインテーブルをフィルタリング
+                      setExpandedCategory(null);
+                      if (!isCallMode) {
+                        onCategorySelect?.(category, initial);
+                      }
+                    }
+                  }}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    fontSize: '0.85rem',
+                    py: 0.75,
+                    px: 1.5,
+                    color: isSelected ? 'white' : color,
+                    bgcolor: isSelected ? color : 'transparent',
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: isSelected ? color : `${color}15`,
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{label}</span>
+                    <Chip 
+                      label={count} 
+                      size="small"
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.7rem',
+                        bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                        color: isSelected ? 'white' : undefined,
+                      }}
+                    />
+                  </Box>
+                </Button>
+              </Box>
+            );
+          })}
+        </Box>
+      );
+    }
+    
+    // フォールバック: sellersからフィルタリング（従来の動作）
     const filterFn = category === 'visitScheduled' ? isVisitScheduled : isVisitCompleted;
     const visitData = getVisitDataByAssignee(sellers, filterFn);
     
@@ -350,9 +434,10 @@ export default function SellerStatusSidebar({
     
     return (
       <Box key={category}>
-        {visitData.map(({ initial, count, sellers: filteredSellers }) => {
+        {visitData.map(({ initial, count }) => {
           const visitKey = `${category}-${initial}`;
-          const isExpanded = expandedVisitKey === visitKey;
+          // 選択状態の判定: カテゴリとイニシャルの両方が一致する場合
+          const isSelected = selectedCategory === category && selectedVisitAssignee === initial;
           const label = `${prefix}(${initial})`;
           
           return (
@@ -360,11 +445,15 @@ export default function SellerStatusSidebar({
               <Button
                 fullWidth
                 onClick={() => {
-                  if (expandedVisitKey === visitKey) {
-                    setExpandedVisitKey(null);
+                  if (isSelected) {
+                    if (!isCallMode) {
+                      onCategorySelect?.('all', undefined);
+                    }
                   } else {
-                    setExpandedVisitKey(visitKey);
                     setExpandedCategory(null);
+                    if (!isCallMode) {
+                      onCategorySelect?.(category, initial);
+                    }
                   }
                 }}
                 sx={{ 
@@ -373,11 +462,11 @@ export default function SellerStatusSidebar({
                   fontSize: '0.85rem',
                   py: 0.75,
                   px: 1.5,
-                  color: isExpanded ? 'white' : color,
-                  bgcolor: isExpanded ? color : 'transparent',
-                  borderRadius: isExpanded ? '4px 4px 0 0' : 1,
+                  color: isSelected ? 'white' : color,
+                  bgcolor: isSelected ? color : 'transparent',
+                  borderRadius: 1,
                   '&:hover': {
-                    bgcolor: isExpanded ? color : `${color}15`,
+                    bgcolor: isSelected ? color : `${color}15`,
                   }
                 }}
               >
@@ -389,70 +478,12 @@ export default function SellerStatusSidebar({
                     sx={{ 
                       height: 20, 
                       fontSize: '0.7rem',
-                      bgcolor: isExpanded ? 'rgba(255,255,255,0.3)' : undefined,
-                      color: isExpanded ? 'white' : undefined,
+                      bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                      color: isSelected ? 'white' : undefined,
                     }}
                   />
                 </Box>
-                {isExpanded ? <ExpandLess /> : <ExpandMore />}
               </Button>
-              
-              {/* 展開時の売主リスト */}
-              <Collapse in={isExpanded}>
-                <Box sx={{ 
-                  bgcolor: 'grey.50', 
-                  borderRadius: '0 0 4px 4px',
-                  border: 1,
-                  borderColor: 'grey.300',
-                  borderTop: 0,
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  mb: 0.5,
-                }}>
-                  {filteredSellers.length === 0 ? (
-                    <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        該当する売主がいません
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <List dense disablePadding>
-                      {filteredSellers.map((seller, index) => (
-                        <Box key={seller.id}>
-                          <ListItem
-                            sx={{ 
-                              py: 1.5, 
-                              px: 2,
-                              cursor: 'pointer',
-                              '&:hover': { bgcolor: 'grey.100' },
-                              bgcolor: currentSeller?.id === seller.id ? 'primary.light' : 'transparent',
-                            }}
-                            onClick={() => handleSellerClick(seller.id)}
-                          >
-                            <Box sx={{ width: '100%' }}>
-                              {/* 売主番号と名前 */}
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {seller.sellerNumber}（{seller.name}）
-                              </Typography>
-                              
-                              {/* 訪問日 */}
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                訪問日: {seller.visitDate || seller.visit_date ? new Date(seller.visitDate || seller.visit_date).toLocaleDateString('ja-JP') : '-'}
-                              </Typography>
-                              
-                              {/* 住所 */}
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                {seller.propertyAddress || seller.address || '-'}
-                              </Typography>
-                            </Box>
-                          </ListItem>
-                          {index < filteredSellers.length - 1 && <Divider />}
-                        </Box>
-                      ))}
-                    </List>
-                  )}
-                </Box>
-              </Collapse>
             </Box>
           );
         })}
@@ -610,7 +641,6 @@ export default function SellerStatusSidebar({
         variant={isActive('all') ? 'contained' : 'text'}
         onClick={() => {
           setExpandedCategory(null);
-          setExpandedVisitKey(null);
           if (!isCallMode) {
             onCategorySelect?.('all');
           } else {
@@ -645,125 +675,12 @@ export default function SellerStatusSidebar({
     </Box>
   );
 
-  // 展開中の訪問カテゴリ+イニシャルの売主リストをレンダリング
-  const renderExpandedVisitCategory = () => {
-    if (!expandedVisitKey) return null;
-    
-    const [category, initial] = expandedVisitKey.split('-') as ['visitScheduled' | 'visitCompleted', string];
-    const prefix = category === 'visitScheduled' ? '①訪問予定' : '②訪問済み';
-    const color = category === 'visitScheduled' ? '#2e7d32' : '#1976d2';
-    const filterFn = category === 'visitScheduled' ? isVisitScheduled : isVisitCompleted;
-    
-    // 該当イニシャルの売主のみをフィルタリング
-    const filteredSellers = sellers.filter(seller => {
-      if (!filterFn(seller)) return false;
-      const assignee = seller.visitAssignee || seller.visit_assignee || '';
-      return assignee.trim() === initial;
-    });
-    
-    const label = `${prefix}(${initial})`;
-    const count = filteredSellers.length;
-    
-    return (
-      <Box>
-        <Button
-          fullWidth
-          onClick={() => setExpandedVisitKey(null)}
-          sx={{ 
-            justifyContent: 'space-between', 
-            textAlign: 'left',
-            fontSize: '0.85rem',
-            py: 0.75,
-            px: 1.5,
-            color: 'white',
-            bgcolor: color,
-            borderRadius: '4px 4px 0 0',
-            '&:hover': {
-              bgcolor: color,
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <span>{label}</span>
-            <Chip 
-              label={count} 
-              size="small"
-              sx={{ 
-                height: 20, 
-                fontSize: '0.7rem',
-                bgcolor: 'rgba(255,255,255,0.3)',
-                color: 'white',
-              }}
-            />
-          </Box>
-          <ExpandLess />
-        </Button>
-        
-        {/* 展開時の売主リスト */}
-        <Box sx={{ 
-          bgcolor: 'grey.50', 
-          borderRadius: '0 0 4px 4px',
-          border: 1,
-          borderColor: 'grey.300',
-          borderTop: 0,
-          maxHeight: 400,
-          overflow: 'auto',
-          mb: 0.5,
-        }}>
-          {filteredSellers.length === 0 ? (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                該当する売主がいません
-              </Typography>
-            </Box>
-          ) : (
-            <List dense disablePadding>
-              {filteredSellers.map((seller, index) => (
-                <Box key={seller.id}>
-                  <ListItem
-                    sx={{ 
-                      py: 1.5, 
-                      px: 2,
-                      cursor: 'pointer',
-                      '&:hover': { bgcolor: 'grey.100' },
-                      bgcolor: currentSeller?.id === seller.id ? 'primary.light' : 'transparent',
-                    }}
-                    onClick={() => handleSellerClick(seller.id)}
-                  >
-                    <Box sx={{ width: '100%' }}>
-                      {/* 売主番号と名前 */}
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        {seller.sellerNumber}（{seller.name}）
-                      </Typography>
-                      
-                      {/* 訪問日 */}
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        訪問日: {seller.visitDate || seller.visit_date ? new Date(seller.visitDate || seller.visit_date).toLocaleDateString('ja-JP') : '-'}
-                      </Typography>
-                      
-                      {/* 住所 */}
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                        {seller.propertyAddress || seller.address || '-'}
-                      </Typography>
-                    </Box>
-                  </ListItem>
-                  {index < filteredSellers.length - 1 && <Divider />}
-                </Box>
-              ))}
-            </List>
-          )}
-        </Box>
-      </Box>
-    );
-  };
+  // 訪問予定/訪問済みのボタンは展開せず、クリックでメインテーブルにフィルタリング結果を表示
+  // renderExpandedVisitCategory関数は削除（展開機能を廃止）
 
   // 展開モード（特定のカテゴリが展開されている場合）
+  // 訪問予定/訪問済みは展開せず、メインテーブルにフィルタリング結果を表示するため、expandedVisitKeyは使用しない
   const renderExpandedCategory = () => {
-    // 訪問カテゴリ+イニシャルが展開されている場合
-    if (expandedVisitKey) {
-      return renderExpandedVisitCategory();
-    }
-    
     if (!expandedCategory) return null;
     
     const label = getCategoryLabel(expandedCategory);
@@ -815,15 +732,7 @@ export default function SellerStatusSidebar({
         </Box>
       ) : (
         /* カテゴリリスト */
-        /* expandedVisitKeyが設定されている場合は、sellersがロードされるまで待つ */
-        (expandedVisitKey && sellers.length === 0) ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
-            <CircularProgress size={24} />
-            <Typography variant="body2" sx={{ ml: 1 }}>売主データを読み込み中...</Typography>
-          </Box>
-        ) : (
-          (expandedCategory || expandedVisitKey) ? renderExpandedCategory() : renderAllCategories()
-        )
+        expandedCategory ? renderExpandedCategory() : renderAllCategories()
       )}
     </Paper>
   );

@@ -843,6 +843,15 @@ const CallModePage = () => {
       responses.forEach((response, index) => {
         const sellers = response.data?.data || [];
         console.log(`✅ ${categories[index]}: ${sellers.length}件`);
+        
+        // 訪問予定/訪問済みの場合、詳細ログを出力
+        if (categories[index] === 'visitScheduled' || categories[index] === 'visitCompleted') {
+          console.log(`  === ${categories[index]}の詳細 ===`);
+          sellers.forEach((s: any) => {
+            console.log(`    ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
+          });
+        }
+        
         // AA376が含まれているか確認
         const hasAA376 = sellers.some((s: any) => s.sellerNumber === 'AA376' || s.seller_number === 'AA376');
         if (hasAA376) {
@@ -858,6 +867,33 @@ const CallModePage = () => {
       const allSellers = Array.from(allSellersMap.values());
       console.log('=== サイドバー売主リスト取得完了 ===');
       console.log('合計取得件数（重複除去後）:', allSellers.length);
+      
+      // 訪問予定/訪問済みの売主を確認
+      const visitScheduledSellers = allSellers.filter((s: any) => {
+        const visitAssignee = s.visitAssignee || s.visit_assignee || '';
+        if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') return false;
+        const visitDate = s.visitDate || s.visit_date;
+        if (!visitDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const vDate = new Date(visitDate);
+        vDate.setHours(0, 0, 0, 0);
+        return vDate >= today;
+      });
+      const visitCompletedSellers = allSellers.filter((s: any) => {
+        const visitAssignee = s.visitAssignee || s.visit_assignee || '';
+        if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') return false;
+        const visitDate = s.visitDate || s.visit_date;
+        if (!visitDate) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const vDate = new Date(visitDate);
+        vDate.setHours(0, 0, 0, 0);
+        return vDate < today;
+      });
+      console.log('=== フロントエンドでのフィルタリング結果 ===');
+      console.log('訪問予定（フィルタリング後）:', visitScheduledSellers.length);
+      console.log('訪問済み（フィルタリング後）:', visitCompletedSellers.length);
       
       setSidebarSellers(allSellers);
       

@@ -430,6 +430,8 @@ export interface ListSellersParams {
   includeDeleted?: boolean; // Default: false (exclude deleted sellers)
   // サイドバーカテゴリフィルター
   statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
+  // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+  visitAssignee?: string;
 }
 
 export interface PaginatedResult<T> {

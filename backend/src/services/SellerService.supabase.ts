@@ -23,6 +23,15 @@ let cacheLastUpdated: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5分
 
 /**
+ * 通常スタッフのイニシャルリスト
+ * スタッフ管理スプレッドシート（ID: 19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xxs）の
+ * I列「通常」がTRUEのスタッフのみ
+ * 
+ * 訪問予定/訪問済みのサイドバー表示で、このリストに含まれるスタッフのみを対象とする
+ */
+const NORMAL_STAFF_INITIALS = ['K', 'Y', 'I', '林', '生', 'U', 'R', '久', '和', 'H'];
+
+/**
  * スタッフのイニシャルからフルネームを取得
  */
 async function getEmployeeNameByInitials(initials: string | null | undefined): Promise<string | null> {
@@ -701,6 +710,7 @@ export class SellerService extends BaseRepository {
       sortOrder = 'desc',
       includeDeleted = false, // デフォルトで削除済みを除外
       statusCategory, // サイドバーカテゴリフィルター
+      visitAssignee, // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
     } = params;
 
     // JST今日の日付を取得
@@ -721,7 +731,8 @@ export class SellerService extends BaseRepository {
       sortBy,
       sortOrder,
       includeDeleted ? 'with-deleted' : 'active-only',
-      statusCategory || 'all'
+      statusCategory || 'all',
+      visitAssignee || 'all'
     );
 
     // キャッシュをチェック
@@ -743,22 +754,38 @@ export class SellerService extends BaseRepository {
     if (statusCategory && statusCategory !== 'all') {
       switch (statusCategory) {
         case 'visitScheduled':
-          // 訪問予定（営担に入力あり AND 訪問日が今日以降）
+          // 訪問予定（営担に入力あり AND 訪問日が今日以降 AND 通常スタッフのみ）
           // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
           query = query
             .not('visit_assignee', 'is', null)
             .neq('visit_assignee', '')
             .neq('visit_assignee', '外す')
             .gte('visit_date', todayJST);
+          
+          // 特定のイニシャルでフィルタリング
+          if (visitAssignee) {
+            query = query.eq('visit_assignee', visitAssignee);
+          } else {
+            // イニシャル指定がない場合は通常スタッフ全員
+            query = query.in('visit_assignee', NORMAL_STAFF_INITIALS);
+          }
           break;
         case 'visitCompleted':
-          // 訪問済み（営担に入力あり AND 訪問日が昨日以前）
+          // 訪問済み（営担に入力あり AND 訪問日が昨日以前 AND 通常スタッフのみ）
           // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
           query = query
             .not('visit_assignee', 'is', null)
             .neq('visit_assignee', '')
             .neq('visit_assignee', '外す')
             .lt('visit_date', todayJST);
+          
+          // 特定のイニシャルでフィルタリング
+          if (visitAssignee) {
+            query = query.eq('visit_assignee', visitAssignee);
+          } else {
+            // イニシャル指定がない場合は通常スタッフ全員
+            query = query.in('visit_assignee', NORMAL_STAFF_INITIALS);
+          }
           break;
         case 'todayCallAssigned':
           // 当日TEL（担当）（営担あり（「外す」以外） AND 次電日が今日以前）
@@ -1404,6 +1431,8 @@ export class SellerService extends BaseRepository {
     mailingPending: number;
     todayCallNotStarted: number;
     pinrichEmpty: number;
+    visitScheduledByAssignee: { initial: string; count: number }[];
+    visitCompletedByAssignee: { initial: string; count: number }[];
   }> {
     // JST今日の日付を取得
     const now = new Date();
@@ -1421,23 +1450,69 @@ export class SellerService extends BaseRepository {
       return true;
     };
 
-    // 1. 訪問予定（営担に入力あり AND 訪問日が今日以降）← 最優先
-    const { count: visitScheduledCount } = await this.table('sellers')
-      .select('*', { count: 'exact', head: true })
+    // ヘルパー関数: 通常スタッフかどうかを判定
+    const isNormalStaff = (visitAssignee: string | null | undefined): boolean => {
+      if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') {
+        return false;
+      }
+      return NORMAL_STAFF_INITIALS.includes(visitAssignee.trim());
+    };
+
+    // 1. 訪問予定（営担に入力あり AND 訪問日が今日以降 AND 通常スタッフのみ）← 最優先
+    // まず全ての訪問予定を取得してから、通常スタッフでフィルタリング
+    const { data: visitScheduledSellers } = await this.table('sellers')
+      .select('id, visit_assignee')
       .is('deleted_at', null)
       .not('visit_assignee', 'is', null)
       .neq('visit_assignee', '')
       .neq('visit_assignee', '外す')
       .gte('visit_date', todayJST);
 
-    // 2. 訪問済み（営担に入力あり AND 訪問日が昨日以前）← 2番目
-    const { count: visitCompletedCount } = await this.table('sellers')
-      .select('*', { count: 'exact', head: true })
+    // 通常スタッフのみをフィルタリング
+    const filteredVisitScheduledSellers = (visitScheduledSellers || []).filter(s => 
+      isNormalStaff(s.visit_assignee)
+    );
+    const visitScheduledCount = filteredVisitScheduledSellers.length;
+
+    // 訪問予定のイニシャル別カウントを計算
+    const visitScheduledByAssigneeMap: { [key: string]: number } = {};
+    filteredVisitScheduledSellers.forEach(s => {
+      const assignee = s.visit_assignee?.trim() || '';
+      if (assignee) {
+        visitScheduledByAssigneeMap[assignee] = (visitScheduledByAssigneeMap[assignee] || 0) + 1;
+      }
+    });
+    const visitScheduledByAssignee = Object.entries(visitScheduledByAssigneeMap)
+      .map(([initial, count]) => ({ initial, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // 2. 訪問済み（営担に入力あり AND 訪問日が昨日以前 AND 通常スタッフのみ）← 2番目
+    // まず全ての訪問済みを取得してから、通常スタッフでフィルタリング
+    const { data: visitCompletedSellers } = await this.table('sellers')
+      .select('id, visit_assignee')
       .is('deleted_at', null)
       .not('visit_assignee', 'is', null)
       .neq('visit_assignee', '')
       .neq('visit_assignee', '外す')
       .lt('visit_date', todayJST);
+
+    // 通常スタッフのみをフィルタリング
+    const filteredVisitCompletedSellers = (visitCompletedSellers || []).filter(s => 
+      isNormalStaff(s.visit_assignee)
+    );
+    const visitCompletedCount = filteredVisitCompletedSellers.length;
+
+    // 訪問済みのイニシャル別カウントを計算
+    const visitCompletedByAssigneeMap: { [key: string]: number } = {};
+    filteredVisitCompletedSellers.forEach(s => {
+      const assignee = s.visit_assignee?.trim() || '';
+      if (assignee) {
+        visitCompletedByAssigneeMap[assignee] = (visitCompletedByAssigneeMap[assignee] || 0) + 1;
+      }
+    });
+    const visitCompletedByAssignee = Object.entries(visitCompletedByAssigneeMap)
+      .map(([initial, count]) => ({ initial, count }))
+      .sort((a, b) => b.count - a.count);
 
     // 3. 当日TEL（担当）（営担あり + 次電日が今日以前）
     // 訪問日の有無に関係なく、営担があり次電日が今日以前であれば対象
@@ -1535,6 +1610,8 @@ export class SellerService extends BaseRepository {
       mailingPending: mailingPendingCount || 0,
       todayCallNotStarted: todayCallNotStartedCount || 0,
       pinrichEmpty: pinrichEmptyCount || 0,
+      visitScheduledByAssignee,
+      visitCompletedByAssignee,
     };
   }
 }

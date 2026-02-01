@@ -84,6 +84,8 @@ router.get(
     query('duplicateConfirmed').optional().isBoolean().withMessage('Duplicate confirmed must be a boolean'),
     // サイドバーカテゴリフィルター
     query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'unvaluated', 'mailingPending']).withMessage('Invalid status category'),
+    // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+    query('visitAssignee').optional().isString().withMessage('Visit assignee must be a string'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -118,6 +120,8 @@ router.get(
         duplicateConfirmed: req.query.duplicateConfirmed === 'true' ? true : req.query.duplicateConfirmed === 'false' ? false : undefined,
         // サイドバーカテゴリフィルター
         statusCategory: req.query.statusCategory as 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending',
+        // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+        visitAssignee: req.query.visitAssignee as string,
       };
 
       const result = await sellerService.listSellers(params);

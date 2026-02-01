@@ -1126,9 +1126,23 @@ export class EnhancedAutoSyncService {
   /**
    * 訪問日を YYYY-MM-DD 形式にフォーマット
    * YYYY/MM/DD または YYYY-MM-DD 形式の日付を標準化
+   * Excelシリアル値（数値）にも対応
    */
   private formatVisitDate(value: any): string | null {
     if (!value || value === '') return null;
+    
+    // Excelシリアル値（数値）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > 30000 && numValue < 60000) {
+      // Excelシリアル値を日付に変換
+      // Excelの基準日は1899年12月30日
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch.getTime() + numValue * 24 * 60 * 60 * 1000);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
     
     const str = String(value).trim();
     

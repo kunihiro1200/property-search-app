@@ -31,6 +31,27 @@
 
 import { Seller } from '../types';
 
+/**
+ * 通常スタッフのイニシャルリスト
+ * スタッフ管理スプレッドシート（ID: 19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xxs）の
+ * I列「通常」がTRUEのスタッフのみ
+ * 
+ * 訪問予定/訪問済みのサイドバー表示で、このリストに含まれるスタッフのみを対象とする
+ */
+export const NORMAL_STAFF_INITIALS = ['K', 'Y', 'I', '林', '生', 'U', 'R', '久', '和', 'H'];
+
+/**
+ * 通常スタッフかどうかを判定
+ * @param visitAssignee 営担のイニシャル
+ * @returns 通常スタッフかどうか
+ */
+export const isNormalStaff = (visitAssignee: string | null | undefined): boolean => {
+  if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') {
+    return false;
+  }
+  return NORMAL_STAFF_INITIALS.includes(visitAssignee.trim());
+};
+
 // ステータスカテゴリの型定義
 // todayCall: コミュニケーション情報が全て空の当日TEL（営担なし）
 // todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL（営担なし）
@@ -53,6 +74,8 @@ export interface CategoryCounts {
   mailingPending: number;
   todayCallNotStarted: number; // 当日TEL_未着手（不通が空欄 + 反響日付が2026/1/1以降）
   pinrichEmpty: number;        // Pinrich空欄（Pinrichカラムが空欄）
+  visitScheduledByAssignee?: { initial: string; count: number }[];  // 訪問予定のイニシャル別カウント
+  visitCompletedByAssignee?: { initial: string; count: number }[];  // 訪問済みのイニシャル別カウント
 }
 
 /**
@@ -201,12 +224,13 @@ const isTodayOrAfter = (dateStr: string | Date | undefined | null): boolean => {
 };
 
 /**
- * 訪問予定判定（営担に入力あり、訪問日が今日以降）
+ * 訪問予定判定（営担に入力あり、訪問日が今日以降、通常スタッフのみ）
  * 
  * 【サイドバー表示】「訪問予定（イニシャル）」
  * 
  * 条件:
  * - 営担（visitAssignee）に入力がある
+ * - 営担が通常スタッフ（NORMAL_STAFF_INITIALS）に含まれる
  * - 訪問日（visitDate）が今日以降
  * 
  * @param seller 売主データ
@@ -214,6 +238,12 @@ const isTodayOrAfter = (dateStr: string | Date | undefined | null): boolean => {
  */
 export const isVisitScheduled = (seller: Seller | any): boolean => {
   if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  // 通常スタッフのみを対象とする
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  if (!isNormalStaff(visitAssignee)) {
     return false;
   }
   
@@ -226,12 +256,13 @@ export const isVisitScheduled = (seller: Seller | any): boolean => {
 };
 
 /**
- * 訪問済み判定（営担に入力あり、訪問日が昨日以前）
+ * 訪問済み判定（営担に入力あり、訪問日が昨日以前、通常スタッフのみ）
  * 
  * 【サイドバー表示】「訪問済み（イニシャル）」
  * 
  * 条件:
  * - 営担（visitAssignee）に入力がある
+ * - 営担が通常スタッフ（NORMAL_STAFF_INITIALS）に含まれる
  * - 訪問日（visitDate）が昨日以前
  * 
  * @param seller 売主データ
@@ -239,6 +270,12 @@ export const isVisitScheduled = (seller: Seller | any): boolean => {
  */
 export const isVisitCompleted = (seller: Seller | any): boolean => {
   if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  // 通常スタッフのみを対象とする
+  const visitAssignee = seller.visitAssignee || seller.visit_assignee || '';
+  if (!isNormalStaff(visitAssignee)) {
     return false;
   }
   

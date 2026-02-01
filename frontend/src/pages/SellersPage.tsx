@@ -129,6 +129,8 @@ export default function SellersPage() {
     mailingPending: number;
     todayCallNotStarted: number;
     pinrichEmpty: number;
+    visitScheduledByAssignee: { initial: string; count: number }[];
+    visitCompletedByAssignee: { initial: string; count: number }[];
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
@@ -139,6 +141,8 @@ export default function SellersPage() {
     mailingPending: 0,
     todayCallNotStarted: 0,
     pinrichEmpty: 0,
+    visitScheduledByAssignee: [],
+    visitCompletedByAssignee: [],
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
   
@@ -170,6 +174,16 @@ export default function SellersPage() {
       return savedCategory as StatusCategory;
     }
     return 'all';
+  });
+  
+  // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+  const [selectedVisitAssignee, setSelectedVisitAssignee] = useState<string | undefined>(() => {
+    const saved = sessionStorage.getItem('selectedVisitAssignee');
+    if (saved) {
+      sessionStorage.removeItem('selectedVisitAssignee');
+      return saved;
+    }
+    return undefined;
   });
 
   // 自動同期の通知データ
@@ -266,6 +280,8 @@ export default function SellersPage() {
         mailingPending: 0,
         todayCallNotStarted: 0,
         pinrichEmpty: 0,
+        visitScheduledByAssignee: [],
+        visitCompletedByAssignee: [],
       });
     } finally {
       setSidebarLoading(false);
@@ -279,7 +295,7 @@ export default function SellersPage() {
 
   useEffect(() => {
     fetchSellers();
-  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory]);
+  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory, selectedVisitAssignee]);
 
   const fetchSellers = async () => {
     try {
@@ -305,6 +321,11 @@ export default function SellersPage() {
       // サイドバーカテゴリフィルター
       if (selectedCategory && selectedCategory !== 'all') {
         params.statusCategory = selectedCategory;
+      }
+      
+      // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      if (selectedVisitAssignee) {
+        params.visitAssignee = selectedVisitAssignee;
       }
       
       const response = await api.get('/api/sellers', { params });
@@ -454,8 +475,10 @@ export default function SellersPage() {
           <SellerStatusSidebar
             categoryCounts={categoryCounts}
             selectedCategory={selectedCategory}
-            onCategorySelect={(category) => {
+            selectedVisitAssignee={selectedVisitAssignee}
+            onCategorySelect={(category, visitAssignee) => {
               setSelectedCategory(category);
+              setSelectedVisitAssignee(visitAssignee);
               setPage(0); // カテゴリが変わったらページを0にリセット
             }}
             isCallMode={false}
