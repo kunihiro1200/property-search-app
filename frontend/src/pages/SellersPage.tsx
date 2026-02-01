@@ -16,12 +16,14 @@ import {
   Chip,
   InputAdornment,
   MenuItem,
+  IconButton,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Phone as PhoneIcon,
   FilterList as FilterListIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -459,7 +461,7 @@ export default function SellersPage() {
         <PageNavigation />
 
         {/* サイドバーとメインコンテンツのレイアウト */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, overflow: 'visible' }}>
           {/* 左側サイドバー - SellerStatusSidebarコンポーネントを使用 */}
           {/* デバッグ: サイドバーに渡すsellersデータを確認 */}
           {console.log('[SellersPage] サイドバーに渡すsellers:', {
@@ -487,9 +489,20 @@ export default function SellersPage() {
           />
 
           {/* メインコンテンツ */}
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, position: 'relative' }}>
 
-        <Paper sx={{ p: 2, mb: 3 }}>
+        {/* 検索バー - スクロールしても固定表示 */}
+        <Paper 
+          sx={{ 
+            p: 2, 
+            mb: 3,
+            position: 'sticky',
+            top: 64, // ヘッダーの高さ分オフセット
+            zIndex: 100,
+            backgroundColor: 'background.paper',
+            boxShadow: 2,
+          }}
+        >
           <Box sx={{ display: 'flex', gap: 2, mb: showFilters ? 2 : 0 }}>
             <TextField
               fullWidth
@@ -504,7 +517,26 @@ export default function SellersPage() {
                   </InputAdornment>
                 ),
                 endAdornment: (
-                  <Button onClick={handleSearch}>検索</Button>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {/* 検索条件クリアボタン（×ボタン） */}
+                    {searchQuery && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSearchQuery('');
+                          fetchSellers(); // 検索をクリアして全件表示
+                        }}
+                        sx={{ 
+                          color: 'text.secondary',
+                          '&:hover': { color: 'error.main' }
+                        }}
+                        title="検索条件をクリア"
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                    <Button onClick={handleSearch}>検索</Button>
+                  </Box>
                 ),
               }}
             />

@@ -1264,7 +1264,15 @@ export class EnhancedAutoSyncService {
       updateData.inquiry_year = this.parseNumeric(inquiryYear);
     }
     if (inquiryDate) {
-      updateData.inquiry_date = this.formatInquiryDate(inquiryYear, inquiryDate);
+      const formattedInquiryDate = this.formatInquiryDate(inquiryYear, inquiryDate);
+      updateData.inquiry_date = formattedInquiryDate;
+      // デバッグログ: inquiry_dateの同期を確認
+      if (!formattedInquiryDate) {
+        console.log(`⚠️ [updateSingleSeller] ${sellerNumber}: inquiry_date is null after formatting (inquiryYear=${inquiryYear}, inquiryDate=${inquiryDate})`);
+      }
+    } else {
+      // デバッグログ: inquiryDateが取得できなかった場合
+      console.log(`⚠️ [updateSingleSeller] ${sellerNumber}: inquiryDate is empty/null from spreadsheet`);
     }
     if (inquirySite) {
       updateData.inquiry_site = String(inquirySite);
@@ -1448,7 +1456,15 @@ export class EnhancedAutoSyncService {
       encryptedData.inquiry_year = this.parseNumeric(inquiryYear);
     }
     if (inquiryDate) {
-      encryptedData.inquiry_date = this.formatInquiryDate(inquiryYear, inquiryDate);
+      const formattedInquiryDate = this.formatInquiryDate(inquiryYear, inquiryDate);
+      encryptedData.inquiry_date = formattedInquiryDate;
+      // デバッグログ: inquiry_dateの同期を確認
+      if (!formattedInquiryDate) {
+        console.log(`⚠️ [syncSingleSeller] ${sellerNumber}: inquiry_date is null after formatting (inquiryYear=${inquiryYear}, inquiryDate=${inquiryDate})`);
+      }
+    } else {
+      // デバッグログ: inquiryDateが取得できなかった場合
+      console.log(`⚠️ [syncSingleSeller] ${sellerNumber}: inquiryDate is empty/null from spreadsheet`);
     }
     if (inquirySite) {
       encryptedData.inquiry_site = String(inquirySite);
