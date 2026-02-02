@@ -33,6 +33,7 @@ import DuplicateDetailsModal from '../components/DuplicateDetailsModal';
 import DocumentModal from '../components/DocumentModal';
 import ImageSelectorModal from '../components/ImageSelectorModal';
 import RichTextEmailEditor from '../components/RichTextEmailEditor';
+import RichTextCommentEditor from '../components/RichTextCommentEditor';
 import { PerformanceMetricsSection } from '../components/PerformanceMetricsSection';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -4450,7 +4451,8 @@ HP：https://ifoo-oita.com/
                   label="B'"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-b-prime');
-                    setUnifiedComment('価格が知りたかっただけ' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>価格が知りたかっただけ</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4472,7 +4474,8 @@ HP：https://ifoo-oita.com/
                   label="木２"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-wood-2f');
-                    setUnifiedComment('木造２F' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>木造２F</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4494,7 +4497,8 @@ HP：https://ifoo-oita.com/
                   label="土地面積"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-land-area');
-                    setUnifiedComment('土地面積：だいたい' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>土地面積：だいたい</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4516,7 +4520,8 @@ HP：https://ifoo-oita.com/
                   label="太陽光"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-solar');
-                    setUnifiedComment('太陽光付き' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>太陽光付き</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4538,7 +4543,8 @@ HP：https://ifoo-oita.com/
                   label="一旦机上"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-desk-valuation');
-                    setUnifiedComment('一旦机上査定して、その後訪問考える' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>一旦机上査定して、その後訪問考える</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4560,7 +4566,8 @@ HP：https://ifoo-oita.com/
                   label="他社待ち"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-waiting-other');
-                    setUnifiedComment('まだ他社の査定がでていない' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>まだ他社の査定がでていない</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4582,7 +4589,8 @@ HP：https://ifoo-oita.com/
                   label="高く驚"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-surprised-high');
-                    setUnifiedComment('思ったより査定額高かった' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>思ったより査定額高かった</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4604,7 +4612,8 @@ HP：https://ifoo-oita.com/
                   label="名義"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-ownership');
-                    setUnifiedComment('本人名義人：本人' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>本人名義人：本人</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4626,7 +4635,8 @@ HP：https://ifoo-oita.com/
                   label="ローン"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-loan');
-                    setUnifiedComment('ローン残：' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>ローン残：</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4648,7 +4658,8 @@ HP：https://ifoo-oita.com/
                   label="売る気あり"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-willing-sell');
-                    setUnifiedComment('売却には興味あり' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>売却には興味あり</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4670,7 +4681,8 @@ HP：https://ifoo-oita.com/
                   label="検討中"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-considering');
-                    setUnifiedComment('検討中' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>検討中</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4692,7 +4704,8 @@ HP：https://ifoo-oita.com/
                   label="不通"
                   onClick={() => {
                     handleQuickButtonClick('call-memo-unreachable');
-                    setUnifiedComment('不通' + (unifiedComment ? '\n' : '') + unifiedComment);
+                    const boldText = '<strong>不通</strong>';
+                    setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
                   }}
                   size="small"
                   clickable
@@ -4714,15 +4727,11 @@ HP：https://ifoo-oita.com/
             </Box>
 
             {/* 統一コメント欄 */}
-            <TextField
-              fullWidth
-              multiline
-              rows={12}
-              label="コメント"
-              placeholder="スプレッドシートのコメントがここに表示されます。新規コメントを入力してください..."
+            <RichTextCommentEditor
               value={unifiedComment}
-              onChange={(e) => setUnifiedComment(e.target.value)}
-              sx={{ mb: 2 }}
+              onChange={setUnifiedComment}
+              placeholder="スプレッドシートのコメントがここに表示されます。新規コメントを入力してください..."
+              disabled={savingComment}
             />
 
             {/* 不通フィールド（inquiry_date >= 2026-01-01の売主のみ表示） */}
