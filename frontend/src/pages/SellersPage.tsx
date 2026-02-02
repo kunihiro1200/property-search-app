@@ -133,6 +133,7 @@ export default function SellersPage() {
     pinrichEmpty: number;
     visitScheduledByAssignee: { initial: string; count: number }[];
     visitCompletedByAssignee: { initial: string; count: number }[];
+    todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
@@ -145,6 +146,7 @@ export default function SellersPage() {
     pinrichEmpty: 0,
     visitScheduledByAssignee: [],
     visitCompletedByAssignee: [],
+    todayCallWithInfoGroups: [],
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
   
@@ -284,6 +286,7 @@ export default function SellersPage() {
         pinrichEmpty: 0,
         visitScheduledByAssignee: [],
         visitCompletedByAssignee: [],
+        todayCallWithInfoGroups: [],
       });
     } finally {
       setSidebarLoading(false);

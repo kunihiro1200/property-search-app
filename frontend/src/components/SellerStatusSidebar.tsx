@@ -300,10 +300,15 @@ export default function SellerStatusSidebar({
     : '';
 
   // 当日TEL（内容）のグループ化結果をキャッシュ（コンポーネントのトップレベルで定義）
-  const todayCallWithInfoGroups = useMemo(() => 
-    groupTodayCallWithInfo(validSellers), 
-    [validSellers]
-  );
+  // APIから取得したグループ化データを優先、なければvalidSellersから計算
+  const todayCallWithInfoGroups = useMemo(() => {
+    // APIから取得したグループ化データがある場合はそれを使用
+    if (categoryCounts?.todayCallWithInfoGroups && categoryCounts.todayCallWithInfoGroups.length > 0) {
+      return categoryCounts.todayCallWithInfoGroups;
+    }
+    // なければvalidSellersから計算（後方互換性のため）
+    return groupTodayCallWithInfo(validSellers);
+  }, [categoryCounts?.todayCallWithInfoGroups, validSellers]);
 
   /**
    * 営担イニシャルが一致するかどうかを判定

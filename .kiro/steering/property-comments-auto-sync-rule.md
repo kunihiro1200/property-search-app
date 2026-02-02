@@ -2,103 +2,78 @@
 
 ## ⚠️ 最重要：業務リストのspreadsheet_urlが必須
 
-物件のコメントデータ（お気に入り文言、オススメコメント、内覧前コメント）を同期する際は、**必ず業務リスト（work_tasks）にspreadsheet_urlが入っている物件のみを対象にする**。
+物件のコメントデータ（お気に入り文言、オススメコメント、パノラマURL）を同期する際は、**必ず業務リスト（work_tasks）にspreadsheet_urlが入っている物件のみを対象にする**。
 
 ---
 
-## 📋 ルールの定義
+## 📋 自動同期の動作
 
-### 同期対象の条件
+### Phase 4.7: property_details同期
 
-**必須条件**:
-- `work_tasks`テーブルに`spreadsheet_url`が入っている物件のみ
+**実装**: `EnhancedAutoSyncService.syncMissingPropertyDetails()`
 
-**理由**:
-- `spreadsheet_url`がない物件は、個別物件スプレッドシートが存在しない
-- 個別物件スプレッドシートがない場合、Athomeシートも存在しない
-- Athomeシートがない場合、コメントデータを取得できない
+**実行タイミング**: **5分ごと**の自動同期で実行
 
-### 同期対象外の物件
+**対象物件**:
+1. `work_tasks`テーブルに`spreadsheet_url`が入っている物件
+2. `property_details`テーブルにコメントデータが空の物件
 
-以下の物件は同期対象外：
+**処理内容**:
+1. `work_tasks`から`spreadsheet_url`が入っている物件を取得
+2. これらの物件の`property_details`を確認
+3. コメントデータが空の物件を検出
+4. `AthomeSheetSyncService`を使用して個別物件スプレッドシートの`athome`シートから同期
+5. バッチ処理（10件ずつ、3秒間隔）でAPIクォータを回避
+
+---
+
+## 🚨 同期対象外の物件
+
+以下の物件は自動同期の対象外：
 - `work_tasks`テーブルに存在しない物件
 - `work_tasks`テーブルに存在するが、`spreadsheet_url`がNULLの物件
 
----
-
-## 🔍 実装方法
-
-### 正しい実装
-
-```typescript
-// 1. work_tasksからspreadsheet_urlが入っている物件を取得
-const { data: workTasks } = await supabase
-  .from('work_tasks')
-  .select('property_number, spreadsheet_url')
-  .not('spreadsheet_url', 'is', null);
-
-// 2. これらの物件のproperty_detailsを取得
-const propertyNumbers = workTasks.map(wt => wt.property_number);
-const { data: properties } = await supabase
-  .from('property_details')
-  .select('*')
-  .in('property_number', propertyNumbers);
-
-// 3. コメントデータが空の物件をフィルタリング
-const emptyCommentProperties = properties.filter(p => 
-  !p.favorite_comment && 
-  (!p.recommended_comments || p.recommended_comments.length === 0)
-);
-
-// 4. これらの物件のみを同期
-for (const property of emptyCommentProperties) {
-  await syncPropertyComments(property.property_number);
-}
-```
-
-### 間違った実装
-
-```typescript
-// ❌ 間違い：全物件を対象にしている
-const { data: properties } = await supabase
-  .from('property_details')
-  .select('*');
-
-// ❌ 間違い：work_tasksのspreadsheet_urlをチェックしていない
-for (const property of properties) {
-  await syncPropertyComments(property.property_number);
-}
-```
+**理由**:
+- `spreadsheet_url`がない物件は、個別物件スプレッドシートが存在しない
+- 個別物件スプレッドシートがない場合、`athome`シートも存在しない
+- `athome`シートがない場合、コメントデータを取得できない
 
 ---
 
 ## 📊 対象物件数の目安
 
-**全物件数**: 約1,000件
+**全物件数**: 約1,500件
 
-**work_tasksにspreadsheet_urlがある物件**: 約150-200件（推定）
+**work_tasksにspreadsheet_urlがある物件**: 約150-200件
 
-**同期対象（コメントデータが空）**: 約50-100件（推定）
+**自動同期対象（コメントデータが空）**: 約50-100件（初回のみ、以降は新規物件のみ）
 
 **推定時間**: 約3-7分（1物件あたり2秒 × 50-100件）
 
 ---
 
-## 🚨 過去の問題
+## 🛠️ 手動同期（必要な場合のみ）
 
-### 問題：全物件を同期しようとした（2026年2月2日）
+通常は自動同期で十分ですが、緊急時や大量の物件を一度に同期したい場合は手動で実行できます。
 
-**症状**:
-- 852件の物件を同期しようとした
-- 推定時間が28分と長すぎた
+### 方法1: 全物件コメント同期スクリプト
 
-**根本原因**:
-- `work_tasks`の`spreadsheet_url`をチェックしていなかった
-- 全物件を対象にしていた
+```bash
+# クォータ確認
+npx ts-node backend/check-google-sheets-quota.ts
 
-**修正内容**:
-- `work_tasks`から`spreadsheet_url`が入っている物件のみを取得
-- これらの物件のみを同期対象にする
+# 同期実行
+npx ts-node backend/sync-all-property-comments.ts
+```
+
+### 方法2: 個別物件の同期
+
+```typescript
+import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
+
+const athomeService = new AthomeSheetSyncService();
+await athomeService.syncPropertyComments('AA13501', 'land');
+```
 
 ---
 
@@ -106,34 +81,43 @@ for (const property of properties) {
 
 | ファイル | 役割 |
 |---------|------|
-| `backend/sync-all-property-comments.ts` | 全物件コメント同期スクリプト |
+| `backend/src/services/EnhancedAutoSyncService.ts` | 自動同期サービス（Phase 4.7を含む） |
 | `backend/src/services/AthomeSheetSyncService.ts` | Athomeシート同期サービス |
 | `backend/src/services/PropertyDetailsService.ts` | 物件詳細サービス |
+| `backend/sync-all-property-comments.ts` | 全物件コメント同期スクリプト（手動実行用） |
+| `backend/check-google-sheets-quota.ts` | Google Sheets APIクォータ確認スクリプト |
 
 ---
 
 ## ✅ チェックリスト
 
-物件コメントデータを同期する前に、以下を確認：
+新規物件を追加する際は、以下を確認：
 
-- [ ] `work_tasks`テーブルから`spreadsheet_url`が入っている物件を取得しているか？
-- [ ] 全物件を対象にしていないか？
-- [ ] 同期対象物件数が妥当か？（150-200件以下）
-- [ ] 推定時間が妥当か？（10分以内）
+- [ ] `work_tasks`テーブルに`spreadsheet_url`が登録されているか？
+- [ ] 個別物件スプレッドシートに`athome`シートが存在するか？
+- [ ] 自動同期が有効になっているか？（通常は有効）
+- [ ] 5分以内に自動同期が実行されるのを待つ、または手動で同期を実行
 
 ---
 
 ## まとめ
 
-**絶対に守るべきルール**:
+**自動同期の動作**:
 
-1. **物件コメントデータの同期は、`work_tasks`に`spreadsheet_url`が入っている物件のみを対象にする**
-2. **全物件を対象にしない**
-3. **同期前に対象物件数を確認する**
+1. **5分ごと**に自動実行
+2. **work_tasksにspreadsheet_urlがある物件のみ**を対象
+3. **コメントデータが空の物件のみ**を同期
+4. **バッチ処理**でAPIクォータを回避
+
+**手動同期は通常不要**:
+- 自動同期が5分ごとに実行されるため、手動同期は通常不要
+- 緊急時のみ手動同期を実行
 
 **このルールを徹底することで、無駄な同期処理を防ぎ、効率的にコメントデータを同期できます。**
 
 ---
 
 **最終更新日**: 2026年2月2日  
-**作成理由**: 全物件を同期しようとして時間がかかりすぎた問題を防ぐため
+**作成理由**: 全物件を同期しようとして時間がかかりすぎた問題を防ぐため  
+**更新履歴**:
+- 2026年2月2日: Phase 4.7の自動同期を再有効化、work_tasksフィルターを追加

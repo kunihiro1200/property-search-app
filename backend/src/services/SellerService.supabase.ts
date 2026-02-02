@@ -1443,6 +1443,7 @@ export class SellerService extends BaseRepository {
     pinrichEmpty: number;
     visitScheduledByAssignee: { initial: string; count: number }[];
     visitCompletedByAssignee: { initial: string; count: number }[];
+    todayCallWithInfoGroups: { label: string; count: number }[];
   }> {
     // JST今日の日付を取得
     const now = new Date();
@@ -1551,12 +1552,34 @@ export class SellerService extends BaseRepository {
     });
 
     // コミュニケーション情報があるものをカウント（当日TEL（内容））
-    const todayCallWithInfoCount = filteredTodayCallSellers.filter(s => {
+    const todayCallWithInfoSellers = filteredTodayCallSellers.filter(s => {
       const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
                       (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
                       (s.contact_method && s.contact_method.trim() !== '');
       return hasInfo;
-    }).length;
+    });
+    const todayCallWithInfoCount = todayCallWithInfoSellers.length;
+
+    // 当日TEL（内容）のグループ化
+    const todayCallWithInfoGroupsMap: { [key: string]: number } = {};
+    todayCallWithInfoSellers.forEach(s => {
+      // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+      let label = '';
+      if (s.contact_method && s.contact_method.trim() !== '') {
+        label = `当日TEL(${s.contact_method.trim()})`;
+      } else if (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') {
+        label = `当日TEL(${s.preferred_contact_time.trim()})`;
+      } else if (s.phone_contact_person && s.phone_contact_person.trim() !== '') {
+        label = `当日TEL(${s.phone_contact_person.trim()})`;
+      }
+      
+      if (label) {
+        todayCallWithInfoGroupsMap[label] = (todayCallWithInfoGroupsMap[label] || 0) + 1;
+      }
+    });
+    const todayCallWithInfoGroups = Object.entries(todayCallWithInfoGroupsMap)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
 
     // コミュニケーション情報がないものをカウント（当日TEL分）
     const todayCallNoInfoSellers = filteredTodayCallSellers.filter(s => {
@@ -1622,6 +1645,7 @@ export class SellerService extends BaseRepository {
       pinrichEmpty: pinrichEmptyCount || 0,
       visitScheduledByAssignee,
       visitCompletedByAssignee,
+      todayCallWithInfoGroups,
     };
   }
 }
