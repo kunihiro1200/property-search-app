@@ -72,6 +72,23 @@ export const isNormalStaff = (visitAssignee: string | null | undefined): boolean
   return false;
 };
 
+/**
+ * 当日TEL（内容）のグループ化データ
+ * 
+ * 「当日TEL（内容）」カテゴリの売主を内容別にグループ化したデータ
+ * 例: 「当日TEL(Eメール)」「当日TEL(3時から)」「当日TEL(Y)」など
+ */
+export interface TodayCallWithInfoGroup {
+  /** 表示ラベル（例: "当日TEL(3時から)"） */
+  label: string;
+  
+  /** 該当する売主の件数 */
+  count: number;
+  
+  /** 該当する売主のリスト */
+  sellers: (Seller | any)[];
+}
+
 // ステータスカテゴリの型定義
 // todayCall: コミュニケーション情報が全て空の当日TEL（営担なし）
 // todayCallWithInfo: コミュニケーション情報のいずれかに入力がある当日TEL（営担なし）
@@ -558,6 +575,70 @@ export const getTodayCallWithInfoLabel = (seller: Seller | any): string => {
   }
   
   return '当日TEL（内容）';
+};
+
+/**
+ * 当日TEL（内容）の売主を内容別にグループ化
+ * 
+ * 「当日TEL（内容）」カテゴリの売主を、コミュニケーション情報の内容別にグループ化します。
+ * 例: 「当日TEL(Eメール)」「当日TEL(3時から)」「当日TEL(Y)」など
+ * 
+ * アルゴリズム:
+ * 1. 当日TEL（内容）の売主のみをフィルタリング
+ * 2. ラベル別にグループ化（Map使用）
+ * 3. グループ化データを配列に変換
+ * 4. 件数の多い順にソート
+ * 
+ * パフォーマンス: O(n)（nは売主数）
+ * - フィルタリング: O(n)
+ * - グループ化: O(n)
+ * - ソート: O(m log m)（mはグループ数、通常は10以下）
+ * 
+ * @param sellers 売主リスト
+ * @returns グループ化されたデータ（件数の多い順）
+ */
+export const groupTodayCallWithInfo = (
+  sellers: (Seller | any)[]
+): TodayCallWithInfoGroup[] => {
+  // 早期リターン: 売主リストが空の場合
+  if (!sellers || sellers.length === 0) {
+    return [];
+  }
+  
+  // 1. 当日TEL（内容）の売主のみをフィルタリング
+  const todayCallWithInfoSellers = sellers.filter(isTodayCallWithInfo);
+  
+  // 早期リターン: 該当する売主がいない場合
+  if (todayCallWithInfoSellers.length === 0) {
+    return [];
+  }
+  
+  // 2. ラベル別にグループ化（Map使用）
+  const groupMap = new Map<string, (Seller | any)[]>();
+  
+  todayCallWithInfoSellers.forEach(seller => {
+    const label = getTodayCallWithInfoLabel(seller);
+    
+    if (!groupMap.has(label)) {
+      groupMap.set(label, []);
+    }
+    
+    groupMap.get(label)!.push(seller);
+  });
+  
+  // 3. グループ化データを配列に変換
+  const groups: TodayCallWithInfoGroup[] = Array.from(groupMap.entries()).map(
+    ([label, sellers]) => ({
+      label,
+      count: sellers.length,
+      sellers,
+    })
+  );
+  
+  // 4. 件数の多い順にソート
+  groups.sort((a, b) => b.count - a.count);
+  
+  return groups;
 };
 
 /**

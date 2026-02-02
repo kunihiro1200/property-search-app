@@ -15,7 +15,7 @@
  * - 「売主リスト」タイトルをクリックすると全カテゴリ表示に戻る
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Paper, Typography, Box, Button, Chip, Collapse, IconButton, List, ListItem, Divider, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { ExpandMore, ExpandLess, Edit, Email, Phone, Chat, LocationOn } from '@mui/icons-material';
@@ -31,6 +31,8 @@ import {
   isTodayCallNotStarted,
   isPinrichEmpty,
   getVisitStatusLabel,
+  groupTodayCallWithInfo,
+  getTodayCallWithInfoLabel,
 } from '../utils/sellerStatusFilters';
 import { Seller } from '../types';
 
@@ -288,6 +290,12 @@ export default function SellerStatusSidebar({
   const currentSellerVisitAssignee = isCallMode && currentSeller 
     ? (currentSeller.visitAssignee || currentSeller.visit_assignee || '').trim()
     : '';
+
+  // 当日TEL（内容）のグループ化結果をキャッシュ（コンポーネントのトップレベルで定義）
+  const todayCallWithInfoGroups = useMemo(() => 
+    groupTodayCallWithInfo(validSellers), 
+    [validSellers]
+  );
 
   /**
    * 営担イニシャルが一致するかどうかを判定
@@ -651,7 +659,76 @@ export default function SellerStatusSidebar({
       {renderVisitCategoryButtons('visitCompleted', '②訪問済み', '#1976d2')}
       
       {renderCategoryButton('todayCall', '③当日TEL分', '#d32f2f')}
-      {renderCategoryButton('todayCallWithInfo', '④当日TEL（内容）', '#9c27b0')}
+      
+      {/* ④当日TEL（内容）- 内容別にグループ化 */}
+      {(() => {
+        // グループが0件の場合は非表示
+        if (todayCallWithInfoGroups.length === 0) return null;
+        
+        return (
+          <Box key="todayCallWithInfo">
+            {todayCallWithInfoGroups.map((group) => {
+              // 選択状態の判定:
+              // - 売主リストページ: カテゴリとラベルの両方が一致する場合
+              // - 通話モードページ: 現在の売主のカテゴリとラベルが一致する場合
+              const isSelected = isCallMode
+                ? (currentSellerCategory === 'todayCallWithInfo' && 
+                   getTodayCallWithInfoLabel(currentSeller) === group.label)
+                : (selectedCategory === 'todayCallWithInfo' && 
+                   selectedVisitAssignee === group.label);
+              
+              return (
+                <Button
+                  key={group.label}
+                  fullWidth
+                  onClick={() => {
+                    if (isSelected) {
+                      // 既に選択中の場合は選択解除
+                      if (!isCallMode) {
+                        onCategorySelect?.('all', undefined);
+                      }
+                    } else {
+                      // 新しいカテゴリを選択
+                      setExpandedCategory(null);
+                      if (!isCallMode) {
+                        onCategorySelect?.('todayCallWithInfo', group.label);
+                      }
+                    }
+                  }}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    fontSize: '0.85rem',
+                    py: 0.75,
+                    px: 1.5,
+                    color: isSelected ? 'white' : '#9c27b0',
+                    bgcolor: isSelected ? '#9c27b0' : 'transparent',
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: isSelected ? '#9c27b0' : '#9c27b015',
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{group.label}</span>
+                    <Chip 
+                      label={group.count} 
+                      size="small"
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.7rem',
+                        bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                        color: isSelected ? 'white' : undefined,
+                      }}
+                    />
+                  </Box>
+                </Button>
+              );
+            })}
+          </Box>
+        );
+      })()}
+      
       {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
       {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}
       {renderCategoryButton('todayCallNotStarted', '⑦当日TEL_未着手', '#ff9800')}
