@@ -398,6 +398,7 @@ export interface UpdateSellerRequest {
   phoneContactPerson?: string; // 電話担当（任意）
   preferredContactTime?: string; // 連絡取りやすい日、時間帯
   contactMethod?: string; // 連絡方法
+  comments?: string; // コメント（統一コメント欄）
   // Phase 1 fields
   inquirySource?: string;
   inquiryYear?: number;

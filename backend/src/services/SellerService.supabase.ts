@@ -430,6 +430,11 @@ export class SellerService extends BaseRepository {
       updates.latest_status = this.sanitizeLatestStatus(data.latestStatus);
     }
 
+    // コメント（統一コメント欄）
+    if (data.comments !== undefined) {
+      updates.comments = data.comments;
+    }
+
     // Phase 1 fields
     if (data.inquirySource !== undefined) {
       updates.inquiry_source = data.inquirySource;
