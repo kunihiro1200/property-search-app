@@ -250,16 +250,24 @@ export default function SellerStatusSidebar({
   
   // カテゴリヘッダークリック時の処理
   const handleCategoryClick = (category: StatusCategory) => {
-    if (expandedCategory === category) {
-      // 既に展開中のカテゴリをクリックした場合は閉じる
-      setExpandedCategory(null);
+    if (isCallMode) {
+      // 通話モードページの場合、最初の売主の通話モードページに遷移
+      const filteredSellers = filterSellersByCategory(sellers, category);
+      if (filteredSellers.length > 0) {
+        const firstSeller = filteredSellers[0];
+        navigate(`/sellers/${firstSeller.id}/call`);
+      } else {
+        console.warn(`カテゴリ「${getCategoryLabel(category)}」に該当する売主がいません`);
+      }
     } else {
-      // 新しいカテゴリを展開
-      setExpandedCategory(category);
-    }
-    
-    // 売主リストページの場合、カテゴリを選択
-    if (!isCallMode) {
+      // 売主リストページの場合、カテゴリを選択（現在の動作を維持）
+      if (expandedCategory === category) {
+        // 既に展開中のカテゴリをクリックした場合は閉じる
+        setExpandedCategory(null);
+      } else {
+        // 新しいカテゴリを展開
+        setExpandedCategory(category);
+      }
       onCategorySelect?.(category);
     }
   };
@@ -356,15 +364,25 @@ export default function SellerStatusSidebar({
                 <Button
                   fullWidth
                   onClick={() => {
-                    if (isSelected) {
-                      // 既に選択中の場合は選択解除
-                      if (!isCallMode) {
-                        onCategorySelect?.('all', undefined);
+                    if (isCallMode) {
+                      // 通話モードページの場合、最初の売主の通話モードページに遷移
+                      const filterFn = category === 'visitScheduled' ? isVisitScheduled : isVisitCompleted;
+                      const visitData = getVisitDataByAssignee(sellers, filterFn);
+                      const targetData = visitData.find(d => d.initial === initial);
+                      if (targetData && targetData.sellers.length > 0) {
+                        const firstSeller = targetData.sellers[0];
+                        navigate(`/sellers/${firstSeller.id}/call`);
+                      } else {
+                        console.warn(`${prefix}(${initial})に該当する売主がいません`);
                       }
                     } else {
-                      // 新しいカテゴリを選択してメインテーブルをフィルタリング
-                      setExpandedCategory(null);
-                      if (!isCallMode) {
+                      // 売主リストページの場合、カテゴリとイニシャルを選択（現在の動作を維持）
+                      if (isSelected) {
+                        // 既に選択中の場合は選択解除
+                        onCategorySelect?.('all', undefined);
+                      } else {
+                        // 新しいカテゴリを選択してメインテーブルをフィルタリング
+                        setExpandedCategory(null);
                         onCategorySelect?.(category, initial);
                       }
                     }
@@ -429,13 +447,23 @@ export default function SellerStatusSidebar({
               <Button
                 fullWidth
                 onClick={() => {
-                  if (isSelected) {
-                    if (!isCallMode) {
-                      onCategorySelect?.('all', undefined);
+                  if (isCallMode) {
+                    // 通話モードページの場合、最初の売主の通話モードページに遷移
+                    const filterFn = category === 'visitScheduled' ? isVisitScheduled : isVisitCompleted;
+                    const visitData = getVisitDataByAssignee(sellers, filterFn);
+                    const targetData = visitData.find(d => d.initial === initial);
+                    if (targetData && targetData.sellers.length > 0) {
+                      const firstSeller = targetData.sellers[0];
+                      navigate(`/sellers/${firstSeller.id}/call`);
+                    } else {
+                      console.warn(`${prefix}(${initial})に該当する売主がいません`);
                     }
                   } else {
-                    setExpandedCategory(null);
-                    if (!isCallMode) {
+                    // 売主リストページの場合、カテゴリとイニシャルを選択（現在の動作を維持）
+                    if (isSelected) {
+                      onCategorySelect?.('all', undefined);
+                    } else {
+                      setExpandedCategory(null);
                       onCategorySelect?.(category, initial);
                     }
                   }
@@ -682,15 +710,22 @@ export default function SellerStatusSidebar({
                   key={group.label}
                   fullWidth
                   onClick={() => {
-                    if (isSelected) {
-                      // 既に選択中の場合は選択解除
-                      if (!isCallMode) {
-                        onCategorySelect?.('all', undefined);
+                    if (isCallMode) {
+                      // 通話モードページの場合、最初の売主の通話モードページに遷移
+                      if (group.sellers.length > 0) {
+                        const firstSeller = group.sellers[0];
+                        navigate(`/sellers/${firstSeller.id}/call`);
+                      } else {
+                        console.warn(`${group.label}に該当する売主がいません`);
                       }
                     } else {
-                      // 新しいカテゴリを選択
-                      setExpandedCategory(null);
-                      if (!isCallMode) {
+                      // 売主リストページの場合、カテゴリとグループを選択（現在の動作を維持）
+                      if (isSelected) {
+                        // 既に選択中の場合は選択解除
+                        onCategorySelect?.('all', undefined);
+                      } else {
+                        // 新しいカテゴリを選択
+                        setExpandedCategory(null);
                         onCategorySelect?.('todayCallWithInfo', group.label);
                       }
                     }
