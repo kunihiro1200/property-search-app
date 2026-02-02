@@ -734,7 +734,7 @@ export class PropertyListingSyncService {
       const [propertyAbout, recommendedComment, favoriteComment, athomeData] = await Promise.all([
         propertyService.getPropertyAbout(propertyNumber).catch(err => {
           console.error(`[PropertyListingSyncService] Failed to get property_about for ${propertyNumber}:`, err);
-          return null;
+          return undefined; // ← undefined を返す（既存値を保持）
         }),
         
         recommendedCommentService.getRecommendedComment(
@@ -743,12 +743,12 @@ export class PropertyListingSyncService {
           property.id
         ).catch(err => {
           console.error(`[PropertyListingSyncService] Failed to get recommended_comments for ${propertyNumber}:`, err);
-          return { comments: [] };
+          return undefined; // ← undefined を返す（既存値を保持）
         }),
         
         favoriteCommentService.getFavoriteComment(property.id).catch(err => {
           console.error(`[PropertyListingSyncService] Failed to get favorite_comment for ${propertyNumber}:`, err);
-          return { comment: null };
+          return undefined; // ← undefined を返す（既存値を保持）
         }),
         
         athomeDataService.getAthomeData(
@@ -757,24 +757,37 @@ export class PropertyListingSyncService {
           property.storage_location
         ).catch(err => {
           console.error(`[PropertyListingSyncService] Failed to get athome_data for ${propertyNumber}:`, err);
-          return { data: [] };
+          return undefined; // ← undefined を返す（既存値を保持）
         })
       ]);
       
-      // property_detailsテーブルにupsert（スキーマキャッシュ問題を回避）
-      const success = await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
-        property_about: propertyAbout,
-        recommended_comments: recommendedComment.comments,
-        athome_data: athomeData.data,
-        favorite_comment: favoriteComment.comment
-      });
-      
-      if (!success) {
-        throw new Error('Failed to upsert property details');
+      // upsertPropertyDetailsに渡す前に、undefinedのフィールドを除外
+      const detailsToUpdate: any = {};
+      if (propertyAbout !== undefined) {
+        detailsToUpdate.property_about = propertyAbout;
+      }
+      if (recommendedComment !== undefined && recommendedComment.comments !== undefined) {
+        detailsToUpdate.recommended_comments = recommendedComment.comments;
+      }
+      if (athomeData !== undefined && athomeData.data !== undefined) {
+        detailsToUpdate.athome_data = athomeData.data;
+      }
+      if (favoriteComment !== undefined && favoriteComment.comment !== undefined) {
+        detailsToUpdate.favorite_comment = favoriteComment.comment;
       }
       
-      console.log(`[PropertyListingSyncService] Successfully updated property details for ${propertyNumber}`);
-      
+      // undefinedのフィールドは渡さない（既存値を保持）
+      if (Object.keys(detailsToUpdate).length > 0) {
+        const success = await propertyDetailsService.upsertPropertyDetails(propertyNumber, detailsToUpdate);
+        
+        if (!success) {
+          throw new Error('Failed to upsert property details');
+        }
+        
+        console.log(`[PropertyListingSyncService] Successfully updated property details for ${propertyNumber}`);
+      } else {
+        console.log(`[PropertyListingSyncService] No valid data to update for ${propertyNumber} (all fields failed)`);
+      }
     } catch (error: any) {
       console.error(`[PropertyListingSyncService] Error updating property details for ${propertyNumber}:`, error);
     }
