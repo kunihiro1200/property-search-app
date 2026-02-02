@@ -261,224 +261,21 @@ export class PropertyListingSyncService {
 
 ### コメントデータの同期
 
-```typescript
-// ✅ コメントデータの同期（AthomeSheetSyncService）
-export class AthomeSheetSyncService {
-  async syncPropertyComments(
-    propertyNumber: string,
-    propertyType: 'land' | 'detached_house' | 'apartment'
-  ): Promise<boolean> {
-    // 1. 個別物件スプレッドシートのIDを取得（業務依頼シートから）
-    const spreadsheetId = await this.getIndividualSpreadsheetId(propertyNumber);
-    
-    // 2. athomeシートからコメントデータを取得
-    const comments = await this.fetchCommentsFromAthomeSheet(spreadsheetId, propertyType);
-    
-    // 3. パノラマURLを取得（athomeシートのN1セル）
-    const panoramaResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'athome!N1',
-    });
-    const panoramaUrl = panoramaResponse.data.values?.[0]?.[0] || null;
-    
-    // 4. データベースに保存
-    await this.propertyDetailsService.upsertPropertyDetails(propertyNumber, {
-      favorite_comment: comments.favoriteComment,
-      recommended_comments: comments.recommendedComments,
-      athome_data: panoramaUrl ? [panoramaUrl] : [],
-    });
-  }
-}
-```
+**重要**: コメントデータの同期については、専用のドキュメントを参照してください：
 
----
+📄 **[物件コメントデータ自動同期ルール](property-comments-auto-sync-rule.md)**
 
-## 🚨 最重要：コメントデータ同期の必須性
+**概要**:
+- `PropertyListingSyncService`は`property_listings`テーブル（基本情報）のみを同期
+- コメントデータ（`property_details`テーブル）は**Phase 4.7の自動同期**で処理される
+- 5分ごとに自動実行され、`work_tasks`に`spreadsheet_url`がある物件のみを対象とする
 
-### ⚠️ 絶対に忘れてはいけないこと
+**新規物件追加時のチェックリスト**:
+- [ ] `PropertyListingSyncService`で`property_listings`テーブルを同期（15分ごとに自動実行）
+- [ ] `work_tasks`テーブルに`spreadsheet_url`が登録されているか確認
+- [ ] 5分以内に自動同期が実行されるのを待つ（Phase 4.7）
 
-**`PropertyListingSyncService`は`property_listings`テーブルのみを同期します。**
-**コメントデータ（`property_details`テーブル）は別途`AthomeSheetSyncService`で同期が必要です。**
-
-### 新規物件追加時のチェックリスト
-
-新しい物件を追加する際は、**必ず以下の2つの同期を実行**してください：
-
-- [ ] **ステップ1**: `PropertyListingSyncService`で`property_listings`テーブルを同期
-  - 基本情報（物件番号、住所、価格、atbb_statusなど）
-  - 自動的に15分ごとに実行される
-
-- [ ] **ステップ2**: `AthomeSheetSyncService`で`property_details`テーブルを同期
-  - コメントデータ（お気に入り文言、アピールポイント、パノラマURL）
-  - **手動で実行する必要がある**（自動同期されない）
-
-### ❌ よくある間違い
-
-**間違い**: `PropertyListingSyncService`だけを実行して、コメントデータ同期を忘れる
-
-**結果**:
-- 物件一覧には表示される ✅
-- 詳細画面で基本情報は表示される ✅
-- **おすすめコメントが表示されない** ❌
-- **お気に入り文言が表示されない** ❌
-- **パノラマURLが表示されない** ❌
-
-**解決策**: 必ず`AthomeSheetSyncService`も実行する
-
-### 📝 コメントデータ同期の実行方法
-
-#### 方法1: 個別物件のコメントデータを同期（推奨）
-
-```bash
-# 例: CC105のコメントデータを同期
-npx ts-node backend/sync-cc105-comments.ts
-```
-
-**スクリプトの内容**:
-1. 業務依頼シートから個別物件スプレッドシートのIDを取得
-2. 物件タイプに応じてセル位置を決定
-3. `athome`シートからコメントデータを取得
-4. `property_details`テーブルに保存
-
-#### 方法2: `AthomeSheetSyncService`を直接使用
-
-```typescript
-import { AthomeSheetSyncService } from './backend/src/services/AthomeSheetSyncService';
-
-const athomeService = new AthomeSheetSyncService();
-
-// 物件タイプを指定して同期
-await athomeService.syncPropertyComments('CC105', 'land');
-```
-
----
-
-## 📊 コメントデータとパノラマURLの取得元
-
-### コメントデータの取得フロー
-
-**ソース**: 個別物件スプレッドシートの`athome`シート
-**取得方法**: `AthomeSheetSyncService`を使用
-**重要**: **`PropertyListingSyncService`では同期されない**
-
-### 1. **お気に入り文言（favorite_comment）**
-
-**物件種別ごとのセル位置**:
-
-| 物件種別 | セル位置 | 説明 |
-|---------|---------|------|
-| 土地（land） | `B53` | athomeシートのB53セル |
-| 戸建て（detached_house） | `B142` | athomeシートのB142セル |
-| マンション（apartment） | `B150` | athomeシートのB150セル |
-
-**取得例**:
-```typescript
-// 土地の場合
-const favoriteResponse = await sheets.spreadsheets.values.get({
-  spreadsheetId: '<個別物件スプレッドシートID>',
-  range: 'athome!B53',
-});
-const favoriteComment = favoriteResponse.data.values?.[0]?.[0] || null;
-```
-
-### 2. **アピールポイント（recommended_comments）**
-
-**物件種別ごとのセル範囲**:
-
-| 物件種別 | セル範囲 | 説明 |
-|---------|---------|------|
-| 土地（land） | `B63:L79` | athomeシートのB63からL79まで |
-| 戸建て（detached_house） | `B152:L166` | athomeシートのB152からL166まで |
-| マンション（apartment） | `B149:L163` | athomeシートのB149からL163まで |
-
-**取得例**:
-```typescript
-// 土地の場合
-const recommendedResponse = await sheets.spreadsheets.values.get({
-  spreadsheetId: '<個別物件スプレッドシートID>',
-  range: 'athome!B63:L79',
-});
-const recommendedRows = recommendedResponse.data.values || [];
-const recommendedComments: string[] = [];
-
-recommendedRows.forEach(row => {
-  const text = row.join(' ').trim();
-  if (text) {
-    recommendedComments.push(text);
-  }
-});
-```
-
-### 3. **パノラマURL（panorama_url）**
-
-**取得方法**: 固定セル位置から取得
-
-**セル位置**: `athome`シートの`N1`セル（全ての物件種別で共通）
-
-**取得例**:
-```typescript
-// athomeシートのN1セルからパノラマURLを取得
-const response = await sheets.spreadsheets.values.get({
-  spreadsheetId: '<個別物件スプレッドシートID>',
-  range: 'athome!N1',
-});
-
-const panoramaUrl = response.data.values?.[0]?.[0] || null;
-```
-
-### 4. **個別物件スプレッドシートIDの取得**
-
-**ソース**: 業務依頼シート（`GYOMU_LIST_SPREADSHEET_ID`）
-**シート名**: `業務依頼`
-**検索範囲**: `A:D`（A列: 物件番号、D列: スプシURL）
-
-**取得フロー**:
-1. 業務依頼シートのA列で物件番号を検索
-2. 見つかった行のD列（スプシURL）を取得
-3. URLからスプレッドシートIDを抽出（正規表現: `/\/d\/([a-zA-Z0-9-_]+)/`）
-
-**取得例**:
-```typescript
-const response = await sheets.spreadsheets.values.get({
-  spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID,
-  range: '業務依頼!A:D',
-});
-
-const rows = response.data.values || [];
-
-for (const row of rows) {
-  if (row[0] === propertyNumber) { // A列: 物件番号
-    const spreadsheetUrl = row[3]; // D列: スプシURL
-    if (spreadsheetUrl) {
-      const match = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      if (match) {
-        return match[1]; // スプレッドシートID
-      }
-    }
-  }
-}
-```
-
-### 5. **データベースへの保存**
-
-**テーブル**: `property_details`
-**保存内容**:
-
-| カラム | 内容 | 例 |
-|-------|------|-----|
-| `property_number` | 物件番号 | `AA12345` |
-| `favorite_comment` | お気に入り文言 | `駅近で便利な立地！` |
-| `recommended_comments` | アピールポイント（配列） | `["南向きで日当たり良好", "閑静な住宅街"]` |
-| `athome_data` | パノラマURL（配列） | `["https://vrpanorama.athome.jp/..."]` |
-
-**保存例**:
-```typescript
-await propertyDetailsService.upsertPropertyDetails(propertyNumber, {
-  favorite_comment: comments.favoriteComment,
-  recommended_comments: comments.recommendedComments,
-  athome_data: comments.panoramaUrl ? [comments.panoramaUrl] : [],
-});
-```
+詳細は **[property-comments-auto-sync-rule.md](property-comments-auto-sync-rule.md)** を参照してください。
 
 ---
 
@@ -717,45 +514,14 @@ npx ts-node backend/check-aa12398-atbb-status.ts
 
 **原因**: `property_details`テーブルにコメントデータが同期されていない
 
-**確認事項**:
-1. `property_details`テーブルに該当物件のレコードが存在するか？
-2. `recommended_comments`、`favorite_comment`、`athome_data`が空になっていないか？
-3. 個別物件スプレッドシートに`athome`シートが存在するか？
-4. `athome`シートの正しいセル位置にデータが入力されているか？
-   - 土地: お気に入り文言（B53）、アピールポイント（B63:L79）
-   - 戸建て: お気に入り文言（B142）、アピールポイント（B152:L166）
-   - マンション: お気に入り文言（B150）、アピールポイント（B149:L163）
-5. 業務依頼シートに個別物件スプレッドシートのURLが登録されているか？
+**解決策**: 📄 **[物件コメントデータ自動同期ルール](property-comments-auto-sync-rule.md)** を参照してください
 
-**解決策**:
-```bash
-# 1. データベースを確認
-npx ts-node backend/check-<property-number>-comments.ts
+**概要**:
+- Phase 4.7の自動同期が5分ごとに実行される
+- `work_tasks`に`spreadsheet_url`が登録されているか確認
+- 緊急時は手動同期スクリプトを実行
 
-# 2. コメントデータを同期
-npx ts-node backend/sync-<property-number>-comments.ts
-```
-
-**スクリプト例**（`backend/sync-<property-number>-comments.ts`）:
-```typescript
-import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
-
-const athomeService = new AthomeSheetSyncService();
-
-// 物件タイプを指定して同期
-await athomeService.syncPropertyComments('<property-number>', 'land');
-```
-
-**重要**: 新規物件を追加する際は、必ず`AthomeSheetSyncService`でコメントデータも同期してください。
-
-### 問題5: パノラマURLが表示されない
-
-**確認事項**:
-1. `athome`シートの`N1`セルにパノラマURLが入力されているか？
-2. URLが正しい形式（`http`または`https`で始まる）か？
-3. `AthomeSheetSyncService`が正しく実行されているか？
-
-### 問題6: 環境変数が設定されていない
+### 問題5: 環境変数が設定されていない
 
 **確認方法**:
 ```bash
@@ -778,33 +544,29 @@ await athomeService.syncPropertyComments('<property-number>', 'land');
 1. ✅ 物件スプシ（物件リストスプレッドシート）に新規列が追加される
 2. ✅ その物件スプシから`property_listings`テーブルを同期（**基本的に全ての物件**）
 3. ✅ 業務依頼シートから「スプシURL」を取得して補完
-4. ✅ **個別物件スプレッドシートの`athome`シートからコメントデータを取得**（最重要）
-5. ✅ パノラマURLを`athome`シートの`N1`セルから取得
+4. ✅ **コメントデータは自動同期（Phase 4.7）で処理される** - 詳細は 📄 **[property-comments-auto-sync-rule.md](property-comments-auto-sync-rule.md)** を参照
 
 **絶対にやってはいけないこと**:
 - ❌ 売主データ（`sellers`テーブル）を同期する
 - ❌ 業務依頼シートをメインソースにする
 - ❌ 新規案件を`atbb_status`でフィルタリングする（全て同期すべき）
 - ❌ 間違った`atbb_status`カラム名（`atbb_status`, `ATBB_status`, `ステータス`）を使用する
-- ❌ **コメントデータ同期を忘れる**（最重要）
 
 **正しいカラム名**:
 - ✅ **`atbb成約済み/非公開`** ← これが唯一の正しいカラム名
 - ✅ **`所在地`** ← 物件の住所（`物件所在`ではない）
 - ✅ **`住居表示（ATBB登録住所）`** ← 住居表示
 
-**コメントデータの取得元**:
-- **お気に入り文言**: 個別物件スプレッドシートの`athome`シート（物件種別ごとに異なるセル位置）
-- **アピールポイント**: 個別物件スプレッドシートの`athome`シート（物件種別ごとに異なるセル範囲）
-- **パノラマURL**: 個別物件スプレッドシートの`athome`シートの`N1`セル（全ての物件種別で共通）
-
 **新規物件追加時の必須チェックリスト**:
-1. ✅ `PropertyListingSyncService`で`property_listings`テーブルを同期
-2. ✅ **`AthomeSheetSyncService`で`property_details`テーブルを同期**（絶対に忘れない）
+1. ✅ `PropertyListingSyncService`で`property_listings`テーブルを同期（15分ごとに自動実行）
+2. ✅ `work_tasks`テーブルに`spreadsheet_url`が登録されているか確認
+3. ✅ 5分以内に自動同期（Phase 4.7）が実行されるのを待つ
 
 **この順番が重要です！絶対に間違えないでください。**
 
 ---
 
-**最終更新日**: 2026年1月29日  
-**作成理由**: 公開物件の同期フローを明確化し、同じ間違いを繰り返さないため
+**最終更新日**: 2026年2月3日  
+**作成理由**: 公開物件の同期フローを明確化し、同じ間違いを繰り返さないため  
+**更新履歴**:
+- 2026年2月3日: コメントデータ同期の重複内容を削除、専用ドキュメントへの参照に変更
