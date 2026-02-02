@@ -1124,13 +1124,21 @@ export class EnhancedAutoSyncService {
     
     const dateStr = String(inquiryDate).trim();
     
-    // MM/DD 形式の場合
-    if (dateStr.match(/^\d{1,2}\/\d{1,2}$/)) {
-      const [month, day] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    // Excelシリアル値（数値）の場合
+    if (/^\d+$/.test(dateStr)) {
+      const serialNumber = parseInt(dateStr, 10);
+      // Excelシリアル値の範囲チェック（30000〜60000程度が妥当）
+      if (serialNumber > 30000 && serialNumber < 60000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + serialNumber * 24 * 60 * 60 * 1000);
+        const y = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${y}-${month}-${day}`;
+      }
     }
     
-    // M/D 形式の場合
+    // MM/DD 形式の場合
     if (dateStr.match(/^\d{1,2}\/\d{1,2}$/)) {
       const [month, day] = dateStr.split('/');
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;

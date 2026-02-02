@@ -437,7 +437,10 @@ export class SellerService extends BaseRepository {
     if (data.inquiryYear !== undefined) {
       updates.inquiry_year = data.inquiryYear;
     }
-    if (data.inquiryDate !== undefined) {
+    // inquiryDateがnullの場合は更新しない（既存の値を保持）
+    // これにより、フロントエンドから空のinquiryDateが送信されても、
+    // データベースの値が上書きされることを防ぐ
+    if (data.inquiryDate !== undefined && data.inquiryDate !== null) {
       updates.inquiry_date = data.inquiryDate;
     }
 

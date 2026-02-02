@@ -1451,14 +1451,21 @@ const CallModePage = () => {
       setError(null);
       setSuccessMessage(null);
 
-      await api.put(`/api/sellers/${seller.id}`, {
+      // inquiryDateが空の場合はundefinedにして送信しない（nullで上書きしない）
+      const updateData: any = {
         name: editedName,
         address: editedAddress || null,
         phoneNumber: editedPhoneNumber,
         email: editedEmail || null,
-        inquiryDate: editedInquiryDate || null,
         site: editedSite || null,
-      });
+      };
+      
+      // inquiryDateが入力されている場合のみ送信
+      if (editedInquiryDate) {
+        updateData.inquiryDate = editedInquiryDate;
+      }
+      
+      await api.put(`/api/sellers/${seller.id}`, updateData);
 
       setSuccessMessage('売主情報を更新しました');
       setEditingSeller(false);
