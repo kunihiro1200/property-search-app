@@ -177,6 +177,11 @@ const CallModePage = () => {
     visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
+    todayCallNotStarted: number;
+    pinrichEmpty: number;
+    visitScheduledByAssignee: { initial: string; count: number }[];
+    visitCompletedByAssignee: { initial: string; count: number }[];
+    todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
@@ -185,6 +190,11 @@ const CallModePage = () => {
     visitCompleted: 0,
     unvaluated: 0,
     mailingPending: 0,
+    todayCallNotStarted: 0,
+    pinrichEmpty: 0,
+    visitScheduledByAssignee: [],
+    visitCompletedByAssignee: [],
+    todayCallWithInfoGroups: [],
   });
 
   // 通話メモ入力状態（削除済み - 統一コメント欄に統合）
@@ -785,6 +795,11 @@ const CallModePage = () => {
         visitCompleted: 0,
         unvaluated: 0,
         mailingPending: 0,
+        todayCallNotStarted: 0,
+        pinrichEmpty: 0,
+        visitScheduledByAssignee: [],
+        visitCompletedByAssignee: [],
+        todayCallWithInfoGroups: [],
       });
     }
   }, []);
