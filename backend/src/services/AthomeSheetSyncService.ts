@@ -117,18 +117,33 @@ export class AthomeSheetSyncService {
     }
 
     try {
-      // お気に入り文言を取得
-      const favoriteResponse = await this.sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!${cellPositions.favoriteComment}`,
-      });
+      console.log(`[AthomeSheetSyncService] Fetching favorite comment from ${cellPositions.favoriteComment}...`);
+      
+      // お気に入り文言を取得（タイムアウト付き）
+      const favoriteResponse = await Promise.race([
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!${cellPositions.favoriteComment}`,
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: favorite comment fetch')), 30000)
+        )
+      ]);
       const favoriteComment = favoriteResponse.data.values?.[0]?.[0] || null;
+      console.log(`[AthomeSheetSyncService] ✅ Favorite comment fetched`);
 
-      // アピールポイントを取得
-      const recommendedResponse = await this.sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!${cellPositions.recommendedComments}`,
-      });
+      console.log(`[AthomeSheetSyncService] Fetching recommended comments from ${cellPositions.recommendedComments}...`);
+      
+      // アピールポイントを取得（タイムアウト付き）
+      const recommendedResponse = await Promise.race([
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!${cellPositions.recommendedComments}`,
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: recommended comments fetch')), 30000)
+        )
+      ]);
       const recommendedRows = recommendedResponse.data.values || [];
       const recommendedComments: string[] = [];
       
@@ -138,13 +153,22 @@ export class AthomeSheetSyncService {
           recommendedComments.push(text);
         }
       });
+      console.log(`[AthomeSheetSyncService] ✅ Recommended comments fetched (${recommendedComments.length} items)`);
 
-      // パノラマURLを取得（athomeシートのN1セル）
-      const panoramaResponse = await this.sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!N1`,
-      });
+      console.log(`[AthomeSheetSyncService] Fetching panorama URL from N1...`);
+      
+      // パノラマURLを取得（athomeシートのN1セル、タイムアウト付き）
+      const panoramaResponse = await Promise.race([
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!N1`,
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: panorama URL fetch')), 30000)
+        )
+      ]);
       const panoramaUrl = panoramaResponse.data.values?.[0]?.[0] || null;
+      console.log(`[AthomeSheetSyncService] ✅ Panorama URL fetched`);
 
       console.log(`[AthomeSheetSyncService] Fetched comments from ${spreadsheetId}:`, {
         has_favorite_comment: !!favoriteComment,
@@ -159,6 +183,12 @@ export class AthomeSheetSyncService {
       };
     } catch (error: any) {
       console.error(`[AthomeSheetSyncService] Error fetching comments from ${spreadsheetId}:`, error.message);
+      
+      // タイムアウトエラーの場合は詳細を出力
+      if (error.message.includes('Timeout')) {
+        console.error(`[AthomeSheetSyncService] ⏱️  Request timed out after 30 seconds`);
+      }
+      
       return {
         favoriteComment: null,
         recommendedComments: [],

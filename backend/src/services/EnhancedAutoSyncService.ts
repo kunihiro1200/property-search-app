@@ -1828,7 +1828,7 @@ export class EnhancedAutoSyncService {
 
   /**
    * Phase 4.7: property_details同期を実行
-   * property_listingsに存在するがproperty_detailsに存在しない物件を検出して同期
+   * work_tasksにspreadsheet_urlがある物件で、property_detailsにコメントデータがない物件を同期
    */
   async syncMissingPropertyDetails(): Promise<{
     success: boolean;
@@ -1841,95 +1841,40 @@ export class EnhancedAutoSyncService {
     try {
       console.log('📝 Starting property details sync...');
 
-      // 1. property_listingsから全物件番号を取得
-      const propertyListingsNumbers = new Set<string>();
-      const pageSize = 1000;
-      let offset = 0;
-      let hasMore = true;
+      // 1. work_tasksからspreadsheet_urlが入っている物件を取得
+      const { data: workTasks, error: workTasksError } = await this.supabase
+        .from('work_tasks')
+        .select('property_number, spreadsheet_url')
+        .not('spreadsheet_url', 'is', null);
 
-      while (hasMore) {
-        const { data: properties, error } = await this.supabase
-          .from('property_listings')
-          .select('property_number')
-          .range(offset, offset + pageSize - 1);
-
-        if (error) {
-          throw new Error(`Failed to read property_listings: ${error.message}`);
-        }
-
-        if (!properties || properties.length === 0) {
-          hasMore = false;
-        } else {
-          for (const property of properties) {
-            if (property.property_number) {
-              propertyListingsNumbers.add(property.property_number);
-            }
-          }
-          offset += pageSize;
-          
-          if (properties.length < pageSize) {
-            hasMore = false;
-          }
-        }
+      if (workTasksError) {
+        throw new Error(`Failed to read work_tasks: ${workTasksError.message}`);
       }
 
-      console.log(`📊 Total properties in property_listings: ${propertyListingsNumbers.size}`);
+      const workTasksPropertyNumbers = new Set(workTasks.map(wt => wt.property_number));
+      console.log(`📊 Properties with spreadsheet_url in work_tasks: ${workTasksPropertyNumbers.size}`);
 
-      // 2. property_detailsから全物件番号を取得（コメントデータが空かどうかも確認）
-      const propertyDetailsNumbers = new Set<string>();
-      const emptyCommentsPropertyNumbers = new Set<string>(); // コメントデータが空の物件
-      offset = 0;
-      hasMore = true;
+      // 2. これらの物件のproperty_detailsを取得
+      const propertyNumbers = Array.from(workTasksPropertyNumbers);
+      const { data: details, error: detailsError } = await this.supabase
+        .from('property_details')
+        .select('property_number, favorite_comment, recommended_comments, athome_data')
+        .in('property_number', propertyNumbers);
 
-      while (hasMore) {
-        const { data: details, error } = await this.supabase
-          .from('property_details')
-          .select('property_number, recommended_comments')
-          .range(offset, offset + pageSize - 1);
-
-        if (error) {
-          throw new Error(`Failed to read property_details: ${error.message}`);
-        }
-
-        if (!details || details.length === 0) {
-          hasMore = false;
-        } else {
-          for (const detail of details) {
-            if (detail.property_number) {
-              propertyDetailsNumbers.add(detail.property_number);
-              
-              // recommended_commentsが空または未設定の場合、更新対象に追加
-              const hasComments = detail.recommended_comments && 
-                                  Array.isArray(detail.recommended_comments) && 
-                                  detail.recommended_comments.length > 0;
-              if (!hasComments) {
-                emptyCommentsPropertyNumbers.add(detail.property_number);
-              }
-            }
-          }
-          offset += pageSize;
-          
-          if (details.length < pageSize) {
-            hasMore = false;
-          }
-        }
+      if (detailsError) {
+        throw new Error(`Failed to read property_details: ${detailsError.message}`);
       }
 
-      console.log(`📊 Total properties in property_details: ${propertyDetailsNumbers.size}`);
-      console.log(`📊 Properties with empty comments: ${emptyCommentsPropertyNumbers.size}`);
+      // 3. コメントデータが空の物件をフィルタリング
+      const emptyCommentProperties = details.filter(p => 
+        !p.favorite_comment && 
+        (!p.recommended_comments || p.recommended_comments.length === 0) &&
+        (!p.athome_data || p.athome_data.length === 0)
+      );
 
-      // 3. 差分を計算（property_listingsにあってproperty_detailsにないもの + コメントが空のもの）
-      const missingPropertyNumbers: string[] = [];
-      for (const propertyNumber of propertyListingsNumbers) {
-        // property_detailsに存在しない、またはコメントデータが空の場合は同期対象
-        if (!propertyDetailsNumbers.has(propertyNumber) || emptyCommentsPropertyNumbers.has(propertyNumber)) {
-          missingPropertyNumbers.push(propertyNumber);
-        }
-      }
+      console.log(`🆕 Properties with empty comments: ${emptyCommentProperties.length}`);
 
-      console.log(`🆕 Properties to sync (missing or empty comments): ${missingPropertyNumbers.length}`);
-
-      if (missingPropertyNumbers.length === 0) {
+      if (emptyCommentProperties.length === 0) {
         const duration_ms = Date.now() - startTime;
         return {
           success: true,
@@ -1939,75 +1884,75 @@ export class EnhancedAutoSyncService {
         };
       }
 
-      // 4. PropertyListingSyncServiceを使用して同期
-      const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
-      const syncService = new PropertyListingSyncService();
+      // 4. 物件種別を取得
+      const emptyPropertyNumbers = emptyCommentProperties.map(p => p.property_number);
+      const { data: listings, error: listingsError } = await this.supabase
+        .from('property_listings')
+        .select('property_number, property_type')
+        .in('property_number', emptyPropertyNumbers);
+
+      if (listingsError) {
+        throw new Error(`Failed to read property_listings: ${listingsError.message}`);
+      }
+
+      const propertyTypeMap = new Map<string, string>();
+      listings.forEach(l => {
+        propertyTypeMap.set(l.property_number, l.property_type);
+      });
+
+      // 5. AthomeSheetSyncServiceを使用して同期
+      const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
+      const athomeSheetSyncService = new AthomeSheetSyncService();
 
       let synced = 0;
       let failed = 0;
 
-      // バッチ処理（10件ずつ）
+      // バッチ処理（10件ずつ、3秒間隔）
       const BATCH_SIZE = 10;
-      for (let i = 0; i < missingPropertyNumbers.length; i += BATCH_SIZE) {
-        const batch = missingPropertyNumbers.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < emptyCommentProperties.length; i += BATCH_SIZE) {
+        const batch = emptyCommentProperties.slice(i, i + BATCH_SIZE);
         const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(missingPropertyNumbers.length / BATCH_SIZE);
+        const totalBatches = Math.ceil(emptyCommentProperties.length / BATCH_SIZE);
 
         console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} properties)...`);
 
-        for (const propertyNumber of batch) {
+        for (const property of batch) {
+          const propertyNumber = property.property_number;
+          const propertyType = propertyTypeMap.get(propertyNumber);
+
+          if (!propertyType) {
+            console.warn(`⚠️ ${propertyNumber}: Property type unknown, skipped`);
+            failed++;
+            continue;
+          }
+
+          // 物件種別を変換
+          let mappedPropertyType: 'land' | 'detached_house' | 'apartment';
+          if (propertyType === '土地') {
+            mappedPropertyType = 'land';
+          } else if (propertyType === '戸建') {
+            mappedPropertyType = 'detached_house';
+          } else if (propertyType === 'マンション') {
+            mappedPropertyType = 'apartment';
+          } else {
+            console.warn(`⚠️ ${propertyNumber}: Unsupported property type: ${propertyType}, skipped`);
+            failed++;
+            continue;
+          }
+
           try {
-            // 物件情報を取得（物件種別が必要）
-            const { data: property, error: propertyError } = await this.supabase
-              .from('property_listings')
-              .select('property_type')
-              .eq('property_number', propertyNumber)
-              .single();
-
-            if (propertyError || !property) {
-              console.error(`❌ ${propertyNumber}: Property not found in property_listings`);
-              failed++;
-              continue;
-            }
-
-            // AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
-            const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
-            const athomeSheetSyncService = new AthomeSheetSyncService();
-            
             const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
               propertyNumber,
-              property.property_type as 'land' | 'detached_house' | 'apartment'
+              mappedPropertyType,
+              1, // リトライ回数を1回に制限
+              500 // リトライ間隔を500msに短縮
             );
 
-            // PropertyServiceを使用して物件リストスプレッドシートのBQ列（●内覧前伝達事項）からproperty_aboutを取得
-            const { PropertyService } = await import('./PropertyService');
-            const propertyService = new PropertyService();
-            
-            try {
-              const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
-              
-              if (propertyAbout) {
-                // property_detailsテーブルにproperty_aboutを保存
-                const { error: updateError } = await this.supabase
-                  .from('property_details')
-                  .update({ property_about: propertyAbout })
-                  .eq('property_number', propertyNumber);
-                
-                if (updateError) {
-                  console.warn(`⚠️ ${propertyNumber}: Failed to update property_about: ${updateError.message}`);
-                } else {
-                  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
-                }
-              }
-            } catch (aboutError: any) {
-              console.warn(`⚠️ ${propertyNumber}: Failed to get property_about: ${aboutError.message}`);
-            }
-
             if (syncSuccess) {
-              console.log(`✅ ${propertyNumber}: Synced comments from spreadsheet`);
+              console.log(`✅ ${propertyNumber}: Synced`);
               synced++;
             } else {
-              console.error(`❌ ${propertyNumber}: Failed to sync comments from spreadsheet`);
+              console.error(`❌ ${propertyNumber}: Failed`);
               failed++;
             }
           } catch (error: any) {
@@ -2016,9 +1961,9 @@ export class EnhancedAutoSyncService {
           }
         }
 
-        // バッチ間に少し待機
-        if (i + BATCH_SIZE < missingPropertyNumbers.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        // バッチ間に3秒待機（APIクォータ対策）
+        if (i + BATCH_SIZE < emptyCommentProperties.length) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
 
@@ -2149,20 +2094,18 @@ export class EnhancedAutoSyncService {
         duration_ms: 0,
       };
 
-      // Phase 4.7: property_details同期（一時的に無効化）
-      // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
-      // 理由: 852件の物件を同期しようとすると、Google Sheets APIのクォータ制限（1分あたりの読み取りリクエスト数）に達し、
-      //       売主コメントの同期まで到達できない
-      // 対策: 物件コメント同期は別途手動で実行するか、実行頻度を減らす（例: 1日1回）
-      console.log('\n⏭️  Phase 4.7: Property Details Sync (Temporarily Disabled)');
-      console.log('   Reason: Google Sheets API quota limit prevention');
-      console.log('   To sync property details manually, run: npx ts-node backend/sync-all-property-comments.ts');
+      // Phase 4.7: property_details同期
+      console.log('\n📝 Phase 4.7: Property Details Sync');
+      console.log('   Syncing property comments from Athome sheets...');
+      console.log('   Target: Properties with spreadsheet_url in work_tasks only');
       
-      let propertyDetailsSyncResult = {
-        synced: 0,
-        failed: 0,
-        duration_ms: 0,
-      };
+      const propertyDetailsSyncResult = await this.syncMissingPropertyDetails();
+      
+      if (propertyDetailsSyncResult.success) {
+        console.log(`✅ Property details sync completed: ${propertyDetailsSyncResult.synced} synced, ${propertyDetailsSyncResult.failed} failed`);
+      } else {
+        console.log(`⚠️  Property details sync completed with errors: ${propertyDetailsSyncResult.synced} synced, ${propertyDetailsSyncResult.failed} failed`);
+      }
 
       const endTime = new Date();
       const totalDurationMs = endTime.getTime() - startTime.getTime();

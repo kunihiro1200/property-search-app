@@ -124,13 +124,19 @@ async function syncAllPropertyComments() {
     }
     
     try {
-      // 同期実行
-      const success = await athomeSheetSyncService.syncPropertyComments(
+      // 同期実行（タイムアウト付き - 60秒）
+      const syncPromise = athomeSheetSyncService.syncPropertyComments(
         propertyNumber,
         mappedPropertyType,
         1, // リトライ回数を1回に制限（時間短縮のため）
         500 // リトライ間隔を500msに短縮
       );
+      
+      const timeoutPromise = new Promise<boolean>((_, reject) => 
+        setTimeout(() => reject(new Error('Sync timeout after 60 seconds')), 60000)
+      );
+      
+      const success = await Promise.race([syncPromise, timeoutPromise]);
       
       if (success) {
         console.log(`  ✅ Success`);
@@ -141,9 +147,15 @@ async function syncAllPropertyComments() {
         errors.push({ propertyNumber, error: 'Sync failed' });
       }
     } catch (error: any) {
-      console.log(`  ❌ Error: ${error.message}`);
-      failCount++;
-      errors.push({ propertyNumber, error: error.message });
+      if (error.message.includes('timeout')) {
+        console.log(`  ⏱️  Timeout (skipped after 60 seconds)`);
+        failCount++;
+        errors.push({ propertyNumber, error: 'Timeout after 60 seconds' });
+      } else {
+        console.log(`  ❌ Error: ${error.message}`);
+        failCount++;
+        errors.push({ propertyNumber, error: error.message });
+      }
     }
     
     // APIクォータ制限を回避するため、3秒待機
