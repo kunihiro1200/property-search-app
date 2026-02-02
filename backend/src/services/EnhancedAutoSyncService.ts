@@ -2117,59 +2117,25 @@ export class EnhancedAutoSyncService {
       // Note: Work task sync is handled elsewhere
       console.log('✅ Work task sync (handled by existing service)');
 
-      // Phase 4.5: 物件リスト更新同期（新規追加）
-      console.log('\n🏢 Phase 4.5: Property Listing Update Sync');
+      // Phase 4.5: 物件リスト更新同期（一時的に無効化）
+      // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
+      console.log('\n⏭️  Phase 4.5: Property Listing Update Sync (Temporarily Disabled)');
+      console.log('   Reason: Google Sheets API quota limit prevention');
       let propertyListingUpdateResult = {
         updated: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
-      try {
-        const plResult = await this.syncPropertyListingUpdates();
-        propertyListingUpdateResult = {
-          updated: plResult.updated,
-          failed: plResult.failed,
-          duration_ms: plResult.duration_ms,
-        };
-        
-        if (plResult.updated > 0) {
-          console.log(`✅ Property listing update sync: ${plResult.updated} updated`);
-        } else {
-          console.log('✅ No property listings to update');
-        }
-      } catch (error: any) {
-        console.error('⚠️  Property listing update sync error:', error.message);
-        propertyListingUpdateResult.failed = 1;
-        // エラーでも次のフェーズに進む
-      }
 
-      // Phase 4.6: 新規物件追加同期（新規追加）
-      console.log('\n🆕 Phase 4.6: New Property Addition Sync');
+      // Phase 4.6: 新規物件追加同期（一時的に無効化）
+      // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
+      console.log('\n⏭️  Phase 4.6: New Property Addition Sync (Temporarily Disabled)');
+      console.log('   Reason: Google Sheets API quota limit prevention');
       let newPropertyAdditionResult = {
         added: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
-      try {
-        const newPropResult = await this.syncNewPropertyAddition();
-        newPropertyAdditionResult = {
-          added: newPropResult.added,
-          failed: newPropResult.failed,
-          duration_ms: newPropResult.duration_ms,
-        };
-        
-        if (newPropResult.added > 0) {
-          console.log(`✅ New property addition sync: ${newPropResult.added} added`);
-        } else {
-          console.log('✅ No new properties to add');
-        }
-      } catch (error: any) {
-        console.error('⚠️  New property addition sync error:', error.message);
-        newPropertyAdditionResult.failed = 1;
-        // エラーでも処理を継続
-      }
 
       // Phase 4.7: property_details同期（一時的に無効化）
       // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
