@@ -42,6 +42,14 @@ const ContentEditable = styled('div')(({ theme }) => ({
     color: theme.palette.text.disabled,
     pointerEvents: 'none',
   },
+  // 太字タグのスタイルを明示的に適用
+  '& b, & strong': {
+    fontWeight: 'bold',
+  },
+  // 赤字のスタイルを明示的に適用
+  '& font[color="red"]': {
+    color: 'red',
+  },
 }));
 
 const RichTextCommentEditor: React.FC<RichTextCommentEditorProps> = ({

@@ -1347,6 +1347,12 @@ export class EnhancedAutoSyncService {
       updateData.contact_method = String(contactMethod);
     }
 
+    // コメントフィールドを追加
+    const comments = row['コメント'];
+    if (comments !== undefined) {
+      updateData.comments = String(comments);
+    }
+
     // 査定方法を追加
     const valuationMethod = row['査定方法'];
     if (valuationMethod) {
@@ -1547,6 +1553,12 @@ export class EnhancedAutoSyncService {
     }
     if (contactMethod) {
       encryptedData.contact_method = String(contactMethod);
+    }
+
+    // コメントフィールドを追加
+    const comments = row['コメント'];
+    if (comments !== undefined) {
+      encryptedData.comments = String(comments);
     }
 
     // 査定方法を追加
