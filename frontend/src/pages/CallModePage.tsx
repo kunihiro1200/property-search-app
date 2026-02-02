@@ -196,6 +196,18 @@ const CallModePage = () => {
   const [unifiedComment, setUnifiedComment] = useState<string>('');
   const [savingComment, setSavingComment] = useState(false);
 
+  // HTMLコンテンツからテキストのみを抽出する関数
+  const getTextFromHtml = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  // 統一コメント欄が空かどうかをチェック
+  const isUnifiedCommentEmpty = (): boolean => {
+    return !getTextFromHtml(unifiedComment).trim();
+  };
+
   // ステータス更新用の状態
   const [editedStatus, setEditedStatus] = useState<string>('追客中');
   const [editedConfidence, setEditedConfidence] = useState<ConfidenceLevel>(ConfidenceLevel.B);
@@ -1327,7 +1339,12 @@ const CallModePage = () => {
 
   // 統一コメント欄の保存処理
   const handleSaveUnifiedComment = async () => {
-    if (!unifiedComment.trim()) {
+    // HTMLコンテンツからテキストのみを抽出してチェック
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = unifiedComment;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    if (!textContent.trim()) {
       setError('コメントを入力してください');
       return;
     }
@@ -4774,7 +4791,7 @@ HP：https://ifoo-oita.com/
               fullWidth
               variant="contained"
               size="large"
-              disabled={savingComment || !unifiedComment.trim()}
+              disabled={savingComment || isUnifiedCommentEmpty()}
               onClick={handleSaveUnifiedComment}
               sx={{ mb: 3 }}
             >

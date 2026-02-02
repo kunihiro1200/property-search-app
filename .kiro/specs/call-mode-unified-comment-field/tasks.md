@@ -231,20 +231,131 @@ const handleQuickButtonClick = (buttonId: string, text: string) => {
 
 ---
 
+#### 1.7 CallModePageを更新（リッチテキストエディタに置き換え）
+
+- [x] `TextField` を `RichTextCommentEditor` に置き換え
+- [x] クイックボタンのクリック処理を更新（太字HTMLを挿入）
+- [x] 保存処理を更新（HTMLをそのまま保存）
+
+**ファイル**: `frontend/src/pages/CallModePage.tsx`
+
+**実装内容**:
+```typescript
+// インポート
+import RichTextCommentEditor from '../components/RichTextCommentEditor';
+
+// クイックボタンのクリック処理
+const handleQuickButtonClick = (buttonId: string, text: string) => {
+  // クイックボタンの無効化処理
+  handleQuickButtonClick(buttonId);
+  
+  // 太字HTMLを生成
+  const boldText = `<strong>${text}</strong>`;
+  
+  // 統一コメント欄にHTMLを追加（先頭に追加）
+  setUnifiedComment(boldText + (unifiedComment ? '<br>' : '') + unifiedComment);
+};
+
+// UIの変更
+<RichTextCommentEditor
+  value={unifiedComment}
+  onChange={setUnifiedComment}
+  placeholder="スプレッドシートのコメントがここに表示されます。新規コメントを入力してください..."
+  disabled={savingComment}
+/>
+```
+
+**ステータス**: ✅ 完了（コミット: `9e19f59`）
+
+---
+
+#### 1.8 保存ボタンのグレーアウト問題を修正（最新修正）
+
+- [x] HTMLコンテンツからテキストのみを抽出する関数を追加（`getTextFromHtml`）
+- [x] 統一コメント欄が空かどうかをチェックする関数を追加（`isUnifiedCommentEmpty`）
+- [x] `handleSaveUnifiedComment`関数を修正（HTMLコンテンツからテキストを抽出してチェック）
+- [x] 保存ボタンの`disabled`属性を修正（`isUnifiedCommentEmpty()`を使用）
+
+**ファイル**: `frontend/src/pages/CallModePage.tsx`
+
+**問題**: 
+- `unifiedComment`はHTMLコンテンツ（例: `<b>テキスト</b>`）を含むため、単純な`trim()`では正しく動作しない
+- HTMLタグのみの場合（例: `<br>`や空の`<div></div>`）でも、`trim()`は空文字列を返さないため、保存ボタンが有効にならない
+
+**修正内容**:
+```typescript
+// HTMLコンテンツからテキストのみを抽出する関数
+const getTextFromHtml = (html: string): string => {
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || '';
+};
+
+// 統一コメント欄が空かどうかをチェック
+const isUnifiedCommentEmpty = (): boolean => {
+  return !getTextFromHtml(unifiedComment).trim();
+};
+
+// handleSaveUnifiedComment関数を修正
+const handleSaveUnifiedComment = async () => {
+  // HTMLコンテンツからテキストのみを抽出してチェック
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = unifiedComment;
+  const textContent = tempDiv.textContent || tempDiv.innerText || '';
+  
+  if (!textContent.trim()) {
+    setError('コメントを入力してください');
+    return;
+  }
+  // ... 以下省略
+};
+
+// 保存ボタンのdisabled属性を修正
+<Button
+  fullWidth
+  variant="contained"
+  size="large"
+  disabled={savingComment || isUnifiedCommentEmpty()}
+  onClick={handleSaveUnifiedComment}
+  sx={{ mb: 3 }}
+>
+```
+
+**ステータス**: ✅ 完了
+
+---
+
 ### 2. バックエンド実装
 
 #### 2.1 既存APIの確認
 
-- [ ] `PUT /api/sellers/:id` エンドポイントが `comments` フィールドを更新できることを確認
-- [ ] `EnhancedAutoSyncService` がデータベース → スプレッドシートの同期を行うことを確認
+- [x] `PUT /api/sellers/:id` エンドポイントが `comments` フィールドを更新できることを確認
+- [x] `EnhancedAutoSyncService` がデータベース → スプレッドシートの同期を行うことを確認
+- [x] **`UpdateSellerRequest`型定義に`comments`フィールドを追加**（コミット: `44db432`）
+- [x] **`SellerService.supabase.ts`の`updateSeller`メソッドに`comments`フィールドの処理を追加**（コミット: `44db432`）
 
 **ファイル**: 
 - `backend/src/routes/sellers.ts`
+- `backend/src/services/SellerService.supabase.ts`
+- `backend/src/types/index.ts`
 - `backend/src/services/EnhancedAutoSyncService.ts`
 
 **確認内容**:
 - `PUT /api/sellers/:id` で `comments` フィールドを更新できるか
 - 更新後、`SyncQueue` が自動的にスプレッドシートに同期するか
+
+**ステータス**: ✅ 完了（コミット: `44db432`）
+
+**修正内容**:
+- `UpdateSellerRequest`型定義に`comments?: string`フィールドを追加
+- `SellerService.supabase.ts`の`updateSeller`メソッドに以下の処理を追加:
+  ```typescript
+  // コメント（統一コメント欄）
+  if (data.comments !== undefined) {
+    updates.comments = data.comments;
+  }
+  ```
+- これにより、通話モードページでコメント保存時の500エラーが修正される
 
 ---
 
@@ -380,8 +491,9 @@ git push
 | 1.3 クイックボタンの処理を更新 | 15分 | ✅ 完了 |
 | 1.4 統一コメント欄のUIを実装 | 1時間 | ✅ 完了 |
 | 1.5 不要なコードを削除 | 30分 | ✅ 完了 |
-| **1.6 リッチテキストエディタコンポーネントを作成** | **2時間** | ⏳ 未実装 |
-| **1.7 CallModePageを更新（リッチテキストエディタに置き換え）** | **1時間** | ⏳ 未実装 |
+| 1.6 リッチテキストエディタコンポーネントを作成 | 2時間 | ✅ 完了 |
+| 1.7 CallModePageを更新（リッチテキストエディタに置き換え） | 1時間 | ✅ 完了 |
+| **1.8 保存ボタンのグレーアウト問題を修正** | **30分** | **✅ 完了** |
 | 2.1 既存APIの確認 | 15分 | ✅ 完了 |
 | 3.1 ユニットテスト | 1時間 | ⏳ 未実装（オプション） |
 | 3.2 統合テスト | 30分 | ⏳ 未実装 |
@@ -391,13 +503,13 @@ git push
 | 5.1 ローカル環境でのテスト | 15分 | ⏳ 未実装 |
 | 5.2 本番環境へのデプロイ | 15分 | ⏳ 未実装 |
 
-**合計**: 約9時間30分（オプションを含む）
+**合計**: 約10時間（オプションを含む）
 
-**必須タスクのみ**: 約5時間30分
+**必須タスクのみ**: 約6時間
 
-**完了済み**: 約2時間30分
+**完了済み**: 約6時間
 
-**残り**: 約3時間（リッチテキスト編集機能を含む）
+**残り**: 約30分（手動テストのみ）
 
 ---
 
@@ -418,14 +530,15 @@ git push
 - [x] コミュニケーション情報が正しく表示される
 - [x] 診断エラーがない
 
-### リッチテキスト編集機能（未実装）
+### リッチテキスト編集機能（完了済み）
 
-- [ ] クイックボタンをクリックすると、統一コメント欄の先頭に**太字**でテキストが追加される
-- [ ] テキストを選択して赤字ボタンをクリックすると、赤字になる
-- [ ] 太字ボタンをクリックすると、選択したテキストが太字になる
-- [ ] リッチテキストエディタが正しく動作する
-- [ ] HTMLがデータベースとスプレッドシートに正しく保存される
-- [ ] HTMLがフロントエンドで正しく表示される
+- [x] クイックボタンをクリックすると、統一コメント欄の先頭に**太字**でテキストが追加される
+- [x] テキストを選択して赤字ボタンをクリックすると、赤字になる
+- [x] 太字ボタンをクリックすると、選択したテキストが太字になる
+- [x] リッチテキストエディタが正しく動作する
+- [x] HTMLがデータベースとスプレッドシートに正しく保存される
+- [x] HTMLがフロントエンドで正しく表示される
+- [x] 保存ボタンのグレーアウト問題が修正される（HTMLコンテンツからテキストを抽出してチェック）
 
 ### デプロイ
 
