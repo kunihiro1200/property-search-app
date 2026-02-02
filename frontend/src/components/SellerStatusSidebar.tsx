@@ -717,8 +717,13 @@ export default function SellerStatusSidebar({
                   onClick={() => {
                     if (isCallMode) {
                       // 通話モードページの場合、最初の売主の通話モードページに遷移
-                      if (group.sellers.length > 0) {
-                        const firstSeller = group.sellers[0];
+                      // group.sellersがある場合はそれを使用、ない場合はvalidSellersから検索
+                      const groupSellers = group.sellers || validSellers.filter(s => 
+                        isTodayCallWithInfo(s) && getTodayCallWithInfoLabel(s) === group.label
+                      );
+                      
+                      if (groupSellers.length > 0) {
+                        const firstSeller = groupSellers[0];
                         navigate(`/sellers/${firstSeller.id}/call`);
                       } else {
                         console.warn(`${group.label}に該当する売主がいません`);
