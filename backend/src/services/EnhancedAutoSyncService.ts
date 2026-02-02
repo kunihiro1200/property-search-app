@@ -55,7 +55,7 @@ export class EnhancedAutoSyncService {
   // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
   private spreadsheetCache: any[] | null = null;
   private spreadsheetCacheExpiry: number = 0;
-  private readonly SPREADSHEET_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（Google Sheets APIクォータ対策）
+  private readonly SPREADSHEET_CACHE_TTL = 60 * 60 * 1000; // 60分間キャッシュ（Google Sheets APIクォータ対策）
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -110,7 +110,7 @@ export class EnhancedAutoSyncService {
     this.spreadsheetCache = allRows;
     this.spreadsheetCacheExpiry = now + this.SPREADSHEET_CACHE_TTL;
     
-    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 30 minutes)`);
+    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 60 minutes)`);
     return allRows;
   }
 
@@ -2171,32 +2171,20 @@ export class EnhancedAutoSyncService {
         // エラーでも処理を継続
       }
 
-      // Phase 4.7: property_details同期（新規追加）
-      console.log('\n📝 Phase 4.7: Property Details Sync');
+      // Phase 4.7: property_details同期（一時的に無効化）
+      // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
+      // 理由: 852件の物件を同期しようとすると、Google Sheets APIのクォータ制限（1分あたりの読み取りリクエスト数）に達し、
+      //       売主コメントの同期まで到達できない
+      // 対策: 物件コメント同期は別途手動で実行するか、実行頻度を減らす（例: 1日1回）
+      console.log('\n⏭️  Phase 4.7: Property Details Sync (Temporarily Disabled)');
+      console.log('   Reason: Google Sheets API quota limit prevention');
+      console.log('   To sync property details manually, run: npx ts-node backend/sync-all-property-comments.ts');
+      
       let propertyDetailsSyncResult = {
         synced: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
-      try {
-        const pdResult = await this.syncMissingPropertyDetails();
-        propertyDetailsSyncResult = {
-          synced: pdResult.synced,
-          failed: pdResult.failed,
-          duration_ms: pdResult.duration_ms,
-        };
-        
-        if (pdResult.synced > 0) {
-          console.log(`✅ Property details sync: ${pdResult.synced} synced`);
-        } else {
-          console.log('✅ No missing property details to sync');
-        }
-      } catch (error: any) {
-        console.error('⚠️  Property details sync error:', error.message);
-        propertyDetailsSyncResult.failed = 1;
-        // エラーでも処理を継続
-      }
 
       const endTime = new Date();
       const totalDurationMs = endTime.getTime() - startTime.getTime();
@@ -2304,7 +2292,7 @@ export class EnhancedPeriodicSyncManager {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
 
-  constructor(intervalMinutes: number = 10) {
+  constructor(intervalMinutes: number = 30) {
     this.syncService = getEnhancedAutoSyncService();
     this.intervalMinutes = intervalMinutes;
   }
