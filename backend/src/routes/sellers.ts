@@ -86,6 +86,8 @@ router.get(
     query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'unvaluated', 'mailingPending']).withMessage('Invalid status category'),
     // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
     query('visitAssignee').optional().isString().withMessage('Visit assignee must be a string'),
+    // 当日TEL（内容）のサブカテゴリフィルター
+    query('todayCallWithInfoLabel').optional().isString().withMessage('Today call with info label must be a string'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -122,6 +124,8 @@ router.get(
         statusCategory: req.query.statusCategory as 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending',
         // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
         visitAssignee: req.query.visitAssignee as string,
+        // 当日TEL（内容）のサブカテゴリフィルター
+        todayCallWithInfoLabel: req.query.todayCallWithInfoLabel as string,
       };
 
       const result = await sellerService.listSellers(params);

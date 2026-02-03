@@ -113,6 +113,7 @@ export interface CategoryCounts {
   pinrichEmpty: number;        // Pinrich空欄（Pinrichカラムが空欄）
   visitScheduledByAssignee?: { initial: string; count: number }[];  // 訪問予定のイニシャル別カウント
   visitCompletedByAssignee?: { initial: string; count: number }[];  // 訪問済みのイニシャル別カウント
+  todayCallWithInfoGroups?: { label: string; count: number }[];     // 当日TEL（内容）のグループ化データ
 }
 
 /**

@@ -36,6 +36,7 @@ import RichTextEmailEditor from '../components/RichTextEmailEditor';
 import RichTextCommentEditor from '../components/RichTextCommentEditor';
 import { PerformanceMetricsSection } from '../components/PerformanceMetricsSection';
 import { useAuthStore } from '../store/authStore';
+import { StatusCategory } from '../utils/sellerStatusFilters';
 import {
   generateInitialCancellationGuidance,
   generateCancellationGuidance,
@@ -168,10 +169,43 @@ const CallModePage = () => {
   const [sidebarSellers, setSidebarSellers] = useState<any[]>([]);
   const [sidebarLoading, setSidebarLoading] = useState<boolean>(true);
   
+  // サイドバー選択状態（通話モードページでも使用）
+  const [selectedCategory, setSelectedCategory] = useState<StatusCategory>('all');
+  const [selectedVisitAssignee, setSelectedVisitAssignee] = useState<string | undefined>(undefined);
+  
+  // URLパラメータから状態を読み取る
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get('category') as StatusCategory || 'all';
+    const assignee = params.get('visitAssignee') || undefined;
+    setSelectedCategory(category);
+    setSelectedVisitAssignee(assignee);
+  }, []);
+  
+  // カテゴリ選択ハンドラー（通話モードページ用）
+  const handleCategorySelect = useCallback((category: StatusCategory, visitAssignee?: string) => {
+    setSelectedCategory(category);
+    setSelectedVisitAssignee(visitAssignee);
+    
+    // URLパラメータを更新（オプション）
+    const params = new URLSearchParams(window.location.search);
+    if (category !== 'all') {
+      params.set('category', category);
+    } else {
+      params.delete('category');
+    }
+    if (visitAssignee) {
+      params.set('visitAssignee', visitAssignee);
+    } else {
+      params.delete('visitAssignee');
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  }, []);
+  
   // サイドバー用のカテゴリカウント（APIから直接取得）
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
-    todayCallWithInfo: number;
     todayCallAssigned: number;
     visitScheduled: number;
     visitCompleted: number;
@@ -184,7 +218,6 @@ const CallModePage = () => {
     todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
-    todayCallWithInfo: 0,
     todayCallAssigned: 0,
     visitScheduled: 0,
     visitCompleted: 0,
@@ -789,7 +822,6 @@ const CallModePage = () => {
       // エラー時はカウントを0にリセット
       setSidebarCounts({
         todayCall: 0,
-        todayCallWithInfo: 0,
         todayCallAssigned: 0,
         visitScheduled: 0,
         visitCompleted: 0,
@@ -827,7 +859,7 @@ const CallModePage = () => {
         'visitCompleted',      // 訪問済み
         'todayCallAssigned',   // 当日TEL（担当）
         'todayCall',           // 当日TEL分
-        'todayCallWithInfo',   // 当日TEL（内容）
+        'todayCallWithInfo',   // コミュニケーション情報別カテゴリ
         'unvaluated',          // 未査定
         'mailingPending',      // 査定（郵送）
       ];
@@ -2616,6 +2648,9 @@ HP：https://ifoo-oita.com/
               all: sidebarSellers.length,
               ...sidebarCounts,
             }}
+            selectedCategory={selectedCategory}
+            selectedVisitAssignee={selectedVisitAssignee}
+            onCategorySelect={handleCategorySelect}
           />
         </Box>
         

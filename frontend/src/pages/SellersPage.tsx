@@ -123,7 +123,6 @@ export default function SellersPage() {
   // サイドバー用のカテゴリカウント（APIから直接取得）
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
-    todayCallWithInfo: number;
     todayCallAssigned: number;
     visitScheduled: number;
     visitCompleted: number;
@@ -136,7 +135,6 @@ export default function SellersPage() {
     todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
-    todayCallWithInfo: 0,
     todayCallAssigned: 0,
     visitScheduled: 0,
     visitCompleted: 0,
@@ -276,7 +274,6 @@ export default function SellersPage() {
       // エラー時はカウントを0にリセット
       setSidebarCounts({
         todayCall: 0,
-        todayCallWithInfo: 0,
         todayCallAssigned: 0,
         visitScheduled: 0,
         visitCompleted: 0,
@@ -326,11 +323,15 @@ export default function SellersPage() {
       // サイドバーカテゴリフィルター
       if (selectedCategory && selectedCategory !== 'all') {
         params.statusCategory = selectedCategory;
-      }
-      
-      // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
-      if (selectedVisitAssignee) {
-        params.visitAssignee = selectedVisitAssignee;
+        
+        // 当日TEL（内容）のサブカテゴリフィルター
+        if (selectedCategory === 'todayCallWithInfo' && selectedVisitAssignee) {
+          params.todayCallWithInfoLabel = selectedVisitAssignee;
+        }
+        // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+        else if ((selectedCategory === 'visitScheduled' || selectedCategory === 'visitCompleted') && selectedVisitAssignee) {
+          params.visitAssignee = selectedVisitAssignee;
+        }
       }
       
       const response = await api.get('/api/sellers', { params });

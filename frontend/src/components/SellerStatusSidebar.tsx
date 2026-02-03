@@ -102,6 +102,7 @@ const filterSellersByCategory = (sellers: any[], category: StatusCategory): any[
 
 /**
  * カテゴリの表示名を取得
+ * 注意: todayCallWithInfoは親カテゴリとして表示しない（サブカテゴリのみ表示）
  */
 const getCategoryLabel = (category: StatusCategory): string => {
   switch (category) {
@@ -112,7 +113,7 @@ const getCategoryLabel = (category: StatusCategory): string => {
     case 'todayCall':
       return '③当日TEL分';
     case 'todayCallWithInfo':
-      return '④当日TEL（内容）';
+      return ''; // 親カテゴリは表示しない（サブカテゴリのみ表示）
     case 'unvaluated':
       return '⑤未査定';
     case 'mailingPending':
@@ -695,86 +696,77 @@ export default function SellerStatusSidebar({
       
       {renderCategoryButton('todayCall', '③当日TEL分', '#d32f2f')}
       
-      {/* ④当日TEL（内容）- 内容別にグループ化 */}
-      {(() => {
-        // グループが0件の場合は非表示
-        if (todayCallWithInfoGroups.length === 0) return null;
+      {/* コミュニケーション情報別カテゴリ - 独立した本カテゴリとして表示 */}
+      {todayCallWithInfoGroups.map((group) => {
+        // 選択状態の判定:
+        // - 売主リストページ: カテゴリとラベルの両方が一致する場合
+        // - 通話モードページ: 現在の売主のカテゴリとラベルが一致する場合
+        const isSelected = isCallMode
+          ? (currentSellerCategory === 'todayCallWithInfo' && 
+             getTodayCallWithInfoLabel(currentSeller) === group.label)
+          : (selectedCategory === 'todayCallWithInfo' && 
+             selectedVisitAssignee === group.label);
         
         return (
-          <Box key="todayCallWithInfo">
-            {todayCallWithInfoGroups.map((group) => {
-              // 選択状態の判定:
-              // - 売主リストページ: カテゴリとラベルの両方が一致する場合
-              // - 通話モードページ: 現在の売主のカテゴリとラベルが一致する場合
-              const isSelected = isCallMode
-                ? (currentSellerCategory === 'todayCallWithInfo' && 
-                   getTodayCallWithInfoLabel(currentSeller) === group.label)
-                : (selectedCategory === 'todayCallWithInfo' && 
-                   selectedVisitAssignee === group.label);
-              
-              return (
-                <Button
-                  key={group.label}
-                  fullWidth
-                  onClick={() => {
-                    if (isCallMode) {
-                      // 通話モードページの場合、最初の売主の通話モードページに遷移
-                      // group.sellersがある場合はそれを使用、ない場合はvalidSellersから検索
-                      const groupSellers = group.sellers || validSellers.filter(s => 
-                        isTodayCallWithInfo(s) && getTodayCallWithInfoLabel(s) === group.label
-                      );
-                      
-                      if (groupSellers.length > 0) {
-                        const firstSeller = groupSellers[0];
-                        navigate(`/sellers/${firstSeller.id}/call`);
-                      } else {
-                        console.warn(`${group.label}に該当する売主がいません`);
-                      }
-                    } else {
-                      // 売主リストページの場合、カテゴリとグループを選択（現在の動作を維持）
-                      if (isSelected) {
-                        // 既に選択中の場合は選択解除
-                        onCategorySelect?.('all', undefined);
-                      } else {
-                        // 新しいカテゴリを選択
-                        setExpandedCategory(null);
-                        onCategorySelect?.('todayCallWithInfo', group.label);
-                      }
-                    }
-                  }}
-                  sx={{ 
-                    justifyContent: 'space-between', 
-                    textAlign: 'left',
-                    fontSize: '0.85rem',
-                    py: 0.75,
-                    px: 1.5,
-                    color: isSelected ? 'white' : '#9c27b0',
-                    bgcolor: isSelected ? '#9c27b0' : 'transparent',
-                    borderRadius: 1,
-                    '&:hover': {
-                      bgcolor: isSelected ? '#9c27b0' : '#9c27b015',
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <span>{group.label}</span>
-                    <Chip 
-                      label={group.count} 
-                      size="small"
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.7rem',
-                        bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
-                        color: isSelected ? 'white' : undefined,
-                      }}
-                    />
-                  </Box>
-                </Button>
-              );
-            })}
-          </Box>
+          <Button
+            key={group.label}
+            fullWidth
+            onClick={() => {
+              if (isCallMode) {
+                // 通話モードページの場合、最初の売主の通話モードページに遷移
+                // group.sellersがある場合はそれを使用、ない場合はvalidSellersから検索
+                const groupSellers = group.sellers || validSellers.filter(s => 
+                  isTodayCallWithInfo(s) && getTodayCallWithInfoLabel(s) === group.label
+                );
+                
+                if (groupSellers.length > 0) {
+                  const firstSeller = groupSellers[0];
+                  navigate(`/sellers/${firstSeller.id}/call`);
+                } else {
+                  console.warn(`${group.label}に該当する売主がいません`);
+                }
+              } else {
+                // 売主リストページの場合、カテゴリとグループを選択（現在の動作を維持）
+                if (isSelected) {
+                  // 既に選択中の場合は選択解除
+                  onCategorySelect?.('all', undefined);
+                } else {
+                  // 新しいカテゴリを選択
+                  setExpandedCategory(null);
+                  onCategorySelect?.('todayCallWithInfo', group.label);
+                }
+              }
+            }}
+            sx={{ 
+              justifyContent: 'space-between', 
+              textAlign: 'left',
+              fontSize: '0.85rem',
+              py: 0.75,
+              px: 1.5,
+              color: isSelected ? 'white' : '#9c27b0',
+              bgcolor: isSelected ? '#9c27b0' : 'transparent',
+              borderRadius: 1,
+              '&:hover': {
+                bgcolor: isSelected ? '#9c27b0' : '#9c27b015',
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span>{group.label}</span>
+              <Chip 
+                label={group.count} 
+                size="small"
+                sx={{ 
+                  height: 20, 
+                  fontSize: '0.7rem',
+                  bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                  color: isSelected ? 'white' : undefined,
+                }}
+              />
+            </Box>
+          </Button>
         );
-      })()}
+      })}
       
       {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
       {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}

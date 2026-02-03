@@ -433,6 +433,8 @@ export interface ListSellersParams {
   statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
   // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
   visitAssignee?: string;
+  // 当日TEL（内容）のサブカテゴリフィルター（例: "当日TEL(Eメール)"）
+  todayCallWithInfoLabel?: string;
 }
 
 export interface PaginatedResult<T> {

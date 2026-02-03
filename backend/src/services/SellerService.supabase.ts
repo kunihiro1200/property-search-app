@@ -719,6 +719,7 @@ export class SellerService extends BaseRepository {
       includeDeleted = false, // デフォルトで削除済みを除外
       statusCategory, // サイドバーカテゴリフィルター
       visitAssignee, // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      todayCallWithInfoLabel, // 当日TEL（内容）のサブカテゴリフィルター
     } = params;
 
     // JST今日の日付を取得
@@ -740,7 +741,8 @@ export class SellerService extends BaseRepository {
       sortOrder,
       includeDeleted ? 'with-deleted' : 'active-only',
       statusCategory || 'all',
-      visitAssignee || 'all'
+      visitAssignee || 'all',
+      todayCallWithInfoLabel || 'all'
     );
 
     // キャッシュをチェック
@@ -824,6 +826,12 @@ export class SellerService extends BaseRepository {
             .or('visit_assignee.is.null,visit_assignee.eq.,visit_assignee.eq.外す')
             // コミュニケーション情報のいずれかに入力あり
             .or('phone_contact_person.neq.,preferred_contact_time.neq.,contact_method.neq.');
+          
+          // サブカテゴリフィルター（例: "当日TEL(Eメール)"）
+          // todayCallWithInfoLabelが指定されている場合、さらにフィルタリング
+          // ただし、Supabaseのクエリでは複雑な条件を表現できないため、
+          // 全件取得してからフィルタリングする必要がある
+          // → この処理は後で行う（decryptedSellersをフィルタリング）
           break;
         case 'unvaluated':
           // 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
@@ -877,7 +885,7 @@ export class SellerService extends BaseRepository {
     }
 
     // 復号化して物件情報を追加
-    const decryptedSellers = await Promise.all((sellers || []).map(async (seller) => {
+    let decryptedSellers = await Promise.all((sellers || []).map(async (seller) => {
       const decrypted = await this.decryptSeller(seller);
       
       // 物件情報を追加（配列の場合は最初の要素を使用）
@@ -910,6 +918,27 @@ export class SellerService extends BaseRepository {
       
       return decrypted;
     }));
+
+    // todayCallWithInfoLabelが指定されている場合、さらにフィルタリング
+    if (statusCategory === 'todayCallWithInfo' && todayCallWithInfoLabel) {
+      // "当日TEL(Eメール)" → "Eメール" を抽出
+      const labelMatch = todayCallWithInfoLabel.match(/当日TEL\((.+)\)/);
+      const targetValue = labelMatch ? labelMatch[1] : todayCallWithInfoLabel;
+      
+      decryptedSellers = decryptedSellers.filter(seller => {
+        // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+        if (seller.contactMethod && seller.contactMethod.trim() === targetValue) {
+          return true;
+        }
+        if (seller.preferredContactTime && seller.preferredContactTime.trim() === targetValue) {
+          return true;
+        }
+        if (seller.phoneContactPerson && seller.phoneContactPerson.trim() === targetValue) {
+          return true;
+        }
+        return false;
+      });
+    }
 
     // 各売主の最新通話日時を取得（一時的にコメントアウト）
     // const sellersWithCallDate = await Promise.all(
@@ -1635,7 +1664,6 @@ export class SellerService extends BaseRepository {
 
     return {
       todayCall: todayCallNoInfoCount || 0,
-      todayCallWithInfo: todayCallWithInfoCount || 0,
       todayCallAssigned: todayCallAssignedCount || 0,
       visitScheduled: visitScheduledCount || 0,
       visitCompleted: visitCompletedCount || 0,
