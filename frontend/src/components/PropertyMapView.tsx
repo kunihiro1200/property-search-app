@@ -75,11 +75,16 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
 
 // マーカーの色を取得
 const getMarkerColor = (atbbStatus: string): string => {
+  console.log('🎨 [getMarkerColor] atbbStatus:', atbbStatus);
+  
   if (!atbbStatus || atbbStatus === '' || atbbStatus === '公開中') {
     return '#2196F3'; // 青（販売中物件）
   }
   
   const result = mapAtbbStatusToDisplayStatus(atbbStatus);
+  console.log('🎨 [getMarkerColor] result:', result);
+  console.log('🎨 [getMarkerColor] markerColor:', BADGE_CONFIGS[result.statusType].markerColor);
+  
   return BADGE_CONFIGS[result.statusType].markerColor;
 };
 
@@ -262,9 +267,22 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
 
   // 座標付き物件が更新されたらマーカーを作成
   useEffect(() => {
-    if (!map || propertiesWithCoords.length === 0) {
+    console.log('🗺️ [Marker Creation useEffect] TRIGGERED');
+    console.log('🗺️ [Marker Creation useEffect] map:', !!map);
+    console.log('🗺️ [Marker Creation useEffect] propertiesWithCoords.length:', propertiesWithCoords.length);
+    console.log('🗺️ [Marker Creation useEffect] propertiesWithCoords sample:', propertiesWithCoords.slice(0, 2));
+    
+    if (!map) {
+      console.log('🗺️ [Marker Creation useEffect] Skipping: map is null');
       return;
     }
+    
+    if (propertiesWithCoords.length === 0) {
+      console.log('🗺️ [Marker Creation useEffect] Skipping: no properties with coordinates');
+      return;
+    }
+
+    console.log('🗺️ [Marker Creation useEffect] Creating markers for', propertiesWithCoords.length, 'properties');
 
     // 既存のマーカーをクリア
     markers.forEach(marker => {
@@ -299,6 +317,11 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
       );
       
       sortedGroup.forEach((property, index) => {
+        // デバッグ：atbb_statusの値を確認
+        if (index === 0) {
+          console.log('🏠 [PropertyMapView] property:', property.property_number, 'atbb_status:', property.atbb_status);
+        }
+        
         // 重複している場合、円形に配置
         let adjustedLat = baseLat;
         let adjustedLng = baseLng;
@@ -353,7 +376,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
 
     // 初期表示は大分市中心に固定（fitBoundsは使わない）
     // ユーザーが手動でズーム・移動できる
-  }, [map, propertiesWithCoords]);
+  }, [map, propertiesWithCoords, propertiesWithCoords.length]);
 
   const handleMarkerClick = (property: PropertyWithCoordinates) => {
     setSelectedProperty(property);
