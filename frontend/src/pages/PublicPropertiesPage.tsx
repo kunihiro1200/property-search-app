@@ -35,6 +35,8 @@ interface PaginationInfo {
 }
 
 const PublicPropertiesPage: React.FC = () => {
+  console.log('🚀🚀🚀 PublicPropertiesPage COMPONENT MOUNTED/RENDERED 🚀🚀🚀');
+  
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   
@@ -57,6 +59,7 @@ const PublicPropertiesPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>(
     viewModeParam === 'map' ? 'map' : 'list'
   );
+  console.log('🎯 viewMode state initialized:', viewMode);
   
   // 物件タイプフィルター状態
   const [selectedTypes, setSelectedTypes] = useState<PropertyType[]>([]);
@@ -137,6 +140,7 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 状態復元が完了したかどうかのフラグ
   const [isStateRestored, setIsStateRestored] = useState(false);
+  console.log('🎯 isStateRestored state initialized:', isStateRestored);
   
   // 状態復元中かどうかのフラグ（setCurrentPage(1)を防ぐため）
   const isRestoringState = useRef(false);
@@ -447,6 +451,16 @@ const PublicPropertiesPage: React.FC = () => {
       fetchProperties();
     }
   }, [viewMode, isStateRestored]);
+  
+  // viewModeの変更を監視（デバッグ用）
+  useEffect(() => {
+    console.log('🔄 viewMode CHANGED to:', viewMode);
+  }, [viewMode]);
+  
+  // isStateRestoredの変更を監視（デバッグ用）
+  useEffect(() => {
+    console.log('🔄 isStateRestored CHANGED to:', isStateRestored);
+  }, [isStateRestored]);
   
   // allPropertiesの変更を監視（デバッグ用）
   useEffect(() => {
@@ -855,7 +869,10 @@ const PublicPropertiesPage: React.FC = () => {
                   },
                 }}
                 onClick={() => {
+                  console.log('🗺️🗺️🗺️ MAP BUTTON CLICKED 🗺️🗺️🗺️');
+                  console.log('🗺️ Current viewMode before change:', viewMode);
                   setViewMode('map');
+                  console.log('🗺️ setViewMode("map") called');
                   setShouldScrollToMap(true); // スクロールフラグを立てる
                 }}
               >

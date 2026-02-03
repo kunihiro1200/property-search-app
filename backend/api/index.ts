@@ -178,6 +178,7 @@ app.get('/api/public/properties', async (req, res) => {
     const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
     const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
     
+    console.log('🔍🔍🔍 [API Endpoint] skipImages param:', req.query.skipImages, 'parsed:', skipImages);
     console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages });
     
     // 価格範囲のバリデーション
