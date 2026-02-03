@@ -425,7 +425,7 @@ const PublicPropertiesPage: React.FC = () => {
   
   // viewModeが変更されたときも全件取得
   useEffect(() => {
-    console.log('🗺️ [viewMode useEffect] TRIGGERED');
+    console.log('🗺️🗺️🗺️ [viewMode useEffect] TRIGGERED 🗺️🗺️🗺️');
     console.log('🗺️ [viewMode useEffect] viewMode:', viewMode);
     console.log('🗺️ [viewMode useEffect] isStateRestored:', isStateRestored);
     console.log('🗺️ [viewMode useEffect] allProperties.length:', allProperties.length);
