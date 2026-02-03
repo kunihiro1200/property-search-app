@@ -554,6 +554,7 @@ const PublicPropertiesPage: React.FC = () => {
   // 座標がある物件のみを取得して高速化
   const fetchAllProperties = async () => {
     try {
+      console.log('🔄 [fetchAllProperties] Starting...');
       setIsLoadingAllProperties(true);
       
       // URLパラメータから検索条件を取得
@@ -615,6 +616,7 @@ const PublicPropertiesPage: React.FC = () => {
         }
         
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        console.log('🌐 [fetchAllProperties] Fetching from API with params:', params.toString());
         const response = await fetch(
           `${apiUrl}/api/public/properties?${params.toString()}`
         );
@@ -625,6 +627,7 @@ const PublicPropertiesPage: React.FC = () => {
         
         const data = await response.json();
         const fetchedProperties = data.properties || [];
+        console.log(`📦 [fetchAllProperties] Fetched ${fetchedProperties.length} properties (offset: ${offset})`);
         
         allFetchedProperties.push(...fetchedProperties);
         
@@ -643,11 +646,16 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
+      console.log(`✅ [fetchAllProperties] Total fetched: ${allFetchedProperties.length} properties`);
+      console.log('📍 [fetchAllProperties] Sample property:', allFetchedProperties[0]);
+      console.log('🔄 [fetchAllProperties] Calling setAllProperties...');
       setAllProperties(allFetchedProperties);
+      console.log('✅ [fetchAllProperties] setAllProperties called');
     } catch (err: any) {
-      console.error('全件取得エラー:', err);
+      console.error('❌ [fetchAllProperties] Error:', err);
     } finally {
       setIsLoadingAllProperties(false);
+      console.log('🏁 [fetchAllProperties] Completed');
     }
   };
   

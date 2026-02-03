@@ -234,6 +234,15 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
+  // properties propsが変更されたときにログ出力
+  useEffect(() => {
+    console.log('🔄 [PropertyMapView] properties prop changed, length:', properties.length);
+    console.log('🔄 [PropertyMapView] isLoaded:', isLoaded);
+    if (properties.length > 0) {
+      console.log('🔄 [PropertyMapView] Sample property:', properties[0]);
+    }
+  }, [properties, isLoaded]);
+
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
     console.log('📍 [Coordinates useEffect] TRIGGERED - isLoaded:', isLoaded, 'properties.length:', properties.length);
