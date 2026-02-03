@@ -251,12 +251,14 @@ const PublicPropertiesPage: React.FC = () => {
       }, 100);
     } else if (!savedState) {
       // location.stateがない場合（新規アクセスなど）
+      console.log('🆕 [PublicPropertiesPage] No saved state, setting isStateRestored to true immediately');
       if (hasRestoredState.current) {
         hasRestoredState.current = false;
       }
       // 状態復元不要なので即座に完了扱い
       isRestoringState.current = false;
       setIsStateRestored(true);
+      console.log('✅ [PublicPropertiesPage] isStateRestored set to true (no saved state)');
     }
   }, [location.state, location.key]); // location.keyを依存配列に追加
   
@@ -423,20 +425,36 @@ const PublicPropertiesPage: React.FC = () => {
   
   // viewModeが変更されたときも全件取得
   useEffect(() => {
+    console.log('🗺️ [viewMode useEffect] TRIGGERED');
+    console.log('🗺️ [viewMode useEffect] viewMode:', viewMode);
+    console.log('🗺️ [viewMode useEffect] isStateRestored:', isStateRestored);
+    console.log('🗺️ [viewMode useEffect] allProperties.length:', allProperties.length);
+    
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
+      console.log('⏸️ [viewMode useEffect] Waiting for state restoration...');
       return;
     }
     
     if (viewMode === 'map' && allProperties.length === 0) {
-      console.log('🗺️ Map view activated, fetching all properties...');
+      console.log('🗺️ [viewMode useEffect] Map view activated, fetching all properties...');
       fetchAllProperties();
+    } else if (viewMode === 'map' && allProperties.length > 0) {
+      console.log('✅ [viewMode useEffect] Map view activated, allProperties already loaded:', allProperties.length);
     } else if (viewMode === 'list') {
       // リスト表示に戻ったときは、物件データを再取得
-      console.log('📋 List view activated, fetching properties...');
+      console.log('📋 [viewMode useEffect] List view activated, fetching properties...');
       fetchProperties();
     }
   }, [viewMode, isStateRestored]);
+  
+  // allPropertiesの変更を監視（デバッグ用）
+  useEffect(() => {
+    console.log('📦 [allProperties changed] New length:', allProperties.length);
+    if (allProperties.length > 0) {
+      console.log('📦 [allProperties changed] Sample property:', allProperties[0]);
+    }
+  }, [allProperties]);
 
   const fetchProperties = async () => {
     try {
