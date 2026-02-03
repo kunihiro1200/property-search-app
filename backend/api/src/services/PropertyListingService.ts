@@ -349,11 +349,15 @@ export class PropertyListingService {
       
       // NEW: 公開中のみ表示フィルター
       if (showPublicOnly) {
-        // atbb_statusに「公開中」が含まれる物件のみを表示
-        // nullや空文字列を除外し、明示的に「公開中」を含むもののみ
+        // atbb_statusに「公開中」「公開前」「非公開（配信メールのみ）」のいずれかが含まれる物件を表示
+        // 「一般・公開前」も「公開前」に含まれるため、正しく表示される
         query = query
           .not('atbb_status', 'is', null)
-          .ilike('atbb_status', '%公開中%');
+          .or(
+            'atbb_status.ilike.%公開中%,' +
+            'atbb_status.ilike.%公開前%,' +
+            'atbb_status.ilike.%非公開（配信メールのみ）%'
+          );
       }
       
       // NEW: 座標がある物件のみ取得（地図表示用）
