@@ -196,7 +196,9 @@ const PublicPropertiesPage: React.FC = () => {
       // ページ番号を復元
       if (savedState.currentPage) {
         console.log('📄 [PublicPropertiesPage] Restoring currentPage:', savedState.currentPage);
+        console.log('📄 [PublicPropertiesPage] Current currentPage before restore:', currentPage);
         setCurrentPage(savedState.currentPage);
+        console.log('📄 [PublicPropertiesPage] setCurrentPage called with:', savedState.currentPage);
       }
       
       // フィルター設定を復元
@@ -434,6 +436,8 @@ const PublicPropertiesPage: React.FC = () => {
   const fetchProperties = async () => {
     try {
       console.log('🔄 [fetchProperties] Starting fetch with currentPage:', currentPage);
+      console.log('🔍 [fetchProperties] isStateRestored:', isStateRestored);
+      console.log('🔍 [fetchProperties] isRestoringState.current:', isRestoringState.current);
       
       // 初回ロードかフィルター変更かで異なるローディング状態を設定
       if (!isInitialLoadDone.current) {
