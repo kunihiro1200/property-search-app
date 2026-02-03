@@ -36,6 +36,7 @@ interface PaginationInfo {
 
 const PublicPropertiesPage: React.FC = () => {
   console.log('🚀🚀🚀 PublicPropertiesPage COMPONENT MOUNTED/RENDERED 🚀🚀🚀');
+  console.log('🎯 Render timestamp:', new Date().toISOString());
   
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -59,7 +60,7 @@ const PublicPropertiesPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'map'>(
     viewModeParam === 'map' ? 'map' : 'list'
   );
-  console.log('🎯 viewMode state initialized:', viewMode);
+  console.log('🎯 viewMode state initialized:', viewMode, '(viewModeParam:', viewModeParam, ')');
   
   // 物件タイプフィルター状態
   const [selectedTypes, setSelectedTypes] = useState<PropertyType[]>([]);
@@ -139,7 +140,12 @@ const PublicPropertiesPage: React.FC = () => {
   const hasRestoredState = useRef(false);
   
   // 状態復元が完了したかどうかのフラグ
-  const [isStateRestored, setIsStateRestored] = useState(false);
+  // location.stateがある場合はfalse、ない場合はtrueで初期化
+  const [isStateRestored, setIsStateRestored] = useState(() => {
+    const hasState = !!location.state;
+    console.log('🎯 isStateRestored initial value:', !hasState, '(hasState:', hasState, ')');
+    return !hasState; // location.stateがある場合はfalse、ない場合はtrue
+  });
   console.log('🎯 isStateRestored state initialized:', isStateRestored);
   
   // 状態復元中かどうかのフラグ（setCurrentPage(1)を防ぐため）
@@ -433,6 +439,7 @@ const PublicPropertiesPage: React.FC = () => {
     console.log('🗺️ [viewMode useEffect] viewMode:', viewMode);
     console.log('🗺️ [viewMode useEffect] isStateRestored:', isStateRestored);
     console.log('🗺️ [viewMode useEffect] allProperties.length:', allProperties.length);
+    console.log('🗺️ [viewMode useEffect] Dependencies:', { viewMode, isStateRestored });
     
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
@@ -871,8 +878,28 @@ const PublicPropertiesPage: React.FC = () => {
                 onClick={() => {
                   console.log('🗺️🗺️🗺️ MAP BUTTON CLICKED 🗺️🗺️🗺️');
                   console.log('🗺️ Current viewMode before change:', viewMode);
-                  setViewMode('map');
-                  console.log('🗺️ setViewMode("map") called');
+                  console.log('🗺️ Current isStateRestored:', isStateRestored);
+                  console.log('🗺️ Current allProperties.length:', allProperties.length);
+                  
+                  // viewModeがすでに'map'の場合でも、強制的に全件取得を実行
+                  if (viewMode === 'map') {
+                    console.log('⚠️ viewMode is already "map", forcing fetchAllProperties...');
+                    if (allProperties.length === 0) {
+                      fetchAllProperties();
+                    }
+                  } else {
+                    console.log('🔄 Changing viewMode from "list" to "map"');
+                    setViewMode('map');
+                    console.log('🗺️ setViewMode("map") called');
+                  }
+                  
+                  // 状態更新後のログ（次のレンダリングで確認）
+                  setTimeout(() => {
+                    console.log('🗺️ [After setState] viewMode:', viewMode);
+                    console.log('🗺️ [After setState] isStateRestored:', isStateRestored);
+                    console.log('🗺️ [After setState] allProperties.length:', allProperties.length);
+                  }, 100);
+                  
                   setShouldScrollToMap(true); // スクロールフラグを立てる
                 }}
               >
