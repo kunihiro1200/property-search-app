@@ -423,6 +423,11 @@ const PublicPropertiesPage: React.FC = () => {
   
   // viewModeが変更されたときも全件取得
   useEffect(() => {
+    // 状態復元が完了するまで待つ
+    if (!isStateRestored) {
+      return;
+    }
+    
     if (viewMode === 'map' && allProperties.length === 0) {
       console.log('🗺️ Map view activated, fetching all properties...');
       fetchAllProperties();
@@ -431,7 +436,7 @@ const PublicPropertiesPage: React.FC = () => {
       console.log('📋 List view activated, fetching properties...');
       fetchProperties();
     }
-  }, [viewMode]);
+  }, [viewMode, isStateRestored]);
 
   const fetchProperties = async () => {
     try {

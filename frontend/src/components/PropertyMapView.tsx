@@ -381,7 +381,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
 
     // 初期表示は大分市中心に固定（fitBoundsは使わない）
     // ユーザーが手動でズーム・移動できる
-  }, [map, propertiesWithCoords, propertiesWithCoords.length]);
+  }, [map, propertiesWithCoords]);
 
   const handleMarkerClick = (property: PropertyWithCoordinates) => {
     setSelectedProperty(property);
