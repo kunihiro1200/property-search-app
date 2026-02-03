@@ -306,8 +306,10 @@ export default function SellerStatusSidebar({
     if (categoryCounts?.todayCallWithInfoGroups && categoryCounts.todayCallWithInfoGroups.length > 0) {
       return categoryCounts.todayCallWithInfoGroups;
     }
+    
     // なければvalidSellersから計算（後方互換性のため）
-    return groupTodayCallWithInfo(validSellers);
+    const computed = groupTodayCallWithInfo(validSellers);
+    return computed;
   }, [categoryCounts?.todayCallWithInfoGroups, validSellers]);
 
   /**
