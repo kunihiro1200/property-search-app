@@ -24,6 +24,7 @@
   pinrichEmpty: number;
   visitScheduledByAssignee: { initial: string; count: number }[];
   visitCompletedByAssignee: { initial: string; count: number }[];
+  todayCallAssignedByAssignee: { initial: string; count: number }[];  // ← 追加！
   todayCallWithInfoGroups: { label: string; count: number }[];  // ← 最重要！
 }
 ```

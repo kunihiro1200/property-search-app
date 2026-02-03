@@ -57,6 +57,11 @@ export class EnhancedAutoSyncService {
   private spreadsheetCacheExpiry: number = 0;
   private readonly SPREADSHEET_CACHE_TTL = 60 * 60 * 1000; // 60分間キャッシュ（Google Sheets APIクォータ対策）
 
+  // 業務依頼シートキャッシュ（Google Sheets APIクォータ対策）
+  private workTasksCache: Map<string, string> | null = null;
+  private workTasksCacheExpiry: number = 0;
+  private readonly WORK_TASKS_CACHE_TTL = 60 * 60 * 1000; // 60分間キャッシュ
+
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
     this.columnMapper = new ColumnMapper();
@@ -121,6 +126,95 @@ export class EnhancedAutoSyncService {
     this.spreadsheetCache = null;
     this.spreadsheetCacheExpiry = 0;
     console.log('🗑️ Spreadsheet cache cleared');
+  }
+
+  /**
+   * 業務依頼シートから物件番号とスプレッドシートURLのマップを取得（キャッシュ付き）
+   * Google Sheets APIクォータ対策のため、60分間キャッシュします
+   */
+  private async getWorkTasksFromSpreadsheet(forceRefresh: boolean = false): Promise<Map<string, string>> {
+    const now = Date.now();
+
+    // 強制リフレッシュでない場合、キャッシュが有効なら使用
+    if (!forceRefresh && this.workTasksCache && now < this.workTasksCacheExpiry) {
+      const remainingSeconds = Math.round((this.workTasksCacheExpiry - now) / 1000);
+      console.log(`📦 Using cached 業務依頼 data (${this.workTasksCache.size} properties, valid for ${remainingSeconds} seconds)`);
+      return this.workTasksCache;
+    }
+
+    // キャッシュが無効な場合は再取得
+    console.log('🔄 Fetching fresh 業務依頼 sheet data...');
+    
+    const { google } = await import('googleapis');
+    
+    // Vercel環境では環境変数から、ローカル環境ではファイルから認証情報を取得
+    let credentials;
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+      credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    } else {
+      const fs = require('fs');
+      const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
+      credentials = JSON.parse(fs.readFileSync(serviceAccountKeyPath, 'utf-8'));
+    }
+    
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    
+    const sheets = google.sheets({ version: 'v4', auth });
+    const gyomuListSpreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
+    
+    if (!gyomuListSpreadsheetId) {
+      console.error('❌ GYOMU_LIST_SPREADSHEET_ID not found in environment');
+      return new Map();
+    }
+
+    try {
+      // 業務依頼シートからA列（物件番号）とD列（スプシURL）を取得
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: gyomuListSpreadsheetId,
+        range: '業務依頼!A:D',
+      });
+
+      const rows = response.data.values || [];
+      const workTasksMap = new Map<string, string>();
+
+      // ヘッダー行をスキップして処理
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const propertyNumber = row[0]; // A列
+        const spreadsheetUrl = row[3]; // D列
+
+        if (propertyNumber && spreadsheetUrl) {
+          // URLからスプレッドシートIDを抽出
+          const match = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          if (match) {
+            workTasksMap.set(propertyNumber, match[1]);
+          }
+        }
+      }
+
+      // キャッシュに保存
+      this.workTasksCache = workTasksMap;
+      this.workTasksCacheExpiry = now + this.WORK_TASKS_CACHE_TTL;
+      
+      console.log(`✅ 業務依頼 data cached (${workTasksMap.size} properties with spreadsheet URLs, valid for 60 minutes)`);
+      return workTasksMap;
+
+    } catch (error: any) {
+      console.error('❌ Error fetching 業務依頼 sheet data:', error.message);
+      return new Map();
+    }
+  }
+
+  /**
+   * 業務依頼シートキャッシュをクリア
+   */
+  public clearWorkTasksCache(): void {
+    this.workTasksCache = null;
+    this.workTasksCacheExpiry = 0;
+    console.log('🗑️ 業務依頼 cache cleared');
   }
 
   /**
@@ -1260,6 +1354,7 @@ export class EnhancedAutoSyncService {
       next_call_date: mappedData.next_call_date || null,
       pinrich_status: mappedData.pinrich_status || null,
       is_unreachable: this.convertIsUnreachable(row['不通']),
+      unreachable_status: row['不通'] ? String(row['不通']) : null,  // 不通ステータス（文字列）を追加
       updated_at: new Date().toISOString(),
     };
 
@@ -1469,6 +1564,7 @@ export class EnhancedAutoSyncService {
       next_call_date: mappedData.next_call_date || null,
       pinrich_status: mappedData.pinrich_status || null,
       is_unreachable: this.convertIsUnreachable(row['不通']),
+      unreachable_status: row['不通'] ? String(row['不通']) : null,  // 不通ステータス（文字列）を追加
     };
 
     // 物件関連フィールドを追加
@@ -1828,7 +1924,7 @@ export class EnhancedAutoSyncService {
 
   /**
    * Phase 4.7: property_details同期を実行
-   * work_tasksにspreadsheet_urlがある物件で、property_detailsにコメントデータがない物件を同期
+   * 業務依頼シートにspreadsheet_urlがある物件で、property_detailsにコメントデータがない物件を同期
    */
   async syncMissingPropertyDetails(): Promise<{
     success: boolean;
@@ -1841,18 +1937,10 @@ export class EnhancedAutoSyncService {
     try {
       console.log('📝 Starting property details sync...');
 
-      // 1. work_tasksからspreadsheet_urlが入っている物件を取得
-      const { data: workTasks, error: workTasksError } = await this.supabase
-        .from('work_tasks')
-        .select('property_number, spreadsheet_url')
-        .not('spreadsheet_url', 'is', null);
-
-      if (workTasksError) {
-        throw new Error(`Failed to read work_tasks: ${workTasksError.message}`);
-      }
-
-      const workTasksPropertyNumbers = new Set(workTasks.map(wt => wt.property_number));
-      console.log(`📊 Properties with spreadsheet_url in work_tasks: ${workTasksPropertyNumbers.size}`);
+      // 1. 業務依頼シートから物件番号とスプレッドシートURLを取得（キャッシュ付き）
+      const workTasksMap = await this.getWorkTasksFromSpreadsheet();
+      const workTasksPropertyNumbers = new Set(workTasksMap.keys());
+      console.log(`📊 Properties with spreadsheet_url in 業務依頼 sheet: ${workTasksPropertyNumbers.size}`);
 
       // 2. これらの物件のproperty_detailsを取得
       const propertyNumbers = Array.from(workTasksPropertyNumbers);
@@ -1865,16 +1953,33 @@ export class EnhancedAutoSyncService {
         throw new Error(`Failed to read property_details: ${detailsError.message}`);
       }
 
-      // 3. コメントデータが空の物件をフィルタリング
-      const emptyCommentProperties = details.filter(p => 
-        !p.favorite_comment && 
-        (!p.recommended_comments || p.recommended_comments.length === 0) &&
-        (!p.athome_data || p.athome_data.length === 0)
-      );
+      // 3. property_detailsに存在する物件のSetを作成
+      const existingDetailsSet = new Set(details.map(d => d.property_number));
 
-      console.log(`🆕 Properties with empty comments: ${emptyCommentProperties.length}`);
+      // 4. コメントデータが空の物件をフィルタリング
+      // - property_detailsに存在しない物件
+      // - property_detailsに存在するがコメントデータが空の物件
+      const emptyCommentPropertyNumbers: string[] = [];
 
-      if (emptyCommentProperties.length === 0) {
+      for (const propertyNumber of propertyNumbers) {
+        if (!existingDetailsSet.has(propertyNumber)) {
+          // property_detailsに存在しない
+          emptyCommentPropertyNumbers.push(propertyNumber);
+        } else {
+          // property_detailsに存在するがコメントデータが空
+          const detail = details.find(d => d.property_number === propertyNumber);
+          if (detail && 
+              !detail.favorite_comment && 
+              (!detail.recommended_comments || detail.recommended_comments.length === 0) &&
+              (!detail.athome_data || detail.athome_data.length === 0)) {
+            emptyCommentPropertyNumbers.push(propertyNumber);
+          }
+        }
+      }
+
+      console.log(`🆕 Properties with empty comments: ${emptyCommentPropertyNumbers.length}`);
+
+      if (emptyCommentPropertyNumbers.length === 0) {
         const duration_ms = Date.now() - startTime;
         return {
           success: true,
@@ -1884,12 +1989,11 @@ export class EnhancedAutoSyncService {
         };
       }
 
-      // 4. 物件種別を取得
-      const emptyPropertyNumbers = emptyCommentProperties.map(p => p.property_number);
+      // 5. 物件種別を取得
       const { data: listings, error: listingsError } = await this.supabase
         .from('property_listings')
         .select('property_number, property_type')
-        .in('property_number', emptyPropertyNumbers);
+        .in('property_number', emptyCommentPropertyNumbers);
 
       if (listingsError) {
         throw new Error(`Failed to read property_listings: ${listingsError.message}`);
@@ -1900,7 +2004,7 @@ export class EnhancedAutoSyncService {
         propertyTypeMap.set(l.property_number, l.property_type);
       });
 
-      // 5. AthomeSheetSyncServiceを使用して同期
+      // 6. AthomeSheetSyncServiceを使用して同期
       const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
       const athomeSheetSyncService = new AthomeSheetSyncService();
 
@@ -1909,15 +2013,14 @@ export class EnhancedAutoSyncService {
 
       // バッチ処理（10件ずつ、3秒間隔）
       const BATCH_SIZE = 10;
-      for (let i = 0; i < emptyCommentProperties.length; i += BATCH_SIZE) {
-        const batch = emptyCommentProperties.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < emptyCommentPropertyNumbers.length; i += BATCH_SIZE) {
+        const batch = emptyCommentPropertyNumbers.slice(i, i + BATCH_SIZE);
         const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(emptyCommentProperties.length / BATCH_SIZE);
+        const totalBatches = Math.ceil(emptyCommentPropertyNumbers.length / BATCH_SIZE);
 
         console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} properties)...`);
 
-        for (const property of batch) {
-          const propertyNumber = property.property_number;
+        for (const propertyNumber of batch) {
           const propertyType = propertyTypeMap.get(propertyNumber);
 
           if (!propertyType) {
@@ -1962,7 +2065,7 @@ export class EnhancedAutoSyncService {
         }
 
         // バッチ間に3秒待機（APIクォータ対策）
-        if (i + BATCH_SIZE < emptyCommentProperties.length) {
+        if (i + BATCH_SIZE < emptyCommentPropertyNumbers.length) {
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
@@ -2003,6 +2106,7 @@ export class EnhancedAutoSyncService {
     // 手動トリガーまたは明示的にキャッシュクリアが指定された場合、キャッシュをクリア
     if (clearCache || triggeredBy === 'manual') {
       this.clearSpreadsheetCache();
+      this.clearWorkTasksCache(); // 業務依頼シートのキャッシュもクリア
     }
     
     try {
@@ -2084,15 +2188,17 @@ export class EnhancedAutoSyncService {
         duration_ms: 0,
       };
 
-      // Phase 4.6: 新規物件追加同期（一時的に無効化）
-      // 🚨 Google Sheets APIクォータ制限対策のため、一時的に無効化
-      console.log('\n⏭️  Phase 4.6: New Property Addition Sync (Temporarily Disabled)');
-      console.log('   Reason: Google Sheets API quota limit prevention');
-      let newPropertyAdditionResult = {
-        added: 0,
-        failed: 0,
-        duration_ms: 0,
-      };
+      // Phase 4.6: 新規物件追加同期
+      console.log('\n🆕 Phase 4.6: New Property Addition Sync');
+      console.log('   Syncing new properties from spreadsheet...');
+      
+      const newPropertyAdditionResult = await this.syncNewPropertyAddition();
+      
+      if (newPropertyAdditionResult.success) {
+        console.log(`✅ New property addition sync completed: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.failed} failed`);
+      } else {
+        console.log(`⚠️  New property addition sync completed with errors: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.failed} failed`);
+      }
 
       // Phase 4.7: property_details同期
       console.log('\n📝 Phase 4.7: Property Details Sync');

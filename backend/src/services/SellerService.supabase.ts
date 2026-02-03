@@ -719,8 +719,20 @@ export class SellerService extends BaseRepository {
       includeDeleted = false, // デフォルトで削除済みを除外
       statusCategory, // サイドバーカテゴリフィルター
       visitAssignee, // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      visitStatus, // 訪問ステータスフィルター（'scheduled' | 'completed'）
       todayCallWithInfoLabel, // 当日TEL（内容）のサブカテゴリフィルター
     } = params;
+
+    // デバッグログ
+    if (statusCategory === 'todayCallAssigned') {
+      console.log('🔍 [listSellers] todayCallAssigned params:', {
+        statusCategory,
+        visitAssignee,
+        visitStatus,
+        page,
+        pageSize,
+      });
+    }
 
     // JST今日の日付を取得
     const now = new Date();

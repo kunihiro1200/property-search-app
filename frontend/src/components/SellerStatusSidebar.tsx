@@ -46,7 +46,7 @@ interface SellerStatusSidebarProps {
   /** 選択中の営担イニシャル（訪問予定/訪問済みで使用） */
   selectedVisitAssignee?: string;
   /** カテゴリ選択時のコールバック（売主リストページで使用） */
-  onCategorySelect?: (category: StatusCategory, visitAssignee?: string) => void;
+  onCategorySelect?: (category: StatusCategory, visitAssignee?: string, visitStatus?: 'scheduled' | 'completed') => void;
   /** 通話モードページかどうか */
   isCallMode?: boolean;
   /** 売主リスト（展開時に表示する売主データ） */
@@ -352,6 +352,9 @@ export default function SellerStatusSidebar({
     const byAssigneeKey = category === 'visitScheduled' ? 'visitScheduledByAssignee' : 'visitCompletedByAssignee';
     const byAssigneeData = categoryCounts?.[byAssigneeKey] || [];
     
+    // 当日TEL（担当）のカウントを取得
+    const todayCallAssignedData = categoryCounts?.todayCallAssignedByAssignee || [];
+    
     // APIからイニシャル別カウントが取得できた場合はそれを使用
     if (byAssigneeData.length > 0) {
       return (
@@ -367,8 +370,12 @@ export default function SellerStatusSidebar({
               : (selectedCategory === category && selectedVisitAssignee === initial);
             const label = `${prefix}(${initial})`;
             
+            // このイニシャルの当日TEL（担当）カウントを取得
+            const todayCallCount = todayCallAssignedData.find(d => d.initial === initial)?.count || 0;
+            
             return (
               <Box key={visitKey}>
+                {/* 訪問予定/訪問済みボタン */}
                 <Button
                   fullWidth
                   onClick={() => {
@@ -423,6 +430,70 @@ export default function SellerStatusSidebar({
                     />
                   </Box>
                 </Button>
+                
+                {/* 当日TEL（担当）サブカテゴリー - インデント表示 */}
+                {todayCallCount > 0 && (
+                  <Button
+                    fullWidth
+                    onClick={() => {
+                      if (isCallMode) {
+                        // 通話モードページの場合、最初の売主の通話モードページに遷移
+                        const todayCallSellers = validSellers.filter(s => 
+                          s.visit_assignee === initial && 
+                          s.next_call_date && 
+                          new Date(s.next_call_date) <= new Date()
+                        );
+                        if (todayCallSellers.length > 0) {
+                          const firstSeller = todayCallSellers[0];
+                          navigate(`/sellers/${firstSeller.id}/call`);
+                        }
+                      } else {
+                        // 売主リストページの場合、当日TEL（担当）を選択
+                        // 🚨 重要: visitAssigneeとvisitStatusパラメータを渡す
+                        // - visitAssignee: その営業担当が担当の売主のみを表示
+                        // - visitStatus: 訪問予定 or 訪問済みを区別（カテゴリの排他性）
+                        // 条件: 営担=initial + 状況（当社）に「追客中」が含まれる + 次電日が今日以前
+                        const isTodayCallSelected = selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial;
+                        if (isTodayCallSelected) {
+                          onCategorySelect?.('all', undefined, undefined);
+                        } else {
+                          setExpandedCategory(null);
+                          // categoryが'visitScheduled'なら'scheduled'、'visitCompleted'なら'completed'を渡す
+                          const visitStatus = category === 'visitScheduled' ? 'scheduled' : 'completed';
+                          onCategorySelect?.('todayCallAssigned', initial, visitStatus);
+                        }
+                      }
+                    }}
+                    sx={{ 
+                      justifyContent: 'space-between', 
+                      textAlign: 'left',
+                      fontSize: '0.8rem',
+                      py: 0.5,
+                      px: 1.5,
+                      pl: 3,  // インデント
+                      color: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial ? 'white' : '#ff5722',
+                      bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial ? '#ff5722' : 'transparent',
+                      borderRadius: 1,
+                      '&:hover': {
+                        bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial ? '#ff5722' : '#ff572215',
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>└ {category === 'visitScheduled' ? '未' : '済'}当日TEL({initial})</span>
+                      <Chip 
+                        label={todayCallCount} 
+                        size="small"
+                        sx={{ 
+                          height: 18, 
+                          fontSize: '0.65rem',
+                          bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial ? 'rgba(255,255,255,0.3)' : undefined,
+                          color: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === initial ? 'white' : undefined,
+                        }}
+                      />
+                    </Box>
+                  </Button>
+                )}
               </Box>
             );
           })}
@@ -450,8 +521,17 @@ export default function SellerStatusSidebar({
             : (selectedCategory === category && selectedVisitAssignee === initial);
           const label = `${prefix}(${initial})`;
           
+          // このイニシャルの当日TEL（担当）カウントを計算
+          const todayCallSellers = validSellers.filter(s => 
+            s.visit_assignee === initial && 
+            s.next_call_date && 
+            new Date(s.next_call_date) <= new Date()
+          );
+          const todayCallCount = todayCallSellers.length;
+          
           return (
             <Box key={visitKey}>
+              {/* 訪問予定/訪問済みボタン */}
               <Button
                 fullWidth
                 onClick={() => {

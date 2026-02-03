@@ -852,93 +852,35 @@ const CallModePage = () => {
       return;
     }
     
+    // 現在の売主の営担を取得
+    if (!seller || !seller.visitAssignee) {
+      console.log('⚠️ 現在の売主の営担が設定されていません。サイドバーを表示しません。');
+      setSidebarSellers([]);
+      setSidebarLoading(false);
+      return;
+    }
+    
+    const currentVisitAssignee = seller.visitAssignee;
+    console.log(`📋 営担「${currentVisitAssignee}」の売主のみを取得します`);
+    
     try {
-      // サイドバーに表示される各カテゴリの売主を並列で取得
-      const categories = [
-        'visitScheduled',      // 訪問予定
-        'visitCompleted',      // 訪問済み
-        'todayCallAssigned',   // 当日TEL（担当）
-        'todayCall',           // 当日TEL分
-        'todayCallWithInfo',   // コミュニケーション情報別カテゴリ
-        'unvaluated',          // 未査定
-        'mailingPending',      // 査定（郵送）
-      ];
+      // 営担でフィルタリングした売主を取得（全件）
+      console.log('📡 営担でフィルタリングした売主を取得中...');
       
-      console.log('📡 各カテゴリの売主を並列取得中...');
-      
-      const responses = await Promise.all(
-        categories.map(category =>
-          api.get('/api/sellers', {
-            params: {
-              page: 1,
-              pageSize: 500, // バックエンドの最大値は500
-              sortBy: 'next_call_date',
-              sortOrder: 'asc',
-              statusCategory: category,
-            },
-          }).catch(err => {
-            console.error(`❌ ${category}の取得エラー:`, err);
-            return { data: { data: [] } };
-          })
-        )
-      );
-      
-      // 全カテゴリの売主を結合（重複を除去）
-      const allSellersMap = new Map<string, any>();
-      responses.forEach((response, index) => {
-        const sellers = response.data?.data || [];
-        console.log(`✅ ${categories[index]}: ${sellers.length}件`);
-        
-        // 訪問予定/訪問済みの場合、詳細ログを出力
-        if (categories[index] === 'visitScheduled' || categories[index] === 'visitCompleted') {
-          console.log(`  === ${categories[index]}の詳細 ===`);
-          sellers.forEach((s: any) => {
-            console.log(`    ${s.sellerNumber}: visitDate=${s.visitDate}, visitAssignee=${s.visitAssignee}`);
-          });
-        }
-        
-        // AA376が含まれているか確認
-        const hasAA376 = sellers.some((s: any) => s.sellerNumber === 'AA376' || s.seller_number === 'AA376');
-        if (hasAA376) {
-          console.log(`  → AA376が${categories[index]}に含まれています`);
-        }
-        sellers.forEach((seller: any) => {
-          if (seller.id && !allSellersMap.has(seller.id)) {
-            allSellersMap.set(seller.id, seller);
-          }
-        });
+      const response = await api.get('/api/sellers', {
+        params: {
+          page: 1,
+          pageSize: 500, // バックエンドの最大値は500
+          sortBy: 'next_call_date',
+          sortOrder: 'asc',
+          statusCategory: 'visitScheduled', // 営担でフィルタリングするために使用
+          visitAssignee: currentVisitAssignee,
+        },
       });
       
-      const allSellers = Array.from(allSellersMap.values());
+      const allSellers = response.data?.data || [];
       console.log('=== サイドバー売主リスト取得完了 ===');
-      console.log('合計取得件数（重複除去後）:', allSellers.length);
-      
-      // 訪問予定/訪問済みの売主を確認
-      const visitScheduledSellers = allSellers.filter((s: any) => {
-        const visitAssignee = s.visitAssignee || s.visit_assignee || '';
-        if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') return false;
-        const visitDate = s.visitDate || s.visit_date;
-        if (!visitDate) return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const vDate = new Date(visitDate);
-        vDate.setHours(0, 0, 0, 0);
-        return vDate >= today;
-      });
-      const visitCompletedSellers = allSellers.filter((s: any) => {
-        const visitAssignee = s.visitAssignee || s.visit_assignee || '';
-        if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') return false;
-        const visitDate = s.visitDate || s.visit_date;
-        if (!visitDate) return false;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const vDate = new Date(visitDate);
-        vDate.setHours(0, 0, 0, 0);
-        return vDate < today;
-      });
-      console.log('=== フロントエンドでのフィルタリング結果 ===');
-      console.log('訪問予定（フィルタリング後）:', visitScheduledSellers.length);
-      console.log('訪問済み（フィルタリング後）:', visitCompletedSellers.length);
+      console.log(`営担「${currentVisitAssignee}」の売主件数:`, allSellers.length);
       
       setSidebarSellers(allSellers);
       

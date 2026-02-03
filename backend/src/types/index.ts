@@ -435,6 +435,9 @@ export interface ListSellersParams {
   visitAssignee?: string;
   // 当日TEL（内容）のサブカテゴリフィルター（例: "当日TEL(Eメール)"）
   todayCallWithInfoLabel?: string;
+  // 訪問ステータス（'scheduled' = 訪問予定, 'completed' = 訪問済み）
+  // 当日TEL（担当）のカテゴリー排他性のために使用
+  visitStatus?: 'scheduled' | 'completed';
 }
 
 export interface PaginatedResult<T> {
