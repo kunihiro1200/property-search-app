@@ -236,7 +236,10 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
 
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
+    console.log('📍 [Coordinates useEffect] TRIGGERED - isLoaded:', isLoaded, 'properties.length:', properties.length);
+    
     if (!isLoaded || properties.length === 0) {
+      console.log('📍 [Coordinates useEffect] Skipping - isLoaded:', isLoaded, 'properties.length:', properties.length);
       return;
     }
 
@@ -249,9 +252,11 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
         lng: property.longitude,
       }));
     
-    console.log(`PropertyMapView: ${propertiesWithCoordinates.length}/${properties.length} properties have coordinates`);
+    console.log(`📍 [Coordinates useEffect] PropertyMapView: ${propertiesWithCoordinates.length}/${properties.length} properties have coordinates`);
+    console.log('📍 [Coordinates useEffect] Sample property:', propertiesWithCoordinates[0]);
     
     setPropertiesWithCoords(propertiesWithCoordinates);
+    console.log('📍 [Coordinates useEffect] setPropertiesWithCoords called');
   }, [properties, isLoaded]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
