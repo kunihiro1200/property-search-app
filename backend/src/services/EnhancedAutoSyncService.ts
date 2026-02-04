@@ -9,6 +9,7 @@ import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { ColumnMapper } from './ColumnMapper';
 import { PropertySyncHandler } from './PropertySyncHandler';
 import { encrypt } from '../utils/encryption';
+import axios from 'axios';
 import {
   ValidationResult,
   DeletionResult,
@@ -1709,6 +1710,16 @@ export class EnhancedAutoSyncService {
         // 物件作成失敗は警告のみ（売主は既に作成済み）
         // エラーを再スローしない（売主同期は成功とみなす）
       }
+
+      // 座標を自動取得（物件住所がある場合のみ）
+      if (propertyAddress && !newSeller.latitude && !newSeller.longitude) {
+        try {
+          await this.fetchAndSaveCoordinates(newSeller.id, sellerNumber, String(propertyAddress));
+        } catch (error: any) {
+          console.warn(`⚠️ ${sellerNumber}: 座標取得失敗 (${error.message})`);
+          // 座標取得失敗は警告のみ（売主同期は成功とみなす）
+        }
+      }
     }
   }
 
@@ -2289,6 +2300,55 @@ export class EnhancedAutoSyncService {
         syncedAt: endTime,
         totalDurationMs: endTime.getTime() - startTime.getTime(),
       };
+    }
+  }
+
+  /**
+   * 住所から座標を取得してデータベースに保存
+   * 
+   * @param sellerId - 売主ID
+   * @param sellerNumber - 売主番号
+   * @param address - 物件住所
+   */
+  private async fetchAndSaveCoordinates(
+    sellerId: string,
+    sellerNumber: string,
+    address: string
+  ): Promise<void> {
+    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+    
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.warn(`⚠️ ${sellerNumber}: GOOGLE_MAPS_API_KEY が設定されていません`);
+      return;
+    }
+
+    try {
+      // Geocoding APIで座標を取得
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await axios.get(url);
+      
+      if (response.data.status === 'OK' && response.data.results.length > 0) {
+        const location = response.data.results[0].geometry.location;
+        
+        // データベースに座標を保存
+        const { error: updateError } = await this.supabase
+          .from('sellers')
+          .update({
+            latitude: location.lat,
+            longitude: location.lng,
+          })
+          .eq('id', sellerId);
+        
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+        
+        console.log(`✅ ${sellerNumber}: 座標取得成功 (${location.lat}, ${location.lng})`);
+      } else {
+        console.warn(`⚠️ ${sellerNumber}: 座標取得失敗 (${response.data.status})`);
+      }
+    } catch (error: any) {
+      throw new Error(`座標取得エラー: ${error.message}`);
     }
   }
 }

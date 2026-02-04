@@ -53,6 +53,7 @@ import { getActiveEmployees, Employee } from '../services/employeeService';
 import SellerStatusSidebar from '../components/SellerStatusSidebar';
 import { getSenderAddress, saveSenderAddress } from '../utils/senderAddressStorage';
 import { useCallModeQuickButtonState } from '../hooks/useCallModeQuickButtonState';
+import PropertyMapSection from '../components/PropertyMapSection';
 
 import { formatCurrentStatusDetailed } from '../utils/propertyStatusFormatter';
 
@@ -2860,6 +2861,21 @@ HP：https://ifoo-oita.com/
                 );
               })()}
             </Paper>
+
+            {/* 地図表示（売主番号が設定されている場合のみ表示） */}
+            {(() => {
+              const propInfo = getPropertyInfo();
+              console.log('🗺️ [CallModePage] seller:', seller);
+              console.log('🗺️ [CallModePage] seller.sellerNumber:', seller?.sellerNumber);
+              console.log('🗺️ [CallModePage] propInfo.address:', propInfo.address);
+              
+              if (seller?.sellerNumber) {
+                return <PropertyMapSection sellerNumber={seller.sellerNumber} propertyAddress={propInfo.address} />;
+              }
+              
+              console.log('🗺️ [CallModePage] 地図を表示しない（売主番号が未設定）');
+              return null;
+            })()}
 
             {/* 売主情報 */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>

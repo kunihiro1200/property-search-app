@@ -66,6 +66,7 @@ import publicPropertiesRoutes from './routes/publicProperties';
 import publicInquiriesRoutes from './routes/publicInquiries';
 import propertyListingSyncRoutes from './routes/propertyListingSync';
 import geocodeRoutes from './routes/geocode';
+import geocodingRoutes from './routes/geocoding';
 import urlRedirectRoutes from './routes/urlRedirect';
 import { activityLogger } from './middleware/activityLogger';
 
@@ -291,6 +292,7 @@ app.use('/api/gmail', gmailRoutes);
 app.use('/api/public/inquiries', publicInquiriesRoutes); // 公開物件問い合わせAPI（認証不要）
 app.use('/api/public', publicPropertiesRoutes); // 公開物件サイト用API（認証不要なので先に登録）
 app.use('/api/geocode', geocodeRoutes); // ジオコーディング座標保存API（認証不要）
+app.use('/api/geocoding', geocodingRoutes); // ジオコーディングAPI（住所→座標変換、認証不要）
 app.use('/api/url-redirect', urlRedirectRoutes); // 短縮URLリダイレクト解決API（認証不要）
 app.use('/api', inquiryHistoryRoutes);
 app.use('/api/audit-logs', auditLogRoutes);

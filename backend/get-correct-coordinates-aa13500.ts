@@ -1,0 +1,35 @@
+import axios from 'axios';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+(async () => {
+  const address = '大分市星和台2丁目2の18の9';
+  
+  console.log('🗺️ 住所:', address);
+  console.log('🔍 Geocoding APIで座標を取得中...');
+  
+  try {
+    const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+      params: {
+        address: address,
+        key: GOOGLE_MAPS_API_KEY,
+      },
+    });
+    
+    if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const location = response.data.results[0].geometry.location;
+      console.log('✅ 座標取得成功:');
+      console.log('緯度:', location.lat);
+      console.log('経度:', location.lng);
+      console.log('フォーマット済み住所:', response.data.results[0].formatted_address);
+    } else {
+      console.error('❌ 座標取得失敗:', response.data.status);
+      console.error('エラーメッセージ:', response.data.error_message);
+    }
+  } catch (error: any) {
+    console.error('❌ エラー:', error.message);
+  }
+})();

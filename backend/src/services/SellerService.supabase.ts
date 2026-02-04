@@ -1341,6 +1341,9 @@ export class SellerService extends BaseRepository {
         floorPlan: seller.floor_plan,
         // Current status (状況売主)
         currentStatus: seller.current_status,
+        // Coordinates (座標)
+        latitude: seller.latitude,
+        longitude: seller.longitude,
       };
       
       return decrypted;
@@ -1821,5 +1824,27 @@ export class SellerService extends BaseRepository {
       assigneeGroups,
       todayCallWithInfoGroups,
     };
+  }
+
+  /**
+   * 売主の座標を更新
+   * @param sellerId - 売主ID
+   * @param latitude - 緯度
+   * @param longitude - 経度
+   */
+  async updateCoordinates(sellerId: string, latitude: number, longitude: number): Promise<void> {
+    const { error } = await this.table('sellers')
+      .update({ latitude, longitude })
+      .eq('id', sellerId);
+    
+    if (error) {
+      throw new Error(`Failed to update coordinates: ${error.message}`);
+    }
+    
+    // キャッシュを無効化
+    const cacheKey = CacheHelper.generateKey('seller', sellerId);
+    await CacheHelper.del(cacheKey);
+    
+    console.log(`✅ Coordinates updated for seller ${sellerId}: (${latitude}, ${longitude})`);
   }
 }

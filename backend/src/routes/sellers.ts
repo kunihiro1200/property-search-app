@@ -7,7 +7,66 @@ import { CreateSellerRequest, ListSellersParams } from '../types';
 const router = Router();
 const sellerService = new SellerService();
 
-// 全てのルートに認証を適用
+/**
+ * 売主番号で売主情報を取得（認証不要）
+ * GET /api/sellers/by-number/:sellerNumber
+ */
+router.get('/by-number/:sellerNumber', async (req: Request, res: Response) => {
+  try {
+    const { sellerNumber } = req.params;
+    console.log(`🔍 Getting seller by number: ${sellerNumber}`);
+
+    // 売主番号で検索
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+
+    const { data: seller, error } = await supabase
+      .from('sellers')
+      .select('id, seller_number, latitude, longitude, property_address')
+      .eq('seller_number', sellerNumber)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !seller) {
+      console.log(`❌ Seller not found: ${sellerNumber}`);
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Seller not found',
+          retryable: false,
+        },
+      });
+    }
+
+    console.log(`✅ Seller found:`, {
+      sellerNumber: seller.seller_number,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+    });
+
+    res.json({
+      id: seller.id,
+      sellerNumber: seller.seller_number,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+      propertyAddress: seller.property_address,
+    });
+  } catch (error) {
+    console.error('Get seller by number error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_SELLER_ERROR',
+        message: 'Failed to get seller',
+        retryable: true,
+      },
+    });
+  }
+});
+
+// 全てのルートに認証を適用（/by-number/:sellerNumberを除く）
 router.use(authenticate);
 
 /**
@@ -749,6 +808,52 @@ router.get(
         success: false,
         error: 'FOLLOW_UP_LOG_HISTORY_ERROR',
         message: error instanceof Error ? error.message : 'Failed to get follow-up log history',
+      });
+    }
+  }
+);
+
+/**
+ * 売主の座標を更新
+ * PATCH /api/sellers/:id/coordinates
+ */
+router.patch(
+  '/:id/coordinates',
+  [
+    body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+    body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Validation failed',
+            details: errors.array(),
+            retryable: false,
+          },
+        });
+      }
+
+      const { id } = req.params;
+      const { latitude, longitude } = req.body;
+
+      console.log(`🗺️ Updating coordinates for seller ${id}:`, { latitude, longitude });
+
+      await sellerService.updateCoordinates(id, latitude, longitude);
+
+      res.json({
+        success: true,
+        message: 'Coordinates updated successfully',
+      });
+    } catch (error) {
+      console.error('Update coordinates error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'UPDATE_COORDINATES_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to update coordinates',
       });
     }
   }

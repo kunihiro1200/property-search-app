@@ -199,6 +199,10 @@ export interface Seller {
   structure?: string; // 構造
   floorPlan?: string; // 間取り
   floor_plan?: string | null; // 間取り - snake_case版
+  
+  // 座標情報（地図表示用）
+  latitude?: number; // 緯度
+  longitude?: number; // 経度
 }
 
 export interface DuplicateMatch {

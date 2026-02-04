@@ -182,6 +182,10 @@ export interface Seller {
   buildYear?: number; // 築年
   structure?: string; // 構造
   floorPlan?: string; // 間取り
+  
+  // 座標情報（地図表示用）
+  latitude?: number; // 緯度
+  longitude?: number; // 経度
 }
 
 export interface PropertyInfo {
