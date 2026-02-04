@@ -26,6 +26,7 @@ import {
   isTodayCallWithInfo,
   isVisitScheduled,
   isVisitCompleted,
+  isVisitOther,
   isUnvaluated,
   isMailingPending,
   isTodayCallNotStarted,
@@ -61,9 +62,10 @@ interface SellerStatusSidebarProps {
 const getSellerCategory = (seller: Seller | any): StatusCategory | null => {
   if (!seller) return null;
   
-  // 優先順位: 訪問予定 > 訪問済み > 当日TEL分 > 当日TEL（内容） > 未査定 > 査定（郵送）
+  // 優先順位: 訪問予定 > 訪問済み > その他（担当） > 当日TEL分 > 当日TEL（内容） > 未査定 > 査定（郵送）
   if (isVisitScheduled(seller)) return 'visitScheduled';
   if (isVisitCompleted(seller)) return 'visitCompleted';
+  if (isVisitOther(seller)) return 'visitOther';
   if (isTodayCall(seller)) return 'todayCall';
   if (isTodayCallWithInfo(seller)) return 'todayCallWithInfo';
   if (isUnvaluated(seller)) return 'unvaluated';
@@ -83,6 +85,8 @@ const filterSellersByCategory = (sellers: any[], category: StatusCategory): any[
       return sellers.filter(isVisitScheduled);
     case 'visitCompleted':
       return sellers.filter(isVisitCompleted);
+    case 'visitOther':
+      return sellers.filter(isVisitOther);
     case 'todayCall':
       return sellers.filter(isTodayCall);
     case 'todayCallWithInfo':
@@ -769,10 +773,146 @@ export default function SellerStatusSidebar({
       </Button>
       
       {/* ①訪問予定（イニシャル別に縦並び） */}
-      {renderVisitCategoryButtons('visitScheduled', '①訪問予定', '#2e7d32')}
-      
       {/* ②訪問済み（イニシャル別に縦並び） */}
-      {renderVisitCategoryButtons('visitCompleted', '②訪問済み', '#1976d2')}
+      {/* 新しい構造: 担当(イニシャル)別に表示 */}
+      {categoryCounts?.assigneeGroups && categoryCounts.assigneeGroups.length > 0 && (
+        categoryCounts.assigneeGroups.map((group) => {
+          const isSelected = selectedVisitAssignee === group.initial;
+          const label = `担当(${group.initial})`;
+          
+          return (
+            <Box key={`assignee-${group.initial}`}>
+              {/* 担当(イニシャル)ボタン */}
+              <Button
+                fullWidth
+                onClick={() => {
+                  if (isSelected) {
+                    onCategorySelect?.('all', undefined);
+                  } else {
+                    setExpandedCategory(null);
+                    onCategorySelect?.('visitScheduled', group.initial);
+                  }
+                }}
+                sx={{ 
+                  justifyContent: 'space-between', 
+                  textAlign: 'left',
+                  fontSize: '0.85rem',
+                  py: 0.75,
+                  px: 1.5,
+                  color: isSelected ? 'white' : '#1976d2',
+                  bgcolor: isSelected ? '#1976d2' : 'transparent',
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: isSelected ? '#1976d2' : '#1976d215',
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <span>{label}</span>
+                  <Chip 
+                    label={group.totalCount} 
+                    size="small"
+                    sx={{ 
+                      height: 20, 
+                      fontSize: '0.7rem',
+                      bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                      color: isSelected ? 'white' : undefined,
+                    }}
+                  />
+                </Box>
+              </Button>
+              
+              {/* 当日TEL(イニシャル)サブカテゴリー */}
+              {group.todayCallCount > 0 && (
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    const isTodayCallSelected = selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial;
+                    if (isTodayCallSelected) {
+                      onCategorySelect?.('all', undefined, undefined);
+                    } else {
+                      setExpandedCategory(null);
+                      onCategorySelect?.('todayCallAssigned', group.initial, undefined);
+                    }
+                  }}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    fontSize: '0.8rem',
+                    py: 0.5,
+                    px: 1.5,
+                    pl: 3,  // インデント
+                    color: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial ? 'white' : '#ff5722',
+                    bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial ? '#ff5722' : 'transparent',
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial ? '#ff5722' : '#ff572215',
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>└ 当日TEL({group.initial})</span>
+                    <Chip 
+                      label={group.todayCallCount} 
+                      size="small"
+                      sx={{ 
+                        height: 18, 
+                        fontSize: '0.65rem',
+                        bgcolor: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial ? 'rgba(255,255,255,0.3)' : undefined,
+                        color: selectedCategory === 'todayCallAssigned' && selectedVisitAssignee === group.initial ? 'white' : undefined,
+                      }}
+                    />
+                  </Box>
+                </Button>
+              )}
+              
+              {/* その他(イニシャル)サブカテゴリー */}
+              {group.otherCount > 0 && (
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    const isOtherSelected = selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial;
+                    if (isOtherSelected) {
+                      onCategorySelect?.('all', undefined, undefined);
+                    } else {
+                      setExpandedCategory(null);
+                      onCategorySelect?.('visitOther', group.initial, undefined);
+                    }
+                  }}
+                  sx={{ 
+                    justifyContent: 'space-between', 
+                    textAlign: 'left',
+                    fontSize: '0.8rem',
+                    py: 0.5,
+                    px: 1.5,
+                    pl: 3,  // インデント
+                    color: selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial ? 'white' : '#757575',
+                    bgcolor: selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial ? '#757575' : 'transparent',
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial ? '#757575' : '#75757515',
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>└ その他({group.initial})</span>
+                    <Chip 
+                      label={group.otherCount} 
+                      size="small"
+                      sx={{ 
+                        height: 18, 
+                        fontSize: '0.65rem',
+                        bgcolor: selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial ? 'rgba(255,255,255,0.3)' : undefined,
+                        color: selectedCategory === 'visitOther' && selectedVisitAssignee === group.initial ? 'white' : undefined,
+                      }}
+                    />
+                  </Box>
+                </Button>
+              )}
+            </Box>
+          );
+        })
+      )}
       
       {renderCategoryButton('todayCall', '③当日TEL分', '#d32f2f')}
       

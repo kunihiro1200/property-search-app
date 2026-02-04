@@ -2,7 +2,7 @@
 tags: [general, troubleshooting, git, best-practices, critical]
 priority: high
 context: all
-inclusion: always
+inclusion: manual
 last-verified: 2026-01-25
 ---
 

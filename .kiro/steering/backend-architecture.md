@@ -1,5 +1,5 @@
 ---
-inclusion: always
+inclusion: manual
 ---
 
 # バックエンドアーキテクチャ定義

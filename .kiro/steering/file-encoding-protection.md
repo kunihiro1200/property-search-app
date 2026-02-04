@@ -2,7 +2,7 @@
 tags: [general, git, encoding, file-management, troubleshooting, critical]
 priority: high
 context: all
-inclusion: always
+inclusion: manual
 last-verified: 2026-01-25
 ---
 

@@ -206,27 +206,26 @@ const CallModePage = () => {
   // サイドバー用のカテゴリカウント（APIから直接取得）
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
-    todayCallAssigned: number;
-    visitScheduled: number;
-    visitCompleted: number;
+    todayCallWithInfo: number;
     unvaluated: number;
     mailingPending: number;
     todayCallNotStarted: number;
     pinrichEmpty: number;
-    visitScheduledByAssignee: { initial: string; count: number }[];
-    visitCompletedByAssignee: { initial: string; count: number }[];
+    assigneeGroups: {
+      initial: string;
+      totalCount: number;
+      todayCallCount: number;
+      otherCount: number;
+    }[];
     todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
-    todayCallAssigned: 0,
-    visitScheduled: 0,
-    visitCompleted: 0,
+    todayCallWithInfo: 0,
     unvaluated: 0,
     mailingPending: 0,
     todayCallNotStarted: 0,
     pinrichEmpty: 0,
-    visitScheduledByAssignee: [],
-    visitCompletedByAssignee: [],
+    assigneeGroups: [],
     todayCallWithInfoGroups: [],
   });
 
@@ -822,15 +821,12 @@ const CallModePage = () => {
       // エラー時はカウントを0にリセット
       setSidebarCounts({
         todayCall: 0,
-        todayCallAssigned: 0,
-        visitScheduled: 0,
-        visitCompleted: 0,
+        todayCallWithInfo: 0,
         unvaluated: 0,
         mailingPending: 0,
         todayCallNotStarted: 0,
         pinrichEmpty: 0,
-        visitScheduledByAssignee: [],
-        visitCompletedByAssignee: [],
+        assigneeGroups: [],
         todayCallWithInfoGroups: [],
       });
     }
