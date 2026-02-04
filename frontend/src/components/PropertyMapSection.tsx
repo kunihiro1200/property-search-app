@@ -180,7 +180,7 @@ const PropertyMapSection: React.FC<PropertyMapSectionProps> = ({ sellerNumber, p
             zoom={DEFAULT_ZOOM}
             options={{
               zoomControl: true,           // ズームコントロールを表示
-              streetViewControl: false,    // ストリートビューコントロールを非表示
+              streetViewControl: true,     // ストリートビューコントロールを表示
               mapTypeControl: false,       // 地図タイプコントロールを非表示
               fullscreenControl: true,     // フルスクリーンコントロールを表示
               clickableIcons: false,       // アイコンをクリック不可に設定
