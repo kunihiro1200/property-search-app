@@ -83,7 +83,7 @@ router.get(
     query('firstCaller').optional().isString().withMessage('First caller must be a string'),
     query('duplicateConfirmed').optional().isBoolean().withMessage('Duplicate confirmed must be a boolean'),
     // サイドバーカテゴリフィルター
-    query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'unvaluated', 'mailingPending']).withMessage('Invalid status category'),
+    query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'visitOther', 'unvaluated', 'mailingPending', 'todayCallNotStarted', 'pinrichEmpty']).withMessage('Invalid status category'),
     // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
     query('visitAssignee').optional().isString().withMessage('Visit assignee must be a string'),
     // 当日TEL（内容）のサブカテゴリフィルター

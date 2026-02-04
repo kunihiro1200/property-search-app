@@ -124,30 +124,25 @@ export default function SellersPage() {
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
     todayCallWithInfo: number;
-    todayCallAssigned: number;
-    visitScheduled: number;
-    visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
     todayCallNotStarted: number;
     pinrichEmpty: number;
-    visitScheduledByAssignee: { initial: string; count: number }[];
-    visitCompletedByAssignee: { initial: string; count: number }[];
-    todayCallAssignedByAssignee: { initial: string; count: number }[];
+    assigneeGroups: {
+      initial: string;
+      totalCount: number;
+      todayCallCount: number;
+      otherCount: number;
+    }[];
     todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
-    todayCallAssigned: 0,
-    visitScheduled: 0,
-    visitCompleted: 0,
     unvaluated: 0,
     mailingPending: 0,
     todayCallNotStarted: 0,
     pinrichEmpty: 0,
-    visitScheduledByAssignee: [],
-    visitCompletedByAssignee: [],
-    todayCallAssignedByAssignee: [],
+    assigneeGroups: [],
     todayCallWithInfoGroups: [],
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
@@ -289,16 +284,11 @@ export default function SellersPage() {
       setSidebarCounts({
         todayCall: 0,
         todayCallWithInfo: 0,
-        todayCallAssigned: 0,
-        visitScheduled: 0,
-        visitCompleted: 0,
         unvaluated: 0,
         mailingPending: 0,
         todayCallNotStarted: 0,
         pinrichEmpty: 0,
-        visitScheduledByAssignee: [],
-        visitCompletedByAssignee: [],
-        todayCallAssignedByAssignee: [],
+        assigneeGroups: [],
         todayCallWithInfoGroups: [],
       });
     } finally {
@@ -311,14 +301,34 @@ export default function SellersPage() {
     fetchSidebarCounts();
   }, []);
 
+  // カテゴリまたは営担が変更された時、ページを0にリセット
   useEffect(() => {
+    setPage(0);
+  }, [selectedCategory, selectedVisitAssignee, selectedVisitStatus]);
+
+  useEffect(() => {
+    console.log('[SellersPage] Fetching sellers with:', {
+      selectedCategory,
+      selectedVisitAssignee,
+      selectedVisitStatus,
+      page,
+      rowsPerPage
+    });
     fetchSellers();
   }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory, selectedVisitAssignee, selectedVisitStatus]);
 
   const fetchSellers = async () => {
     try {
       setLoading(true);
-      const params: any = {
+      
+      // その他（担当）カテゴリの場合、visitAssigneeが設定されるまで待つ
+      if (selectedCategory === 'visitOther' && !selectedVisitAssignee) {
+        console.log('[fetchSellers] Skipping request: visitOther category without assignee');
+        setLoading(false);
+        return;
+      }
+      
+      let params: any = {
         page: page + 1,
         pageSize: rowsPerPage,
         sortBy: 'inquiry_date',
@@ -339,31 +349,63 @@ export default function SellersPage() {
       // サイドバーカテゴリフィルター
       if (selectedCategory && selectedCategory !== 'all') {
         params.statusCategory = selectedCategory;
-        
-        // 当日TEL（内容）のサブカテゴリフィルター
-        if (selectedCategory === 'todayCallWithInfo' && selectedVisitAssignee) {
-          params.todayCallWithInfoLabel = selectedVisitAssignee;
-        }
-        // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
-        else if ((selectedCategory === 'visitScheduled' || selectedCategory === 'visitCompleted') && selectedVisitAssignee) {
-          params.visitAssignee = selectedVisitAssignee;
-        }
-        // 当日TEL（担当）の営担フィルター（イニシャル指定）
-        else if (selectedCategory === 'todayCallAssigned' && selectedVisitAssignee) {
-          params.visitAssignee = selectedVisitAssignee;
-          // 訪問ステータスを渡す（訪問予定 or 訪問済み）
-          if (selectedVisitStatus) {
-            params.visitStatus = selectedVisitStatus;
-          }
+      }
+      
+      // 当日TEL（内容）のサブカテゴリフィルター
+      if (selectedCategory === 'todayCallWithInfo' && selectedVisitAssignee) {
+        params.todayCallWithInfoLabel = selectedVisitAssignee;
+      }
+      
+      // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      if ((selectedCategory === 'visitScheduled' || selectedCategory === 'visitCompleted') && selectedVisitAssignee) {
+        params.visitAssignee = selectedVisitAssignee;
+      }
+      
+      // 当日TEL（担当）の営担フィルター（イニシャル指定）
+      if (selectedCategory === 'todayCallAssigned' && selectedVisitAssignee) {
+        params.visitAssignee = selectedVisitAssignee;
+        // 訪問ステータスを渡す（訪問予定 or 訪問済み）
+        if (selectedVisitStatus) {
+          params.visitStatus = selectedVisitStatus;
         }
       }
       
+      // その他（担当）の営担フィルター（イニシャル指定）
+      console.log('[fetchSellers] Before visitOther check:', {
+        selectedCategory,
+        selectedVisitAssignee,
+        categoryType: typeof selectedCategory,
+        assigneeType: typeof selectedVisitAssignee,
+        categoryEquals: selectedCategory === 'visitOther',
+        assigneeTruthy: !!selectedVisitAssignee
+      });
+      if (selectedCategory === 'visitOther' && selectedVisitAssignee) {
+        // 🚨 重要: paramsオブジェクトを直接変更するのではなく、新しいオブジェクトを作成
+        params = {
+          ...params,
+          visitAssignee: selectedVisitAssignee
+        };
+        console.log('[fetchSellers] visitOther category selected with assignee:', selectedVisitAssignee);
+        console.log('[fetchSellers] params after setting visitAssignee:', JSON.stringify(params));
+      }
+      
+      console.log('[listSellers] Requesting with params:', params);
       const response = await api.get('/api/sellers', { params });
+      console.log('[listSellers] Response received:', {
+        dataLength: response.data.data?.length,
+        total: response.data.total
+      });
       
       setSellers(response.data.data);
       setTotal(response.data.total);
-    } catch (error) {
-      console.error('Failed to fetch sellers:', error);
+    } catch (error: any) {
+      console.error('[listSellers] Failed to fetch sellers:', error);
+      console.error('[listSellers] Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     } finally {
       setLoading(false);
     }
@@ -474,10 +516,11 @@ export default function SellersPage() {
             selectedCategory={selectedCategory}
             selectedVisitAssignee={selectedVisitAssignee}
             onCategorySelect={(category, visitAssignee, visitStatus) => {
+              console.log('[onCategorySelect] Called with:', { category, visitAssignee, visitStatus });
               setSelectedCategory(category);
               setSelectedVisitAssignee(visitAssignee);
               setSelectedVisitStatus(visitStatus);
-              setPage(0); // カテゴリが変わったらページを0にリセット
+              console.log('[onCategorySelect] State will be updated to:', { category, visitAssignee, visitStatus });
             }}
             isCallMode={false}
             sellers={sellers}
