@@ -772,9 +772,86 @@ export default function SellerStatusSidebar({
         )}
       </Button>
       
-      {/* ①訪問予定（イニシャル別に縦並び） */}
-      {/* ②訪問済み（イニシャル別に縦並び） */}
-      {/* 新しい構造: 担当(イニシャル)別に表示 */}
+      {renderCategoryButton('todayCall', '③当日TEL分', '#d32f2f')}
+      
+      {/* コミュニケーション情報別カテゴリ - 独立した本カテゴリとして表示 */}
+      {todayCallWithInfoGroups.map((group) => {
+        // 選択状態の判定:
+        // - 売主リストページ: カテゴリとラベルの両方が一致する場合
+        // - 通話モードページ: 現在の売主のカテゴリとラベルが一致する場合
+        const isSelected = isCallMode
+          ? (currentSellerCategory === 'todayCallWithInfo' && 
+             getTodayCallWithInfoLabel(currentSeller) === group.label)
+          : (selectedCategory === 'todayCallWithInfo' && 
+             selectedVisitAssignee === group.label);
+        
+        return (
+          <Button
+            key={group.label}
+            fullWidth
+            onClick={() => {
+              if (isCallMode) {
+                // 通話モードページの場合、最初の売主の通話モードページに遷移
+                // group.sellersがある場合はそれを使用、ない場合はvalidSellersから検索
+                const groupSellers = group.sellers || validSellers.filter(s => 
+                  isTodayCallWithInfo(s) && getTodayCallWithInfoLabel(s) === group.label
+                );
+                
+                if (groupSellers.length > 0) {
+                  const firstSeller = groupSellers[0];
+                  navigate(`/sellers/${firstSeller.id}/call`);
+                } else {
+                  console.warn(`${group.label}に該当する売主がいません`);
+                }
+              } else {
+                // 売主リストページの場合、カテゴリとグループを選択（現在の動作を維持）
+                if (isSelected) {
+                  // 既に選択中の場合は選択解除
+                  onCategorySelect?.('all', undefined);
+                } else {
+                  // 新しいカテゴリを選択
+                  setExpandedCategory(null);
+                  onCategorySelect?.('todayCallWithInfo', group.label);
+                }
+              }
+            }}
+            sx={{ 
+              justifyContent: 'space-between', 
+              textAlign: 'left',
+              fontSize: '0.85rem',
+              py: 0.75,
+              px: 1.5,
+              color: isSelected ? 'white' : '#9c27b0',
+              bgcolor: isSelected ? '#9c27b0' : 'transparent',
+              borderRadius: 1,
+              '&:hover': {
+                bgcolor: isSelected ? '#9c27b0' : '#9c27b015',
+              }
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span>{group.label}</span>
+              <Chip 
+                label={group.count} 
+                size="small"
+                sx={{ 
+                  height: 20, 
+                  fontSize: '0.7rem',
+                  bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
+                  color: isSelected ? 'white' : undefined,
+                }}
+              />
+            </Box>
+          </Button>
+        );
+      })}
+      
+      {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
+      {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}
+      {renderCategoryButton('todayCallNotStarted', '⑦当日TEL_未着手', '#ff9800')}
+      {renderCategoryButton('pinrichEmpty', '⑧Pinrich空欄', '#795548')}
+      
+      {/* 担当(イニシャル) - 最後に移動 */}
       {categoryCounts?.assigneeGroups && categoryCounts.assigneeGroups.length > 0 && (
         categoryCounts.assigneeGroups.map((group) => {
           const isSelected = selectedVisitAssignee === group.initial;
@@ -913,85 +990,6 @@ export default function SellerStatusSidebar({
           );
         })
       )}
-      
-      {renderCategoryButton('todayCall', '③当日TEL分', '#d32f2f')}
-      
-      {/* コミュニケーション情報別カテゴリ - 独立した本カテゴリとして表示 */}
-      {todayCallWithInfoGroups.map((group) => {
-        // 選択状態の判定:
-        // - 売主リストページ: カテゴリとラベルの両方が一致する場合
-        // - 通話モードページ: 現在の売主のカテゴリとラベルが一致する場合
-        const isSelected = isCallMode
-          ? (currentSellerCategory === 'todayCallWithInfo' && 
-             getTodayCallWithInfoLabel(currentSeller) === group.label)
-          : (selectedCategory === 'todayCallWithInfo' && 
-             selectedVisitAssignee === group.label);
-        
-        return (
-          <Button
-            key={group.label}
-            fullWidth
-            onClick={() => {
-              if (isCallMode) {
-                // 通話モードページの場合、最初の売主の通話モードページに遷移
-                // group.sellersがある場合はそれを使用、ない場合はvalidSellersから検索
-                const groupSellers = group.sellers || validSellers.filter(s => 
-                  isTodayCallWithInfo(s) && getTodayCallWithInfoLabel(s) === group.label
-                );
-                
-                if (groupSellers.length > 0) {
-                  const firstSeller = groupSellers[0];
-                  navigate(`/sellers/${firstSeller.id}/call`);
-                } else {
-                  console.warn(`${group.label}に該当する売主がいません`);
-                }
-              } else {
-                // 売主リストページの場合、カテゴリとグループを選択（現在の動作を維持）
-                if (isSelected) {
-                  // 既に選択中の場合は選択解除
-                  onCategorySelect?.('all', undefined);
-                } else {
-                  // 新しいカテゴリを選択
-                  setExpandedCategory(null);
-                  onCategorySelect?.('todayCallWithInfo', group.label);
-                }
-              }
-            }}
-            sx={{ 
-              justifyContent: 'space-between', 
-              textAlign: 'left',
-              fontSize: '0.85rem',
-              py: 0.75,
-              px: 1.5,
-              color: isSelected ? 'white' : '#9c27b0',
-              bgcolor: isSelected ? '#9c27b0' : 'transparent',
-              borderRadius: 1,
-              '&:hover': {
-                bgcolor: isSelected ? '#9c27b0' : '#9c27b015',
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <span>{group.label}</span>
-              <Chip 
-                label={group.count} 
-                size="small"
-                sx={{ 
-                  height: 20, 
-                  fontSize: '0.7rem',
-                  bgcolor: isSelected ? 'rgba(255,255,255,0.3)' : undefined,
-                  color: isSelected ? 'white' : undefined,
-                }}
-              />
-            </Box>
-          </Button>
-        );
-      })}
-      
-      {renderCategoryButton('unvaluated', '⑤未査定', '#ed6c02')}
-      {renderCategoryButton('mailingPending', '⑥査定（郵送）', '#0288d1')}
-      {renderCategoryButton('todayCallNotStarted', '⑦当日TEL_未着手', '#ff9800')}
-      {renderCategoryButton('pinrichEmpty', '⑧Pinrich空欄', '#795548')}
     </Box>
   );};
 
