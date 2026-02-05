@@ -104,11 +104,38 @@ export class AthomeSheetSyncService {
     spreadsheetId: string,
     propertyType: 'land' | 'detached_house' | 'apartment'
   ): Promise<AthomeCommentData> {
-    const sheetName = 'athome';
+    // シート名は末尾にスペースがある場合があるため、両方試す
+    const sheetNames = ['athome', 'athome '];
     const cellPositions = CELL_MAPPING[propertyType];
 
     if (!cellPositions) {
       console.error(`[AthomeSheetSyncService] Invalid property type: ${propertyType}`);
+      return {
+        favoriteComment: null,
+        recommendedComments: [],
+        panoramaUrl: null,
+      };
+    }
+
+    // 正しいシート名を見つける
+    let validSheetName: string | null = null;
+    for (const sheetName of sheetNames) {
+      try {
+        await this.sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `${sheetName}!A1`,
+        });
+        validSheetName = sheetName;
+        console.log(`[AthomeSheetSyncService] Found valid sheet name: "${validSheetName}"`);
+        break;
+      } catch (error) {
+        // このシート名は無効、次を試す
+        continue;
+      }
+    }
+
+    if (!validSheetName) {
+      console.error(`[AthomeSheetSyncService] Could not find athome sheet in spreadsheet ${spreadsheetId}`);
       return {
         favoriteComment: null,
         recommendedComments: [],
@@ -123,7 +150,7 @@ export class AthomeSheetSyncService {
       const favoriteResponse = await Promise.race([
         this.sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: `${sheetName}!${cellPositions.favoriteComment}`,
+          range: `${validSheetName}!${cellPositions.favoriteComment}`,
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout: favorite comment fetch')), 30000)
@@ -138,7 +165,7 @@ export class AthomeSheetSyncService {
       const recommendedResponse = await Promise.race([
         this.sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: `${sheetName}!${cellPositions.recommendedComments}`,
+          range: `${validSheetName}!${cellPositions.recommendedComments}`,
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout: recommended comments fetch')), 30000)
@@ -161,7 +188,7 @@ export class AthomeSheetSyncService {
       const panoramaResponse = await Promise.race([
         this.sheets.spreadsheets.values.get({
           spreadsheetId,
-          range: `${sheetName}!N1`,
+          range: `${validSheetName}!N1`,
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout: panorama URL fetch')), 30000)
