@@ -20,7 +20,6 @@ import api from '../services/api';
 interface NearbyBuyer {
   buyer_number: string;
   name: string;
-  phone: string;
   distribution_areas: string[];
   latest_status: string;
   latest_viewing_date: string;
@@ -141,7 +140,6 @@ const NearbyBuyersList = ({ sellerId }: NearbyBuyersListProps) => {
             <TableRow>
               <TableCell>買主番号</TableCell>
               <TableCell>氏名</TableCell>
-              <TableCell>電話番号</TableCell>
               <TableCell>希望エリア</TableCell>
               <TableCell>最新状況</TableCell>
               <TableCell>内覧日</TableCell>
@@ -169,7 +167,6 @@ const NearbyBuyersList = ({ sellerId }: NearbyBuyersListProps) => {
                   </Link>
                 </TableCell>
                 <TableCell>{buyer.name || '-'}</TableCell>
-                <TableCell>{buyer.phone || '-'}</TableCell>
                 <TableCell>
                   {buyer.distribution_areas && buyer.distribution_areas.length > 0 ? (
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>

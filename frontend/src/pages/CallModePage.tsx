@@ -55,6 +55,7 @@ import { getSenderAddress, saveSenderAddress } from '../utils/senderAddressStora
 import { useCallModeQuickButtonState } from '../hooks/useCallModeQuickButtonState';
 import PropertyMapSection from '../components/PropertyMapSection';
 import NearbyBuyersList from '../components/NearbyBuyersList';
+import CollapsibleSection from '../components/CollapsibleSection';
 
 import { formatCurrentStatusDetailed } from '../utils/propertyStatusFormatter';
 
@@ -2900,11 +2901,16 @@ HP：https://ifoo-oita.com/
 
             {/* 近隣買主リスト */}
             {seller?.id && (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  🏘️ 近隣買主リスト
-                </Typography>
-                <NearbyBuyersList sellerId={seller.id} />
+              <Box sx={{ mb: 2 }}>
+                <Button
+                  variant="contained"
+                  color="info"
+                  fullWidth
+                  onClick={() => window.open(`/sellers/${seller.id}/nearby-buyers`, '_blank')}
+                  sx={{ py: 1.5 }}
+                >
+                  近隣買主リストを開く
+                </Button>
               </Box>
             )}
 
@@ -4986,9 +4992,9 @@ HP：https://ifoo-oita.com/
             </Box>
 
             {/* 実績セクション */}
-            <Box sx={{ mt: 3 }}>
+            <CollapsibleSection title="実績" defaultExpanded={false} headerColor="success.light">
               <PerformanceMetricsSection />
-            </Box>
+            </CollapsibleSection>
           </Grid>
         </Grid>
       </Box>

@@ -1026,9 +1026,11 @@ export class BuyerService {
           buyer_number,
           name,
           latest_status,
+          latest_viewing_date,
           inquiry_confidence,
           inquiry_source,
           distribution_type,
+          distribution_areas,
           broker_inquiry,
           desired_area,
           desired_property_type,
@@ -1077,7 +1079,42 @@ export class BuyerService {
     const sortedBuyers = this.sortBuyersByDateAndConfidence(filteredBuyers);
 
     console.log(`[BuyerService.getBuyersByAreas] After sorting: ${sortedBuyers.length} buyers`);
-    return sortedBuyers;
+    
+    // distribution_areasを配列に変換（文字列の場合）
+    // 注意: データベースではdesired_areaカラムに希望エリアが入っている
+    const buyersWithParsedAreas = sortedBuyers.map(buyer => ({
+      ...buyer,
+      distribution_areas: this.parseDistributionAreas(buyer.distribution_areas || buyer.desired_area)
+    }));
+    
+    return buyersWithParsedAreas;
+  }
+  
+  /**
+   * distribution_areasを配列に変換
+   * @param distributionAreas - 配信エリア（文字列または配列）
+   * @returns 配信エリアの配列
+   */
+  private parseDistributionAreas(distributionAreas: any): string[] {
+    if (!distributionAreas) {
+      return [];
+    }
+    
+    // 既に配列の場合はそのまま返す
+    if (Array.isArray(distributionAreas)) {
+      return distributionAreas;
+    }
+    
+    // 文字列の場合はパース
+    if (typeof distributionAreas === 'string') {
+      // カンマ区切りまたはスペース区切りで分割
+      return distributionAreas
+        .split(/[,\s]+/)
+        .map(area => area.trim())
+        .filter(area => area.length > 0);
+    }
+    
+    return [];
   }
 
   /**
@@ -1165,21 +1202,39 @@ export class BuyerService {
    * 買主を除外すべきかどうかを判定
    */
   private shouldExcludeBuyer(buyer: any): boolean {
+    // デバッグログ（買主4370の場合のみ）
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370の除外チェック開始`);
+    }
+    
     // 1. 業者問合せは除外
     if (this.isBusinessInquiry(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 業者問合せのため除外`);
+      }
       return true;
     }
 
     // 2. 希望エリアと希望種別が両方空欄の場合は除外
     if (!this.hasMinimumCriteria(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 最低限の条件を満たしていないため除外`);
+      }
       return true;
     }
 
     // 3. 配信種別が「要」でない場合は除外
     if (!this.hasDistributionRequired(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 配信種別が「要」ではないため除外`);
+      }
       return true;
     }
 
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370: 除外されない（全ての条件をクリア）`);
+    }
+    
     return false;
   }
 
@@ -1225,6 +1280,15 @@ export class BuyerService {
    */
   private hasDistributionRequired(buyer: any): boolean {
     const distributionType = (buyer.distribution_type || '').trim();
+    
+    // デバッグログ（買主4370の場合のみ）
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370の配信種別チェック:`);
+      console.log(`  distribution_type: "${buyer.distribution_type}"`);
+      console.log(`  trim後: "${distributionType}"`);
+      console.log(`  判定結果: ${distributionType === '要' ? '✅ 要' : '❌ 要ではない'}`);
+    }
+    
     return distributionType === '要';
   }
 
@@ -1286,16 +1350,42 @@ export class BuyerService {
       return false;
     }
 
+    // データベースの英語値を日本語に変換
+    const propertyTypeMap: Record<string, string> = {
+      'land': '土地',
+      'detached_house': '戸建',
+      'apartment': 'マンション',
+    };
+    
+    const japanesePropertyType = propertyTypeMap[propertyType] || propertyType;
+
     // 種別の正規化と比較
-    const normalizedPropertyType = this.normalizePropertyType(propertyType);
+    const normalizedPropertyType = this.normalizePropertyType(japanesePropertyType);
     const normalizedDesiredTypes = desiredType.split(/[,、\s]+/).map((t: string) => this.normalizePropertyType(t));
 
+    // デバッグログ（買主6767の場合のみ）
+    if (buyer.buyer_number === '6767') {
+      console.log(`[DEBUG] 買主6767の種別フィルタリング:`);
+      console.log(`  物件種別（元）: ${propertyType}`);
+      console.log(`  物件種別（日本語）: ${japanesePropertyType}`);
+      console.log(`  物件種別（正規化）: ${normalizedPropertyType}`);
+      console.log(`  買主希望種別（元）: ${desiredType}`);
+      console.log(`  買主希望種別（正規化）: ${JSON.stringify(normalizedDesiredTypes)}`);
+    }
+
     // いずれかの希望種別が物件種別と合致すれば条件を満たす
-    return normalizedDesiredTypes.some((dt: string) => 
+    const isMatch = normalizedDesiredTypes.some((dt: string) => 
       dt === normalizedPropertyType || 
       normalizedPropertyType.includes(dt) ||
       dt.includes(normalizedPropertyType)
     );
+
+    // デバッグログ（買主6767の場合のみ）
+    if (buyer.buyer_number === '6767') {
+      console.log(`  マッチング結果: ${isMatch ? '✅ マッチ' : '❌ マッチしない'}`);
+    }
+
+    return isMatch;
   }
 
   /**
@@ -1311,9 +1401,18 @@ export class BuyerService {
       return true;
     }
 
+    // データベースの英語値を日本語に変換
+    const propertyTypeMap: Record<string, string> = {
+      'land': '土地',
+      'detached_house': '戸建',
+      'apartment': 'マンション',
+    };
+    
+    const japanesePropertyType = propertyTypeMap[propertyType || ''] || propertyType;
+
     // 物件種別に応じた価格帯フィールドを選択
     let priceRange: string | null = null;
-    const normalizedType = this.normalizePropertyType(propertyType || '');
+    const normalizedType = this.normalizePropertyType(japanesePropertyType || '');
 
     if (normalizedType === '戸建' || normalizedType.includes('戸建')) {
       priceRange = buyer.price_range_house;

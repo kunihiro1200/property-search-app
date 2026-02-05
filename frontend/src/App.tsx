@@ -6,6 +6,7 @@ import SellersPage from './pages/SellersPage';
 import NewSellerPage from './pages/NewSellerPage';
 import SellerDetailPage from './pages/SellerDetailPage';
 import CallModePage from './pages/CallModePage';
+import NearbyBuyersPage from './pages/NearbyBuyersPage';
 import ActivityLogsPage from './pages/ActivityLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import { PhoneSettingsPage } from './pages/PhoneSettingsPage';
@@ -74,6 +75,14 @@ function App() {
         element={
           <ProtectedRoute>
             <CallModePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sellers/:sellerId/nearby-buyers"
+        element={
+          <ProtectedRoute>
+            <NearbyBuyersPage />
           </ProtectedRoute>
         }
       />

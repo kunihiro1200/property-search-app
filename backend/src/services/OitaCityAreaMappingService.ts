@@ -72,7 +72,8 @@ export class OitaCityAreaMappingService {
       '上春日町', '季の坂', '椎迫', '志手',
       'にじが丘', 'ほたるの杜団地',
       '府内町',
-      '中央町', '金池町', '荷揚町', '城崎町'
+      '中央町', '金池町', '荷揚町', '城崎町',
+      '高崎'
     ];
     if (area1Patterns.some(pattern => normalizedAddress.includes(pattern))) {
       console.log(`[OitaCityAreaMapping] ①エリア detected → ①`);

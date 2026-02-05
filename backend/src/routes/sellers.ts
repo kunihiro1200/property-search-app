@@ -900,39 +900,26 @@ router.get('/:id/nearby-buyers', async (req: Request, res: Response) => {
     const calculator = new PropertyDistributionAreaCalculator();
     const cityExtractor = new CityNameExtractor();
     
-    // Google Map URLと物件情報を取得（propertiesテーブルから）
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-    
-    const { data: property } = await supabase
-      .from('properties')
-      .select('google_map_url, property_type, valuation_amount_1, valuation_amount_2, valuation_amount_3')
-      .eq('seller_id', seller.id)
-      .single();
-    
-    const googleMapUrl = property?.google_map_url || null;
-    const propertyType = property?.property_type || null;
+    // Google Map URLと物件情報を取得（sellersテーブルから）
+    // 注意: 売主リストなので、property_listingsテーブルは使用しない
+    const googleMapUrl = seller.googleMapUrl || null;
+    const propertyType = seller.propertyType || null;
     
     // 売出価格を取得（査定額の中央値を使用）
     let salesPrice: number | null = null;
-    if (property) {
-      const valuations = [
-        property.valuation_amount_1,
-        property.valuation_amount_2,
-        property.valuation_amount_3
-      ].filter(v => v !== null && v !== undefined) as number[];
-      
-      if (valuations.length > 0) {
-        // 中央値を計算
-        valuations.sort((a, b) => a - b);
-        const mid = Math.floor(valuations.length / 2);
-        salesPrice = valuations.length % 2 === 0
-          ? (valuations[mid - 1] + valuations[mid]) / 2
-          : valuations[mid];
-      }
+    const valuations = [
+      seller.valuationAmount1,
+      seller.valuationAmount2,
+      seller.valuationAmount3
+    ].filter(v => v !== null && v !== undefined) as number[];
+    
+    if (valuations.length > 0) {
+      // 中央値を計算
+      valuations.sort((a, b) => a - b);
+      const mid = Math.floor(valuations.length / 2);
+      salesPrice = valuations.length % 2 === 0
+        ? (valuations[mid - 1] + valuations[mid]) / 2
+        : valuations[mid];
     }
     
     // 市名を物件住所から抽出

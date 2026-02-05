@@ -6,6 +6,7 @@ interface CollapsibleSectionProps {
   title: string;
   count?: number;
   defaultExpanded?: boolean;
+  headerColor?: string; // ヘッダーの背景色（例: 'primary.light', 'info.light', '#e3f2fd'）
   children: React.ReactNode;
 }
 
@@ -19,6 +20,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   title,
   count,
   defaultExpanded = false,
+  headerColor,
   children,
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -26,6 +28,14 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const handleToggle = () => {
     setExpanded(!expanded);
   };
+
+  // デフォルトの背景色とホバー色
+  const defaultBgColor = 'grey.50';
+  const defaultHoverColor = 'grey.100';
+  
+  // headerColorが指定されている場合は、それを使用
+  const bgColor = headerColor || defaultBgColor;
+  const hoverColor = headerColor ? (headerColor.includes('.light') ? headerColor.replace('.light', '.main') : headerColor) : defaultHoverColor;
 
   return (
     <Paper sx={{ overflow: 'hidden', mb: 0.5 }}>
@@ -35,10 +45,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           p: 0.75,
-          bgcolor: 'grey.50',
+          bgcolor: bgColor,
           cursor: 'pointer',
           '&:hover': {
-            bgcolor: 'grey.100',
+            bgcolor: hoverColor,
+            opacity: 0.9,
           },
         }}
         onClick={handleToggle}
