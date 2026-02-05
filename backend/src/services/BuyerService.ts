@@ -151,13 +151,15 @@ export class BuyerService {
   }
 
   /**
-   * IDで買主を取得
+   * IDで買主を取得（buyer_id）
+   * 注意: このメソッドはbuyer_id（文字列型のUUID）で検索します。
+   * 買主番号で検索する場合は getByBuyerNumber() を使用してください。
    */
   async getById(id: string): Promise<any | null> {
     const { data, error } = await this.supabase
       .from('buyers')
       .select('*')
-      .eq('id', id)
+      .eq('buyer_id', id)
       .single();
 
     if (error) {
@@ -215,30 +217,54 @@ export class BuyerService {
 
   /**
    * 買主に紐づく物件リストを取得
+   * 
+   * 取得元:
+   * 1. buyers.property_number（初回問い合わせ物件）
+   * 
+   * 注意: inquiry_historyテーブルは現在存在しないため、
+   * buyers.property_numberのみから物件を取得します。
    */
   async getLinkedProperties(buyerId: string): Promise<any[]> {
-    // まず買主を取得
+    const propertyNumbersSet = new Set<string>();
+
+    // buyers.property_number から物件番号を取得
     const buyer = await this.getById(buyerId);
-    if (!buyer || !buyer.property_number) {
+    if (!buyer) {
+      console.log(`[BuyerService.getLinkedProperties] Buyer not found: ${buyerId}`);
+      return [];
+    }
+
+    if (buyer.property_number) {
+      const propertyNumbers = buyer.property_number
+        .split(',')
+        .map((n: string) => n.trim())
+        .filter((n: string) => n);
+      
+      console.log(`[BuyerService.getLinkedProperties] Found property numbers from buyer.property_number:`, propertyNumbers);
+      propertyNumbers.forEach(pn => propertyNumbersSet.add(pn));
+    }
+
+    // 物件番号が1つもない場合は空配列を返す
+    if (propertyNumbersSet.size === 0) {
+      console.log(`[BuyerService.getLinkedProperties] No property numbers found for buyer ${buyerId}`);
       return [];
     }
 
     // 物件番号で物件リストを検索
-    const propertyNumbers = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+    const propertyNumbers = Array.from(propertyNumbersSet);
+    console.log(`[BuyerService.getLinkedProperties] Fetching properties:`, propertyNumbers);
     
-    if (propertyNumbers.length === 0) {
-      return [];
-    }
-
     const { data, error } = await this.supabase
       .from('property_listings')
       .select('*')
       .in('property_number', propertyNumbers);
 
     if (error) {
+      console.error(`[BuyerService.getLinkedProperties] Error fetching properties:`, error);
       throw new Error(`Failed to fetch linked properties: ${error.message}`);
     }
 
+    console.log(`[BuyerService.getLinkedProperties] Found ${data?.length || 0} properties`);
     return data || [];
   }
 
@@ -325,8 +351,8 @@ export class BuyerService {
     const newBuyer = {
       ...buyerData,
       buyer_number: buyerNumber,
-      db_created_at: new Date().toISOString(),
-      db_updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await this.supabase
@@ -392,12 +418,12 @@ export class BuyerService {
     }
 
     // 更新タイムスタンプを追加
-    allowedData.db_updated_at = new Date().toISOString();
+    allowedData.updated_at = new Date().toISOString();
 
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('id', id)
+      .eq('buyer_id', id)
       .select()
       .single();
 
@@ -408,7 +434,7 @@ export class BuyerService {
     // Log audit trail for each changed field
     if (userId && userEmail) {
       for (const key in allowedData) {
-        if (key !== 'db_updated_at' && existing[key] !== allowedData[key]) {
+        if (key !== 'updated_at' && existing[key] !== allowedData[key]) {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
@@ -458,7 +484,7 @@ export class BuyerService {
     const buyerNumber = existing.buyer_number;
 
     // 更新不可フィールドを除外
-    const protectedFields = ['id', 'db_created_at', 'synced_at', 'buyer_number'];
+    const protectedFields = ['buyer_id', 'created_at', 'synced_at', 'buyer_number'];
     const allowedData: any = {};
     
     for (const key in updateData) {
@@ -468,7 +494,7 @@ export class BuyerService {
     }
 
     // 更新タイムスタンプを追加
-    allowedData.db_updated_at = new Date().toISOString();
+    allowedData.updated_at = new Date().toISOString();
 
     // 競合チェック（forceオプションがない場合、かつ前回同期済みの場合のみ）
     // last_synced_at がない場合は、まだ一度も同期されていないため競合チェックをスキップ
@@ -513,7 +539,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('id', id)
+      .eq('buyer_id', id)
       .select()
       .single();
 
@@ -542,7 +568,7 @@ export class BuyerService {
           await this.supabase
             .from('buyers')
             .update({ last_synced_at: new Date().toISOString() })
-            .eq('id', id);
+            .eq('buyer_id', id);
 
           syncResult = {
             success: true,
@@ -604,7 +630,7 @@ export class BuyerService {
     // 監査ログを記録（sync_status付き）
     if (userId && userEmail) {
       for (const key in allowedData) {
-        if (key !== 'db_updated_at' && existing[key] !== allowedData[key]) {
+        if (key !== 'updated_at' && existing[key] !== allowedData[key]) {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
@@ -759,7 +785,7 @@ export class BuyerService {
   } | null> {
     const { data, error } = await this.supabase
       .from('buyers')
-      .select('buyer_id, buyer_number, property_number, reception_date, inquiry_source, latest_status')
+      .select('id, buyer_number, property_number, reception_date, inquiry_source, latest_status')
       .eq('buyer_number', buyerNumber)
       .single();
 
@@ -776,7 +802,7 @@ export class BuyerService {
       inquiryDate: data.reception_date,
       inquirySource: data.inquiry_source,
       status: data.latest_status,
-      buyerId: data.buyer_id
+      buyerId: data.id
     };
   }
 

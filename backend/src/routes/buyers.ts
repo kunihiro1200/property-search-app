@@ -182,7 +182,7 @@ router.get('/:id/properties', async (req: Request, res: Response) => {
       if (!buyer) {
         return res.status(404).json({ error: 'Buyer not found' });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用
     }
     
     const properties = await buyerService.getLinkedProperties(buyerId);
@@ -242,7 +242,7 @@ router.get('/:id/inquiry-history', async (req: Request, res: Response) => {
       if (!buyer) {
         return res.status(404).json({ error: 'Buyer not found' });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
     }
     
     const inquiryHistory = await buyerService.getInquiryHistory(buyerId);
@@ -326,7 +326,7 @@ router.get('/:buyerId/email-history', async (req: Request, res: Response) => {
       if (!buyer) {
         return res.status(404).json({ error: 'Buyer not found' });
       }
-      actualBuyerId = buyer.id;
+      actualBuyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
     }
     
     const emailHistory = await emailHistoryService.getEmailHistory(actualBuyerId);
@@ -362,7 +362,7 @@ router.get('/:id/related', uuidValidationMiddleware('id'), async (req: Request, 
           details: { buyer_number: id }
         });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
       console.log(`[API] Resolved buyer_number ${id} to UUID ${buyerId}`);
     }
     
@@ -442,7 +442,7 @@ router.get('/:id/unified-inquiry-history', uuidValidationMiddleware('id'), async
           details: { buyer_number: id }
         });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
       console.log(`[API] Resolved buyer_number ${id} to UUID ${buyerId}`);
     }
     
@@ -532,7 +532,7 @@ router.get('/:id/conflict-check', async (req: Request, res: Response) => {
       if (!buyer) {
         return res.status(404).json({ error: 'Buyer not found' });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
     }
 
     // 買主を取得
@@ -544,17 +544,17 @@ router.get('/:id/conflict-check', async (req: Request, res: Response) => {
     // 競合チェック: last_synced_atがtimestampより新しい場合は競合
     const clientTimestamp = new Date(timestamp as string);
     const lastSyncedAt = buyer.last_synced_at ? new Date(buyer.last_synced_at) : null;
-    const dbUpdatedAt = buyer.db_updated_at ? new Date(buyer.db_updated_at) : null;
+    const updatedAt = buyer.updated_at ? new Date(buyer.updated_at) : null;
 
     // 競合判定: DBが更新されていて、かつクライアントのタイムスタンプより新しい場合
-    const hasConflict = dbUpdatedAt && dbUpdatedAt > clientTimestamp;
+    const hasConflict = updatedAt && updatedAt > clientTimestamp;
 
     if (hasConflict) {
       return res.json({
         hasConflict: true,
         conflictingValue: buyer[field as string],
         conflictingUser: 'another user', // TODO: 実際のユーザー情報を取得
-        conflictingTimestamp: dbUpdatedAt?.toISOString()
+        conflictingTimestamp: updatedAt?.toISOString()
       });
     }
 
@@ -678,7 +678,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     // 更新不可フィールドを自動的に除外（エラーにせず、単に無視する）
-    const protectedFields = ['id', 'db_created_at', 'synced_at', 'created_at', 'updated_at'];
+    const protectedFields = ['buyer_id', 'created_at', 'synced_at', 'updated_at'];
     const sanitizedData = { ...updateData };
     protectedFields.forEach(field => {
       delete sanitizedData[field];
@@ -699,14 +699,14 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     console.log(`[PUT /buyers/:id] id=${id}, isUuid=${isUuid}`);
 
-    // 買主番号の場合はUUIDを取得
+    // 買主番号の場合はbuyer_idを取得
     if (!isUuid) {
       const buyer = await buyerService.getByBuyerNumber(id);
-      console.log(`[PUT /buyers/:id] getByBuyerNumber result:`, buyer ? `found (id=${buyer.id})` : 'not found');
+      console.log(`[PUT /buyers/:id] getByBuyerNumber result:`, buyer ? `found (buyer_id=${buyer.buyer_id})` : 'not found');
       if (!buyer) {
         return res.status(404).json({ error: 'Buyer not found' });
       }
-      buyerId = buyer.id;
+      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
     }
 
     console.log(`[PUT /buyers/:id] buyerId=${buyerId}`);

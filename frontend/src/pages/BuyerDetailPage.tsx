@@ -106,7 +106,7 @@ const BUYER_FIELD_SECTIONS = [
     ],
   },
   {
-    title: '問合せ・内覧情報',
+    title: '問合せ内容',
     fields: [
       { key: 'initial_assignee', label: '初動担当', inlineEditable: true },
       { key: 'follow_up_assignee', label: '後続担当', inlineEditable: true },
@@ -119,41 +119,13 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'email_type', label: 'メール種別', inlineEditable: true, fieldType: 'dropdown' },
       { key: 'distribution_type', label: '配信種別', inlineEditable: true, fieldType: 'dropdown' },
       { key: 'owned_home_hearing', label: '持家ヒアリング', inlineEditable: true },
-      { key: 'latest_viewing_date', label: '内覧日(最新)', type: 'date', inlineEditable: true },
+      // latest_viewing_date は内覧ページに移動
       // viewing_notes は PropertyInfoCard 内に移動
       { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true },
     ],
   },
-  {
-    title: '内覧結果・後続対応',
-    isViewingResultGroup: true,  // 特別なグループとしてマーク
-    fields: [
-      { key: 'viewing_result_follow_up', label: '内覧結果・後続対応', multiline: true, inlineEditable: true },
-      { key: 'follow_up_assignee', label: '後続担当', inlineEditable: true },
-      { key: 'latest_status', label: '★最新状況', inlineEditable: true, fieldType: 'dropdown' },
-    ],
-  },
-  {
-    title: '希望条件',
-    fields: [
-      { key: 'desired_timing', label: '希望時期', inlineEditable: true },
-      { key: 'desired_area', label: 'エリア', inlineEditable: true },
-      { key: 'desired_property_type', label: '希望種別', inlineEditable: true },
-      { key: 'desired_building_age', label: '築年数', inlineEditable: true },
-      { key: 'desired_floor_plan', label: '間取り', inlineEditable: true },
-      { key: 'budget', label: '予算', inlineEditable: true },
-      { key: 'price_range_house', label: '価格帯（戸建）', inlineEditable: true },
-      { key: 'price_range_apartment', label: '価格帯（マンション）', inlineEditable: true },
-      { key: 'price_range_land', label: '価格帯（土地）', inlineEditable: true },
-      { key: 'parking_spaces', label: 'P台数', inlineEditable: true },
-      { key: 'hot_spring_required', label: '温泉あり', inlineEditable: true },
-      { key: 'garden_required', label: '庭付き', inlineEditable: true },
-      { key: 'pet_allowed_required', label: 'ペット可', inlineEditable: true },
-      { key: 'good_view_required', label: '眺望良好', inlineEditable: true },
-      { key: 'high_floor_required', label: '高層階', inlineEditable: true },
-      { key: 'corner_room_required', label: '角部屋', inlineEditable: true },
-    ],
-  },
+  // 希望条件セクションは別ページに移動
+  // 内覧結果・後続対応セクションは別ページに移動
   {
     title: 'その他',
     fields: [
@@ -194,6 +166,7 @@ export default function BuyerDetailPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [relatedBuyersCount, setRelatedBuyersCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [copiedBuyerNumber, setCopiedBuyerNumber] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
     open: false,
     message: '',
@@ -594,15 +567,35 @@ export default function BuyerDetailPage() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
-            onClick={() => navigate(-1)} 
+            onClick={() => navigate('/buyers')} 
             sx={{ mr: 2 }}
-            aria-label="戻る"
+            aria-label="買主一覧に戻る"
           >
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h5" fontWeight="bold">
             {buyer.name || buyer.buyer_number}
           </Typography>
+          {/* 買主番号（クリックでコピー） */}
+          {buyer.buyer_number && (
+            <>
+              <Chip 
+                label={buyer.buyer_number} 
+                size="small" 
+                color="primary"
+                onClick={() => {
+                  navigator.clipboard.writeText(buyer.buyer_number || '');
+                  setCopiedBuyerNumber(true);
+                  setTimeout(() => setCopiedBuyerNumber(false), 1500);
+                }}
+                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                title="クリックでコピー"
+              />
+              {copiedBuyerNumber && (
+                <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>✓</Typography>
+              )}
+            </>
+          )}
           {buyer.inquiry_confidence && (
             <Chip label={buyer.inquiry_confidence} color="info" sx={{ ml: 2 }} />
           )}
@@ -615,68 +608,47 @@ export default function BuyerDetailPage() {
           />
         </Box>
 
-      </Box>
-
-      {/* 問い合わせ履歴テーブルセクション */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">
-            問い合わせ履歴
-          </Typography>
-          {/* New Gmail Send Button with Template Selection */}
-          {buyer && (
-            <BuyerGmailSendButton
-              buyerId={buyer.id || buyer_number || ''}
-              buyerEmail={buyer.email || ''}
-              buyerName={buyer.name || ''}
-              inquiryHistory={inquiryHistoryTable}
-              selectedPropertyIds={selectedPropertyIds}
-              size="medium"
-              variant="contained"
-            />
-          )}
-        </Box>
-        <Divider sx={{ mb: 2 }} />
-        
-        {/* Selection Controls - Keep for backward compatibility */}
-        {selectedPropertyIds.size > 0 && (
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-            <Typography variant="body2" color="primary" fontWeight="bold">
-              {selectedPropertyIds.size}件選択中
-            </Typography>
-            <Button 
-              variant="outlined" 
-              size="small"
-              onClick={handleClearSelection}
-            >
-              選択をクリア
-            </Button>
+        {/* ヘッダー右側のボタン */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* 問い合わせ履歴ボタン（履歴がある場合のみ表示） */}
+          {inquiryHistoryTable.length > 0 && (
             <Button
               variant="outlined"
-              size="small"
-              disabled={selectedPropertyIds.size === 0}
-              onClick={handleGmailSend}
-              startIcon={<EmailIcon />}
+              size="medium"
+              onClick={() => navigate(`/buyers/${buyer_number}/inquiry-history`)}
+              sx={{
+                whiteSpace: 'nowrap',
+              }}
             >
-              旧Gmail送信 ({selectedPropertyIds.size}件)
+              問い合わせ履歴
             </Button>
-          </Box>
-        )}
+          )}
+          
+          {/* 希望条件ボタン */}
+          <Button
+            variant="outlined"
+            size="medium"
+            onClick={() => navigate(`/buyers/${buyer_number}/desired-conditions`)}
+            sx={{
+              whiteSpace: 'nowrap',
+            }}
+          >
+            希望条件
+          </Button>
 
-        {/* Inquiry History Table */}
-        {isLoadingHistory ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <InquiryHistoryTable
-            inquiryHistory={inquiryHistoryTable}
-            selectedPropertyIds={selectedPropertyIds}
-            onSelectionChange={handleSelectionChange}
-            onBuyerClick={handleBuyerClick}
-          />
-        )}
-      </Paper>
+          {/* 内覧ボタン */}
+          <Button
+            variant="outlined"
+            size="medium"
+            onClick={() => navigate(`/buyers/${buyer_number}/viewing-result`)}
+            sx={{
+              whiteSpace: 'nowrap',
+            }}
+          >
+            内覧
+          </Button>
+        </Box>
+      </Box>
 
       {/* 2カラムレイアウト: 左側に紐づいた物件の詳細情報、右側に買主情報 */}
       <Box

@@ -7,7 +7,53 @@ const router = Router();
 const googleAuthService = new GoogleAuthService();
 const employeeUtils = new EmployeeUtils();
 
-// 全てのルートに認証を適用
+/**
+ * 有効なスタッフのイニシャル一覧を取得（電話担当プルダウン用）
+ * スタッフ管理スプレッドシートの「通常=TRUE」のスタッフのイニシャルを返す
+ * 
+ * 注意: このエンドポイントは認証不要（テスト用）
+ */
+router.get('/active-initials', async (req: Request, res: Response) => {
+  try {
+    // スタッフ管理スプレッドシートから通常=TRUEのスタッフを取得
+    const { GoogleSheetsClient } = await import('../services/GoogleSheetsClient');
+    const sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: process.env.STAFF_SPREADSHEET_ID || '19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xxs',
+      sheetName: 'スタッフ',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    });
+
+    await sheetsClient.authenticate();
+    const rows = await sheetsClient.readAll();
+
+    console.log(`[active-initials] Total rows fetched: ${rows.length}`);
+    console.log(`[active-initials] Sample row:`, rows[0]);
+
+    // 通常=TRUEのスタッフのイニシャルを抽出
+    const activeInitials = rows
+      .filter((row: any) => {
+        const isNormal = row['通常'] === 'TRUE' || row['通常'] === true || row['通常'] === '○';
+        console.log(`[active-initials] Row: ${row['イニシャル']}, 通常: ${row['通常']}, isNormal: ${isNormal}`);
+        return isNormal;
+      })
+      .map((row: any) => row['イニシャル'])
+      .filter((initial: string) => initial && initial.trim() !== '');
+
+    console.log(`[active-initials] Returning ${activeInitials.length} active staff initials:`, activeInitials);
+    res.json({ initials: activeInitials });
+  } catch (error) {
+    console.error('Get active staff initials error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_ACTIVE_INITIALS_ERROR',
+        message: 'Failed to get active staff initials',
+        retryable: true,
+      },
+    });
+  }
+});
+
+// 全てのルートに認証を適用（/active-initials以外）
 router.use(authenticate);
 
 /**
@@ -48,42 +94,6 @@ router.get('/active', async (req: Request, res: Response) => {
       error: {
         code: 'GET_ACTIVE_EMPLOYEES_ERROR',
         message: 'Failed to get active employees',
-        retryable: true,
-      },
-    });
-  }
-});
-
-/**
- * 有効なスタッフのイニシャル一覧を取得（電話担当プルダウン用）
- * スタッフ管理スプレッドシートの「通常=TRUE」のスタッフのイニシャルを返す
- */
-router.get('/active-initials', async (req: Request, res: Response) => {
-  try {
-    // スタッフ管理スプレッドシートから通常=TRUEのスタッフを取得
-    const { GoogleSheetsClient } = await import('../services/GoogleSheetsClient');
-    const sheetsClient = new GoogleSheetsClient(
-      process.env.STAFF_SPREADSHEET_ID || '19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xx',
-      'スタッフ'
-    );
-
-    await sheetsClient.initialize();
-    const rows = await sheetsClient.readAll();
-
-    // 通常=TRUEのスタッフのイニシャルを抽出
-    const activeInitials = rows
-      .filter((row: any) => row['通常'] === 'TRUE' || row['通常'] === true)
-      .map((row: any) => row['イニシャル'])
-      .filter((initial: string) => initial && initial.trim() !== '');
-
-    console.log(`Returning ${activeInitials.length} active staff initials`);
-    res.json({ initials: activeInitials });
-  } catch (error) {
-    console.error('Get active staff initials error:', error);
-    res.status(500).json({
-      error: {
-        code: 'GET_ACTIVE_INITIALS_ERROR',
-        message: 'Failed to get active staff initials',
         retryable: true,
       },
     });

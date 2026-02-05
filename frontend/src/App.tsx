@@ -18,6 +18,9 @@ import PropertyListingDetailPage from './pages/PropertyListingDetailPage';
 import BuyersPage from './pages/BuyersPage';
 import NewBuyerPage from './pages/NewBuyerPage';
 import BuyerDetailPage from './pages/BuyerDetailPage';
+import BuyerInquiryHistoryPage from './pages/BuyerInquiryHistoryPage';
+import BuyerDesiredConditionsPage from './pages/BuyerDesiredConditionsPage';
+import BuyerViewingResultPage from './pages/BuyerViewingResultPage';
 import PublicPropertyListingPage from './pages/PublicPropertyListingPage';
 import PublicPropertiesPage from './pages/PublicPropertiesPage';
 import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
@@ -175,6 +178,30 @@ function App() {
         element={
           <ProtectedRoute>
             <BuyerDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/buyers/:buyer_number/inquiry-history"
+        element={
+          <ProtectedRoute>
+            <BuyerInquiryHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/buyers/:buyer_number/desired-conditions"
+        element={
+          <ProtectedRoute>
+            <BuyerDesiredConditionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/buyers/:buyer_number/viewing-result"
+        element={
+          <ProtectedRoute>
+            <BuyerViewingResultPage />
           </ProtectedRoute>
         }
       />
