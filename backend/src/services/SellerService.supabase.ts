@@ -265,6 +265,7 @@ export class SellerService extends BaseRepository {
       sellerNumber: decryptedSeller.sellerNumber,
       name: decryptedSeller.name,
       phoneNumber: decryptedSeller.phoneNumber,
+      propertyAddress: decryptedSeller.propertyAddress, // ← 追加
       visitAcquisitionDate: decryptedSeller.visitAcquisitionDate,
       visitDate: decryptedSeller.visitDate,
       visitValuationAcquirer: decryptedSeller.visitValuationAcquirer,

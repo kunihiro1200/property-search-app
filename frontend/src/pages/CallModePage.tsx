@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -54,6 +54,7 @@ import SellerStatusSidebar from '../components/SellerStatusSidebar';
 import { getSenderAddress, saveSenderAddress } from '../utils/senderAddressStorage';
 import { useCallModeQuickButtonState } from '../hooks/useCallModeQuickButtonState';
 import PropertyMapSection from '../components/PropertyMapSection';
+import NearbyBuyersList from '../components/NearbyBuyersList';
 
 import { formatCurrentStatusDetailed } from '../utils/propertyStatusFormatter';
 
@@ -116,8 +117,15 @@ const CallModePage = () => {
   /**
    * 物件情報を取得するヘルパー関数
    * propertyオブジェクトがある場合はそれを使用し、ない場合はsellerの直接フィールドを使用
+   * 
+   * 🚨 重要: useMemoで計算することで、seller/propertyの変更時に自動的に再計算される
    */
-  const getPropertyInfo = useCallback(() => {
+  const propInfo = useMemo(() => {
+    console.log('🔄 [propInfo useMemo] 再計算中...');
+    console.log('🔄 [propInfo useMemo] property:', property);
+    console.log('🔄 [propInfo useMemo] seller:', seller);
+    console.log('🔄 [propInfo useMemo] seller?.propertyAddress:', seller?.propertyAddress);
+    
     if (property) {
       return {
         address: property.address,
@@ -161,7 +169,17 @@ const CallModePage = () => {
       currentStatus: undefined,
       hasData: false,
     };
-  }, [property, seller]);
+  }, [
+    property, 
+    seller?.propertyAddress,
+    seller?.propertyType,
+    seller?.landArea,
+    seller?.buildingArea,
+    seller?.buildYear,
+    seller?.floorPlan,
+    seller?.structure,
+    seller?.currentStatus,
+  ]);
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [callSummary, setCallSummary] = useState<string>('');
@@ -925,7 +943,7 @@ const CallModePage = () => {
       const [sellerResponse, activitiesResponse, employeesResponse] = await Promise.all([
         api.get(`/api/sellers/${id}`),
         api.get(`/api/sellers/${id}/activities`),
-        api.get('/employees'),
+        api.get('/api/employees'),
       ]);
 
       console.log('=== APIレスポンス ===');
@@ -940,6 +958,7 @@ const CallModePage = () => {
       const sellerData = sellerResponse.data;
       console.log('=== sellerData詳細 ===');
       console.log('sellerData:', sellerData);
+      console.log('sellerData.propertyAddress:', sellerData.propertyAddress); // ← 追加
       console.log('sellerData.property:', sellerData.property);
       console.log('typeof sellerData.property:', typeof sellerData.property);
       console.log('sellerData.property === null:', sellerData.property === null);
@@ -2662,7 +2681,10 @@ HP：https://ifoo-oita.com/
             </Box>
             <Paper sx={{ p: 2, mb: 3 }}>
               {(() => {
-                const propInfo = getPropertyInfo();
+                console.log('🏠 [物件情報表示] propInfo:', propInfo); // ← 追加
+                console.log('🏠 [物件情報表示] propInfo.address:', propInfo.address); // ← 追加
+                console.log('🏠 [物件情報表示] seller:', seller); // ← 追加
+                console.log('🏠 [物件情報表示] property:', property); // ← 追加
                 if (!propInfo.hasData) {
                   return (
                     <Typography variant="body2" color="text.secondary">
@@ -2800,53 +2822,53 @@ HP：https://ifoo-oita.com/
                         物件住所
                       </Typography>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {propInfo.address}
+                        {property?.address || seller?.propertyAddress || '未登録'}
                       </Typography>
                     </Box>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="body2" color="text.secondary">
                         物件種別
                       </Typography>
-                      <Typography variant="body1">{getPropertyTypeLabel(propInfo.propertyType || '')}</Typography>
+                      <Typography variant="body1">{getPropertyTypeLabel(property?.propertyType || seller?.propertyType || '')}</Typography>
                     </Box>
-                    {propInfo.landArea && (
+                    {(property?.landArea || seller?.landArea) && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           土地面積
                         </Typography>
-                        <Typography variant="body1">{propInfo.landArea} m²</Typography>
+                        <Typography variant="body1">{property?.landArea || seller?.landArea} m²</Typography>
                       </Box>
                     )}
-                    {propInfo.buildingArea && (
+                    {(property?.buildingArea || seller?.buildingArea) && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           建物面積
                         </Typography>
-                        <Typography variant="body1">{propInfo.buildingArea} m²</Typography>
+                        <Typography variant="body1">{property?.buildingArea || seller?.buildingArea} m²</Typography>
                       </Box>
                     )}
-                    {propInfo.buildYear && (
+                    {(property?.buildYear || seller?.buildYear) && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           築年
                         </Typography>
-                        <Typography variant="body1">{propInfo.buildYear}年</Typography>
+                        <Typography variant="body1">{property?.buildYear || seller?.buildYear}年</Typography>
                       </Box>
                     )}
-                    {propInfo.floorPlan && (
+                    {(property?.floorPlan || seller?.floorPlan) && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           間取り
                         </Typography>
-                        <Typography variant="body1">{propInfo.floorPlan}</Typography>
+                        <Typography variant="body1">{property?.floorPlan || seller?.floorPlan}</Typography>
                       </Box>
                     )}
-                    {propInfo.structure && (
+                    {(property?.structure || seller?.structure) && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
                           構造
                         </Typography>
-                        <Typography variant="body1">{propInfo.structure}</Typography>
+                        <Typography variant="body1">{property?.structure || seller?.structure}</Typography>
                       </Box>
                     )}
                     <Box>
@@ -2854,7 +2876,7 @@ HP：https://ifoo-oita.com/
                         状況（売主）
                       </Typography>
                       <Typography variant="body1">
-                        {propInfo.currentStatus ? getSellerSituationLabel(propInfo.currentStatus) : '未設定'}
+                        {(property?.currentStatus || seller?.currentStatus) ? getSellerSituationLabel(property?.currentStatus || seller?.currentStatus || '') : '未設定'}
                       </Typography>
                     </Box>
                   </>
@@ -2864,18 +2886,27 @@ HP：https://ifoo-oita.com/
 
             {/* 地図表示（売主番号が設定されている場合のみ表示） */}
             {(() => {
-              const propInfo = getPropertyInfo();
               console.log('🗺️ [CallModePage] seller:', seller);
               console.log('🗺️ [CallModePage] seller.sellerNumber:', seller?.sellerNumber);
-              console.log('🗺️ [CallModePage] propInfo.address:', propInfo.address);
+              console.log('🗺️ [CallModePage] seller.propertyAddress:', seller?.propertyAddress);
               
               if (seller?.sellerNumber) {
-                return <PropertyMapSection sellerNumber={seller.sellerNumber} propertyAddress={propInfo.address} />;
+                return <PropertyMapSection sellerNumber={seller.sellerNumber} propertyAddress={property?.address || seller?.propertyAddress} />;
               }
               
               console.log('🗺️ [CallModePage] 地図を表示しない（売主番号が未設定）');
               return null;
             })()}
+
+            {/* 近隣買主リスト */}
+            {seller?.id && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  🏘️ 近隣買主リスト
+                </Typography>
+                <NearbyBuyersList sellerId={seller.id} />
+              </Box>
+            )}
 
             {/* 売主情報 */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
