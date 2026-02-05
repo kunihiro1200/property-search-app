@@ -9,11 +9,13 @@ import {
   Alert,
   Button,
   Link,
+  Snackbar,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
   Launch as LaunchIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -21,6 +23,7 @@ import api from '../services/api';
 interface PropertyFullDetails {
   id: number;
   property_number: string;
+  atbb_status?: string; // atbb_status
   status?: string; // atbb成約済み/非公開
   distribution_date?: string; // 配信日
   address?: string; // 所在地
@@ -40,6 +43,7 @@ interface PropertyFullDetails {
   floor_plan?: string;
   land_area?: number;
   building_area?: number;
+  pre_viewing_notes?: string; // 内覧前伝達事項（物件リストから取得）
 }
 
 interface Buyer {
@@ -65,6 +69,8 @@ export default function PropertyInfoCard({
   const [property, setProperty] = useState<PropertyFullDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -108,6 +114,24 @@ export default function PropertyInfoCard({
     if (property) {
       navigate(`/property-listings/${property.property_number}`);
     }
+  };
+
+  const handleCopyPropertyNumber = async () => {
+    if (!property?.property_number) return;
+    
+    try {
+      await navigator.clipboard.writeText(property.property_number);
+      setSnackbarMessage('物件番号をコピーしました');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to copy property number:', err);
+      setSnackbarMessage('コピーに失敗しました');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   if (loading) {
@@ -182,9 +206,50 @@ export default function PropertyInfoCard({
           <Typography variant="caption" color="text.secondary">
             物件番号
           </Typography>
-          <Typography variant="body1" fontWeight="bold" color="primary.main">
-            {property.property_number}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+            {/* 物件番号テキスト */}
+            <Typography variant="body1" fontWeight="bold" color="primary.main">
+              {property.property_number}
+            </Typography>
+            
+            {/* コピーボタン */}
+            <IconButton 
+              size="small" 
+              onClick={handleCopyPropertyNumber}
+              aria-label="物件番号をコピー"
+              sx={{ 
+                padding: '4px',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+            
+            {/* atbb_status */}
+            {property.atbb_status && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography 
+                  variant="body2" 
+                  fontWeight="bold"
+                  color={property.atbb_status.includes('非公開') ? 'error.main' : 'text.secondary'}
+                  sx={{ ml: 1 }}
+                >
+                  {property.atbb_status}
+                </Typography>
+                
+                {/* 一般媒介の警告 */}
+                {property.atbb_status === '一般・公開中' && (
+                  <Typography 
+                    variant="caption" 
+                    color="error.main"
+                    sx={{ ml: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                  >
+                    ⚠ 一般媒介なので売主様に状況確認してください
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
         </Grid>
 
         {/* atbb成約済み/非公開 */}
@@ -236,7 +301,7 @@ export default function PropertyInfoCard({
         )}
 
         {/* 内覧前伝達事項 */}
-        {buyer?.pre_viewing_notes && (
+        {property.pre_viewing_notes && (
           <Grid item xs={12}>
             <Box
               sx={{
@@ -260,7 +325,7 @@ export default function PropertyInfoCard({
                   lineHeight: 1.5,
                 }}
               >
-                {buyer.pre_viewing_notes}
+                {property.pre_viewing_notes}
               </Typography>
             </Box>
           </Grid>
@@ -464,6 +529,15 @@ export default function PropertyInfoCard({
           物件詳細ページを開く
         </Button>
       </Box>
+
+      {/* Snackbar for copy notification */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Paper>
   );
 }

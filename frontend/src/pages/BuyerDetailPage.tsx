@@ -574,7 +574,7 @@ export default function BuyerDetailPage() {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h5" fontWeight="bold">
-            {buyer.name || buyer.buyer_number}
+            {buyer.name ? `${buyer.name}様` : buyer.buyer_number}
           </Typography>
           {/* 買主番号（クリックでコピー） */}
           {buyer.buyer_number && (
@@ -620,7 +620,7 @@ export default function BuyerDetailPage() {
                 whiteSpace: 'nowrap',
               }}
             >
-              問い合わせ履歴
+              問い合わせ履歴 ({inquiryHistoryTable.length})
             </Button>
           )}
           

@@ -15,10 +15,19 @@
 - `environment-definition.md` - 環境定義（本番環境とローカル環境）
 - `auto-sync-timing.md` - 自動同期のタイミング
 
-### 売主（Seller）関連（常に読み込み）
+### 買主（Buyer）関連（常に読み込み）
+- `buyer-table-column-definition.md` - 買主テーブルのカラム定義
+- `buyer-property-card-sync-rule.md` - 物件詳細カード同期ルール
+
+### 売主（Seller）関連（手動読み込み - `inclusion: manual`）
+以下のファイルは売主関連の作業時のみ手動で参照してください：
+
 - `seller-table-column-definition.md` - 売主テーブルのカラム定義
 - `seller-spreadsheet-column-mapping.md` - 売主スプレッドシートのカラムマッピング
 - `sidebar-status-definition.md` - サイドバーステータス定義
+- `sidebar-api-response-validation.md` - サイドバーAPIレスポンス検証ルール
+- `seller-nearby-buyers-rule.md` - 売主リストの近隣買主リスト機能ルール
+- `staff-spreadsheet-definition.md` - スタッフ管理スプレッドシート定義
 
 ### 物件（Property）関連（手動読み込み - `inclusion: manual`）
 以下のファイルは物件関連の作業時のみ手動で参照してください：
@@ -28,6 +37,12 @@
 - `property-listing-column-mapping.md` - 物件リストスプレッドシートのカラムマッピング
 - `property-coordinates-sync-rules.md` - 物件座標同期ルール
 - `property-comments-auto-sync-rule.md` - 物件コメントデータ自動同期ルール
+
+### エリアマッピング関連（手動読み込み - `inclusion: manual`）
+以下のファイルはエリアマッピング関連の作業時のみ手動で参照してください：
+
+- `beppu-city-address-based-area-mapping.md` - 別府市の住所ベースエリアマッピング
+- `oita-city-address-based-area-mapping.md` - 大分市の住所ベースエリアマッピング
 
 ---
 
@@ -83,9 +98,16 @@
 - `backend-architecture.md` - バックエンドアーキテクチャ定義
 - `environment-definition.md` - 環境定義
 - `auto-sync-timing.md` - 自動同期のタイミング
-- `seller-table-column-definition.md` - 売主テーブルのカラム定義
-- `seller-spreadsheet-column-mapping.md` - 売主スプレッドシートのカラムマッピング
-- `sidebar-status-definition.md` - サイドバーステータス定義
+- `buyer-table-column-definition.md` - 買主テーブルのカラム定義
+- `buyer-property-card-sync-rule.md` - 物件詳細カード同期ルール
+
+**売主関連の作業時のみ手動で参照**:
+- `#seller-table-column-definition` - 売主テーブルのカラム定義
+- `#seller-spreadsheet-column-mapping` - 売主スプレッドシートのカラムマッピング
+- `#sidebar-status-definition` - サイドバーステータス定義
+- `#sidebar-api-response-validation` - サイドバーAPIレスポンス検証ルール
+- `#seller-nearby-buyers-rule` - 売主リストの近隣買主リスト機能ルール
+- `#staff-spreadsheet-definition` - スタッフ管理スプレッドシート定義
 
 **物件関連の作業時のみ手動で参照**:
 - `#public-property-definition` - 公開物件の定義
@@ -93,6 +115,10 @@
 - `#property-listing-column-mapping` - 物件リストカラムマッピング
 - `#property-coordinates-sync-rules` - 物件座標同期ルール
 - `#property-comments-auto-sync-rule` - 物件コメント自動同期ルール
+
+**エリアマッピング関連の作業時のみ手動で参照**:
+- `#beppu-city-address-based-area-mapping` - 別府市の住所ベースエリアマッピング
+- `#oita-city-address-based-area-mapping` - 大分市の住所ベースエリアマッピング
 
 ### 問題が発生した時
 該当する機能の復元ガイド（`.kiro/restore-guides/`）を手動で参照してください。
@@ -117,8 +143,9 @@
 
 ---
 
-**最終更新日**: 2026年1月31日  
+**最終更新日**: 2026年2月6日  
 **更新内容**: 
-- `system-isolation-rule.md`を追加（5つの独立システムの隔離ルール）
-- 物件関連のステアリングドキュメントを手動読み込み（`inclusion: manual`）に変更
-- 売主関連の作業時にコンテキストを軽量化
+- 買主リスト関連を常に読み込みに変更
+- 売主関連のステアリングドキュメントを手動読み込み（`inclusion: manual`）に変更
+- エリアマッピング関連のステアリングドキュメントを手動読み込み（`inclusion: manual`）に変更
+- 買主リスト作業時にコンテキストを軽量化
