@@ -17,8 +17,17 @@ import { z } from 'zod';
 const router = Router();
 
 // Supabase クライアントの初期化
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Supabase environment variables are missing:', {
+    SUPABASE_URL: supabaseUrl ? 'Set' : 'Missing',
+    SUPABASE_SERVICE_KEY: supabaseServiceKey ? 'Set' : 'Missing',
+  });
+  throw new Error('Supabase environment variables are required');
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const propertyListingService = new PropertyListingService();
