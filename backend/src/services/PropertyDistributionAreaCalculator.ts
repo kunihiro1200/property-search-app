@@ -2,6 +2,7 @@
 import { EnhancedGeolocationService } from './EnhancedGeolocationService';
 import { AreaMapConfigService } from './AreaMapConfigService';
 import { BeppuAreaMappingService } from './BeppuAreaMappingService';
+import { OitaCityAreaMappingService } from './OitaCityAreaMappingService';
 
 export interface Coordinates {
   lat: number;
@@ -55,12 +56,14 @@ export class PropertyDistributionAreaCalculator {
   private geolocationService: EnhancedGeolocationService;
   private areaMapConfigService: AreaMapConfigService;
   private beppuAreaMappingService: BeppuAreaMappingService;
+  private oitaCityAreaMappingService: OitaCityAreaMappingService;
   private readonly RADIUS_KM: number;
 
   constructor() {
     this.geolocationService = new EnhancedGeolocationService();
     this.areaMapConfigService = new AreaMapConfigService();
     this.beppuAreaMappingService = new BeppuAreaMappingService();
+    this.oitaCityAreaMappingService = new OitaCityAreaMappingService();
     // 環境変数から半径を取得、デフォルトは3km
     this.RADIUS_KM = parseFloat(process.env.DISTRIBUTION_AREA_RADIUS_KM || '3');
   }
@@ -85,7 +88,19 @@ export class PropertyDistributionAreaCalculator {
       const normalizedCity = this.normalizeCityName(city);
       
       if (normalizedCity.includes('大分')) {
+        // 大分市全域エリアを追加
         cityWideAreas.push('㊵');
+        
+        // 住所ベースの詳細エリアを取得（例: 萩原 → ②）
+        if (address) {
+          const oitaAreas = await this.oitaCityAreaMappingService.getDistributionAreasForAddress(address);
+          
+          if (oitaAreas) {
+            console.log(`[DistributionArea] Oita detailed areas: ${oitaAreas}`);
+            const detailedAreas = this.parseAreaNumbers(oitaAreas);
+            cityWideAreas.push(...detailedAreas);
+          }
+        }
       }
       if (normalizedCity.includes('別府')) {
         // 別府市の場合、住所から詳細エリアを取得
@@ -299,7 +314,7 @@ export class PropertyDistributionAreaCalculator {
         // 3. Load area map configurations
         const areaConfigs = await this.areaMapConfigService.loadAreaMaps();
         
-        // Store area configs in debug info
+        // Store ALL area configs in debug info (including city-wide)
         debugInfo.areaConfigs = areaConfigs.map(config => ({
           areaNumber: config.areaNumber,
           coordinates: config.coordinates || null
@@ -330,6 +345,13 @@ export class PropertyDistributionAreaCalculator {
           }
         }
       }
+    } else {
+      // Google Map URLがない場合でも、エリア設定を読み込んでデバッグ情報に保存
+      const areaConfigs = await this.areaMapConfigService.loadAreaMaps();
+      debugInfo.areaConfigs = areaConfigs.map(config => ({
+        areaNumber: config.areaNumber,
+        coordinates: config.coordinates || null
+      }));
     }
 
     // 5. Combine and remove duplicates

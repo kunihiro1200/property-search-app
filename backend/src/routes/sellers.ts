@@ -859,4 +859,139 @@ router.patch(
   }
 );
 
+/**
+ * 売主の近隣買主リストを取得
+ * GET /api/sellers/:id/nearby-buyers
+ */
+router.get('/:id/nearby-buyers', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log(`🏘️ Getting nearby buyers for seller ${id}`);
+
+    // 売主情報を取得
+    const seller = await sellerService.getSeller(id);
+    if (!seller) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Seller not found',
+          retryable: false,
+        },
+      });
+    }
+
+    // 物件住所が設定されているか確認
+    if (!seller.propertyAddress) {
+      console.log(`⚠️ Property address not set for seller ${id}`);
+      return res.json({
+        buyers: [],
+        matchedAreas: [],
+        propertyAddress: null,
+        propertyType: null,
+        salesPrice: null,
+        message: '物件住所が設定されていません',
+      });
+    }
+
+    // 物件リストと同じ仕組みで配信エリアを計算
+    const { PropertyDistributionAreaCalculator } = await import('../services/PropertyDistributionAreaCalculator');
+    const { CityNameExtractor } = await import('../services/CityNameExtractor');
+    
+    const calculator = new PropertyDistributionAreaCalculator();
+    const cityExtractor = new CityNameExtractor();
+    
+    // Google Map URLと物件情報を取得（propertiesテーブルから）
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+    
+    const { data: property } = await supabase
+      .from('properties')
+      .select('google_map_url, property_type, valuation_amount_1, valuation_amount_2, valuation_amount_3')
+      .eq('seller_id', seller.id)
+      .single();
+    
+    const googleMapUrl = property?.google_map_url || null;
+    const propertyType = property?.property_type || null;
+    
+    // 売出価格を取得（査定額の中央値を使用）
+    let salesPrice: number | null = null;
+    if (property) {
+      const valuations = [
+        property.valuation_amount_1,
+        property.valuation_amount_2,
+        property.valuation_amount_3
+      ].filter(v => v !== null && v !== undefined) as number[];
+      
+      if (valuations.length > 0) {
+        // 中央値を計算
+        valuations.sort((a, b) => a - b);
+        const mid = Math.floor(valuations.length / 2);
+        salesPrice = valuations.length % 2 === 0
+          ? (valuations[mid - 1] + valuations[mid]) / 2
+          : valuations[mid];
+      }
+    }
+    
+    // 市名を物件住所から抽出
+    const city = cityExtractor.extractCityFromAddress(seller.propertyAddress);
+    
+    console.log(`📍 Calculating distribution areas for ${seller.propertyAddress}`, {
+      city,
+      citySource: 'extracted from address',
+      googleMapUrl: googleMapUrl ? 'あり' : 'なし',
+      propertyType,
+      salesPrice
+    });
+    
+    // 配信エリアを計算（物件リストと同じロジック）
+    const result = await calculator.calculateDistributionAreas(
+      googleMapUrl,
+      city,
+      seller.propertyAddress
+    );
+
+    console.log(`📍 Calculated distribution areas:`, result.areas);
+
+    // 配信エリアが空の場合
+    if (!result.areas || result.areas.length === 0) {
+      console.log(`⚠️ No distribution areas found for seller ${id}`);
+      return res.json({
+        buyers: [],
+        matchedAreas: [],
+        propertyAddress: seller.propertyAddress,
+        propertyType,
+        salesPrice,
+        message: '配信エリアを計算できませんでした',
+      });
+    }
+
+    // 該当エリアの買主を取得（物件種別と売出価格でフィルタリング）
+    const { BuyerService } = await import('../services/BuyerService');
+    const buyerService = new BuyerService();
+    const buyers = await buyerService.getBuyersByAreas(result.areas, propertyType, salesPrice);
+
+    console.log(`✅ Found ${buyers.length} nearby buyers for seller ${id} (after filtering)`);
+
+    res.json({
+      buyers,
+      matchedAreas: result.areas,
+      propertyAddress: seller.propertyAddress,
+      propertyType,
+      salesPrice,
+    });
+  } catch (error) {
+    console.error('Get nearby buyers error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_NEARBY_BUYERS_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to get nearby buyers',
+        retryable: true,
+      },
+    });
+  }
+});
+
 export default router;

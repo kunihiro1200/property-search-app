@@ -988,4 +988,423 @@ export class BuyerService {
 
     return history;
   }
+
+  /**
+   * 配信エリア番号に該当する買主を取得（買主候補と同じ条件でフィルタリング）
+   * @param areaNumbers - エリア番号の配列（例: ["①", "②", "③", "㊵"]）
+   * @param propertyType - 物件種別（オプション）
+   * @param salesPrice - 売出価格（オプション）
+   * @returns 該当する買主のリスト
+   */
+  async getBuyersByAreas(
+    areaNumbers: string[],
+    propertyType?: string | null,
+    salesPrice?: number | null
+  ): Promise<any[]> {
+    if (!areaNumbers || areaNumbers.length === 0) {
+      return [];
+    }
+
+    console.log(`[BuyerService.getBuyersByAreas] Searching for buyers in areas:`, areaNumbers);
+    console.log(`[BuyerService.getBuyersByAreas] Property type:`, propertyType);
+    console.log(`[BuyerService.getBuyersByAreas] Sales price:`, salesPrice);
+
+    // 全ての買主を取得（フィルタリングは後で行う）
+    // ソートはフィルタリング後にJavaScript側で行う（複雑なソート条件のため）
+    // 注意: Supabase Postgrestのmax-rows設定により、1回のクエリで取得できる最大件数が制限されている
+    // そのため、ページネーションを使用して全件取得する
+    const allBuyers: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('buyers')
+        .select(`
+          buyer_id,
+          buyer_number,
+          name,
+          latest_status,
+          inquiry_confidence,
+          inquiry_source,
+          distribution_type,
+          broker_inquiry,
+          desired_area,
+          desired_property_type,
+          price_range_house,
+          price_range_apartment,
+          price_range_land,
+          reception_date,
+          email,
+          phone_number
+        `)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        console.error(`[BuyerService.getBuyersByAreas] Error:`, error);
+        throw new Error(`Failed to fetch buyers by areas: ${error.message}`);
+      }
+
+      if (data && data.length > 0) {
+        allBuyers.push(...data);
+        console.log(`[BuyerService.getBuyersByAreas] Fetched page ${page + 1}: ${data.length} buyers (total: ${allBuyers.length})`);
+        
+        // 取得したデータが pageSize より少ない場合は、これが最後のページ
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    console.log(`[BuyerService.getBuyersByAreas] Fetched ${allBuyers.length} buyers from database (${page + 1} pages)`);
+
+    // BuyerCandidateServiceと同じ条件でフィルタリング
+    const filteredBuyers = this.filterBuyerCandidates(
+      allBuyers,
+      areaNumbers,
+      propertyType,
+      salesPrice
+    );
+
+    console.log(`[BuyerService.getBuyersByAreas] After filtering: ${filteredBuyers.length} buyers`);
+
+    // ソート: 1. reception_date DESC (newest first), 2. inquiry_confidence DESC (A > B > C > D)
+    const sortedBuyers = this.sortBuyersByDateAndConfidence(filteredBuyers);
+
+    console.log(`[BuyerService.getBuyersByAreas] After sorting: ${sortedBuyers.length} buyers`);
+    return sortedBuyers;
+  }
+
+  /**
+   * 買主候補をフィルタリング（BuyerCandidateServiceと同じロジック）
+   */
+  private filterBuyerCandidates(
+    buyers: any[],
+    propertyAreaNumbers: string[],
+    propertyType?: string | null,
+    salesPrice?: number | null
+  ): any[] {
+    return buyers.filter(buyer => {
+      // 1. 除外条件の評価（早期リターン）
+      if (this.shouldExcludeBuyer(buyer)) {
+        return false;
+      }
+
+      // 2. 最新状況/問合せ時確度フィルタ
+      if (!this.matchesStatus(buyer)) {
+        return false;
+      }
+
+      // 3. エリアフィルタ
+      if (!this.matchesAreaCriteria(buyer, propertyAreaNumbers)) {
+        return false;
+      }
+
+      // 4. 種別フィルタ（物件種別が指定されている場合のみ）
+      if (propertyType && !this.matchesPropertyTypeCriteria(buyer, propertyType)) {
+        return false;
+      }
+
+      // 5. 価格帯フィルタ（売出価格が指定されている場合のみ）
+      if (salesPrice && !this.matchesPriceCriteria(buyer, salesPrice, propertyType)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * 買主を受付日と確度でソート
+   * 1. reception_date DESC (newest first, nulls last)
+   * 2. inquiry_confidence DESC (A > B > C > D > E > F > ... > null)
+   */
+  private sortBuyersByDateAndConfidence(buyers: any[]): any[] {
+    return buyers.sort((a, b) => {
+      // 1. reception_date DESC (newest first, nulls last)
+      // nullの場合は0（最も古い日付）として扱い、最後に配置
+      const dateA = a.reception_date ? new Date(a.reception_date).getTime() : 0;
+      const dateB = b.reception_date ? new Date(b.reception_date).getTime() : 0;
+      
+      if (dateA !== dateB) {
+        // DESC order: 新しい日付が先に来る（2026 > 2025）
+        return dateB - dateA;
+      }
+
+      // 2. inquiry_confidence DESC (A > B > C > D)
+      const confidenceA = (a.inquiry_confidence || '').trim().toUpperCase();
+      const confidenceB = (b.inquiry_confidence || '').trim().toUpperCase();
+      
+      // 確度の優先順位を定義
+      const confidenceOrder: { [key: string]: number } = {
+        'A': 1,
+        'B': 2,
+        'C': 3,
+        'D': 4,
+        'E': 5,
+        'F': 6,
+        'G': 7,
+        'H': 8,
+        'I': 9,
+        'J': 10,
+      };
+      
+      const orderA = confidenceOrder[confidenceA] || 999; // 未定義は最後
+      const orderB = confidenceOrder[confidenceB] || 999;
+      
+      return orderA - orderB; // ASC (A first)
+    });
+  }
+
+  /**
+   * 買主を除外すべきかどうかを判定
+   */
+  private shouldExcludeBuyer(buyer: any): boolean {
+    // 1. 業者問合せは除外
+    if (this.isBusinessInquiry(buyer)) {
+      return true;
+    }
+
+    // 2. 希望エリアと希望種別が両方空欄の場合は除外
+    if (!this.hasMinimumCriteria(buyer)) {
+      return true;
+    }
+
+    // 3. 配信種別が「要」でない場合は除外
+    if (!this.hasDistributionRequired(buyer)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 業者問合せかどうかを判定
+   */
+  private isBusinessInquiry(buyer: any): boolean {
+    const inquirySource = (buyer.inquiry_source || '').trim();
+    const distributionType = (buyer.distribution_type || '').trim();
+    const brokerInquiry = (buyer.broker_inquiry || '').trim();
+
+    // 問合せ元が「業者問合せ」
+    if (inquirySource === '業者問合せ' || inquirySource.includes('業者')) {
+      return true;
+    }
+
+    // 配信種別が「業者問合せ」
+    if (distributionType === '業者問合せ' || distributionType.includes('業者')) {
+      return true;
+    }
+
+    // 業者問合せフラグに値がある場合
+    if (brokerInquiry && brokerInquiry !== '' && brokerInquiry !== '0' && brokerInquiry.toLowerCase() !== 'false') {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 最低限の希望条件を持っているかを判定
+   */
+  private hasMinimumCriteria(buyer: any): boolean {
+    const desiredArea = (buyer.desired_area || '').trim();
+    const desiredPropertyType = (buyer.desired_property_type || '').trim();
+
+    // 希望エリアまたは希望種別のいずれかが入力されていればtrue
+    return desiredArea !== '' || desiredPropertyType !== '';
+  }
+
+  /**
+   * 配信種別が「要」かどうかを判定
+   */
+  private hasDistributionRequired(buyer: any): boolean {
+    const distributionType = (buyer.distribution_type || '').trim();
+    return distributionType === '要';
+  }
+
+  /**
+   * 最新状況によるフィルタリング
+   */
+  private matchesStatus(buyer: any): boolean {
+    const latestStatus = (buyer.latest_status || '').trim();
+
+    // 買付またはDを含む場合は除外
+    if (latestStatus.includes('買付') || latestStatus.includes('D')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * エリア条件によるフィルタリング
+   */
+  private matchesAreaCriteria(buyer: any, propertyAreaNumbers: string[]): boolean {
+    const desiredArea = (buyer.desired_area || '').trim();
+
+    // 希望エリアが空欄の場合は条件を満たす
+    if (!desiredArea) {
+      return true;
+    }
+
+    // 物件の配信エリアが空欄の場合は条件を満たさない
+    if (propertyAreaNumbers.length === 0) {
+      return false;
+    }
+
+    // 買主の希望エリアを抽出
+    const buyerAreaNumbers = this.extractAreaNumbers(desiredArea);
+
+    // 1つでも合致すれば条件を満たす
+    return propertyAreaNumbers.some(area => buyerAreaNumbers.includes(area));
+  }
+
+  /**
+   * 種別条件によるフィルタリング
+   */
+  private matchesPropertyTypeCriteria(buyer: any, propertyType: string | null): boolean {
+    const desiredType = (buyer.desired_property_type || '').trim();
+
+    // 希望種別が「指定なし」の場合は条件を満たす
+    if (desiredType === '指定なし') {
+      return true;
+    }
+
+    // 希望種別が空欄の場合は条件を満たさない
+    if (!desiredType) {
+      return false;
+    }
+
+    // 物件種別が空欄の場合は条件を満たさない
+    if (!propertyType) {
+      return false;
+    }
+
+    // 種別の正規化と比較
+    const normalizedPropertyType = this.normalizePropertyType(propertyType);
+    const normalizedDesiredTypes = desiredType.split(/[,、\s]+/).map((t: string) => this.normalizePropertyType(t));
+
+    // いずれかの希望種別が物件種別と合致すれば条件を満たす
+    return normalizedDesiredTypes.some((dt: string) => 
+      dt === normalizedPropertyType || 
+      normalizedPropertyType.includes(dt) ||
+      dt.includes(normalizedPropertyType)
+    );
+  }
+
+  /**
+   * 価格帯条件によるフィルタリング
+   */
+  private matchesPriceCriteria(
+    buyer: any,
+    salesPrice: number | null,
+    propertyType: string | null
+  ): boolean {
+    // 物件価格が空欄の場合は条件を満たす
+    if (!salesPrice) {
+      return true;
+    }
+
+    // 物件種別に応じた価格帯フィールドを選択
+    let priceRange: string | null = null;
+    const normalizedType = this.normalizePropertyType(propertyType || '');
+
+    if (normalizedType === '戸建' || normalizedType.includes('戸建')) {
+      priceRange = buyer.price_range_house;
+    } else if (normalizedType === 'マンション' || normalizedType.includes('マンション')) {
+      priceRange = buyer.price_range_apartment;
+    } else if (normalizedType === '土地' || normalizedType.includes('土地')) {
+      priceRange = buyer.price_range_land;
+    }
+
+    // 価格帯が空欄の場合は条件を満たす
+    if (!priceRange || !priceRange.trim()) {
+      return true;
+    }
+
+    // 価格帯をパースして範囲チェック
+    const { min, max } = this.parsePriceRange(priceRange);
+    return salesPrice >= min && salesPrice <= max;
+  }
+
+  /**
+   * エリア番号を抽出
+   */
+  private extractAreaNumbers(areaString: string): string[] {
+    const circledNumbers = areaString.match(/[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯㊵㊶]/g) || [];
+    return circledNumbers;
+  }
+
+  /**
+   * 種別を正規化
+   */
+  private normalizePropertyType(type: string): string {
+    const normalized = type.trim()
+      .replace(/中古/g, '')
+      .replace(/新築/g, '')
+      .replace(/一戸建て/g, '戸建')
+      .replace(/一戸建/g, '戸建')
+      .replace(/戸建て/g, '戸建')
+      .replace(/分譲/g, '')
+      .trim();
+    return normalized;
+  }
+
+  /**
+   * 価格帯をパース
+   */
+  private parsePriceRange(priceRange: string): { min: number; max: number } {
+    let min = 0;
+    let max = Number.MAX_SAFE_INTEGER;
+
+    const cleanedRange = priceRange
+      .replace(/,/g, '')
+      .replace(/円/g, '')
+      .replace(/万/g, '0000')
+      .replace(/億/g, '00000000')
+      .trim();
+
+    // 範囲パターン
+    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-]\s*(\d+)?/);
+    if (rangeMatch) {
+      if (rangeMatch[1]) {
+        min = parseInt(rangeMatch[1], 10);
+      }
+      if (rangeMatch[2]) {
+        max = parseInt(rangeMatch[2], 10);
+      }
+      return { min, max };
+    }
+
+    // 以上/以下パターン
+    const aboveMatch = cleanedRange.match(/(\d+)\s*以上/);
+    if (aboveMatch) {
+      min = parseInt(aboveMatch[1], 10);
+      return { min, max };
+    }
+
+    const belowMatch = cleanedRange.match(/(\d+)\s*以下/);
+    if (belowMatch) {
+      max = parseInt(belowMatch[1], 10);
+      return { min, max };
+    }
+
+    // 単一値パターン
+    const singleMatch = cleanedRange.match(/^(\d+)$/);
+    if (singleMatch) {
+      const value = parseInt(singleMatch[1], 10);
+      min = value * 0.8;
+      max = value * 1.2;
+      return { min, max };
+    }
+
+    return { min, max };
+  }
 }
+
