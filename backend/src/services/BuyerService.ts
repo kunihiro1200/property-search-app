@@ -124,10 +124,13 @@ export class BuyerService {
 
     // ソート（受付日が空欄のものは一番後ろに配置）
     // nullsFirst: false で NULL値を最後に配置
-    query = query.order(sortBy, { 
-      ascending: sortOrder === 'asc',
-      nullsFirst: false 
-    });
+    // 受付日が同じ場合は買主番号の降順でソート
+    query = query
+      .order(sortBy, { 
+        ascending: sortOrder === 'asc',
+        nullsFirst: false 
+      })
+      .order('buyer_number', { ascending: false }); // 買主番号の降順（新しい順）
 
     // ページネーション
     query = query.range(offset, offset + limit - 1);

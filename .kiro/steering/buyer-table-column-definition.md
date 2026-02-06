@@ -16,12 +16,13 @@
 
 **重要**: 
 - ✅ **`buyer_number`** ← **これが主キー（買主番号）** ← **これだけを使用する**
-- ❌ **`buyer_id`** ← **使用しない**（内部的に存在するが、アプリケーションでは使わない）
+- ❌ **`buyer_id`** ← **存在すら不要**（データベースに存在するが、アプリケーションでは完全に無視する）
 - ❌ **`id`** ← **存在しない**（絶対に使用しない）
 
 **🚨 最重要ルール**: 
 - 買主を識別する際は、**常に`buyer_number`を使用する**
-- `buyer_id`は内部的に存在するが、**アプリケーションコードでは一切使用しない**
+- `buyer_id`は**存在すら不要**で、**アプリケーションコードでは完全に無視する**
+- `buyer_id`がNULLでも問題なし（主キーは`buyer_number`）
 
 ---
 
@@ -40,12 +41,14 @@ const { data } = await supabase
 ### ❌ 間違い2: `buyer_id`カラムを使用
 
 ```typescript
-// ❌ 間違い（buyer_idは使用しない）
+// ❌ 間違い（buyer_idは存在すら不要）
 const { data } = await supabase
   .from('buyers')
   .select('*')
   .eq('buyer_id', 'some-uuid');
 ```
+
+**重要**: `buyer_id`は**存在すら不要**です。データベースに存在しても、アプリケーションコードでは完全に無視してください。
 
 ### ✅ 正しい方法: 買主番号で検索
 
@@ -135,18 +138,12 @@ await supabase
 
 ### getById メソッド
 
-**重要**: `getById`メソッドは`buyer_id`（UUID）で検索します。買主番号で検索する場合は`getByBuyerNumber`を使用してください。
+**重要**: `getById`メソッドは**使用しないでください**。買主番号で検索する場合は`getByBuyerNumber`を使用してください。
 
 ```typescript
-// ✅ 正しい（buyer_idで検索 - UUID）
+// ❌ 使用しない（buyer_idは存在すら不要）
 async getById(id: string): Promise<any | null> {
-  const { data, error } = await this.supabase
-    .from('buyers')
-    .select('*')
-    .eq('buyer_id', id)  // ← buyer_id（UUID）で検索
-    .single();
-  
-  return data;
+  // このメソッドは使用しない
 }
 
 // ✅ 正しい（buyer_numberで検索 - 買主番号）
@@ -193,14 +190,14 @@ async getByBuyerNumber(buyerNumber: string): Promise<any | null> {
 - `buyer_number`をUUIDとして使用している
 
 **解決方法**:
-- `buyer_id`（UUID）: データベース内部ID（UUID形式の文字列）
+- `buyer_id`（UUID）: **存在すら不要**（データベースに存在しても無視）
 - `buyer_number`（文字列）: 買主番号（例: "6666"）← **これが主キー**
 
 ```typescript
-// ✅ 正しい使い分け
+// ✅ 正しい使い方
 const buyer = await buyerService.getByBuyerNumber('6666');  // 買主番号で検索
-console.log(buyer.buyer_id);  // UUID（内部ID）
 console.log(buyer.buyer_number);  // 買主番号（"6666"）← 主キー
+// buyer.buyer_idは使用しない（存在すら不要）
 ```
 
 ---
@@ -216,15 +213,19 @@ console.log(buyer.buyer_number);  // 買主番号（"6666"）← 主キー
 **絶対に守るべきルール**:
 
 1. **買主番号は`buyer_number`** ← これが主キー
-2. **UUIDは`buyer_id`** ← 内部ID（UUID形式の文字列）
+2. **`buyer_id`は存在すら不要** ← データベースに存在しても完全に無視する
 3. **`id`カラムは存在しない** ← 絶対に使用しない
-4. **`getById`メソッドは`buyer_id`で検索** ← UUID検索用
-5. **`getByBuyerNumber`メソッドは`buyer_number`で検索** ← 主キー検索用（推奨）
+4. **`getById`メソッドは使用しない** ← buyer_idを使うため
+5. **`getByBuyerNumber`メソッドを使用** ← 主キー検索用（推奨）
+6. **`buyer_id`がNULLでも問題なし** ← 主キーはbuyer_number
 
 **このルールを徹底することで、カラム名の間違いを完全に防止できます。**
 
 ---
 
-**最終更新日**: 2026年2月5日  
-**作成理由**: buyer_idとbuyer_numberの混同を防ぎ、カラム名を明確化するため
+**最終更新日**: 2026年2月6日  
+**作成理由**: buyer_idは存在すら不要であることを明確化するため  
+**更新履歴**:
+- 2026年2月6日: buyer_idは存在すら不要であることを明確化、getByIdメソッドは使用しないことを追加
+- 2026年2月5日: buyer_idとbuyer_numberの混同を防ぎ、カラム名を明確化するため
 

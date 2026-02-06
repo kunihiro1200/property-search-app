@@ -104,7 +104,30 @@ export class BuyerColumnMapper {
    * 日付文字列をパース
    */
   private parseDate(value: any): string | null {
-    if (!value) return null;
+    if (!value || value === '') return null;
+    
+    // Excelシリアル値（数値）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > 30000 && numValue < 60000) {
+      try {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + numValue * 24 * 60 * 60 * 1000);
+        
+        // 日付が有効範囲内かチェック（1900-01-01 ～ 2100-12-31）
+        const year = date.getFullYear();
+        if (year < 1900 || year > 2100) {
+          console.warn(`⚠️  Invalid year from Excel serial: ${year} (serial: ${numValue})`);
+          return null;
+        }
+        
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (error: any) {
+        console.warn(`⚠️  Failed to parse Excel serial value: ${numValue} (${error.message})`);
+        return null;
+      }
+    }
     
     const str = String(value).trim();
     if (!str) return null;
@@ -138,7 +161,28 @@ export class BuyerColumnMapper {
    * 日時文字列をパース
    */
   private parseDatetime(value: any): string | null {
-    if (!value) return null;
+    if (!value || value === '') return null;
+    
+    // Excelシリアル値（数値）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > 30000 && numValue < 60000) {
+      try {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + numValue * 24 * 60 * 60 * 1000);
+        
+        // 日付が有効範囲内かチェック（1900-01-01 ～ 2100-12-31）
+        const year = date.getFullYear();
+        if (year < 1900 || year > 2100) {
+          console.warn(`⚠️  Invalid year from Excel serial: ${year} (serial: ${numValue})`);
+          return null;
+        }
+        
+        return date.toISOString();
+      } catch (error: any) {
+        console.warn(`⚠️  Failed to parse Excel serial value: ${numValue} (${error.message})`);
+        return null;
+      }
+    }
     
     const str = String(value).trim();
     if (!str) return null;

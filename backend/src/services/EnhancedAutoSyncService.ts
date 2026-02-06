@@ -2504,8 +2504,12 @@ export class EnhancedAutoSyncService {
     
     for (const row of allRows) {
       const buyerNumber = row['買主番号'];
-      if (buyerNumber && typeof buyerNumber === 'string') {
-        sheetBuyerNumbers.add(buyerNumber);
+      // 🔧 修正: 数値型と文字列型の両方に対応
+      if (buyerNumber !== null && buyerNumber !== undefined && buyerNumber !== '') {
+        const buyerNumberStr = String(buyerNumber).trim();
+        if (buyerNumberStr) {
+          sheetBuyerNumbers.add(buyerNumberStr);
+        }
       }
     }
     console.log(`📊 Spreadsheet buyers: ${sheetBuyerNumbers.size}`);
@@ -2553,8 +2557,12 @@ export class EnhancedAutoSyncService {
     
     for (const row of allRows) {
       const buyerNumber = row['買主番号'];
-      if (buyerNumber && typeof buyerNumber === 'string') {
-        sheetDataByBuyerNumber.set(buyerNumber, row);
+      // 🔧 修正: 数値型と文字列型の両方に対応
+      if (buyerNumber !== null && buyerNumber !== undefined && buyerNumber !== '') {
+        const buyerNumberStr = String(buyerNumber).trim();
+        if (buyerNumberStr) {
+          sheetDataByBuyerNumber.set(buyerNumberStr, row);
+        }
       }
     }
     console.log(`📊 Spreadsheet buyers: ${sheetDataByBuyerNumber.size}`);
@@ -2841,6 +2849,14 @@ export class EnhancedAutoSyncService {
       Object.keys(row),
       Object.values(row)
     );
+
+    // 主キーはbuyer_numberなので、buyer_idの自動生成は不要
+    // buyer_idがNULLの場合はそのままNULLで保存
+
+    // nameがNULLの場合はデフォルト値を設定（NOT NULL制約対応）
+    if (!mappedData.name || mappedData.name === null || mappedData.name === 'null' || mappedData.name.trim() === '') {
+      mappedData.name = `買主${buyerNumber}`;
+    }
 
     const buyerData: any = {
       buyer_number: buyerNumber,
