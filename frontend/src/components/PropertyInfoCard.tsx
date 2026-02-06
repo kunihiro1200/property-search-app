@@ -182,16 +182,11 @@ export default function PropertyInfoCard({
         bgcolor: '#f8f9ff',
       }}
     >
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h6" fontWeight="bold" color="primary">
-            物件情報
-          </Typography>
-          <IconButton size="small" onClick={handleNavigateToProperty} color="primary">
-            <OpenInNewIcon fontSize="small" />
-          </IconButton>
-        </Box>
+      {/* Header - 外部リンクアイコンと閉じるボタンのみ */}
+      <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5 }}>
+        <IconButton size="small" onClick={handleNavigateToProperty} color="primary">
+          <OpenInNewIcon fontSize="small" />
+        </IconButton>
         {showCloseButton && onClose && (
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
@@ -201,104 +196,101 @@ export default function PropertyInfoCard({
 
       {/* Property Details */}
       <Grid container spacing={2}>
-        {/* 物件番号 */}
+        {/* 1行目: 物件番号 + atbb_status + 配信日 */}
         <Grid item xs={12}>
-          <Typography variant="caption" color="text.secondary">
-            物件番号
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
-            {/* 物件番号テキスト */}
-            <Typography variant="body1" fontWeight="bold" color="primary.main">
-              {property.property_number}
-            </Typography>
-            
-            {/* コピーボタン */}
-            <IconButton 
-              size="small" 
-              onClick={handleCopyPropertyNumber}
-              aria-label="物件番号をコピー"
-              sx={{ 
-                padding: '4px',
-                '&:hover': { bgcolor: 'action.hover' }
-              }}
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-            
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, flexWrap: 'wrap' }}>
+            {/* 物件番号 */}
+            <Box sx={{ flex: '0 0 auto' }}>
+              <Typography variant="caption" color="text.secondary">
+                物件番号
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <Typography variant="body1" fontWeight="bold" color="primary.main">
+                  {property.property_number}
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={handleCopyPropertyNumber}
+                  aria-label="物件番号をコピー"
+                  sx={{ 
+                    padding: '4px',
+                    '&:hover': { bgcolor: 'action.hover' }
+                  }}
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+
             {/* atbb_status */}
             {property.atbb_status && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <Typography 
-                  variant="body2" 
-                  fontWeight="bold"
-                  color={property.atbb_status.includes('非公開') ? 'error.main' : 'text.secondary'}
-                  sx={{ ml: 1 }}
-                >
-                  {property.atbb_status}
+              <Box sx={{ flex: '0 0 auto' }}>
+                <Typography variant="caption" color="text.secondary">
+                  ステータス
                 </Typography>
-                
-                {/* 一般媒介の警告 */}
-                {property.atbb_status === '一般・公開中' && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
                   <Typography 
-                    variant="caption" 
-                    color="error.main"
-                    sx={{ ml: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    variant="body2" 
+                    fontWeight="bold"
+                    color={property.atbb_status.includes('非公開') ? 'error.main' : 'text.secondary'}
                   >
-                    ⚠ 一般媒介なので売主様に状況確認してください
+                    {property.atbb_status}
                   </Typography>
-                )}
+                  {property.atbb_status === '一般・公開中' && (
+                    <Typography 
+                      variant="caption" 
+                      color="error.main"
+                      sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                      ⚠ 一般媒介なので売主様に状況確認してください
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {/* 配信日 */}
+            {property.distribution_date && (
+              <Box sx={{ flex: '0 0 auto' }}>
+                <Typography variant="caption" color="text.secondary">
+                  配信日
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {formatDate(property.distribution_date)}
+                </Typography>
               </Box>
             )}
           </Box>
         </Grid>
 
-        {/* atbb成約済み/非公開 */}
-        {property.status && (
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" color="text.secondary">
-              ステータス
-            </Typography>
-            <Typography variant="body2">
-              {property.status}
-            </Typography>
-          </Grid>
-        )}
+        {/* 2行目: 所在地 + 住居表示 */}
+        <Grid item xs={12}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {/* 所在地 */}
+            {property.address && (
+              <Box sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+                <Typography variant="caption" color="text.secondary">
+                  所在地
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {property.address}
+                </Typography>
+              </Box>
+            )}
 
-        {/* 配信日 */}
-        {property.distribution_date && (
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" color="text.secondary">
-              配信日
-            </Typography>
-            <Typography variant="body2">
-              {formatDate(property.distribution_date)}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 所在地 */}
-        {property.address && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              所在地
-            </Typography>
-            <Typography variant="body2">
-              {property.address}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 住居表示 */}
-        {property.display_address && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              住居表示
-            </Typography>
-            <Typography variant="body2">
-              {property.display_address}
-            </Typography>
-          </Grid>
-        )}
+            {/* 住居表示 */}
+            {property.display_address && (
+              <Box sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+                <Typography variant="caption" color="text.secondary">
+                  住居表示
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {property.display_address}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Grid>
 
         {/* 内覧前伝達事項 */}
         {property.pre_viewing_notes && (
@@ -415,49 +407,54 @@ export default function PropertyInfoCard({
           </Grid>
         )}
 
-        {/* Suumo URL */}
-        {property.suumo_url && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              Suumo URL
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Link 
-                href={property.suumo_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-              >
-                <Typography variant="body2">
-                  Suumoで開く
+        {/* 3行目: Suumo URL + Google Map */}
+        <Grid item xs={12}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {/* Suumo URL */}
+            {property.suumo_url && (
+              <Box sx={{ flex: '0 0 auto' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Suumo URL
                 </Typography>
-                <LaunchIcon fontSize="small" />
-              </Link>
-            </Box>
-          </Grid>
-        )}
+                <Box sx={{ mt: 0.5 }}>
+                  <Link 
+                    href={property.suumo_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                  >
+                    <Typography variant="body2">
+                      Suumoで開く
+                    </Typography>
+                    <LaunchIcon fontSize="small" />
+                  </Link>
+                </Box>
+              </Box>
+            )}
 
-        {/* Google Map URL */}
-        {property.google_map_url && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              Google Map
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Link 
-                href={property.google_map_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-              >
-                <Typography variant="body2">
-                  地図を開く
+            {/* Google Map URL */}
+            {property.google_map_url && (
+              <Box sx={{ flex: '0 0 auto' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Google Map
                 </Typography>
-                <LaunchIcon fontSize="small" />
-              </Link>
-            </Box>
-          </Grid>
-        )}
+                <Box sx={{ mt: 0.5 }}>
+                  <Link 
+                    href={property.google_map_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                  >
+                    <Typography variant="body2">
+                      地図を開く
+                    </Typography>
+                    <LaunchIcon fontSize="small" />
+                  </Link>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Grid>
 
         {/* 確済 */}
         {property.confirmation_status && (

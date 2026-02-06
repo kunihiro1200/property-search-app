@@ -96,6 +96,25 @@ const INQUIRY_HEARING_QUICK_INPUTS = [
 
 const BUYER_FIELD_SECTIONS = [
   {
+    title: '問合せ内容',
+    fields: [
+      // 一番上：問合時ヒアリング（全幅）
+      { key: 'inquiry_hearing', label: '問合時ヒアリング', multiline: true, inlineEditable: true, fullWidth: true },
+      // 左の列
+      { key: 'inquiry_email_phone', label: '【問合メール】電話対応', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
+      { key: 'three_calls_confirmed', label: '3回架電確認済み', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
+      { key: 'email_type', label: 'メール種別', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
+      { key: 'distribution_type', label: '配信の有無', inlineEditable: true, fieldType: 'button', column: 'left' },
+      // 右の列
+      { key: 'reception_date', label: '受付日', type: 'date', inlineEditable: true, column: 'right' },
+      { key: 'initial_assignee', label: '初動担当', inlineEditable: true, column: 'right' },
+      { key: 'inquiry_source', label: '問合せ元', inlineEditable: true, column: 'right' },
+      { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true, column: 'right' },
+      // 削除: owned_home_hearing（持家ヒアリング）
+      // 削除: inquiry_confidence（問合時確度）- 指定されていないため削除
+    ],
+  },
+  {
     title: '基本情報',
     fields: [
       { key: 'buyer_number', label: '買主番号', inlineEditable: true, readOnly: true },
@@ -103,25 +122,6 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'phone_number', label: '電話番号', inlineEditable: true },
       { key: 'email', label: 'メールアドレス', inlineEditable: true },
       { key: 'company_name', label: '法人名', inlineEditable: true },
-    ],
-  },
-  {
-    title: '問合せ内容',
-    fields: [
-      { key: 'initial_assignee', label: '初動担当', inlineEditable: true },
-      { key: 'follow_up_assignee', label: '後続担当', inlineEditable: true },
-      { key: 'reception_date', label: '受付日', type: 'date', inlineEditable: true },
-      { key: 'inquiry_source', label: '問合せ元', inlineEditable: true },
-      { key: 'inquiry_hearing', label: '問合時ヒアリング', multiline: true, inlineEditable: true },
-      { key: 'inquiry_confidence', label: '問合時確度', inlineEditable: true },
-      { key: 'inquiry_email_phone', label: '【問合メール】電話対応', inlineEditable: true, fieldType: 'dropdown' },
-      { key: 'three_calls_confirmed', label: '3回架電確認済み', inlineEditable: true, fieldType: 'dropdown' },
-      { key: 'email_type', label: 'メール種別', inlineEditable: true, fieldType: 'dropdown' },
-      { key: 'distribution_type', label: '配信種別', inlineEditable: true, fieldType: 'dropdown' },
-      { key: 'owned_home_hearing', label: '持家ヒアリング', inlineEditable: true },
-      // latest_viewing_date は内覧ページに移動
-      // viewing_notes は PropertyInfoCard 内に移動
-      { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true },
     ],
   },
   // 希望条件セクションは別ページに移動
@@ -167,6 +167,7 @@ export default function BuyerDetailPage() {
   const [relatedBuyersCount, setRelatedBuyersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copiedBuyerNumber, setCopiedBuyerNumber] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
     open: false,
     message: '',
@@ -232,8 +233,11 @@ export default function BuyerDetailPage() {
   const fetchBuyer = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/api/buyers/${buyer_number}`);
+      // 常にスプレッドシートから最新データを取得（force=true）
+      const res = await api.get(`/api/buyers/${buyer_number}?force=true`);
       setBuyer(res.data);
+      // inquiry_hearingフィールドを強制再レンダリング
+      setInquiryHearingKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to fetch buyer:', error);
     } finally {
@@ -246,39 +250,18 @@ export default function BuyerDetailPage() {
     if (!buyer) return;
 
     try {
-      // 更新するフィールドのみを送信（双方向同期を有効化）
+      // 更新するフィールドのみを送信（DBのみに保存、スプレッドシートには保存しない）
       const result = await buyerApi.update(
         buyer_number!,
         { [fieldName]: newValue },
-        { sync: true }  // スプレッドシートへの同期を有効化
+        { sync: false, force: false }  // スプレッドシートへの同期を無効化
       );
-      
-      // 競合がある場合
-      if (result.conflicts && result.conflicts.length > 0) {
-        console.warn('Sync conflict detected:', result.conflicts);
-        setSnackbar({
-          open: true,
-          message: '同期競合が発生しました。スプレッドシートの値が変更されています。',
-          severity: 'warning'
-        });
-        // ローカル状態は更新（DBには保存されている）
-        setBuyer(result.buyer);
-        return { success: true };
-      }
       
       // ローカル状態を更新
       setBuyer(result.buyer);
       
-      // 同期ステータスを表示
-      if (result.syncStatus === 'pending') {
-        setSnackbar({
-          open: true,
-          message: '保存しました（スプレッドシート同期は保留中）',
-          severity: 'warning'
-        });
-      } else if (result.syncStatus === 'synced') {
-        // 成功時は特にメッセージを表示しない（静かに成功）
-      }
+      // 未保存の変更フラグを立てる
+      setHasUnsavedChanges(true);
       
       return { success: true };
     } catch (error: any) {
@@ -297,29 +280,44 @@ export default function BuyerDetailPage() {
   const handleInquiryHearingQuickInput = async (text: string, buttonLabel: string) => {
     if (!buyer) return;
     
-    // ボタンを無効化
-    disableQuickButton(buttonLabel);
+    console.log('[handleInquiryHearingQuickInput] Called with:', { text, buttonLabel });
+    console.log('[handleInquiryHearingQuickInput] Current buyer.inquiry_hearing:', buyer.inquiry_hearing);
     
+    // 現在の値を取得（buyerの最新状態から）
     const currentValue = buyer.inquiry_hearing || '';
+    
     // 新しいテキストを先頭に追加（既存内容がある場合は改行を挟む）
     const newValue = currentValue 
       ? `${text}\n${currentValue}` 
       : text;
     
+    console.log('[handleInquiryHearingQuickInput] New value to save:', newValue);
+    
     // 先にローカル状態を更新して即座にUIに反映
     setBuyer(prev => prev ? { ...prev, inquiry_hearing: newValue } : prev);
     // キーを更新してInlineEditableFieldを強制再レンダリング
     setInquiryHearingKey(prev => prev + 1);
+    // 未保存の変更フラグを立てる
+    setHasUnsavedChanges(true);
     
-    // その後DBに保存
-    const result = await handleInlineFieldSave('inquiry_hearing', newValue);
-    if (result && !result.success && result.error) {
+    // DBのみに保存（スプレッドシートには保存しない）
+    try {
+      const result = await buyerApi.update(
+        buyer_number!,
+        { inquiry_hearing: newValue },
+        { sync: false, force: false }  // スプレッドシート同期を無効化
+      );
+      
+      console.log('[handleInquiryHearingQuickInput] Save result:', result);
+      
+    } catch (error: any) {
+      console.error('[handleInquiryHearingQuickInput] Exception:', error);
       // エラー時は元の値に戻す
       setBuyer(prev => prev ? { ...prev, inquiry_hearing: currentValue } : prev);
       setInquiryHearingKey(prev => prev + 1);
       setSnackbar({
         open: true,
-        message: result.error,
+        message: error.response?.data?.error || '保存に失敗しました',
         severity: 'error'
       });
     }
@@ -647,6 +645,62 @@ export default function BuyerDetailPage() {
           >
             内覧
           </Button>
+
+          {/* Save ボタン（全データをスプレッドシートに同期） */}
+          <Button
+            variant={hasUnsavedChanges ? "contained" : "outlined"}
+            color={hasUnsavedChanges ? "error" : "primary"}
+            size="medium"
+            onClick={async () => {
+              console.log('[Save Button] Clicked, hasUnsavedChanges:', hasUnsavedChanges);
+              try {
+                // 現在のブラウザのデータを全てスプレッドシートに同期
+                console.log('[Save Button] Sending update request...');
+                const result = await buyerApi.update(
+                  buyer_number!,
+                  buyer,  // 全フィールドを送信
+                  { sync: true, force: true }  // スプレッドシートへの同期を有効化 + 強制上書き
+                );
+                
+                console.log('[Save Button] Update successful, result:', result);
+                setBuyer(result.buyer);
+                // 未保存の変更フラグをクリア
+                console.log('[Save Button] Clearing hasUnsavedChanges flag');
+                setHasUnsavedChanges(false);
+                console.log('[Save Button] hasUnsavedChanges cleared');
+                setSnackbar({
+                  open: true,
+                  message: 'スプレッドシートに保存しました',
+                  severity: 'success'
+                });
+              } catch (error: any) {
+                console.error('[Save Button] Failed to save to spreadsheet:', error);
+                setSnackbar({
+                  open: true,
+                  message: 'スプレッドシートへの保存に失敗しました',
+                  severity: 'error'
+                });
+              }
+            }}
+            sx={{
+              whiteSpace: 'nowrap',
+              // 未保存の変更がある場合は赤色で光らせる
+              ...(hasUnsavedChanges && {
+                animation: 'pulse 2s ease-in-out infinite',
+                boxShadow: '0 0 20px rgba(211, 47, 47, 0.6)',
+                '@keyframes pulse': {
+                  '0%, 100%': {
+                    boxShadow: '0 0 20px rgba(211, 47, 47, 0.6)',
+                  },
+                  '50%': {
+                    boxShadow: '0 0 30px rgba(211, 47, 47, 0.9)',
+                  },
+                },
+              }),
+            }}
+          >
+            Save {hasUnsavedChanges && '●'}
+          </Button>
         </Box>
       </Box>
 
@@ -668,7 +722,7 @@ export default function BuyerDetailPage() {
           sx={{ 
             flex: '0 0 42%', 
             minWidth: 0,
-            maxHeight: 'calc(100vh - 200px)',
+            maxHeight: 'calc(100vh - 180px)',
             overflowY: 'auto',
             overflowX: 'hidden',
             pr: 1,
@@ -699,12 +753,12 @@ export default function BuyerDetailPage() {
             },
           }}
           role="complementary"
-          aria-label="物件詳細カード"
+          aria-label="物件情報"
           tabIndex={0}
         >
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">物件詳細カード</Typography>
+              <Typography variant="h6">物件情報</Typography>
               {linkedProperties.length > 0 && (
                 <Chip 
                   label={`${linkedProperties.length}件`} 
@@ -737,7 +791,7 @@ export default function BuyerDetailPage() {
           sx={{ 
             flex: '1 1 58%', 
             minWidth: 0,
-            maxHeight: 'calc(100vh - 200px)',
+            maxHeight: 'calc(100vh - 180px)',
             overflowY: 'auto',
             overflowX: 'hidden',
             pl: 1,
@@ -876,8 +930,18 @@ export default function BuyerDetailPage() {
                 {section.fields.map((field: any) => {
                   const value = buyer[field.key];
                   
-                  // multilineフィールドは全幅で表示
-                  const gridSize = field.multiline ? { xs: 12 } : { xs: 12, sm: 6 };
+                  // グリッドサイズの決定
+                  // 1. fullWidthプロパティがtrueの場合は全幅
+                  // 2. columnプロパティがある場合は半幅（左右の列）
+                  // 3. multilineフィールドは全幅
+                  // 4. それ以外は半幅
+                  const gridSize = field.fullWidth 
+                    ? { xs: 12 } 
+                    : field.column 
+                      ? { xs: 12, sm: 6 } 
+                      : field.multiline 
+                        ? { xs: 12 } 
+                        : { xs: 12, sm: 6 };
 
                   // インライン編集可能なフィールド
                   if (field.inlineEditable) {
@@ -933,7 +997,7 @@ export default function BuyerDetailPage() {
                       );
                     }
 
-                    // inquiry_email_phoneフィールドは特別処理（ドロップダウン）
+                    // inquiry_email_phoneフィールドは特別処理（ボタン形式）
                     if (field.key === 'inquiry_email_phone') {
                       const handleFieldSave = async (newValue: any) => {
                         const result = await handleInlineFieldSave(field.key, newValue);
@@ -942,24 +1006,70 @@ export default function BuyerDetailPage() {
                         }
                       };
 
+                      // 標準的な選択肢
+                      const standardOptions = ['済', '未', '不通', '過去のもの'];
+                      const isStandardValue = standardOptions.includes(value);
+
                       return (
                         <Grid item {...gridSize} key={field.key}>
-                          <InlineEditableField
-                            label={field.label}
-                            value={value || ''}
-                            fieldName={field.key}
-                            fieldType="dropdown"
-                            options={INQUIRY_EMAIL_PHONE_OPTIONS}
-                            onSave={handleFieldSave}
-                            buyerId={buyer?.id || buyer_number}
-                            enableConflictDetection={true}
-                            showEditIndicator={true}
-                          />
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            {isStandardValue || !value ? (
+                              // 標準的な値または空の場合はボタンを表示
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {standardOptions.map((option) => (
+                                  <Button
+                                    key={option}
+                                    variant={value === option ? 'contained' : 'outlined'}
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => {
+                                      // 同じボタンを2度クリックしたら値をクリア
+                                      if (value === option) {
+                                        handleFieldSave('');
+                                      } else {
+                                        handleFieldSave(option);
+                                      }
+                                    }}
+                                    sx={{ flex: '1 1 auto', minWidth: '60px' }}
+                                  >
+                                    {option}
+                                  </Button>
+                                ))}
+                              </Box>
+                            ) : (
+                              // 想定外の値の場合はテキストとして表示
+                              <Box sx={{ 
+                                p: 1, 
+                                border: '1px solid', 
+                                borderColor: 'warning.main',
+                                borderRadius: 1,
+                                bgcolor: 'warning.light',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {value}
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleFieldSave('')}
+                                  sx={{ ml: 1 }}
+                                >
+                                  クリア
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
                         </Grid>
                       );
                     }
 
-                    // three_calls_confirmedフィールドは特別処理（ドロップダウン）
+                    // three_calls_confirmedフィールドは特別処理（ボタン形式）
                     if (field.key === 'three_calls_confirmed') {
                       const handleFieldSave = async (newValue: any) => {
                         const result = await handleInlineFieldSave(field.key, newValue);
@@ -968,19 +1078,65 @@ export default function BuyerDetailPage() {
                         }
                       };
 
+                      // 標準的な選択肢
+                      const standardOptions = ['3回架電OK', '3回架電未', '他'];
+                      const isStandardValue = standardOptions.includes(value);
+
                       return (
                         <Grid item {...gridSize} key={field.key}>
-                          <InlineEditableField
-                            label={field.label}
-                            value={value || ''}
-                            fieldName={field.key}
-                            fieldType="dropdown"
-                            options={THREE_CALLS_CONFIRMED_OPTIONS}
-                            onSave={handleFieldSave}
-                            buyerId={buyer?.id || buyer_number}
-                            enableConflictDetection={true}
-                            showEditIndicator={true}
-                          />
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            {isStandardValue || !value ? (
+                              // 標準的な値または空の場合はボタンを表示
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {standardOptions.map((option) => (
+                                  <Button
+                                    key={option}
+                                    variant={value === option ? 'contained' : 'outlined'}
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => {
+                                      // 同じボタンを2度クリックしたら値をクリア
+                                      if (value === option) {
+                                        handleFieldSave('');
+                                      } else {
+                                        handleFieldSave(option);
+                                      }
+                                    }}
+                                    sx={{ flex: '1 1 auto', minWidth: '80px' }}
+                                  >
+                                    {option}
+                                  </Button>
+                                ))}
+                              </Box>
+                            ) : (
+                              // 想定外の値の場合はテキストとして表示
+                              <Box sx={{ 
+                                p: 1, 
+                                border: '1px solid', 
+                                borderColor: 'warning.main',
+                                borderRadius: 1,
+                                bgcolor: 'warning.light',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {value}
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleFieldSave('')}
+                                  sx={{ ml: 1 }}
+                                >
+                                  クリア
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
                         </Grid>
                       );
                     }
@@ -1011,7 +1167,7 @@ export default function BuyerDetailPage() {
                       );
                     }
 
-                    // distribution_typeフィールドは特別処理（ドロップダウン）
+                    // distribution_typeフィールドは特別処理（ボタン形式）
                     if (field.key === 'distribution_type') {
                       const handleFieldSave = async (newValue: any) => {
                         const result = await handleInlineFieldSave(field.key, newValue);
@@ -1022,17 +1178,45 @@ export default function BuyerDetailPage() {
 
                       return (
                         <Grid item {...gridSize} key={field.key}>
-                          <InlineEditableField
-                            label={field.label}
-                            value={value || ''}
-                            fieldName={field.key}
-                            fieldType="dropdown"
-                            options={DISTRIBUTION_TYPE_OPTIONS}
-                            onSave={handleFieldSave}
-                            buyerId={buyer?.id || buyer_number}
-                            enableConflictDetection={true}
-                            showEditIndicator={true}
-                          />
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                variant={value === '要' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => {
+                                  // 同じボタンを2度クリックしたら値をクリア
+                                  if (value === '要') {
+                                    handleFieldSave('');
+                                  } else {
+                                    handleFieldSave('要');
+                                  }
+                                }}
+                                sx={{ flex: 1 }}
+                              >
+                                要
+                              </Button>
+                              <Button
+                                variant={value === '不要' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => {
+                                  // 同じボタンを2度クリックしたら値をクリア
+                                  if (value === '不要') {
+                                    handleFieldSave('');
+                                  } else {
+                                    handleFieldSave('不要');
+                                  }
+                                }}
+                                sx={{ flex: 1 }}
+                              >
+                                不要
+                              </Button>
+                            </Box>
+                          </Box>
                         </Grid>
                       );
                     }
@@ -1058,32 +1242,23 @@ export default function BuyerDetailPage() {
                             </Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                               {INQUIRY_HEARING_QUICK_INPUTS.map((item) => {
-                                const disabled = isQuickButtonDisabled(item.label);
                                 return (
                                   <Tooltip 
                                     key={item.label} 
-                                    title={disabled ? 'このボタンは使用済みです' : item.text} 
+                                    title={item.text} 
                                     arrow
                                   >
-                                    <span>
-                                      <Chip
-                                        label={item.label}
-                                        onClick={() => !disabled && handleInquiryHearingQuickInput(item.text, item.label)}
-                                        size="small"
-                                        clickable={!disabled}
-                                        color="primary"
-                                        variant="outlined"
-                                        disabled={disabled}
-                                        sx={{
-                                          opacity: disabled ? 0.5 : 1,
-                                          cursor: disabled ? 'not-allowed' : 'pointer',
-                                          '&.Mui-disabled': {
-                                            opacity: 0.5,
-                                            pointerEvents: 'auto',
-                                          },
-                                        }}
-                                      />
-                                    </span>
+                                    <Chip
+                                      label={item.label}
+                                      onClick={() => handleInquiryHearingQuickInput(item.text, item.label)}
+                                      size="small"
+                                      clickable
+                                      color="primary"
+                                      variant="outlined"
+                                      sx={{
+                                        cursor: 'pointer',
+                                      }}
+                                    />
                                   </Tooltip>
                                 );
                               })}
@@ -1231,7 +1406,7 @@ export default function BuyerDetailPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
