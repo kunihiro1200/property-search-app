@@ -225,8 +225,8 @@ export default function BuyerDetailPage() {
   const fetchBuyer = async () => {
     try {
       setLoading(true);
-      // 常にスプレッドシートから最新データを取得（force=true）
-      const res = await api.get(`/api/buyers/${buyer_number}?force=true`);
+      // DBから最新データを取得（高速）
+      const res = await api.get(`/api/buyers/${buyer_number}`);
       setBuyer(res.data);
       // inquiry_hearingフィールドを強制再レンダリング
       setInquiryHearingKey(prev => prev + 1);
