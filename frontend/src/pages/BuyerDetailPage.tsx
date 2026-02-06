@@ -16,10 +16,15 @@ import {
   List,
   ListItem,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
   Email as EmailIcon,
+  Phone,
 } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
@@ -594,7 +599,56 @@ export default function BuyerDetailPage() {
         </Box>
 
         {/* ヘッダー右側のボタン */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* Email送信ドロップダウン（仮実装） */}
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Email送信</InputLabel>
+            <Select
+              value=""
+              label="Email送信"
+              disabled={!buyer?.email}
+              onChange={(e) => {
+                // TODO: メールテンプレート選択処理
+                console.log('Email template selected:', e.target.value);
+              }}
+            >
+              <MenuItem value="template1">テンプレート1</MenuItem>
+              <MenuItem value="template2">テンプレート2</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* SMS送信ドロップダウン（仮実装） */}
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>SMS送信</InputLabel>
+            <Select
+              value=""
+              label="SMS送信"
+              disabled={!buyer?.phone_number}
+              onChange={(e) => {
+                // TODO: SMSテンプレート選択処理
+                console.log('SMS template selected:', e.target.value);
+              }}
+            >
+              <MenuItem value="sms1">SMSテンプレート1</MenuItem>
+              <MenuItem value="sms2">SMSテンプレート2</MenuItem>
+            </Select>
+          </FormControl>
+
+          {/* 電話番号ボタン */}
+          {buyer?.phone_number && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Phone />}
+              href={`tel:${buyer.phone_number}`}
+              sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}
+            >
+              {buyer.phone_number}
+            </Button>
+          )}
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
           {/* 問い合わせ履歴ボタン（履歴がある場合のみ表示） */}
           {inquiryHistoryTable.length > 0 && (
             <Button
