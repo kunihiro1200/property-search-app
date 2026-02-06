@@ -347,69 +347,21 @@ export default function PropertyInfoCard({
           </Grid>
         )}
 
-        {/* 価格 */}
-        {(property.price || property.listing_price) && (
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" color="text.secondary">
-              価格
-            </Typography>
-            <Typography variant="body2" fontWeight="bold">
-              {formatPrice(property.price || property.listing_price)}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 月々ローン支払い */}
-        {property.monthly_loan_payment && (
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" color="text.secondary">
-              月々ローン支払い
-            </Typography>
-            <Typography variant="body2">
-              {formatPrice(property.monthly_loan_payment)}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 買付有無 */}
-        {property.offer_status && (
-          <Grid item xs={12} sm={6}>
-            <Typography variant="caption" color="text.secondary">
-              買付有無
-            </Typography>
-            <Typography variant="body2">
-              {property.offer_status}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 値下げ履歴 */}
-        {property.price_reduction_history && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              値下げ履歴
-            </Typography>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-              {property.price_reduction_history}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 理由 */}
-        {property.sale_reason && (
-          <Grid item xs={12}>
-            <Typography variant="caption" color="text.secondary">
-              理由
-            </Typography>
-            <Typography variant="body2">
-              {property.sale_reason}
-            </Typography>
-          </Grid>
-        )}
-
-        {/* 3行目: Suumo URL + Google Map */}
+        {/* 価格 + Suumo URL + Google Map */}
         <Grid item xs={12}>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {/* 価格 */}
+            {(property.price || property.listing_price) && (
+              <Box sx={{ flex: '0 0 auto' }}>
+                <Typography variant="caption" color="text.secondary">
+                  価格
+                </Typography>
+                <Typography variant="body2" fontWeight="bold" sx={{ mt: 0.5 }}>
+                  {formatPrice(property.price || property.listing_price)}
+                </Typography>
+              </Box>
+            )}
+
             {/* Suumo URL */}
             {property.suumo_url && (
               <Box sx={{ flex: '0 0 auto' }}>
@@ -455,6 +407,63 @@ export default function PropertyInfoCard({
             )}
           </Box>
         </Grid>
+
+        {/* 月々ローン支払い */}
+        {property.monthly_loan_payment && (
+          <Grid item xs={12} sm={6}>
+            <Typography variant="caption" color="text.secondary">
+              月々ローン支払い
+            </Typography>
+            <Typography variant="body2">
+              {formatPrice(property.monthly_loan_payment)}
+            </Typography>
+          </Grid>
+        )}
+
+        {/* 買付有無 */}
+        {property.offer_status && (
+          <Grid item xs={12} sm={6}>
+            <Typography variant="caption" color="text.secondary">
+              買付有無
+            </Typography>
+            <Typography variant="body2">
+              {property.offer_status}
+            </Typography>
+          </Grid>
+        )}
+
+        {/* 値下げ履歴 + 理由 */}
+        {(property.price_reduction_history || property.sale_reason) && (
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              {/* 値下げ履歴 */}
+              {property.price_reduction_history && (
+                <Box sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    値下げ履歴
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-line' }}>
+                    {property.price_reduction_history}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* 理由 */}
+              {property.sale_reason && (
+                <Box sx={{ flex: '1 1 45%', minWidth: '200px' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    理由
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {property.sale_reason}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Grid>
+        )}
+
+
 
         {/* 確済 */}
         {property.confirmation_status && (
