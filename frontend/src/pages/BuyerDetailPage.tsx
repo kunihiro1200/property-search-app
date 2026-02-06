@@ -88,6 +88,14 @@ interface Activity {
   };
 }
 
+interface BuyerTemplate {
+  id: string;
+  category: string;
+  type: string;
+  subject: string;
+  content: string;
+}
+
 // フィールドをセクションごとにグループ化
 // 問合時ヒアリング用クイック入力ボタンの定義
 const INQUIRY_HEARING_QUICK_INPUTS = [
@@ -170,6 +178,8 @@ export default function BuyerDetailPage() {
     message: '',
     severity: 'success',
   });
+  const [emailTemplates, setEmailTemplates] = useState<BuyerTemplate[]>([]);
+  const [smsTemplates, setSmsTemplates] = useState<BuyerTemplate[]>([]);
 
   // クイックボタンの状態管理
   const { isDisabled: isQuickButtonDisabled, disableButton: disableQuickButton } = useQuickButtonState(buyer_number || '');
@@ -208,6 +218,7 @@ export default function BuyerDetailPage() {
       fetchInquiryHistoryTable();
       fetchRelatedBuyersCount();
       fetchActivities();
+      fetchTemplates();
     }
   }, [buyer_number, isValidBuyerNumber]);
 
@@ -319,6 +330,32 @@ export default function BuyerDetailPage() {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  const handleEmailTemplateSelect = (templateId: string) => {
+    const template = emailTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // TODO: メール送信モーダルを開く
+    console.log('Email template selected:', template);
+    setSnackbar({
+      open: true,
+      message: `メールテンプレート「${template.type}」を選択しました（実装予定）`,
+      severity: 'info',
+    });
+  };
+
+  const handleSmsTemplateSelect = (templateId: string) => {
+    const template = smsTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // TODO: SMS送信モーダルを開く
+    console.log('SMS template selected:', template);
+    setSnackbar({
+      open: true,
+      message: `SMSテンプレート「${template.type}」を選択しました（実装予定）`,
+      severity: 'info',
+    });
+  };
+
   const fetchLinkedProperties = async () => {
     try {
       const res = await api.get(`/api/buyers/${buyer_number}/properties`);
@@ -350,6 +387,22 @@ export default function BuyerDetailPage() {
       setActivities(res.data || []);
     } catch (error) {
       console.error('Failed to fetch activities:', error);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await api.get('/api/buyers/templates');
+      const templates = res.data || [];
+      
+      // メールテンプレート（件名がある）とSMSテンプレート（件名がない）に分ける
+      const emails = templates.filter((t: BuyerTemplate) => t.subject);
+      const sms = templates.filter((t: BuyerTemplate) => !t.subject);
+      
+      setEmailTemplates(emails);
+      setSmsTemplates(sms);
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
     }
   };
 
@@ -600,37 +653,37 @@ export default function BuyerDetailPage() {
 
         {/* ヘッダー右側のボタン */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {/* Email送信ドロップダウン（仮実装） */}
+          {/* Email送信ドロップダウン */}
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Email送信</InputLabel>
             <Select
               value=""
               label="Email送信"
               disabled={!buyer?.email}
-              onChange={(e) => {
-                // TODO: メールテンプレート選択処理
-                console.log('Email template selected:', e.target.value);
-              }}
+              onChange={(e) => handleEmailTemplateSelect(e.target.value)}
             >
-              <MenuItem value="template1">テンプレート1</MenuItem>
-              <MenuItem value="template2">テンプレート2</MenuItem>
+              {emailTemplates.map((template) => (
+                <MenuItem key={template.id} value={template.id}>
+                  {template.type}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
-          {/* SMS送信ドロップダウン（仮実装） */}
+          {/* SMS送信ドロップダウン */}
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>SMS送信</InputLabel>
             <Select
               value=""
               label="SMS送信"
               disabled={!buyer?.phone_number}
-              onChange={(e) => {
-                // TODO: SMSテンプレート選択処理
-                console.log('SMS template selected:', e.target.value);
-              }}
+              onChange={(e) => handleSmsTemplateSelect(e.target.value)}
             >
-              <MenuItem value="sms1">SMSテンプレート1</MenuItem>
-              <MenuItem value="sms2">SMSテンプレート2</MenuItem>
+              {smsTemplates.map((template) => (
+                <MenuItem key={template.id} value={template.id}>
+                  {template.type}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 

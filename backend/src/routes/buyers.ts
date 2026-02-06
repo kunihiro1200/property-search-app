@@ -7,6 +7,7 @@ import { relatedBuyerService } from '../services/RelatedBuyerService';
 import { uuidValidationMiddleware } from '../middleware/uuidValidator';
 import { ValidationError, NotFoundError, ServiceError } from '../errors';
 import { EnhancedAutoSyncService } from '../services/EnhancedAutoSyncService';
+import { BuyerTemplateService } from '../services/BuyerTemplateService';
 
 const router = Router();
 const buyerService = new BuyerService();
@@ -778,6 +779,18 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
     
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 買主テンプレート取得
+router.get('/templates', async (req: Request, res: Response) => {
+  try {
+    const buyerTemplateService = new BuyerTemplateService();
+    const templates = await buyerTemplateService.getBuyerTemplates();
+    res.json(templates);
+  } catch (error: any) {
+    console.error('Failed to fetch buyer templates:', error);
+    res.status(500).json({ error: error.message || 'テンプレートの取得に失敗しました' });
   }
 });
 
