@@ -875,7 +875,13 @@ export class BuyerService {
    * @param buyerId - The buyer ID
    * @returns Array of inquiry history items with property details
    */
-  async getInquiryHistory(buyerId: string): Promise<Array<{
+  /**
+   * Get inquiry history for buyer detail page
+   * Returns all property inquiries associated with current and past buyer numbers
+   * @param buyerNumber - The buyer number
+   * @returns Array of inquiry history items with property details
+   */
+  async getInquiryHistory(buyerNumber: string): Promise<Array<{
     buyerNumber: string;
     propertyNumber: string;
     propertyAddress: string;
@@ -884,10 +890,27 @@ export class BuyerService {
     propertyId: string;
     propertyListingId: string;
   }>> {
-    // Get the buyer
-    const buyer = await this.getById(buyerId);
+    return this.getInquiryHistoryByBuyerNumberInternal(buyerNumber);
+  }
+
+  /**
+   * Get inquiry history by buyer number (internal method)
+   * @param buyerNumber - The buyer number
+   * @returns Array of inquiry history items with property details
+   */
+  private async getInquiryHistoryByBuyerNumberInternal(buyerNumber: string): Promise<Array<{
+    buyerNumber: string;
+    propertyNumber: string;
+    propertyAddress: string;
+    inquiryDate: string;
+    status: 'current' | 'past';
+    propertyId: string;
+    propertyListingId: string;
+  }>> {
+    // Get the buyer by buyer_number
+    const buyer = await this.getByBuyerNumber(buyerNumber);
     if (!buyer) {
-      throw new Error(`Buyer not found: ${buyerId}`);
+      throw new Error(`Buyer not found: ${buyerNumber}`);
     }
 
     // Collect all property numbers from current buyer
@@ -903,7 +926,11 @@ export class BuyerService {
       const currentPropertyNumbers = buyer.property_number
         .split(',')
         .map((n: string) => n.trim())
-        .filter((n: string) => n);
+        .filter((n: string) => n)
+        // 物件番号のパターンのみを抽出（AA, BB, CC, DD, EE, FF, GG, HH, II, JJ, KK, LL, MM, NN, OO, PP, QQ, RR, SS, TT, UU, VV, WW, XX, YY, ZZ で始まる番号）
+        // 完全一致のみ（先頭から末尾まで）
+        // 異常に長い文字列（100文字以上）はスキップ
+        .filter((n: string) => n.length < 100 && /^[A-Z]{2}\d+(-\d+)?$/.test(n));
       
       currentPropertyNumbers.forEach((propNum: string) => {
         allPropertyNumbers.push(propNum);
@@ -930,7 +957,11 @@ export class BuyerService {
         const pastPropertyNumbers = pastBuyer.property_number
           .split(',')
           .map((n: string) => n.trim())
-          .filter((n: string) => n);
+          .filter((n: string) => n)
+          // 物件番号のパターンのみを抽出
+          // 完全一致のみ（先頭から末尾まで）
+          // 異常に長い文字列（100文字以上）はスキップ
+          .filter((n: string) => n.length < 100 && /^[A-Z]{2}\d+(-\d+)?$/.test(n));
         
         pastPropertyNumbers.forEach((propNum: string) => {
           allPropertyNumbers.push(propNum);
@@ -954,13 +985,14 @@ export class BuyerService {
     const { data: properties, error } = await this.supabase
       .from('property_listings')
       .select(`
-        id,
         property_number,
         address
       `)
       .in('property_number', uniquePropertyNumbers);
 
     if (error) {
+      console.error('[getInquiryHistoryByBuyerNumberInternal] Supabase error:', error);
+      console.error('[getInquiryHistoryByBuyerNumberInternal] uniquePropertyNumbers:', uniquePropertyNumbers);
       throw new Error(`Failed to fetch inquiry history: ${error.message}`);
     }
 
@@ -977,8 +1009,8 @@ export class BuyerService {
         propertyAddress: property.address || '',
         inquiryDate: buyerInfo?.inquiryDate || '',
         status: buyerInfo?.status || 'current',
-        propertyId: property.id,
-        propertyListingId: property.id,
+        propertyId: property.property_number,  // property_numberを使用
+        propertyListingId: property.property_number,  // property_numberを使用
       };
     });
 

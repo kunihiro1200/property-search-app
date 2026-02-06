@@ -2789,8 +2789,8 @@ export class EnhancedAutoSyncService {
 
     console.log(`🔄 Updating ${buyerNumbers.length} existing buyers...`);
 
-    // スプレッドシートから全データを取得（キャッシュ対応）
-    const allRows = await this.getBuyerSpreadsheetData();
+    // スプレッドシートから全データを取得（キャッシュを無視して最新データを取得）
+    const allRows = await this.getBuyerSpreadsheetData(true);  // forceRefresh = true
     const rowsByBuyerNumber = new Map<string, any>();
     for (const row of allRows) {
       const buyerNumber = row['買主番号'];

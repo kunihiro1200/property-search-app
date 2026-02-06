@@ -268,7 +268,7 @@ app.use('/api/sellers', emailRoutes);
 app.use('/api/emails', emailRoutes);  // 画像添付機能用の追加ルート
 app.use('/api/sellers', followUpRoutes);
 app.use('/appointments', appointmentRoutes);
-app.use('/activity-logs', activityLogRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 app.use('/summarize', summarizeRoutes);
 app.use('/api/auth/google/calendar', googleCalendarRoutes);
 app.use('/api/employees', employeeRoutes);

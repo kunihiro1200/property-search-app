@@ -6,11 +6,18 @@ import { EmailHistoryService } from '../services/EmailHistoryService';
 import { relatedBuyerService } from '../services/RelatedBuyerService';
 import { uuidValidationMiddleware } from '../middleware/uuidValidator';
 import { ValidationError, NotFoundError, ServiceError } from '../errors';
+import { EnhancedAutoSyncService } from '../services/EnhancedAutoSyncService';
 
 const router = Router();
 const buyerService = new BuyerService();
 const buyerSyncService = new BuyerSyncService();
 const emailHistoryService = new EmailHistoryService();
+
+// EnhancedAutoSyncServiceのインスタンスを作成（買主同期用）
+const enhancedAutoSyncService = new EnhancedAutoSyncService(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
 
 // 一覧取得
 router.get('/', async (req: Request, res: Response) => {
@@ -232,20 +239,14 @@ router.get('/:id/inquiry-history', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // UUIDかどうかで判定
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    
-    // 買主番号の場合は、まずbuyer_idを取得
-    let buyerId = id;
-    if (!isUuid) {
-      const buyer = await buyerService.getByBuyerNumber(id);
-      if (!buyer) {
-        return res.status(404).json({ error: 'Buyer not found' });
-      }
-      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用（UUID）
+    // buyer_numberで直接検索
+    const buyer = await buyerService.getByBuyerNumber(id);
+    if (!buyer) {
+      return res.status(404).json({ error: 'Buyer not found' });
     }
     
-    const inquiryHistory = await buyerService.getInquiryHistory(buyerId);
+    // getInquiryHistoryメソッドを使用（内部でbuyer_numberベースの処理を実行）
+    const inquiryHistory = await buyerService.getInquiryHistory(buyer.buyer_number);
     res.json({ inquiryHistory });
   } catch (error: any) {
     console.error('Error fetching inquiry history:', error);
@@ -646,9 +647,37 @@ router.post('/:id/conflict', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { force } = req.query;
     
     // UUIDかどうかで判定
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    // force=trueの場合はスプレッドシートから強制同期
+    if (force === 'true') {
+      console.log(`[Buyers API] Force sync from spreadsheet for buyer: ${id}`);
+      
+      // 買主番号を取得
+      let buyerNumber: string;
+      if (isUuid) {
+        const buyer = await buyerService.getById(id);
+        if (!buyer) {
+          return res.status(404).json({ error: 'Buyer not found' });
+        }
+        buyerNumber = buyer.buyer_number;
+      } else {
+        buyerNumber = id;
+      }
+      
+      // スプレッドシートから同期（EnhancedAutoSyncServiceを使用）
+      try {
+        await enhancedAutoSyncService.initializeBuyer(); // 初期化
+        const syncResult = await enhancedAutoSyncService.syncUpdatedBuyers([buyerNumber]);
+        console.log(`[Buyers API] Successfully synced buyer ${buyerNumber} from spreadsheet:`, syncResult);
+      } catch (syncError: any) {
+        console.error(`[Buyers API] Failed to sync buyer ${buyerNumber} from spreadsheet:`, syncError);
+        // 同期エラーでも続行（DBから取得）
+      }
+    }
     
     const data = isUuid 
       ? await buyerService.getById(id)
