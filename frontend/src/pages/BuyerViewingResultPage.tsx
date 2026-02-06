@@ -10,6 +10,8 @@ import {
   IconButton,
   Chip,
   Alert,
+  Tooltip,
+  Snackbar,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import api, { buyerApi, employeeApi } from '../services/api';
@@ -20,6 +22,16 @@ interface Buyer {
   [key: string]: any;
 }
 
+// 内覧結果・後続対応用クイック入力ボタンの定義
+const VIEWING_RESULT_QUICK_INPUTS = [
+  { label: '家族構成', text: '■家族構成：' },
+  { label: '譲れない点', text: '■譲れない点：' },
+  { label: '気に入っている点', text: '■気に入っている点：' },
+  { label: '駄目な点', text: '■駄目な点：' },
+  { label: '障害となる点', text: '■障害となる点：' },
+  { label: '次のアクション', text: '■次のアクション：' },
+];
+
 export default function BuyerViewingResultPage() {
   const { buyer_number } = useParams<{ buyer_number: string }>();
   const navigate = useNavigate();
@@ -28,6 +40,13 @@ export default function BuyerViewingResultPage() {
   const [staffInitials, setStaffInitials] = useState<Array<{ label: string; value: string }>>([]);
   const [copiedBuyerNumber, setCopiedBuyerNumber] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [viewingResultKey, setViewingResultKey] = useState(0);
+  const [isQuickInputSaving, setIsQuickInputSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   useEffect(() => {
     if (buyer_number) {
@@ -101,6 +120,58 @@ export default function BuyerViewingResultPage() {
       console.error('Failed to update field:', error);
       throw new Error(error.response?.data?.error || '更新に失敗しました');
     }
+  };
+
+  const handleViewingResultQuickInput = async (text: string, buttonLabel: string) => {
+    if (!buyer || isQuickInputSaving) return;
+    
+    setIsQuickInputSaving(true);
+    
+    console.log('[handleViewingResultQuickInput] Called with:', { text, buttonLabel });
+    console.log('[handleViewingResultQuickInput] Current buyer.viewing_result_follow_up:', buyer.viewing_result_follow_up);
+    console.log('[handleViewingResultQuickInput] Current value (escaped):', JSON.stringify(buyer.viewing_result_follow_up));
+    
+    // 現在の値を取得
+    const currentValue = buyer.viewing_result_follow_up || '';
+    
+    // 新しいテキストを先頭に追加（既存内容がある場合は改行を挟む）
+    const newValue = currentValue 
+      ? `${text}\n${currentValue}` 
+      : text;
+    
+    console.log('[handleViewingResultQuickInput] New value to save:', newValue);
+    console.log('[handleViewingResultQuickInput] New value (escaped):', JSON.stringify(newValue));
+    
+    // DBのみに保存（スプレッドシートには保存しない）
+    try {
+      const result = await buyerApi.update(
+        buyer_number!,
+        { viewing_result_follow_up: newValue },
+        { sync: false, force: false }  // スプレッドシート同期を無効化
+      );
+      
+      console.log('[handleViewingResultQuickInput] Save result:', result);
+      console.log('[handleViewingResultQuickInput] Saved value (escaped):', JSON.stringify(result.buyer.viewing_result_follow_up));
+      
+      // 保存後、buyerステートを更新（DBから返された値を使用）
+      setBuyer(result.buyer);
+      // キーを更新してInlineEditableFieldを強制再レンダリング
+      setViewingResultKey(prev => prev + 1);
+      
+    } catch (error: any) {
+      console.error('[handleViewingResultQuickInput] Exception:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || '保存に失敗しました',
+        severity: 'error'
+      });
+    } finally {
+      setIsQuickInputSaving(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   if (loading) {
@@ -277,10 +348,44 @@ export default function BuyerViewingResultPage() {
 
           {/* 内覧結果・後続対応 */}
           <Box>
+            {/* クイック入力ボタン */}
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                ヒアリング項目
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {VIEWING_RESULT_QUICK_INPUTS.map((item) => {
+                  return (
+                    <Tooltip 
+                      key={item.label} 
+                      title={item.text} 
+                      arrow
+                    >
+                      <Chip
+                        label={item.label}
+                        onClick={() => handleViewingResultQuickInput(item.text, item.label)}
+                        size="small"
+                        clickable
+                        color="primary"
+                        variant="outlined"
+                        disabled={isQuickInputSaving}
+                        sx={{
+                          cursor: isQuickInputSaving ? 'not-allowed' : 'pointer',
+                          opacity: isQuickInputSaving ? 0.5 : 1,
+                        }}
+                      />
+                    </Tooltip>
+                  );
+                })}
+              </Box>
+            </Box>
             <InlineEditableField
+              key={`viewing_result_${viewingResultKey}`}
               label="内覧結果・後続対応"
+              fieldName="viewing_result_follow_up"
               value={buyer.viewing_result_follow_up || ''}
               onSave={(newValue) => handleInlineFieldSave('viewing_result_follow_up', newValue)}
+              fieldType="textarea"
               multiline
               rows={6}
             />
@@ -298,6 +403,18 @@ export default function BuyerViewingResultPage() {
           </Box>
         </Box>
       </Paper>
+
+      {/* スナックバー */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
