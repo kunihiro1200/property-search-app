@@ -794,4 +794,78 @@ router.get('/templates', async (req: Request, res: Response) => {
   }
 });
 
+// 買主へのメール送信
+router.post('/:id/send-email', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { to, subject, content, htmlBody } = req.body;
+
+    // バリデーション
+    if (!to || !subject || !content) {
+      return res.status(400).json({ error: '宛先、件名、本文は必須です' });
+    }
+
+    // 買主情報を取得
+    const buyer = await buyerService.getByBuyerNumber(id);
+    if (!buyer) {
+      return res.status(404).json({ error: '買主が見つかりません' });
+    }
+
+    // TODO: 実際のメール送信処理を実装
+    // 現在は仮実装（ログのみ）
+    console.log('Sending email to buyer:', {
+      buyerNumber: id,
+      to,
+      subject,
+      content: content.substring(0, 100) + '...',
+    });
+
+    // アクティビティログを記録
+    // TODO: アクティビティログサービスを実装
+
+    res.json({
+      success: true,
+      message: 'メールを送信しました',
+    });
+  } catch (error: any) {
+    console.error('Failed to send email:', error);
+    res.status(500).json({ error: error.message || 'メール送信に失敗しました' });
+  }
+});
+
+// 買主へのSMS送信記録
+router.post('/:id/send-sms', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    // バリデーション
+    if (!message) {
+      return res.status(400).json({ error: 'メッセージは必須です' });
+    }
+
+    // 買主情報を取得
+    const buyer = await buyerService.getByBuyerNumber(id);
+    if (!buyer) {
+      return res.status(404).json({ error: '買主が見つかりません' });
+    }
+
+    // SMS送信記録をアクティビティログに保存
+    // TODO: アクティビティログサービスを実装
+    console.log('Recording SMS to buyer:', {
+      buyerNumber: id,
+      phoneNumber: buyer.phone_number,
+      message: message.substring(0, 100) + '...',
+    });
+
+    res.json({
+      success: true,
+      message: 'SMS送信を記録しました',
+    });
+  } catch (error: any) {
+    console.error('Failed to record SMS:', error);
+    res.status(500).json({ error: error.message || 'SMS送信記録に失敗しました' });
+  }
+});
+
 export default router;

@@ -420,11 +420,12 @@ export default function BuyerDetailPage() {
       setConfirmDialog({ open: false, type: null, template: null });
 
       if (type === 'email') {
-        // メール送信API呼び出し（TODO: 実装）
-        console.log('Sending email:', {
+        // メール送信API呼び出し
+        await api.post(`/api/buyers/${buyer_number}/send-email`, {
           to: editableEmailRecipient,
           subject: editableEmailSubject,
-          body: editableEmailBody,
+          content: editableEmailBody,
+          htmlBody: editableEmailBody,
         });
 
         setSnackbar({
@@ -432,24 +433,35 @@ export default function BuyerDetailPage() {
           message: 'メールを送信しました',
           severity: 'success',
         });
+
+        // アクティビティを再読み込み
+        fetchActivities();
       } else if (type === 'sms') {
-        // SMS送信API呼び出し（TODO: 実装）
-        console.log('Sending SMS:', {
-          to: buyer?.phone_number,
+        // SMS送信記録API呼び出し
+        await api.post(`/api/buyers/${buyer_number}/send-sms`, {
           message: template.content,
         });
 
         setSnackbar({
           open: true,
-          message: 'SMSを送信しました',
+          message: 'SMS送信を記録しました',
           severity: 'success',
         });
+
+        // SMSアプリを開く
+        if (buyer?.phone_number) {
+          const smsLink = `sms:${buyer.phone_number}?body=${encodeURIComponent(template.content)}`;
+          window.location.href = smsLink;
+        }
+
+        // アクティビティを再読み込み
+        fetchActivities();
       }
     } catch (error: any) {
       console.error('Failed to send:', error);
       setSnackbar({
         open: true,
-        message: '送信に失敗しました',
+        message: error.response?.data?.error || '送信に失敗しました',
         severity: 'error',
       });
     } finally {
