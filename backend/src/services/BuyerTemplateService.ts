@@ -63,18 +63,6 @@ export class BuyerTemplateService {
       throw new Error('買主テンプレートの取得に失敗しました');
     }
   }
-          type: type || '',
-          subject: subject || '',
-          content: content || '',
-        });
-      }
-
-      return templates;
-    } catch (error) {
-      console.error('Failed to fetch buyer templates:', error);
-      throw new Error('買主テンプレートの取得に失敗しました');
-    }
-  }
 
   /**
    * テンプレート内のプレースホルダーを置換
