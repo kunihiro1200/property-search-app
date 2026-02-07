@@ -416,7 +416,12 @@ export class BuyerService {
     
     for (const key in updateData) {
       if (!protectedFields.includes(key)) {
-        allowedData[key] = updateData[key];
+        // 日付フィールドの空文字列をnullに変換
+        if ((key === 'reception_date' || key === 'next_call_date' || key === 'latest_viewing_date') && updateData[key] === '') {
+          allowedData[key] = null;
+        } else {
+          allowedData[key] = updateData[key];
+        }
       }
     }
 
@@ -492,7 +497,12 @@ export class BuyerService {
     
     for (const key in updateData) {
       if (!protectedFields.includes(key)) {
-        allowedData[key] = updateData[key];
+        // 日付フィールドの空文字列をnullに変換
+        if ((key === 'reception_date' || key === 'next_call_date' || key === 'latest_viewing_date') && updateData[key] === '') {
+          allowedData[key] = null;
+        } else {
+          allowedData[key] = updateData[key];
+        }
       }
     }
 

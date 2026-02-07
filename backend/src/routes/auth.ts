@@ -135,6 +135,53 @@ router.post('/refresh', async (req: Request, res: Response) => {
 });
 
 /**
+ * Supabase Auth コールバック（フロントエンドから呼ばれる）
+ */
+router.post('/callback', async (req: Request, res: Response) => {
+  try {
+    const { access_token, refresh_token } = req.body;
+
+    console.log('📝 Supabase callback received:', {
+      hasAccessToken: !!access_token,
+      hasRefreshToken: !!refresh_token,
+    });
+
+    if (!access_token) {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Access token is required',
+          retryable: false,
+        },
+      });
+    }
+
+    // Supabaseトークンから社員情報を取得
+    const authResult = await authService.loginWithSupabaseToken(access_token);
+
+    console.log('✅ Supabase login successful for:', authResult.employee.email);
+
+    res.json({
+      employee: authResult.employee,
+      sessionToken: access_token,
+      refreshToken: refresh_token,
+    });
+  } catch (error: any) {
+    console.error('❌ Supabase callback error:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(401).json({
+      error: {
+        code: 'AUTH_ERROR',
+        message: error.message || 'Authentication failed',
+        retryable: false,
+      },
+    });
+  }
+});
+
+/**
  * 現在のユーザー情報取得
  */
 router.get('/me', authenticate, (req: Request, res: Response) => {

@@ -17,28 +17,46 @@ import {
 } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import { InlineEditableField } from '../components/InlineEditableField';
+import {
+  AREA_OPTIONS,
+  DESIRED_PROPERTY_TYPE_OPTIONS,
+  PARKING_SPACES_OPTIONS,
+  PRICE_RANGE_DETACHED_OPTIONS,
+  PRICE_RANGE_MANSION_OPTIONS,
+  PRICE_RANGE_LAND_OPTIONS,
+  BUILDING_AGE_OPTIONS,
+  FLOOR_PLAN_OPTIONS,
+  HOT_SPRING_OPTIONS,
+  GARDEN_OPTIONS,
+  PET_ALLOWED_OPTIONS,
+  HIGH_FLOOR_OPTIONS,
+  CORNER_ROOM_OPTIONS,
+  GOOD_VIEW_OPTIONS,
+  MONTHLY_PARKING_OK_OPTIONS,
+} from '../utils/buyerDesiredConditionsOptions';
 
 interface Buyer {
   [key: string]: any;
 }
 
 const DESIRED_CONDITIONS_FIELDS = [
-  { key: 'desired_timing', label: '希望時期', inlineEditable: true },
-  { key: 'desired_area', label: 'エリア', inlineEditable: true },
-  { key: 'desired_property_type', label: '希望種別', inlineEditable: true },
-  { key: 'desired_building_age', label: '築年数', inlineEditable: true },
-  { key: 'desired_floor_plan', label: '間取り', inlineEditable: true },
-  { key: 'budget', label: '予算', inlineEditable: true },
-  { key: 'price_range_house', label: '価格帯（戸建）', inlineEditable: true },
-  { key: 'price_range_apartment', label: '価格帯（マンション）', inlineEditable: true },
-  { key: 'price_range_land', label: '価格帯（土地）', inlineEditable: true },
-  { key: 'parking_spaces', label: 'P台数', inlineEditable: true },
-  { key: 'hot_spring_required', label: '温泉あり', inlineEditable: true },
-  { key: 'garden_required', label: '庭付き', inlineEditable: true },
-  { key: 'pet_allowed_required', label: 'ペット可', inlineEditable: true },
-  { key: 'good_view_required', label: '眺望良好', inlineEditable: true },
-  { key: 'high_floor_required', label: '高層階', inlineEditable: true },
-  { key: 'corner_room_required', label: '角部屋', inlineEditable: true },
+  { key: 'desired_timing', label: '希望時期', inlineEditable: true, fieldType: 'text' },
+  { key: 'desired_area', label: '★エリア', inlineEditable: true, fieldType: 'dropdown', options: AREA_OPTIONS },
+  { key: 'desired_property_type', label: '★希望種別', inlineEditable: true, fieldType: 'dropdown', options: DESIRED_PROPERTY_TYPE_OPTIONS },
+  { key: 'desired_building_age', label: '★築年数', inlineEditable: true, fieldType: 'dropdown', options: BUILDING_AGE_OPTIONS },
+  { key: 'desired_floor_plan', label: '★間取り', inlineEditable: true, fieldType: 'dropdown', options: FLOOR_PLAN_OPTIONS },
+  { key: 'budget', label: '予算', inlineEditable: true, fieldType: 'text' },
+  { key: 'price_range_house', label: '価格帯（戸建）', inlineEditable: true, fieldType: 'dropdown', options: PRICE_RANGE_DETACHED_OPTIONS },
+  { key: 'price_range_apartment', label: '価格帯（マンション）', inlineEditable: true, fieldType: 'dropdown', options: PRICE_RANGE_MANSION_OPTIONS },
+  { key: 'price_range_land', label: '価格帯（土地）', inlineEditable: true, fieldType: 'dropdown', options: PRICE_RANGE_LAND_OPTIONS },
+  { key: 'parking_spaces', label: '●P台数', inlineEditable: true, fieldType: 'dropdown', options: PARKING_SPACES_OPTIONS },
+  { key: 'monthly_parking_ok', label: '★月極でも可', inlineEditable: true, fieldType: 'dropdown', options: MONTHLY_PARKING_OK_OPTIONS },
+  { key: 'hot_spring_required', label: '★温泉あり', inlineEditable: true, fieldType: 'dropdown', options: HOT_SPRING_OPTIONS },
+  { key: 'garden_required', label: '★庭付き', inlineEditable: true, fieldType: 'dropdown', options: GARDEN_OPTIONS },
+  { key: 'pet_allowed_required', label: '★ペット可', inlineEditable: true, fieldType: 'dropdown', options: PET_ALLOWED_OPTIONS },
+  { key: 'good_view_required', label: '★眺望良好', inlineEditable: true, fieldType: 'dropdown', options: GOOD_VIEW_OPTIONS },
+  { key: 'high_floor_required', label: '★高層階', inlineEditable: true, fieldType: 'dropdown', options: HIGH_FLOOR_OPTIONS },
+  { key: 'corner_room_required', label: '★角部屋', inlineEditable: true, fieldType: 'dropdown', options: CORNER_ROOM_OPTIONS },
 ];
 
 export default function BuyerDesiredConditionsPage() {
@@ -201,7 +219,8 @@ export default function BuyerDesiredConditionsPage() {
                   <InlineEditableField
                     value={buyer[field.key]}
                     onSave={(newValue) => handleInlineFieldSave(field.key, newValue)}
-                    fieldType="text"
+                    fieldType={field.fieldType || 'text'}
+                    options={field.options}
                     multiline={false}
                   />
                 ) : (

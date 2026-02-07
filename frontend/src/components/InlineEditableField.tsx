@@ -284,20 +284,88 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
 
       case 'date':
         return (
-          <TextField
-            {...commonProps}
-            type="date"
-            InputLabelProps={{ shrink: true }}
-          />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <TextField
+              {...commonProps}
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              sx={{ ...commonProps.sx, flex: 1 }}
+            />
+            {editValue && (
+              <Box
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  // 直接空文字で保存
+                  try {
+                    await onSave('');
+                    setIsEditing(false);
+                  } catch (err) {
+                    console.error('Failed to delete date:', err);
+                  }
+                }}
+                sx={{
+                  mt: 0.5,
+                  px: 1,
+                  py: 0.5,
+                  cursor: 'pointer',
+                  color: 'error.main',
+                  fontSize: '0.75rem',
+                  border: '1px solid',
+                  borderColor: 'error.main',
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: 'error.light',
+                    color: 'error.contrastText',
+                  },
+                }}
+              >
+                削除
+              </Box>
+            )}
+          </Box>
         );
 
       case 'time':
         return (
-          <TextField
-            {...commonProps}
-            type="time"
-            InputLabelProps={{ shrink: true }}
-          />
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <TextField
+              {...commonProps}
+              type="time"
+              InputLabelProps={{ shrink: true }}
+              sx={{ ...commonProps.sx, flex: 1 }}
+            />
+            {editValue && (
+              <Box
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  // 直接空文字で保存
+                  try {
+                    await onSave('');
+                    setIsEditing(false);
+                  } catch (err) {
+                    console.error('Failed to delete time:', err);
+                  }
+                }}
+                sx={{
+                  mt: 0.5,
+                  px: 1,
+                  py: 0.5,
+                  cursor: 'pointer',
+                  color: 'error.main',
+                  fontSize: '0.75rem',
+                  border: '1px solid',
+                  borderColor: 'error.main',
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: 'error.light',
+                    color: 'error.contrastText',
+                  },
+                }}
+              >
+                削除
+              </Box>
+            )}
+          </Box>
         );
 
       case 'number':
