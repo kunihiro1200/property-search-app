@@ -42,6 +42,7 @@ import RelatedBuyerNotificationBadge from '../components/RelatedBuyerNotificatio
 import BuyerGmailSendButton from '../components/BuyerGmailSendButton';
 import ImageSelectorModal from '../components/ImageSelectorModal';
 import { InlineEditableField } from '../components/InlineEditableField';
+import { ConfirmationToAssignee } from '../components/ConfirmationToAssignee';
 import { useStableContainerHeight } from '../hooks/useStableContainerHeight';
 import { useQuickButtonState } from '../hooks/useQuickButtonState';
 import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
@@ -149,13 +150,6 @@ const BUYER_FIELD_SECTIONS = [
   },
   // 希望条件セクションは別ページに移動
   // 内覧結果・後続対応セクションは別ページに移動
-  {
-    title: 'その他',
-    fields: [
-      { key: 'message_to_assignee', label: '担当への伝言/質問事項', multiline: true, inlineEditable: true },
-      { key: 'confirmation_to_assignee', label: '担当への確認事項', multiline: true, inlineEditable: true },
-    ],
-  },
   {
     title: '買付情報',
     fields: [
@@ -1600,6 +1594,23 @@ Email: <<会社メールアドレス>>`;
                     </Grid>
                   );
                 })}
+                
+                {/* 問合せ内容セクションの場合、担当への確認事項コンポーネントを追加 */}
+                {section.title === '問合せ内容' && linkedProperties.length > 0 && linkedProperties[0].sales_assignee && (
+                  <Grid item xs={12}>
+                    <ConfirmationToAssignee
+                      buyer={buyer}
+                      propertyAssignee={linkedProperties[0].sales_assignee}
+                      onSendSuccess={() => {
+                        setSnackbar({
+                          open: true,
+                          message: '送信しました',
+                          severity: 'success'
+                        });
+                      }}
+                    />
+                  </Grid>
+                )}
               </Grid>
             </Paper>
           ))}
