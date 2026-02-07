@@ -20,6 +20,18 @@ const enhancedAutoSyncService = new EnhancedAutoSyncService(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
+// 買主テンプレート取得（/:idの前に配置）
+router.get('/templates', async (req: Request, res: Response) => {
+  try {
+    const buyerTemplateService = new BuyerTemplateService();
+    const templates = await buyerTemplateService.getBuyerTemplates();
+    res.json(templates);
+  } catch (error: any) {
+    console.error('Failed to fetch buyer templates:', error);
+    res.status(500).json({ error: error.message || 'テンプレートの取得に失敗しました' });
+  }
+});
+
 // 一覧取得
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -779,18 +791,6 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
     
     res.status(500).json({ error: error.message });
-  }
-});
-
-// 買主テンプレート取得
-router.get('/templates', async (req: Request, res: Response) => {
-  try {
-    const buyerTemplateService = new BuyerTemplateService();
-    const templates = await buyerTemplateService.getBuyerTemplates();
-    res.json(templates);
-  } catch (error: any) {
-    console.error('Failed to fetch buyer templates:', error);
-    res.status(500).json({ error: error.message || 'テンプレートの取得に失敗しました' });
   }
 });
 
