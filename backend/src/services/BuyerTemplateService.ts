@@ -19,6 +19,9 @@ export class BuyerTemplateService {
    */
   async getBuyerTemplates(): Promise<BuyerTemplate[]> {
     try {
+      // 認証
+      await this.sheetsClient.authorize();
+
       // スプレッドシートからデータを取得
       const range = `${this.SHEET_NAME}!A:F`;
       const values = await this.sheetsClient.getValues(this.SPREADSHEET_ID, range);
@@ -48,6 +51,18 @@ export class BuyerTemplateService {
         templates.push({
           id: id || `buyer_${templates.length + 1}`,
           category: category || '買主',
+          type: type || '',
+          subject: subject || '',
+          content: content || '',
+        });
+      }
+
+      return templates;
+    } catch (error) {
+      console.error('Failed to fetch buyer templates:', error);
+      throw new Error('買主テンプレートの取得に失敗しました');
+    }
+  }
           type: type || '',
           subject: subject || '',
           content: content || '',
