@@ -28,6 +28,13 @@ export interface EmailWithImagesParams {
   selectedImages?: SelectedImages;  // 手動選択された画像
 }
 
+export interface BuyerEmailParams {
+  to: string;
+  subject: string;
+  body: string;
+  selectedImages?: any[];  // 画像添付データ
+}
+
 export interface DistributionEmailParams {
   senderAddress: string;
   recipients: string[];
@@ -74,22 +81,55 @@ export class EmailService extends BaseRepository {
    */
   private async initializeGmail() {
     try {
+      console.log('[EmailService.initializeGmail] Starting Gmail API initialization...');
+      
       // GoogleAuthServiceを使用して認証済みクライアントを取得
       const { GoogleAuthService } = await import('./GoogleAuthService');
       const googleAuthService = new GoogleAuthService();
+      
+      console.log('[EmailService.initializeGmail] Getting authenticated client...');
       const oauth2Client = await googleAuthService.getAuthenticatedClient();
       
       this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
       console.log('✅ Gmail API initialized with authenticated client');
     } catch (error) {
-      console.warn('⚠️ Gmail API initialization failed:', error);
+      console.error('⚠️ Gmail API initialization failed:', error);
+      console.error('⚠️ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
       // フォールバック: 環境変数から直接初期化
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
-      );
-      this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      console.log('[EmailService.initializeGmail] Attempting fallback initialization...');
+      try {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
+          process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET,
+          process.env.GMAIL_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI
+        );
+        
+        // リフレッシュトークンを設定（GMAIL_REFRESH_TOKENを優先）
+        const refreshToken = process.env.GMAIL_REFRESH_TOKEN || process.env.GOOGLE_REFRESH_TOKEN;
+        if (refreshToken) {
+          oauth2Client.setCredentials({
+            refresh_token: refreshToken,
+          });
+          console.log('[EmailService.initializeGmail] Refresh token set from:', 
+            process.env.GMAIL_REFRESH_TOKEN ? 'GMAIL_REFRESH_TOKEN' : 'GOOGLE_REFRESH_TOKEN');
+        } else {
+          console.error('[EmailService.initializeGmail] Neither GMAIL_REFRESH_TOKEN nor GOOGLE_REFRESH_TOKEN found in environment');
+          throw new Error('GMAIL_REFRESH_TOKEN or GOOGLE_REFRESH_TOKEN not found in environment variables');
+        }
+        
+        this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+        console.log('✅ Gmail API initialized with fallback method');
+      } catch (fallbackError) {
+        console.error('❌ Fallback initialization also failed:', fallbackError);
+        throw new Error(
+          `Gmail API initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
+          `Fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`
+        );
+      }
     }
   }
 
@@ -344,6 +384,122 @@ export class EmailService extends BaseRepository {
     `;
 
     return { subject, body };
+  }
+
+  /**
+   * 買主へのメールを送信（画像添付対応）
+   */
+  async sendBuyerEmail(params: BuyerEmailParams): Promise<EmailResult> {
+    try {
+      console.log('[EmailService.sendBuyerEmail] Starting email send:', {
+        to: params.to,
+        subject: params.subject,
+        bodyLength: params.body?.length || 0,
+        hasImages: params.selectedImages && params.selectedImages.length > 0,
+        imageCount: params.selectedImages?.length || 0,
+      });
+
+      // Gmail APIを初期化
+      console.log('[EmailService.sendBuyerEmail] Initializing Gmail API...');
+      await this.ensureGmailInitialized();
+      console.log('[EmailService.sendBuyerEmail] Gmail API initialized');
+
+      // 送信元アドレス（デフォルト）
+      const from = 'tenant@ifoo-oita.com';
+
+      // 改行を<br>タグに変換（HTMLメール用）
+      const htmlBody = params.body.replace(/\n/g, '<br>');
+
+      // 画像添付がない場合はシンプルなHTMLメールを送信
+      if (!params.selectedImages || params.selectedImages.length === 0) {
+        console.log('[EmailService.sendBuyerEmail] Sending simple HTML email (no images)');
+        
+        const message = this.createHtmlMessageWithDataUrls(
+          params.to,
+          from,
+          params.subject,
+          htmlBody  // 改行を<br>に変換したHTMLを使用
+        );
+
+        console.log('[EmailService.sendBuyerEmail] Message created, sending via Gmail API...');
+
+        // Gmail APIで送信
+        const response = await this.gmail.users.messages.send({
+          userId: 'me',
+          requestBody: {
+            raw: message,
+          },
+        });
+
+        console.log('[EmailService.sendBuyerEmail] Email sent successfully:', response.data.id);
+
+        return {
+          messageId: response.data.id,
+          sentAt: new Date(),
+          success: true,
+        };
+      }
+
+      console.log('[EmailService.sendBuyerEmail] Sending email with images');
+
+      // 画像添付がある場合は、multipart/relatedメッセージを作成
+      // selectedImagesをInlineImage形式に変換
+      const inlineImages: InlineImage[] = params.selectedImages.map((img, index) => ({
+        id: `image${index}`,
+        mimeType: img.mimeType || 'image/jpeg',
+        data: Buffer.from(img.data, 'base64'),
+      }));
+
+      console.log('[EmailService.sendBuyerEmail] Inline images created:', inlineImages.length);
+
+      // 改行を<br>タグに変換してからHTML内の画像参照をCID参照に変換
+      let html = params.body.replace(/\n/g, '<br>');
+      params.selectedImages.forEach((img, index) => {
+        // 画像のURLをCID参照に置き換え
+        if (img.url) {
+          html = html.replace(img.url, `cid:image${index}`);
+        }
+      });
+
+      const message = this.createMultipartRelatedMessage(
+        params.to,
+        from,
+        params.subject,
+        html,
+        inlineImages
+      );
+
+      console.log('[EmailService.sendBuyerEmail] Multipart message created, sending via Gmail API...');
+
+      // Gmail APIで送信
+      const response = await this.gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: message,
+        },
+      });
+
+      console.log('[EmailService.sendBuyerEmail] Email with images sent successfully:', response.data.id);
+
+      return {
+        messageId: response.data.id,
+        sentAt: new Date(),
+        success: true,
+      };
+    } catch (error) {
+      console.error('[EmailService.sendBuyerEmail] Error:', error);
+      console.error('[EmailService.sendBuyerEmail] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
+      return {
+        messageId: '',
+        sentAt: new Date(),
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   /**

@@ -30,6 +30,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Email as EmailIcon,
   Phone,
+  Image as ImageIcon,
 } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
@@ -39,6 +40,7 @@ import RelatedBuyersSection from '../components/RelatedBuyersSection';
 import UnifiedInquiryHistoryTable from '../components/UnifiedInquiryHistoryTable';
 import RelatedBuyerNotificationBadge from '../components/RelatedBuyerNotificationBadge';
 import BuyerGmailSendButton from '../components/BuyerGmailSendButton';
+import ImageSelectorModal from '../components/ImageSelectorModal';
 import { InlineEditableField } from '../components/InlineEditableField';
 import { useStableContainerHeight } from '../hooks/useStableContainerHeight';
 import { useQuickButtonState } from '../hooks/useQuickButtonState';
@@ -69,6 +71,8 @@ interface PropertyListing {
   sales_assignee?: string;
   contract_date?: string;
   settlement_date?: string;
+  google_map_url?: string;
+  suumo_url?: string;
 }
 
 interface InquiryHistory {
@@ -200,6 +204,11 @@ export default function BuyerDetailPage() {
   const [editableEmailRecipient, setEditableEmailRecipient] = useState('');
   const [editableEmailSubject, setEditableEmailSubject] = useState('');
   const [editableEmailBody, setEditableEmailBody] = useState('');
+  
+  // 画像選択モーダル用の状態
+  const [imageSelectorOpen, setImageSelectorOpen] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<any[] | null>(null);
+  const [imageError, setImageError] = useState<string>('');
 
   // クイックボタンの状態管理
   const { isDisabled: isQuickButtonDisabled, disableButton: disableQuickButton } = useQuickButtonState(buyer_number || '');
@@ -356,17 +365,14 @@ export default function BuyerDetailPage() {
     const template = emailTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // プレースホルダーを置換
+    // プレースホルダーを置換（<br>タグも改行に変換される）
     const replacedSubject = replacePlaceholders(template.subject);
     const replacedContent = replacePlaceholders(template.content);
-
-    // 改行を<br>タグに変換
-    const htmlContent = replacedContent.replace(/\n/g, '<br>');
 
     // 編集可能フィールドを初期化
     setEditableEmailRecipient(buyer?.email || '');
     setEditableEmailSubject(replacedSubject);
-    setEditableEmailBody(htmlContent);
+    setEditableEmailBody(replacedContent); // 改行（\n）のまま設定
 
     // 確認ダイアログを表示
     setConfirmDialog({
@@ -420,19 +426,34 @@ export default function BuyerDetailPage() {
       setConfirmDialog({ open: false, type: null, template: null });
 
       if (type === 'email') {
-        // メール送信API呼び出し
-        await api.post(`/api/buyers/${buyer_number}/send-email`, {
+        console.log('[handleConfirmSend] Sending email:', {
           to: editableEmailRecipient,
           subject: editableEmailSubject,
-          content: editableEmailBody,
-          htmlBody: editableEmailBody,
+          bodyLength: editableEmailBody.length,
+          hasImages: selectedImages && selectedImages.length > 0,
+          imageCount: selectedImages?.length || 0,
         });
+
+        // メール送信API呼び出し（画像添付データも送信）
+        // 改行変換はバックエンドで処理
+        const response = await api.post(`/api/buyers/${buyer_number}/send-email`, {
+          to: editableEmailRecipient,
+          subject: editableEmailSubject,
+          content: editableEmailBody,  // 改行（\n）のまま送信
+          selectedImages: selectedImages || [], // 画像添付データを送信
+        });
+
+        console.log('[handleConfirmSend] Email sent successfully:', response.data);
 
         setSnackbar({
           open: true,
           message: 'メールを送信しました',
           severity: 'success',
         });
+
+        // 画像選択をクリア
+        setSelectedImages(null);
+        setImageError('');
 
         // アクティビティを再読み込み
         fetchActivities();
@@ -458,10 +479,22 @@ export default function BuyerDetailPage() {
         fetchActivities();
       }
     } catch (error: any) {
-      console.error('Failed to send:', error);
+      console.error('[handleConfirmSend] Failed to send:', error);
+      console.error('[handleConfirmSend] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      
+      // より詳細なエラーメッセージを表示
+      const errorMessage = error.response?.data?.error 
+        || error.response?.data?.message 
+        || error.message 
+        || '送信に失敗しました';
+      
       setSnackbar({
         open: true,
-        message: error.response?.data?.error || '送信に失敗しました',
+        message: `送信エラー: ${errorMessage}`,
         severity: 'error',
       });
     } finally {
@@ -471,6 +504,25 @@ export default function BuyerDetailPage() {
 
   const handleCancelSend = () => {
     setConfirmDialog({ open: false, type: null, template: null });
+    setSelectedImages(null);
+    setImageError('');
+  };
+
+  // 画像選択ボタンのハンドラー
+  const handleOpenImageSelector = () => {
+    setImageSelectorOpen(true);
+  };
+
+  // 画像選択確定のハンドラー
+  const handleImageSelectionConfirm = (images: any[]) => {
+    setSelectedImages(images);
+    setImageSelectorOpen(false);
+    setImageError('');
+  };
+
+  // 画像選択キャンセルのハンドラー
+  const handleImageSelectionCancel = () => {
+    setImageSelectorOpen(false);
   };
 
   const fetchLinkedProperties = async () => {
@@ -512,12 +564,10 @@ export default function BuyerDetailPage() {
       const res = await api.get('/api/buyers/templates');
       const templates = res.data || [];
       
-      // メールテンプレート（件名がある）とSMSテンプレート（件名がない）に分ける
-      const emails = templates.filter((t: BuyerTemplate) => t.subject);
-      const sms = templates.filter((t: BuyerTemplate) => !t.subject);
-      
-      setEmailTemplates(emails);
-      setSmsTemplates(sms);
+      // 全てのテンプレートをメールとSMS両方で使用可能にする
+      // （ユーザーがどちらでも選択できるように）
+      setEmailTemplates(templates);
+      setSmsTemplates(templates);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
     }
@@ -532,8 +582,11 @@ export default function BuyerDetailPage() {
     let result = template;
 
     // 買主情報の置換
+    result = result.replace(/<<●氏名・会社名>>/g, buyer.name || '');
     result = result.replace(/<<氏名>>/g, buyer.name || '');
+    result = result.replace(/<<●電話番号>>/g, buyer.phone_number || '');
     result = result.replace(/<<電話番号>>/g, buyer.phone_number || '');
+    result = result.replace(/<<●メールアドレス>>/g, buyer.email || '');
     result = result.replace(/<<メールアドレス>>/g, buyer.email || '');
     result = result.replace(/<<買主番号>>/g, buyer.buyer_number || '');
     result = result.replace(/<<会社名>>/g, buyer.company_name || '');
@@ -546,18 +599,47 @@ export default function BuyerDetailPage() {
     // 内覧情報
     result = result.replace(/<<内覧日>>/g, buyer.latest_viewing_date ? new Date(buyer.latest_viewing_date).toLocaleDateString('ja-JP') : '');
     result = result.replace(/<<内覧時間>>/g, buyer.viewing_time || '');
+    result = result.replace(/<<時間>>/g, buyer.viewing_time || '');
+    
+    // 物件情報（紐づいた物件から取得）
+    if (linkedProperties && linkedProperties.length > 0) {
+      const firstProperty = linkedProperties[0];
+      result = result.replace(/<<住居表示>>/g, firstProperty.display_address || firstProperty.address || '');
+      result = result.replace(/<<住居表示Pinrich>>/g, firstProperty.display_address || firstProperty.address || '');
+      result = result.replace(/<<建物名\/価格 内覧物件は赤表示（★は他社物件）>>/g, firstProperty.property_number || '');
+      result = result.replace(/<<athome URL>>/g, firstProperty.suumo_url || '');
+      result = result.replace(/<<SUUMO URL>>/g, firstProperty.suumo_url || '');
+      result = result.replace(/<<GoogleMap>>/g, firstProperty.google_map_url || '');
+      result = result.replace(/<<現況v>>/g, ''); // TODO: 現況フィールドを追加
+      result = result.replace(/<<鍵等v>>/g, ''); // TODO: 鍵等フィールドを追加
+      result = result.replace(/<<内覧前伝達事項v>>/g, buyer.pre_viewing_notes || '');
+    }
+    
+    // アンケートURL（固定値）
+    result = result.replace(/<<内覧アンケート>>/g, 'https://forms.gle/xxxxx'); // TODO: 実際のURLに置き換え
+    result = result.replace(/<<不動産査定アンケート>>/g, 'https://forms.gle/xxxxx'); // TODO: 実際のURLに置き換え
     
     // 担当者情報（現在ログイン中のユーザー）
     const currentUser = employee || {};
+    result = result.replace(/<<後続担当>>/g, buyer.follow_up_assignee || currentUser.name || '');
     result = result.replace(/<<担当者名>>/g, currentUser.name || '');
+    result = result.replace(/<<担当名（営業）名前>>/g, currentUser.name || '');
     result = result.replace(/<<担当者電話番号>>/g, currentUser.phoneNumber || '');
+    result = result.replace(/<<担当名（営業）電話番号>>/g, currentUser.phoneNumber || '');
     result = result.replace(/<<担当者メールアドレス>>/g, currentUser.email || '');
+    result = result.replace(/<<担当名（営業）メールアドレス>>/g, currentUser.email || '');
+    result = result.replace(/<<担当名（営業）固定休>>/g, '水曜日'); // TODO: 実際の固定休を取得
     
     // 会社情報（固定値）
-    result = result.replace(/<<会社名>>/g, '株式会社アットホーム別府');
-    result = result.replace(/<<住所>>/g, '〒874-0000 大分県別府市○○町1-1-1');
-    result = result.replace(/<<会社電話番号>>/g, '0977-00-0000');
-    result = result.replace(/<<会社メールアドレス>>/g, 'info@athome-beppu.com');
+    result = result.replace(/<<会社名>>/g, '株式会社いふう');
+    result = result.replace(/<<住所>>/g, '〒870-0044 大分市舞鶴町1丁目3-30');
+    result = result.replace(/<<会社電話番号>>/g, '097-533-2022');
+    result = result.replace(/<<会社メールアドレス>>/g, 'tenant@ifoo-oita.com');
+
+    // <br>タグを改行に変換
+    result = result.replace(/<br>/g, '\n');
+    result = result.replace(/<br\/>/g, '\n');
+    result = result.replace(/<br \/>/g, '\n');
 
     return result;
   };
@@ -1649,7 +1731,7 @@ Email: <<会社メールアドレス>>`;
       <Dialog
         open={confirmDialog.open}
         onClose={handleCancelSend}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
@@ -1681,9 +1763,35 @@ Email: <<会社メールアドレス>>`;
                 onChange={(e) => setEditableEmailBody(e.target.value)}
                 margin="normal"
                 multiline
-                rows={10}
+                rows={20}
                 required
               />
+              
+              {/* 画像添付ボタン */}
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ImageIcon />}
+                  onClick={handleOpenImageSelector}
+                  fullWidth
+                >
+                  画像を添付
+                </Button>
+
+                {selectedImages && Array.isArray(selectedImages) && selectedImages.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Alert severity="success">
+                      {selectedImages.length}枚の画像が選択されました
+                    </Alert>
+                  </Box>
+                )}
+
+                {imageError && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {imageError}
+                  </Alert>
+                )}
+              </Box>
             </Box>
           )}
           {confirmDialog.type === 'sms' && confirmDialog.template && (
@@ -1722,6 +1830,13 @@ Email: <<会社メールアドレス>>`;
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 画像選択モーダル */}
+      <ImageSelectorModal
+        open={imageSelectorOpen}
+        onConfirm={handleImageSelectionConfirm}
+        onCancel={handleImageSelectionCancel}
+      />
     </Container>
   );
 }

@@ -798,38 +798,79 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.post('/:id/send-email', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { to, subject, content, htmlBody } = req.body;
+    const { to, subject, content, htmlBody, selectedImages } = req.body;
+
+    console.log('[POST /buyers/:id/send-email] Request received:', {
+      buyerId: id,
+      to,
+      subject,
+      contentLength: content?.length || 0,
+      htmlBodyLength: htmlBody?.length || 0,
+      hasImages: selectedImages && Array.isArray(selectedImages) && selectedImages.length > 0,
+      imageCount: selectedImages?.length || 0,
+    });
 
     // バリデーション
     if (!to || !subject || !content) {
+      console.error('[POST /buyers/:id/send-email] Validation failed:', { to: !!to, subject: !!subject, content: !!content });
       return res.status(400).json({ error: '宛先、件名、本文は必須です' });
     }
 
     // 買主情報を取得
     const buyer = await buyerService.getByBuyerNumber(id);
     if (!buyer) {
+      console.error('[POST /buyers/:id/send-email] Buyer not found:', id);
       return res.status(404).json({ error: '買主が見つかりません' });
     }
 
-    // TODO: 実際のメール送信処理を実装
-    // 現在は仮実装（ログのみ）
-    console.log('Sending email to buyer:', {
-      buyerNumber: id,
-      to,
-      subject,
-      content: content.substring(0, 100) + '...',
+    console.log('[POST /buyers/:id/send-email] Buyer found:', {
+      buyerNumber: buyer.buyer_number,
+      name: buyer.name,
+      email: buyer.email,
     });
+
+    // EmailServiceを使用してGmail送信
+    const { EmailService } = require('../services/EmailService');
+    const emailService = new EmailService();
+
+    console.log('[POST /buyers/:id/send-email] Calling sendBuyerEmail...');
+
+    // メール送信（画像添付対応）
+    const result = await emailService.sendBuyerEmail({
+      to: to,
+      subject: subject,
+      body: htmlBody || content,
+      selectedImages: selectedImages || [], // 画像添付データ
+    });
+
+    console.log('[POST /buyers/:id/send-email] sendBuyerEmail result:', {
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error,
+    });
+
+    if (!result.success) {
+      console.error('[POST /buyers/:id/send-email] Email sending failed:', result.error);
+      throw new Error(result.error || 'メール送信に失敗しました');
+    }
 
     // アクティビティログを記録
     // TODO: アクティビティログサービスを実装
 
+    console.log('[POST /buyers/:id/send-email] Email sent successfully:', result.messageId);
+
     res.json({
       success: true,
       message: 'メールを送信しました',
+      messageId: result.messageId,
     });
   } catch (error: any) {
-    console.error('Failed to send email:', error);
-    res.status(500).json({ error: error.message || 'メール送信に失敗しました' });
+    console.error('[POST /buyers/:id/send-email] Exception:', error);
+    console.error('[POST /buyers/:id/send-email] Error stack:', error.stack);
+    res.status(500).json({ 
+      error: error.message || 'メール送信に失敗しました',
+      details: error.toString(),
+    });
   }
 });
 
