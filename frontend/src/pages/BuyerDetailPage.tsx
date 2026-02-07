@@ -20,6 +20,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
@@ -180,6 +185,19 @@ export default function BuyerDetailPage() {
   });
   const [emailTemplates, setEmailTemplates] = useState<BuyerTemplate[]>([]);
   const [smsTemplates, setSmsTemplates] = useState<BuyerTemplate[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: 'email' | 'sms' | null;
+    template: BuyerTemplate | null;
+  }>({
+    open: false,
+    type: null,
+    template: null,
+  });
+  const [sendingTemplate, setSendingTemplate] = useState(false);
+  const [editableEmailRecipient, setEditableEmailRecipient] = useState('');
+  const [editableEmailSubject, setEditableEmailSubject] = useState('');
+  const [editableEmailBody, setEditableEmailBody] = useState('');
 
   // クイックボタンの状態管理
   const { isDisabled: isQuickButtonDisabled, disableButton: disableQuickButton } = useQuickButtonState(buyer_number || '');
@@ -331,29 +349,113 @@ export default function BuyerDetailPage() {
   };
 
   const handleEmailTemplateSelect = (templateId: string) => {
+    if (!templateId) return;
+
     const template = emailTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // TODO: メール送信モーダルを開く
-    console.log('Email template selected:', template);
-    setSnackbar({
+    // プレースホルダーを置換（仮実装）
+    const replacedSubject = template.subject;
+    const replacedContent = template.content;
+
+    // 改行を<br>タグに変換
+    const htmlContent = replacedContent.replace(/\n/g, '<br>');
+
+    // 編集可能フィールドを初期化
+    setEditableEmailRecipient(buyer?.email || '');
+    setEditableEmailSubject(replacedSubject);
+    setEditableEmailBody(htmlContent);
+
+    // 確認ダイアログを表示
+    setConfirmDialog({
       open: true,
-      message: `メールテンプレート「${template.type}」を選択しました（実装予定）`,
-      severity: 'info',
+      type: 'email',
+      template: {
+        ...template,
+        subject: replacedSubject,
+        content: replacedContent,
+      },
     });
   };
 
   const handleSmsTemplateSelect = (templateId: string) => {
+    if (!templateId) return;
+
     const template = smsTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // TODO: SMS送信モーダルを開く
-    console.log('SMS template selected:', template);
-    setSnackbar({
+    // プレースホルダーを置換（仮実装）
+    const replacedContent = template.content;
+
+    // メッセージ長の検証（日本語SMS制限: 670文字）
+    if (replacedContent.length > 670) {
+      setSnackbar({
+        open: true,
+        message: `メッセージが長すぎます（${replacedContent.length}文字 / 670文字制限）`,
+        severity: 'error',
+      });
+      return;
+    }
+
+    // 確認ダイアログを表示
+    setConfirmDialog({
       open: true,
-      message: `SMSテンプレート「${template.type}」を選択しました（実装予定）`,
-      severity: 'info',
+      type: 'sms',
+      template: {
+        ...template,
+        content: replacedContent,
+      },
     });
+  };
+
+  const handleConfirmSend = async () => {
+    const { type, template } = confirmDialog;
+    if (!type || !template) return;
+
+    try {
+      setSendingTemplate(true);
+      setConfirmDialog({ open: false, type: null, template: null });
+
+      if (type === 'email') {
+        // メール送信API呼び出し（TODO: 実装）
+        console.log('Sending email:', {
+          to: editableEmailRecipient,
+          subject: editableEmailSubject,
+          body: editableEmailBody,
+        });
+
+        setSnackbar({
+          open: true,
+          message: 'メールを送信しました',
+          severity: 'success',
+        });
+      } else if (type === 'sms') {
+        // SMS送信API呼び出し（TODO: 実装）
+        console.log('Sending SMS:', {
+          to: buyer?.phone_number,
+          message: template.content,
+        });
+
+        setSnackbar({
+          open: true,
+          message: 'SMSを送信しました',
+          severity: 'success',
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to send:', error);
+      setSnackbar({
+        open: true,
+        message: '送信に失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setSendingTemplate(false);
+    }
+  };
+
+  const handleCancelSend = () => {
+    setConfirmDialog({ open: false, type: null, template: null });
   };
 
   const fetchLinkedProperties = async () => {
@@ -659,7 +761,7 @@ export default function BuyerDetailPage() {
             <Select
               value=""
               label="Email送信"
-              disabled={!buyer?.email}
+              disabled={!buyer?.email || sendingTemplate}
               onChange={(e) => handleEmailTemplateSelect(e.target.value)}
             >
               {emailTemplates.map((template) => (
@@ -676,7 +778,7 @@ export default function BuyerDetailPage() {
             <Select
               value=""
               label="SMS送信"
-              disabled={!buyer?.phone_number}
+              disabled={!buyer?.phone_number || sendingTemplate}
               onChange={(e) => handleSmsTemplateSelect(e.target.value)}
             >
               {smsTemplates.map((template) => (
@@ -1463,6 +1565,84 @@ export default function BuyerDetailPage() {
           buyerId: buyer.id || buyer_number || '',
         } : undefined}
       />
+
+      {/* 確認ダイアログ */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={handleCancelSend}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {confirmDialog.type === 'email' ? 'Email送信確認' : 'SMS送信確認'}
+        </DialogTitle>
+        <DialogContent>
+          {confirmDialog.type === 'email' && confirmDialog.template && (
+            <Box>
+              <TextField
+                fullWidth
+                label="宛先"
+                value={editableEmailRecipient}
+                onChange={(e) => setEditableEmailRecipient(e.target.value)}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="件名"
+                value={editableEmailSubject}
+                onChange={(e) => setEditableEmailSubject(e.target.value)}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="本文"
+                value={editableEmailBody}
+                onChange={(e) => setEditableEmailBody(e.target.value)}
+                margin="normal"
+                multiline
+                rows={10}
+                required
+              />
+            </Box>
+          )}
+          {confirmDialog.type === 'sms' && confirmDialog.template && (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                宛先: {buyer?.phone_number}
+              </Typography>
+              <TextField
+                fullWidth
+                label="メッセージ"
+                value={confirmDialog.template.content}
+                margin="normal"
+                multiline
+                rows={10}
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                文字数: {confirmDialog.template.content.length} / 670
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelSend} disabled={sendingTemplate}>
+            キャンセル
+          </Button>
+          <Button
+            onClick={handleConfirmSend}
+            variant="contained"
+            color="primary"
+            disabled={sendingTemplate}
+          >
+            {sendingTemplate ? '送信中...' : '送信'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
