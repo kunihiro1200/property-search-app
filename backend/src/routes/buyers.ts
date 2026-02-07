@@ -593,8 +593,8 @@ router.post('/:id/conflict', async (req: Request, res: Response) => {
     }
 
     // Get user info from request
-    const userId = (req as any).user?.id || 'system';
-    const userEmail = (req as any).user?.email || 'system@example.com';
+    const userId = (req as any).employee?.id || 'system';
+    const userEmail = (req as any).employee?.email || 'system@example.com';
 
     // 買主を取得
     const buyer = await buyerService.getById(id);
@@ -732,8 +732,8 @@ router.put('/:id', async (req: Request, res: Response) => {
     }
 
     // Get user info from request (set by auth middleware)
-    const userId = (req as any).user?.id || 'system';
-    const userEmail = (req as any).user?.email || 'system@example.com';
+    const userId = (req as any).employee?.id || 'system';
+    const userEmail = (req as any).employee?.email || 'system@example.com';
 
     // idがUUIDか買主番号かを判定
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -798,7 +798,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.post('/:id/send-email', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { to, subject, content, htmlBody, selectedImages } = req.body;
+    const { to, subject, content, htmlBody, selectedImages, templateType } = req.body;
 
     console.log('[POST /buyers/:id/send-email] Request received:', {
       buyerId: id,
@@ -808,6 +808,7 @@ router.post('/:id/send-email', async (req: Request, res: Response) => {
       htmlBodyLength: htmlBody?.length || 0,
       hasImages: selectedImages && Array.isArray(selectedImages) && selectedImages.length > 0,
       imageCount: selectedImages?.length || 0,
+      templateType,
     });
 
     // バリデーション
@@ -855,7 +856,37 @@ router.post('/:id/send-email', async (req: Request, res: Response) => {
     }
 
     // アクティビティログを記録
-    // TODO: アクティビティログサービスを実装
+    try {
+      const { ActivityLogService } = require('../services/ActivityLogService');
+      const activityLogService = new ActivityLogService();
+      
+      // employee_idがない場合はログを記録しない（UUIDが必須のため）
+      const employeeId = (req as any).employee?.id;
+      if (employeeId) {
+        await activityLogService.logActivity({
+          employeeId: employeeId,
+          action: 'email',
+          targetType: 'buyer',
+          targetId: buyer.buyer_number,
+          metadata: {
+            template_type: templateType || '不明',
+            subject: subject,
+            body: content, // 本文全体を保存
+            recipient_email: to,
+            sender_email: (req as any).employee?.email || 'unknown',
+            selected_images: selectedImages?.length || 0,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        console.log('[POST /buyers/:id/send-email] Activity log recorded successfully');
+      } else {
+        console.warn('[POST /buyers/:id/send-email] Skipping activity log: No employee_id available');
+      }
+    } catch (logError: any) {
+      // ログ記録失敗してもメール送信は成功として扱う
+      console.error('[POST /buyers/:id/send-email] Failed to log email activity:', logError);
+    }
 
     console.log('[POST /buyers/:id/send-email] Email sent successfully:', result.messageId);
 
@@ -878,7 +909,7 @@ router.post('/:id/send-email', async (req: Request, res: Response) => {
 router.post('/:id/send-sms', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { message } = req.body;
+    const { message, templateType } = req.body;
 
     // バリデーション
     if (!message) {
@@ -892,7 +923,36 @@ router.post('/:id/send-sms', async (req: Request, res: Response) => {
     }
 
     // SMS送信記録をアクティビティログに保存
-    // TODO: アクティビティログサービスを実装
+    try {
+      const { ActivityLogService } = require('../services/ActivityLogService');
+      const activityLogService = new ActivityLogService();
+      
+      // employee_idがない場合はログを記録しない（UUIDが必須のため）
+      const employeeId = (req as any).employee?.id;
+      if (employeeId) {
+        await activityLogService.logActivity({
+          employeeId: employeeId,
+          action: 'sms',
+          targetType: 'buyer',
+          targetId: buyer.buyer_number,
+          metadata: {
+            template_type: templateType || '不明',
+            message: message,
+            recipient_phone: buyer.phone_number,
+            sender: (req as any).employee?.name || 'unknown',
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        console.log('SMS activity log recorded successfully for buyer:', id);
+      } else {
+        console.warn('Skipping SMS activity log: No employee_id available');
+      }
+    } catch (logError: any) {
+      // ログ記録失敗してもSMS送信は成功として扱う
+      console.error('Failed to log SMS activity:', logError);
+    }
+
     console.log('Recording SMS to buyer:', {
       buyerNumber: id,
       phoneNumber: buyer.phone_number,

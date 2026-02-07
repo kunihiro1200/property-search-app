@@ -199,6 +199,10 @@ export default function BuyerDetailPage() {
   const [editableEmailSubject, setEditableEmailSubject] = useState('');
   const [editableEmailBody, setEditableEmailBody] = useState('');
   
+  // アクティビティ詳細ダイアログ用の状態
+  const [activityDetailOpen, setActivityDetailOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  
   // 画像選択モーダル用の状態
   const [imageSelectorOpen, setImageSelectorOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<any[] | null>(null);
@@ -359,6 +363,19 @@ export default function BuyerDetailPage() {
     const template = emailTemplates.find(t => t.id === templateId);
     if (!template) return;
 
+    console.log('[handleEmailTemplateSelect] Selected template:', {
+      id: template.id,
+      category: template.category,
+      type: template.type,
+      subject: template.subject,
+    });
+
+    console.log('[handleEmailTemplateSelect] Linked properties:', linkedProperties);
+    console.log('[handleEmailTemplateSelect] Buyer data:', {
+      buyer_number: buyer?.buyer_number,
+      pre_viewing_notes: buyer?.pre_viewing_notes,
+    });
+
     // プレースホルダーを置換（<br>タグも改行に変換される）
     const replacedSubject = replacePlaceholders(template.subject);
     const replacedContent = replacePlaceholders(template.content);
@@ -386,21 +403,31 @@ export default function BuyerDetailPage() {
     const template = smsTemplates.find(t => t.id === templateId);
     if (!template) return;
 
+    console.log('[handleSmsTemplateSelect] Selected template:', {
+      id: template.id,
+      category: template.category,
+      type: template.type,
+      contentLength: template.content.length,
+    });
+
     // SMS用に署名を簡略化してからプレースホルダーを置換
     const simplifiedContent = simplifySmsSignature(template.content);
     const replacedContent = replacePlaceholders(simplifiedContent);
 
     // メッセージ長の検証（日本語SMS制限: 670文字）
-    if (replacedContent.length > 670) {
+    const isOverLimit = replacedContent.length > 670;
+    
+    if (isOverLimit) {
+      // エラーメッセージを表示するが、ダイアログも開く
       setSnackbar({
         open: true,
-        message: `メッセージが長すぎます（${replacedContent.length}文字 / 670文字制限）`,
-        severity: 'error',
+        message: `メッセージが長すぎます（${replacedContent.length}文字 / 670文字制限）。内容を確認してください。`,
+        severity: 'warning',
       });
-      return;
     }
 
-    // 確認ダイアログを表示
+    // 確認ダイアログを表示（文字数オーバーでも表示）
+    // 確認ダイアログを表示（文字数オーバーでも表示）
     setConfirmDialog({
       open: true,
       type: 'sms',
@@ -415,6 +442,16 @@ export default function BuyerDetailPage() {
     const { type, template } = confirmDialog;
     if (!type || !template) return;
 
+    console.log('[handleConfirmSend] Confirm dialog state:', {
+      type,
+      template: {
+        id: template.id,
+        category: template.category,
+        type: template.type,
+        subject: template.subject,
+      },
+    });
+
     try {
       setSendingTemplate(true);
       setConfirmDialog({ open: false, type: null, template: null });
@@ -426,6 +463,7 @@ export default function BuyerDetailPage() {
           bodyLength: editableEmailBody.length,
           hasImages: selectedImages && selectedImages.length > 0,
           imageCount: selectedImages?.length || 0,
+          templateType: template.type,
         });
 
         // メール送信API呼び出し（画像添付データも送信）
@@ -435,6 +473,7 @@ export default function BuyerDetailPage() {
           subject: editableEmailSubject,
           content: editableEmailBody,  // 改行（\n）のまま送信
           selectedImages: selectedImages || [], // 画像添付データを送信
+          templateType: template.type, // テンプレート種別を送信
         });
 
         console.log('[handleConfirmSend] Email sent successfully:', response.data);
@@ -455,6 +494,7 @@ export default function BuyerDetailPage() {
         // SMS送信記録API呼び出し
         await api.post(`/api/buyers/${buyer_number}/send-sms`, {
           message: template.content,
+          templateType: template.type, // テンプレート種別を送信
         });
 
         setSnackbar({
@@ -602,11 +642,24 @@ export default function BuyerDetailPage() {
       result = result.replace(/<<住居表示Pinrich>>/g, firstProperty.display_address || firstProperty.address || '');
       result = result.replace(/<<建物名\/価格 内覧物件は赤表示（★は他社物件）>>/g, firstProperty.property_number || '');
       result = result.replace(/<<athome URL>>/g, firstProperty.suumo_url || '');
+      
+      // SUUMO URLの表示: URLがある場合のみ「SUUMO: URL」形式で表示
+      const suumoUrlDisplay = firstProperty.suumo_url ? `SUUMO: ${firstProperty.suumo_url}` : '';
+      result = result.replace(/<<SUUMO　URLの表示>>/g, suumoUrlDisplay);
+      result = result.replace(/<<SUUMO URLの表示>>/g, suumoUrlDisplay);
+      
       result = result.replace(/<<SUUMO URL>>/g, firstProperty.suumo_url || '');
       result = result.replace(/<<GoogleMap>>/g, firstProperty.google_map_url || '');
       result = result.replace(/<<現況v>>/g, ''); // TODO: 現況フィールドを追加
       result = result.replace(/<<鍵等v>>/g, ''); // TODO: 鍵等フィールドを追加
-      result = result.replace(/<<内覧前伝達事項v>>/g, buyer.pre_viewing_notes || '');
+      
+      // 内覧前伝達事項: 物件リストテーブルのpre_viewing_notesフィールドから取得
+      result = result.replace(/<<内覧前伝達事項v>>/g, (firstProperty as any).pre_viewing_notes || '');
+      result = result.replace(/<<内覧前伝達事項>>/g, (firstProperty as any).pre_viewing_notes || '');
+    } else {
+      // 物件が紐づいていない場合は空文字
+      result = result.replace(/<<内覧前伝達事項v>>/g, '');
+      result = result.replace(/<<内覧前伝達事項>>/g, '');
     }
     
     // アンケートURL（固定値）
@@ -1615,22 +1668,24 @@ Email: <<会社メールアドレス>>`;
             </Paper>
           ))}
 
-          {/* メール送信履歴セクション */}
+          {/* メール・SMS送信履歴セクション */}
           <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <EmailIcon sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6">メール送信履歴</Typography>
+              <Typography variant="h6">メール・SMS送信履歴</Typography>
             </Box>
             <Divider sx={{ mb: 2 }} />
-            {activities.filter(a => a.action === 'email').length > 0 ? (
+            {activities.filter(a => a.action === 'email' || a.action === 'sms').length > 0 ? (
               <List sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {activities
-                  .filter(a => a.action === 'email')
+                  .filter(a => a.action === 'email' || a.action === 'sms')
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .map((activity) => {
                     const metadata = activity.metadata || {};
                     const propertyNumbers = metadata.propertyNumbers || [];
                     const displayName = activity.employee ? getDisplayName(activity.employee) : '不明';
+                    const actionLabel = activity.action === 'email' ? 'Email' : 'SMS';
+                    const templateType = metadata.template_type || '不明';
                     
                     return (
                       <ListItem
@@ -1641,12 +1696,28 @@ Email: <<会社メールアドレス>>`;
                           borderBottom: '1px solid',
                           borderColor: 'divider',
                           py: 2,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                        }}
+                        onClick={() => {
+                          setSelectedActivity(activity);
+                          setActivityDetailOpen(true);
                         }}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', mb: 1 }}>
-                          <Typography variant="body2" fontWeight="bold">
-                            {metadata.subject || '件名なし'}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label={actionLabel} 
+                              size="small" 
+                              color={activity.action === 'email' ? 'primary' : 'secondary'}
+                              sx={{ fontWeight: 'bold' }}
+                            />
+                            <Typography variant="body2" fontWeight="bold">
+                              {templateType}
+                            </Typography>
+                          </Box>
                           <Typography variant="caption" color="text.secondary">
                             {formatDateTime(activity.created_at)}
                           </Typography>
@@ -1654,7 +1725,7 @@ Email: <<会社メールアドレス>>`;
                         
                         <Box sx={{ width: '100%', mb: 1 }}>
                           <Typography variant="caption" color="text.secondary">
-                            送信者: {displayName} ({metadata.senderEmail || '-'})
+                            送信者: {displayName} ({metadata.sender_email || metadata.sender || '-'})
                           </Typography>
                         </Box>
                         
@@ -1674,17 +1745,6 @@ Email: <<会社メールアドレス>>`;
                             ))}
                           </Box>
                         )}
-                        
-                        {metadata.preViewingNotes && (
-                          <Box sx={{ width: '100%', mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                              内覧前伝達事項:
-                            </Typography>
-                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>
-                              {metadata.preViewingNotes}
-                            </Typography>
-                          </Box>
-                        )}
                       </ListItem>
                     );
                   })}
@@ -1692,7 +1752,7 @@ Email: <<会社メールアドレス>>`;
             ) : (
               <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
                 <EmailIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
-                <Typography variant="body2">メール送信履歴はありません</Typography>
+                <Typography variant="body2">メール・SMS送信履歴はありません</Typography>
               </Box>
             )}
           </Paper>
@@ -1838,6 +1898,114 @@ Email: <<会社メールアドレス>>`;
             disabled={sendingTemplate}
           >
             {sendingTemplate ? '送信中...' : '送信'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* アクティビティ詳細ダイアログ */}
+      <Dialog
+        open={activityDetailOpen}
+        onClose={() => setActivityDetailOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedActivity?.action === 'email' ? 'メール送信詳細' : 'SMS送信詳細'}
+        </DialogTitle>
+        <DialogContent>
+          {selectedActivity && (
+            <Box>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  種別: {selectedActivity.metadata?.template_type || '不明'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  送信日時: {formatDateTime(selectedActivity.created_at)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  送信者: {selectedActivity.employee ? getDisplayName(selectedActivity.employee) : '不明'} ({selectedActivity.metadata?.sender_email || selectedActivity.metadata?.sender || '-'})
+                </Typography>
+              </Box>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              {selectedActivity.action === 'email' && (
+                <>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      件名
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedActivity.metadata?.subject || '件名なし'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      宛先
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedActivity.metadata?.recipient_email || '-'}
+                    </Typography>
+                  </Box>
+                  
+                  {selectedActivity.metadata?.body && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        本文
+                      </Typography>
+                      <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 500, overflow: 'auto' }}>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {selectedActivity.metadata.body}
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  )}
+                  
+                  {selectedActivity.metadata?.selected_images > 0 && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        添付画像
+                      </Typography>
+                      <Typography variant="body2">
+                        {selectedActivity.metadata.selected_images}枚
+                      </Typography>
+                    </Box>
+                  )}
+                </>
+              )}
+              
+              {selectedActivity.action === 'sms' && (
+                <>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      宛先
+                    </Typography>
+                    <Typography variant="body1">
+                      {selectedActivity.metadata?.recipient_phone || '-'}
+                    </Typography>
+                  </Box>
+                  
+                  {selectedActivity.metadata?.message && (
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        メッセージ
+                      </Typography>
+                      <Paper sx={{ p: 2, bgcolor: 'grey.50', maxHeight: 500, overflow: 'auto' }}>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {selectedActivity.metadata.message}
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActivityDetailOpen(false)}>
+            閉じる
           </Button>
         </DialogActions>
       </Dialog>

@@ -8,6 +8,8 @@ export interface LogFilter {
   dateTo?: Date;
   activityType?: string;
   sellerId?: string;
+  targetType?: string;
+  targetId?: string;
 }
 
 export interface ActivityStatistics {
@@ -48,7 +50,16 @@ export class ActivityLogService extends BaseRepository {
    * ログを取得（フィルタ対応）
    */
   async getLogs(filter: LogFilter): Promise<ActivityLog[]> {
-    let query = this.table('activity_logs').select('*');
+    let query = this.table('activity_logs')
+      .select(`
+        *,
+        employee:employee_id (
+          id,
+          name,
+          initials,
+          email
+        )
+      `);
 
     if (filter.employeeId) {
       query = query.eq('employee_id', filter.employeeId);
@@ -68,6 +79,15 @@ export class ActivityLogService extends BaseRepository {
 
     if (filter.sellerId) {
       query = query.eq('target_id', filter.sellerId).eq('target_type', 'seller');
+    }
+
+    // target_typeとtarget_idのフィルタリングを追加
+    if (filter.targetType) {
+      query = query.eq('target_type', filter.targetType);
+    }
+
+    if (filter.targetId) {
+      query = query.eq('target_id', filter.targetId);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false }).limit(1000);

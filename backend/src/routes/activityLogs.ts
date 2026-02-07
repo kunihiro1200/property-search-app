@@ -39,6 +39,8 @@ router.get(
         dateTo: req.query.dateTo ? new Date(req.query.dateTo as string) : undefined,
         activityType: req.query.activityType as string,
         sellerId: req.query.sellerId as string,
+        targetType: req.query.target_type as string,
+        targetId: req.query.target_id as string,
       };
 
       const logs = await activityLogService.getLogs(filter);

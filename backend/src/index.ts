@@ -68,6 +68,7 @@ import propertyListingSyncRoutes from './routes/propertyListingSync';
 import geocodeRoutes from './routes/geocode';
 import urlRedirectRoutes from './routes/urlRedirect';
 import { activityLogger } from './middleware/activityLogger';
+import { authenticate } from './middleware/auth';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -280,7 +281,8 @@ app.use('/cache', cacheRoutes);
 app.use('/api/drive', driveRoutes);
 app.use('/api/work-tasks', workTaskRoutes);
 app.use('/api/property-listings', propertyListingRoutes);
-app.use('/api/buyers', buyerRoutes);
+// 買主ルートに認証ミドルウェアを適用（アクティビティログ記録のため）
+app.use('/api/buyers', authenticate, buyerRoutes);
 app.use('/api', viewingResultRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/validation', validationRoutes);
