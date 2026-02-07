@@ -52,6 +52,7 @@ import {
 } from '../utils/buyerFieldOptions';
 import { formatDateTime } from '../utils/dateFormat';
 import { getDisplayName } from '../utils/employeeUtils';
+import { useAuthStore } from '../store/authStore';
 
 interface Buyer {
   [key: string]: any;
@@ -166,6 +167,7 @@ const BUYER_FIELD_SECTIONS = [
 export default function BuyerDetailPage() {
   const { buyer_number } = useParams<{ buyer_number: string }>();
   const navigate = useNavigate();
+  const { employee } = useAuthStore();
   const [buyer, setBuyer] = useState<Buyer | null>(null);
   const [linkedProperties, setLinkedProperties] = useState<PropertyListing[]>([]);
   const [inquiryHistory, setInquiryHistory] = useState<InquiryHistory[]>([]);
@@ -354,9 +356,9 @@ export default function BuyerDetailPage() {
     const template = emailTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // プレースホルダーを置換（仮実装）
-    const replacedSubject = template.subject;
-    const replacedContent = template.content;
+    // プレースホルダーを置換
+    const replacedSubject = replacePlaceholders(template.subject);
+    const replacedContent = replacePlaceholders(template.content);
 
     // 改行を<br>タグに変換
     const htmlContent = replacedContent.replace(/\n/g, '<br>');
@@ -384,8 +386,9 @@ export default function BuyerDetailPage() {
     const template = smsTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // プレースホルダーを置換（仮実装）
-    const replacedContent = template.content;
+    // SMS用に署名を簡略化してからプレースホルダーを置換
+    const simplifiedContent = simplifySmsSignature(template.content);
+    const replacedContent = replacePlaceholders(simplifiedContent);
 
     // メッセージ長の検証（日本語SMS制限: 670文字）
     if (replacedContent.length > 670) {
@@ -506,6 +509,70 @@ export default function BuyerDetailPage() {
     } catch (error) {
       console.error('Failed to fetch templates:', error);
     }
+  };
+
+  /**
+   * テンプレート内のプレースホルダーを置換
+   */
+  const replacePlaceholders = (template: string): string => {
+    if (!buyer) return template;
+
+    let result = template;
+
+    // 買主情報の置換
+    result = result.replace(/<<氏名>>/g, buyer.name || '');
+    result = result.replace(/<<電話番号>>/g, buyer.phone_number || '');
+    result = result.replace(/<<メールアドレス>>/g, buyer.email || '');
+    result = result.replace(/<<買主番号>>/g, buyer.buyer_number || '');
+    result = result.replace(/<<会社名>>/g, buyer.company_name || '');
+    
+    // 問い合わせ情報
+    result = result.replace(/<<物件番号>>/g, buyer.property_number || '');
+    result = result.replace(/<<問合せ元>>/g, buyer.inquiry_source || '');
+    result = result.replace(/<<受付日>>/g, buyer.reception_date ? new Date(buyer.reception_date).toLocaleDateString('ja-JP') : '');
+    
+    // 内覧情報
+    result = result.replace(/<<内覧日>>/g, buyer.latest_viewing_date ? new Date(buyer.latest_viewing_date).toLocaleDateString('ja-JP') : '');
+    result = result.replace(/<<内覧時間>>/g, buyer.viewing_time || '');
+    
+    // 担当者情報（現在ログイン中のユーザー）
+    const currentUser = employee || {};
+    result = result.replace(/<<担当者名>>/g, currentUser.name || '');
+    result = result.replace(/<<担当者電話番号>>/g, currentUser.phoneNumber || '');
+    result = result.replace(/<<担当者メールアドレス>>/g, currentUser.email || '');
+    
+    // 会社情報（固定値）
+    result = result.replace(/<<会社名>>/g, '株式会社アットホーム別府');
+    result = result.replace(/<<住所>>/g, '〒874-0000 大分県別府市○○町1-1-1');
+    result = result.replace(/<<会社電話番号>>/g, '0977-00-0000');
+    result = result.replace(/<<会社メールアドレス>>/g, 'info@athome-beppu.com');
+
+    return result;
+  };
+
+  /**
+   * SMS用に署名を簡略化
+   */
+  const simplifySmsSignature = (content: string): string => {
+    let result = content;
+
+    // 署名部分を簡略化（最後の署名欄を会社名、住所、電話番号、メアドのみに）
+    const signaturePattern = /---+\s*\n([\s\S]*?)$/;
+    const match = result.match(signaturePattern);
+
+    if (match) {
+      // 署名部分を簡略化
+      const simplifiedSignature = `
+---
+<<会社名>>
+<<住所>>
+TEL: <<会社電話番号>>
+Email: <<会社メールアドレス>>`;
+
+      result = result.replace(signaturePattern, simplifiedSignature);
+    }
+
+    return result;
   };
 
   const fetchInquiryHistoryTable = async () => {
