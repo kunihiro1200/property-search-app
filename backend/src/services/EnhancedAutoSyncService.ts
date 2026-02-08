@@ -545,9 +545,31 @@ export class EnhancedAutoSyncService {
   /**
    * ソフトデリートを実行
    * トランザクションで売主と関連物件を削除し、監査ログに記録
+   * 
+   * 🚨 重要: 削除前にスプレッドシートに本当に存在しないかを再確認
    */
   private async executeSoftDelete(sellerNumber: string): Promise<DeletionResult> {
     try {
+      // 🚨 削除前の最終確認: スプレッドシートに本当に存在しないかを再確認
+      console.log(`🔍 Final check: Verifying seller ${sellerNumber} is not in spreadsheet...`);
+      
+      const allRows = await this.getSpreadsheetData();
+      const existsInSheet = allRows.some(row => {
+        const sheetSellerNumber = row['売主番号'];
+        return sheetSellerNumber && String(sheetSellerNumber).trim() === sellerNumber;
+      });
+
+      if (existsInSheet) {
+        console.log(`⚠️ ABORT: Seller ${sellerNumber} EXISTS in spreadsheet! Skipping deletion.`);
+        return {
+          sellerNumber,
+          success: false,
+          error: 'Seller exists in spreadsheet - deletion aborted',
+        };
+      }
+
+      console.log(`✅ Confirmed: Seller ${sellerNumber} is not in spreadsheet. Proceeding with deletion.`);
+
       // 売主情報を取得
       const { data: seller, error: fetchError } = await this.supabase
         .from('sellers')
@@ -3088,9 +3110,31 @@ export class EnhancedAutoSyncService {
   /**
    * ソフトデリートを実行（買主用）
    * トランザクションで買主を削除し、監査ログに記録
+   * 
+   * 🚨 重要: 削除前にスプレッドシートに本当に存在しないかを再確認
    */
   private async executeBuyerSoftDelete(buyerNumber: string): Promise<DeletionResult> {
     try {
+      // 🚨 削除前の最終確認: スプレッドシートに本当に存在しないかを再確認
+      console.log(`🔍 Final check: Verifying buyer ${buyerNumber} is not in spreadsheet...`);
+      
+      const allRows = await this.getBuyerSpreadsheetData();
+      const existsInSheet = allRows.some(row => {
+        const sheetBuyerNumber = row['買主番号'];
+        return sheetBuyerNumber && String(sheetBuyerNumber).trim() === buyerNumber;
+      });
+
+      if (existsInSheet) {
+        console.log(`⚠️ ABORT: Buyer ${buyerNumber} EXISTS in spreadsheet! Skipping deletion.`);
+        return {
+          sellerNumber: buyerNumber,
+          success: false,
+          error: 'Buyer exists in spreadsheet - deletion aborted',
+        };
+      }
+
+      console.log(`✅ Confirmed: Buyer ${buyerNumber} is not in spreadsheet. Proceeding with deletion.`);
+
       // 買主情報を取得
       const { data: buyer, error: fetchError } = await this.supabase
         .from('buyers')
