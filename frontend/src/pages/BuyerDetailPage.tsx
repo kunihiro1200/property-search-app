@@ -1010,12 +1010,18 @@ Email: <<会社メールアドレス>>`;
               )}
             </>
           )}
-          {buyer.inquiry_confidence && (
-            <Chip label={buyer.inquiry_confidence} color="info" sx={{ ml: 2 }} />
-          )}
-          {buyer.latest_status && (
-            <Chip label={buyer.latest_status.substring(0, 30)} sx={{ ml: 1 }} />
-          )}
+          {/* ステータス表示: 最新確度を優先、なければ問合せ時確度を表示（頭文字のみ） */}
+          {(() => {
+            const status = buyer.latest_status || buyer.inquiry_confidence;
+            if (!status) return null;
+            
+            // 頭文字を抽出（A, B, C, D, E, AZ, BZ等）
+            const match = status.match(/^[A-Z]+/);
+            const label = match ? match[0] : status.substring(0, 2);
+            const color = buyer.latest_status ? 'secondary' : 'info';
+            
+            return <Chip label={label} color={color} sx={{ ml: 2 }} />;
+          })()}
           <RelatedBuyerNotificationBadge 
             count={relatedBuyersCount} 
             onClick={scrollToRelatedBuyers}
