@@ -251,11 +251,20 @@ export default function BuyersPage() {
                 ) : (
                   buyers.map((buyer) => {
                     const displayConfidence = getDisplayConfidence(buyer);
+                    const formattedAtbbStatus = formatAtbbStatus(buyer.atbb_status);
+                    const isIppan = formattedAtbbStatus === '一般'; // 一般物件かどうか
+                    
                     return (
                       <TableRow
                         key={buyer.id}
                         hover
-                        sx={{ cursor: 'pointer' }}
+                        sx={{ 
+                          cursor: 'pointer',
+                          backgroundColor: isIppan ? '#fff3e0' : 'inherit', // 一般物件はオレンジ系の背景色
+                          '&:hover': {
+                            backgroundColor: isIppan ? '#ffe0b2' : undefined, // ホバー時も色を維持
+                          }
+                        }}
                         onClick={() => handleRowClick(buyer.buyer_number)}
                       >
                         <TableCell>
@@ -266,7 +275,7 @@ export default function BuyersPage() {
                         <TableCell>{buyer.name || '-'}</TableCell>
                         <TableCell>{buyer.property_address || '-'}</TableCell>
                         <TableCell>{buyer.property_type || '-'}</TableCell>
-                        <TableCell>{formatAtbbStatus(buyer.atbb_status)}</TableCell>
+                        <TableCell>{formattedAtbbStatus}</TableCell>
                         <TableCell>{buyer.follow_up_assignee || buyer.initial_assignee || '-'}</TableCell>
                         <TableCell>
                           {displayConfidence && (
