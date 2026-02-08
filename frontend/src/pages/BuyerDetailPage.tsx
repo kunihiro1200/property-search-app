@@ -141,6 +141,7 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'initial_assignee', label: '初動担当', inlineEditable: true, fieldType: 'button', column: 'right' },
       { key: 'inquiry_source', label: '問合せ元', inlineEditable: true, column: 'right' },
       { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true, column: 'right' },
+      { key: 'latest_status', label: '最新状況', inlineEditable: true, fieldType: 'dropdown', column: 'right' },
     ],
   },
   {
