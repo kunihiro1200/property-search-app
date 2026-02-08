@@ -239,6 +239,13 @@ export default function BuyerViewingResultPage() {
       // 紐づいた物件情報を取得（最初の物件を使用）
       const property = linkedProperties && linkedProperties.length > 0 ? linkedProperties[0] : null;
 
+      console.log('[BuyerViewingResultPage] Property info:', {
+        hasProperty: !!property,
+        address: property?.address,
+        googleMapUrl: property?.google_map_url,
+        propertyNumber: property?.property_number,
+      });
+
       // バックエンドAPIを呼び出し
       const response = await api.post('/api/buyer-appointments', {
         buyerNumber: buyer.buyer_number,
