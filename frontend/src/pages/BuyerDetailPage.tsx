@@ -133,7 +133,7 @@ const BUYER_FIELD_SECTIONS = [
       // 左の列
       { key: 'inquiry_email_phone', label: '【問合メール】電話対応', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
       { key: 'three_calls_confirmed', label: '3回架電確認済み', inlineEditable: true, fieldType: 'dropdown', column: 'left', conditionalDisplay: true, required: true },
-      { key: 'viewing_promotion_email', label: '内覧促進メール', inlineEditable: true, fieldType: 'button', column: 'left', conditionalDisplay: true },
+      { key: 'viewing_promotion_email', label: '内覧促進メール', inlineEditable: true, fieldType: 'button', column: 'left', conditionalDisplay: true, required: true },
       { key: 'distribution_type', label: '配信の有無', inlineEditable: true, fieldType: 'button', column: 'left' },
       { key: 'pinrich', label: 'Pinrich', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
       // 右の列
@@ -1462,15 +1462,35 @@ Email: <<会社メールアドレス>>`;
                         return null; // 条件を満たさない場合は表示しない
                       }
 
-                      const handleFieldSave = async (newValue: any) => {
-                        const result = await handleInlineFieldSave(field.key, newValue);
-                        if (result && !result.success && result.error) {
-                          throw new Error(result.error);
+                      const handleButtonClick = async (newValue: string) => {
+                        try {
+                          console.log('[inquiry_email_phone] Button clicked, current value:', value, 'new value:', newValue);
+                          
+                          // 同じボタンを2度クリックしたら値をクリア
+                          const valueToSave = value === newValue ? '' : newValue;
+                          console.log('[inquiry_email_phone] Setting value:', valueToSave);
+                          
+                          const result = await handleInlineFieldSave(field.key, valueToSave);
+                          
+                          if (result && !result.success && result.error) {
+                            setSnackbar({
+                              open: true,
+                              message: result.error,
+                              severity: 'error'
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('[inquiry_email_phone] Error:', error);
+                          setSnackbar({
+                            open: true,
+                            message: error.message || '保存に失敗しました',
+                            severity: 'error'
+                          });
                         }
                       };
 
                       // 標準的な選択肢
-                      const standardOptions = ['済', '未', '不通', '過去のもの'];
+                      const standardOptions = ['済', '未', '不通'];
                       const isStandardValue = standardOptions.includes(value);
 
                       return (
@@ -1488,14 +1508,7 @@ Email: <<会社メールアドレス>>`;
                                     variant={value === option ? 'contained' : 'outlined'}
                                     color="primary"
                                     size="small"
-                                    onClick={() => {
-                                      // 同じボタンを2度クリックしたら値をクリア
-                                      if (value === option) {
-                                        handleFieldSave('');
-                                      } else {
-                                        handleFieldSave(option);
-                                      }
-                                    }}
+                                    onClick={() => handleButtonClick(option)}
                                     sx={{ flex: '1 1 auto', minWidth: '60px' }}
                                   >
                                     {option}
@@ -1520,7 +1533,24 @@ Email: <<会社メールアドレス>>`;
                                 <Button
                                   variant="outlined"
                                   size="small"
-                                  onClick={() => handleFieldSave('')}
+                                  onClick={async () => {
+                                    try {
+                                      const result = await handleInlineFieldSave(field.key, '');
+                                      if (result && !result.success && result.error) {
+                                        setSnackbar({
+                                          open: true,
+                                          message: result.error,
+                                          severity: 'error'
+                                        });
+                                      }
+                                    } catch (error: any) {
+                                      setSnackbar({
+                                        open: true,
+                                        message: error.message || 'クリアに失敗しました',
+                                        severity: 'error'
+                                      });
+                                    }
+                                  }}
                                   sx={{ ml: 1 }}
                                 >
                                   クリア
@@ -1532,20 +1562,116 @@ Email: <<会社メールアドレス>>`;
                       );
                     }
 
-                    // three_calls_confirmedフィールドは削除されました（条件が複雑すぎるため非表示）
+                    // three_calls_confirmedフィールドは条件付き表示（ボタン形式）
                     if (field.key === 'three_calls_confirmed') {
-                      // このフィールドは常に非表示
-                      return null;
+                      // 表示条件：「【問合メール】電話対応」が「不通」の場合のみ表示
+                      const shouldDisplay = buyer.inquiry_email_phone === '不通';
+
+                      if (!shouldDisplay) {
+                        return null; // 条件を満たさない場合は表示しない
+                      }
+
+                      const handleButtonClick = async (newValue: string) => {
+                        try {
+                          console.log('[three_calls_confirmed] Button clicked, current value:', value, 'new value:', newValue);
+                          
+                          // 同じボタンを2度クリックしたら値をクリア
+                          const valueToSave = value === newValue ? '' : newValue;
+                          console.log('[three_calls_confirmed] Setting value:', valueToSave);
+                          
+                          const result = await handleInlineFieldSave(field.key, valueToSave);
+                          
+                          if (result && !result.success && result.error) {
+                            setSnackbar({
+                              open: true,
+                              message: result.error,
+                              severity: 'error'
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('[three_calls_confirmed] Error:', error);
+                          setSnackbar({
+                            open: true,
+                            message: error.message || '保存に失敗しました',
+                            severity: 'error'
+                          });
+                        }
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label} <span style={{ color: 'red', fontWeight: 'bold' }}>*必須</span>
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                variant={value === '3回架電OK' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => handleButtonClick('3回架電OK')}
+                                sx={{ flex: '1 1 auto', minWidth: '90px' }}
+                              >
+                                3回架電OK
+                              </Button>
+                              <Button
+                                variant={value === '3回架電未' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => handleButtonClick('3回架電未')}
+                                sx={{ flex: '1 1 auto', minWidth: '90px' }}
+                              >
+                                3回架電未
+                              </Button>
+                              <Button
+                                variant={value === '他' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => handleButtonClick('他')}
+                                sx={{ flex: '1 1 auto', minWidth: '60px' }}
+                              >
+                                他
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
                     }
 
                     // email_typeフィールドは削除されました
 
                     // initial_assigneeフィールドは特別処理（スタッフイニシャルボタン形式）
                     if (field.key === 'initial_assignee') {
-                      const handleFieldSave = async (newValue: any) => {
-                        const result = await handleInlineFieldSave(field.key, newValue);
-                        if (result && !result.success && result.error) {
-                          throw new Error(result.error);
+                      const handleButtonClick = async (newValue: string) => {
+                        try {
+                          console.log('[initial_assignee] Button clicked, current value:', value, 'new value:', newValue);
+                          
+                          // 同じボタンを2度クリックしたら値をクリア
+                          const valueToSave = value === newValue ? '' : newValue;
+                          console.log('[initial_assignee] Setting value:', valueToSave);
+                          
+                          const result = await handleInlineFieldSave(field.key, valueToSave);
+                          
+                          if (result && !result.success && result.error) {
+                            setSnackbar({
+                              open: true,
+                              message: result.error,
+                              severity: 'error'
+                            });
+                          } else {
+                            setSnackbar({
+                              open: true,
+                              message: '保存しました',
+                              severity: 'success'
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('[initial_assignee] Error:', error);
+                          setSnackbar({
+                            open: true,
+                            message: error.message || '保存に失敗しました',
+                            severity: 'error'
+                          });
                         }
                       };
 
@@ -1562,14 +1688,7 @@ Email: <<会社メールアドレス>>`;
                                   variant={value === initial ? 'contained' : 'outlined'}
                                   color="primary"
                                   size="small"
-                                  onClick={() => {
-                                    // 同じボタンを2度クリックしたら値をクリア
-                                    if (value === initial) {
-                                      handleFieldSave('');
-                                    } else {
-                                      handleFieldSave(initial);
-                                    }
-                                  }}
+                                  onClick={() => handleButtonClick(initial)}
                                   sx={{ 
                                     minWidth: '40px',
                                     padding: '4px 8px',
@@ -1639,12 +1758,21 @@ Email: <<会社メールアドレス>>`;
 
                     // 内覧促進メール（条件付き表示・ボタン形式）
                     if (field.key === 'viewing_promotion_email') {
-                      // 表示条件：「問合せ元」に"メール"が含まれる場合のみ表示
-                      const shouldDisplay = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      // 表示条件：「問合せ元」に"メール"または"電話"が含まれる場合のみ表示
+                      const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+                      const shouldDisplay = hasMailInquiry || hasPhoneInquiry;
 
                       if (!shouldDisplay) {
                         return null; // 条件を満たさない場合は表示しない
                       }
+
+                      // 必須条件の判定
+                      // パターン1: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応 = "済"
+                      const isRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+                      // パターン2: 問合せ元に"電話"が含まれる AND 問合時ヒアリングに入力がある
+                      const isRequiredPattern2 = hasPhoneInquiry && buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+                      const isRequired = isRequiredPattern1 || isRequiredPattern2;
 
                       const handleButtonClick = async (newValue: string) => {
                         try {
@@ -1662,12 +1790,6 @@ Email: <<会社メールアドレス>>`;
                               message: result.error,
                               severity: 'error'
                             });
-                          } else {
-                            setSnackbar({
-                              open: true,
-                              message: '保存しました',
-                              severity: 'success'
-                            });
                           }
                         } catch (error: any) {
                           console.error('[viewing_promotion_email] Error:', error);
@@ -1679,79 +1801,29 @@ Email: <<会社メールアドレス>>`;
                         }
                       };
 
-                      // 値が設定されている場合は通常表示
-                      const hasValue = value === '要' || value === '不要';
-
                       return (
                         <Grid item {...gridSize} key={field.key}>
-                          <Box 
-                            sx={{ 
-                              mb: 1,
-                              p: 2,
-                              border: hasValue ? '1px solid' : '3px solid',
-                              borderColor: hasValue ? 'divider' : 'warning.main',
-                              borderRadius: 2,
-                              bgcolor: hasValue ? 'background.paper' : 'warning.light',
-                              boxShadow: hasValue ? 0 : '0 4px 12px rgba(237, 108, 2, 0.3)',
-                              transition: 'all 0.3s ease',
-                            }}
-                          >
-                            <Typography 
-                              variant="subtitle2" 
-                              sx={{ 
-                                display: 'block', 
-                                mb: 1.5,
-                                fontWeight: hasValue ? 'normal' : 'bold',
-                                fontSize: hasValue ? '0.875rem' : '0.95rem',
-                                color: hasValue ? 'text.secondary' : 'text.primary',
-                              }}
-                            >
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
                               {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               <Button
                                 variant={value === '要' ? 'contained' : 'outlined'}
-                                color="success"
-                                size={hasValue ? 'medium' : 'large'}
+                                color="primary"
+                                size="small"
                                 onClick={() => handleButtonClick('要')}
-                                sx={{ 
-                                  flex: 1,
-                                  fontWeight: 'bold',
-                                  fontSize: hasValue ? '0.95rem' : '1.1rem',
-                                  py: hasValue ? 1 : 1.5,
-                                  bgcolor: value === '要' ? 'success.main' : 'white',
-                                  color: value === '要' ? 'white' : 'success.main',
-                                  borderWidth: 2,
-                                  borderColor: 'success.main',
-                                  '&:hover': {
-                                    bgcolor: value === '要' ? 'success.dark' : 'success.light',
-                                    borderWidth: 2,
-                                  },
-                                  boxShadow: value === '要' ? 3 : 1,
-                                }}
+                                sx={{ flex: 1 }}
                               >
                                 要
                               </Button>
                               <Button
                                 variant={value === '不要' ? 'contained' : 'outlined'}
-                                color="error"
-                                size={hasValue ? 'medium' : 'large'}
+                                color="primary"
+                                size="small"
                                 onClick={() => handleButtonClick('不要')}
-                                sx={{ 
-                                  flex: 1,
-                                  fontWeight: 'bold',
-                                  fontSize: hasValue ? '0.95rem' : '1.1rem',
-                                  py: hasValue ? 1 : 1.5,
-                                  bgcolor: value === '不要' ? 'error.main' : 'white',
-                                  color: value === '不要' ? 'white' : 'error.main',
-                                  borderWidth: 2,
-                                  borderColor: 'error.main',
-                                  '&:hover': {
-                                    bgcolor: value === '不要' ? 'error.dark' : 'error.light',
-                                    borderWidth: 2,
-                                  },
-                                  boxShadow: value === '不要' ? 3 : 1,
-                                }}
+                                sx={{ flex: 1 }}
                               >
                                 不要
                               </Button>
@@ -1936,10 +2008,36 @@ Email: <<会社メールアドレス>>`;
                     // 内覧未確定
                     // distribution_typeフィールドは特別処理（ボタン形式）
                     if (field.key === 'distribution_type') {
-                      const handleFieldSave = async (newValue: any) => {
-                        const result = await handleInlineFieldSave(field.key, newValue);
-                        if (result && !result.success && result.error) {
-                          throw new Error(result.error);
+                      const handleButtonClick = async (newValue: string) => {
+                        try {
+                          console.log('[distribution_type] Button clicked, current value:', value, 'new value:', newValue);
+                          
+                          // 同じボタンを2度クリックしたら値をクリア
+                          const valueToSave = value === newValue ? '' : newValue;
+                          console.log('[distribution_type] Setting value:', valueToSave);
+                          
+                          const result = await handleInlineFieldSave(field.key, valueToSave);
+                          
+                          if (result && !result.success && result.error) {
+                            setSnackbar({
+                              open: true,
+                              message: result.error,
+                              severity: 'error'
+                            });
+                          } else {
+                            setSnackbar({
+                              open: true,
+                              message: '保存しました',
+                              severity: 'success'
+                            });
+                          }
+                        } catch (error: any) {
+                          console.error('[distribution_type] Error:', error);
+                          setSnackbar({
+                            open: true,
+                            message: error.message || '保存に失敗しました',
+                            severity: 'error'
+                          });
                         }
                       };
 
@@ -1954,14 +2052,7 @@ Email: <<会社メールアドレス>>`;
                                 variant={value === '要' ? 'contained' : 'outlined'}
                                 color="primary"
                                 size="small"
-                                onClick={() => {
-                                  // 同じボタンを2度クリックしたら値をクリア
-                                  if (value === '要') {
-                                    handleFieldSave('');
-                                  } else {
-                                    handleFieldSave('要');
-                                  }
-                                }}
+                                onClick={() => handleButtonClick('要')}
                                 sx={{ flex: 1 }}
                               >
                                 要
@@ -1970,14 +2061,7 @@ Email: <<会社メールアドレス>>`;
                                 variant={value === '不要' ? 'contained' : 'outlined'}
                                 color="primary"
                                 size="small"
-                                onClick={() => {
-                                  // 同じボタンを2度クリックしたら値をクリア
-                                  if (value === '不要') {
-                                    handleFieldSave('');
-                                  } else {
-                                    handleFieldSave('不要');
-                                  }
-                                }}
+                                onClick={() => handleButtonClick('不要')}
                                 sx={{ flex: 1 }}
                               >
                                 不要
