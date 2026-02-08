@@ -158,7 +158,7 @@ export default function BuyerNearbyPropertiesPage() {
                     key={property.id}
                     hover
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/properties/${property.property_number}`)}
+                    onClick={() => navigate(`/property-listings/${property.property_number}`)}
                   >
                     <TableCell>{property.property_number}</TableCell>
                     <TableCell>{property.display_address || property.address}</TableCell>

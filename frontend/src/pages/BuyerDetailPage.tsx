@@ -31,6 +31,7 @@ import {
   Email as EmailIcon,
   Phone,
   Image as ImageIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
@@ -1031,17 +1032,18 @@ Email: <<会社メールアドレス>>`;
 
         {/* ヘッダー右側のボタン */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {/* 物件近隣物件ボタン */}
+          {/* 近隣物件ボタン */}
           {linkedProperties.length > 0 && (
             <Button
               variant="outlined"
               size="small"
+              startIcon={<HomeIcon />}
               onClick={() => {
                 const firstProperty = linkedProperties[0];
                 window.open(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`, '_blank');
               }}
             >
-              物件近隣物件
+              近隣物件
             </Button>
           )}
           
