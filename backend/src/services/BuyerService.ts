@@ -289,6 +289,7 @@ export class BuyerService {
   /**
    * 近隣物件を取得
    * 条件：
+   * - 種別：基準物件と同じ種別（戸建て、マンション等）
    * - エリア：基準物件のdistribution_areasに含まれるエリア
    * - 価格帯：基準物件の価格に応じた範囲
    * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
@@ -338,11 +339,15 @@ export class BuyerService {
       .map((a: string) => a.trim())
       .filter((a: string) => a);
 
+    // 種別を取得
+    const propertyType = baseProperty.property_type || '';
+
     console.log('[BuyerService.getNearbyProperties] Search criteria:', {
       propertyNumber,
       price,
       priceRange: `${minPrice} - ${maxPrice}`,
       areaNumbers,
+      propertyType,
     });
 
     // 近隣物件を検索
@@ -352,6 +357,11 @@ export class BuyerService {
       .neq('property_number', propertyNumber) // 基準物件を除外
       .gte('sales_price', minPrice)
       .lte('sales_price', maxPrice);
+
+    // 種別条件：基準物件と同じ種別
+    if (propertyType) {
+      query = query.eq('property_type', propertyType);
+    }
 
     // ステータス条件：公開中または公開前
     query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%');
