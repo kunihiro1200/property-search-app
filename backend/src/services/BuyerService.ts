@@ -309,8 +309,8 @@ export class BuyerService {
       throw new Error(`Base property not found: ${propertyNumber}`);
     }
 
-    // 価格帯を決定（sales_priceがnullの場合はpriceを使用）
-    const price = baseProperty.sales_price || baseProperty.price || 0;
+    // 価格帯を決定（priceカラムを使用）
+    const price = baseProperty.price || 0;
     let minPrice = 0;
     let maxPrice = 0;
 
@@ -366,11 +366,9 @@ export class BuyerService {
     let query = this.supabase
       .from('property_listings')
       .select('*')
-      .neq('property_number', propertyNumber); // 基準物件を除外
-
-    // 価格帯条件：sales_priceまたはpriceが範囲内
-    // sales_priceがnullの場合はpriceを使用
-    query = query.or(`and(sales_price.gte.${minPrice},sales_price.lte.${maxPrice}),and(sales_price.is.null,price.gte.${minPrice},price.lte.${maxPrice})`);
+      .neq('property_number', propertyNumber) // 基準物件を除外
+      .gte('price', minPrice)
+      .lte('price', maxPrice);
 
     // 種別条件：基準物件と同じ種別
     if (propertyType) {

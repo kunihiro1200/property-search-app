@@ -105,7 +105,7 @@ export default function BuyerNearbyPropertiesPage() {
         <IconButton onClick={() => navigate(`/buyers/${buyer_number}`)} sx={{ mr: 2 }}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h5">物件近隣物件</Typography>
+        <Typography variant="h5">近隣物件 ({nearbyProperties.length}件)</Typography>
       </Box>
 
       {/* 基準物件情報 */}
