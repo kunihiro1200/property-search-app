@@ -40,6 +40,10 @@ interface Buyer {
   desired_property_type: string;
   calculated_status?: string;
   status_color?: string;
+  // 物件情報
+  property_address?: string;
+  property_type?: string;
+  atbb_status?: string;
 }
 
 export default function BuyersPage() {
@@ -103,6 +107,33 @@ export default function BuyersPage() {
     } catch {
       return dateStr;
     }
+  };
+
+  // 確度の頭文字のみを抽出（A, B, C, AZ, BZ等）
+  const extractConfidencePrefix = (confidence: string | null | undefined) => {
+    if (!confidence) return '-';
+    // 最初のアルファベット部分を抽出（例：「A：〜」→「A」、「AZ：〜」→「AZ」）
+    const match = confidence.match(/^([A-Z]+)/);
+    return match ? match[1] : confidence;
+  };
+
+  // 最新確度を優先して表示
+  const getDisplayConfidence = (buyer: Buyer) => {
+    // latest_statusがあれば最新確度を優先
+    if (buyer.latest_status) {
+      return {
+        label: extractConfidencePrefix(buyer.latest_status),
+        color: 'secondary' as const, // 紫色
+      };
+    }
+    // なければ問合せ時確度
+    if (buyer.inquiry_confidence) {
+      return {
+        label: extractConfidencePrefix(buyer.inquiry_confidence),
+        color: 'info' as const, // 水色
+      };
+    }
+    return null;
   };
 
   const handleStatusSelect = (status: string | null) => {
@@ -180,8 +211,9 @@ export default function BuyersPage() {
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                   <TableCell>買主番号</TableCell>
                   <TableCell>氏名</TableCell>
-                  <TableCell>電話番号</TableCell>
-                  <TableCell>物件番号</TableCell>
+                  <TableCell>物件住所</TableCell>
+                  <TableCell>種別</TableCell>
+                  <TableCell>atbb_status</TableCell>
                   <TableCell>担当</TableCell>
                   <TableCell>確度</TableCell>
                   <TableCell>受付日</TableCell>
@@ -192,14 +224,15 @@ export default function BuyersPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">読み込み中...</TableCell>
+                    <TableCell colSpan={10} align="center">読み込み中...</TableCell>
                   </TableRow>
                 ) : buyers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">買主データが見つかりませんでした</TableCell>
+                    <TableCell colSpan={10} align="center">買主データが見つかりませんでした</TableCell>
                   </TableRow>
                 ) : (
                   buyers.map((buyer) => {
+                    const displayConfidence = getDisplayConfidence(buyer);
                     return (
                       <TableRow
                         key={buyer.id}
@@ -213,16 +246,13 @@ export default function BuyersPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>{buyer.name || '-'}</TableCell>
-                        <TableCell>{buyer.phone_number || '-'}</TableCell>
-                        <TableCell>
-                          {buyer.property_number && (
-                            <Chip label={buyer.property_number} size="small" variant="outlined" />
-                          )}
-                        </TableCell>
+                        <TableCell>{buyer.property_address || '-'}</TableCell>
+                        <TableCell>{buyer.property_type || '-'}</TableCell>
+                        <TableCell>{buyer.atbb_status || '-'}</TableCell>
                         <TableCell>{buyer.follow_up_assignee || buyer.initial_assignee || '-'}</TableCell>
                         <TableCell>
-                          {buyer.inquiry_confidence && (
-                            <Chip label={buyer.inquiry_confidence} size="small" color="info" />
+                          {displayConfidence && (
+                            <Chip label={displayConfidence.label} size="small" color={displayConfidence.color} />
                           )}
                         </TableCell>
                         <TableCell>{formatDate(buyer.reception_date)}</TableCell>

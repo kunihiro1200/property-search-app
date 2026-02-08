@@ -148,11 +148,39 @@ export class BuyerService {
       throw new Error(`Failed to fetch buyers: ${error.message}`);
     }
 
+    // 各買主に物件情報を追加
+    const buyersWithPropertyInfo = await Promise.all(
+      (data || []).map(async (buyer) => {
+        // property_numberがある場合、最初の物件情報を取得
+        if (buyer.property_number) {
+          const propertyNumbers = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+          if (propertyNumbers.length > 0) {
+            const firstPropertyNumber = propertyNumbers[0];
+            const { data: property } = await this.supabase
+              .from('property_listings')
+              .select('address, display_address, property_type, atbb_status')
+              .eq('property_number', firstPropertyNumber)
+              .single();
+            
+            if (property) {
+              return {
+                ...buyer,
+                property_address: property.display_address || property.address,
+                property_type: property.property_type,
+                atbb_status: property.atbb_status,
+              };
+            }
+          }
+        }
+        return buyer;
+      })
+    );
+
     const total = count || 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: data || [],
+      data: buyersWithPropertyInfo,
       total,
       page,
       limit,
