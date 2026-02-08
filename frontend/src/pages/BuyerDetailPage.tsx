@@ -152,6 +152,7 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'email', label: 'メールアドレス', inlineEditable: true },
       { key: 'email_confirmation', label: 'メアド確認', inlineEditable: true, fieldType: 'dropdown', conditionalDisplay: true },
       { key: 'company_name', label: '法人名', inlineEditable: true },
+      { key: 'business_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
     ],
   },
   // 希望条件セクションは別ページに移動
@@ -960,6 +961,13 @@ Email: <<会社メールアドレス>>`;
               
               if (isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
                 errors.push('3回架電確認済みを選択してください');
+              }
+              
+              // パターン4: 業者問合せが必須（法人名に入力がある場合）
+              const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+              
+              if (hasCompanyName && !buyer.business_inquiry) {
+                errors.push('業者問合せを選択してください');
               }
               
               if (errors.length > 0) {
@@ -1966,6 +1974,81 @@ Email: <<会社メールアドレス>>`;
                             enableConflictDetection={true}
                             showEditIndicator={true}
                           />
+                        </Grid>
+                      );
+                    }
+
+                    // 業者問合せ（条件付き表示・ボタン形式）
+                    if (field.key === 'business_inquiry') {
+                      // 表示条件：法人名に入力がある場合のみ表示
+                      const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+                      
+                      if (!hasCompanyName) {
+                        return null; // 条件を満たさない場合は表示しない
+                      }
+
+                      // 必須条件: 値が空の場合のみ赤字表示
+                      const isRequired = !value || value.trim() === '';
+
+                      const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
+                        try {
+                          const result = await handleInlineFieldSave(field.key, valueToSave);
+                          
+                          if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                            setSnackbar({
+                              open: true,
+                              message: result.error,
+                              severity: 'error'
+                            });
+                          }
+                        } catch (error: any) {
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                          setSnackbar({
+                            open: true,
+                            message: error.message || '保存に失敗しました',
+                            severity: 'error'
+                          });
+                        }
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                variant={value === '業者問合せ' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => handleButtonClick('業者問合せ')}
+                                sx={{ flex: '1 1 auto', minWidth: '100px' }}
+                              >
+                                業者問合せ
+                              </Button>
+                              <Button
+                                variant={value === '業者（両手）' ? 'contained' : 'outlined'}
+                                color="primary"
+                                size="small"
+                                onClick={() => handleButtonClick('業者（両手）')}
+                                sx={{ flex: '1 1 auto', minWidth: '100px' }}
+                              >
+                                業者（両手）
+                              </Button>
+                            </Box>
+                          </Box>
                         </Grid>
                       );
                     }
