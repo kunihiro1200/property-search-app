@@ -1564,8 +1564,17 @@ Email: <<会社メールアドレス>>`;
 
                     // three_calls_confirmedフィールドは条件付き表示（ボタン形式）
                     if (field.key === 'three_calls_confirmed') {
-                      // 表示条件：「【問合メール】電話対応」が「不通」の場合のみ表示
-                      const shouldDisplay = buyer.inquiry_email_phone === '不通';
+                      // 表示条件の判定
+                      const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+                      const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+                      
+                      // パターン1: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応 = "済"
+                      const shouldDisplayPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+                      // パターン2: 問合せ元に"電話"が含まれる AND 問合時ヒアリングに入力がある
+                      const shouldDisplayPattern2 = hasPhoneInquiry && hasInquiryHearing;
+                      
+                      const shouldDisplay = shouldDisplayPattern1 || shouldDisplayPattern2;
 
                       if (!shouldDisplay) {
                         return null; // 条件を満たさない場合は表示しない
