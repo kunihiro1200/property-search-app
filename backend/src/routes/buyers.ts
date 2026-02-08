@@ -258,6 +258,24 @@ router.get('/:id/properties', async (req: Request, res: Response) => {
   }
 });
 
+// 近隣物件取得
+router.get('/:id/nearby-properties', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { propertyNumber } = req.query;
+    
+    if (!propertyNumber) {
+      return res.status(400).json({ error: 'propertyNumber is required' });
+    }
+    
+    const result = await buyerService.getNearbyProperties(propertyNumber as string);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error fetching nearby properties:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 過去買主番号取得
 router.get('/:id/past-buyer-numbers', async (req: Request, res: Response) => {
   try {

@@ -287,6 +287,99 @@ export class BuyerService {
   }
 
   /**
+   * 近隣物件を取得
+   * 条件：
+   * - エリア：基準物件のdistribution_areasに含まれるエリア
+   * - 価格帯：基準物件の価格に応じた範囲
+   * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
+   */
+  async getNearbyProperties(propertyNumber: string): Promise<{
+    baseProperty: any;
+    nearbyProperties: any[];
+  }> {
+    // 基準物件を取得
+    const { data: baseProperty, error: baseError } = await this.supabase
+      .from('property_listings')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .single();
+
+    if (baseError || !baseProperty) {
+      throw new Error(`Base property not found: ${propertyNumber}`);
+    }
+
+    // 価格帯を決定
+    const price = baseProperty.sales_price || 0;
+    let minPrice = 0;
+    let maxPrice = 0;
+
+    if (price < 10000000) {
+      // 1000万円未満
+      minPrice = 0;
+      maxPrice = 9999999;
+    } else if (price < 30000000) {
+      // 1000万～2999万円
+      minPrice = 10000000;
+      maxPrice = 29999999;
+    } else if (price < 50000000) {
+      // 3000万～4999万円
+      minPrice = 30000000;
+      maxPrice = 49999999;
+    } else {
+      // 5000万円以上
+      minPrice = 50000000;
+      maxPrice = 999999999;
+    }
+
+    // エリアを抽出（distribution_areasから）
+    const distributionAreas = baseProperty.distribution_areas || '';
+    const areaNumbers = distributionAreas
+      .split(',')
+      .map((a: string) => a.trim())
+      .filter((a: string) => a);
+
+    console.log('[BuyerService.getNearbyProperties] Search criteria:', {
+      propertyNumber,
+      price,
+      priceRange: `${minPrice} - ${maxPrice}`,
+      areaNumbers,
+    });
+
+    // 近隣物件を検索
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', propertyNumber) // 基準物件を除外
+      .gte('sales_price', minPrice)
+      .lte('sales_price', maxPrice);
+
+    // ステータス条件：公開中または公開前
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%');
+
+    // エリア条件（distribution_areasに含まれる）
+    if (areaNumbers.length > 0) {
+      const areaConditions = areaNumbers.map((area: string) => 
+        `distribution_areas.ilike.%${area}%`
+      ).join(',');
+      query = query.or(areaConditions);
+    }
+
+    const { data: nearbyProperties, error: nearbyError } = await query;
+
+    if (nearbyError) {
+      console.error('[BuyerService.getNearbyProperties] Error:', nearbyError);
+      throw new Error(`Failed to fetch nearby properties: ${nearbyError.message}`);
+    }
+
+    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties?.length || 0);
+
+    return {
+      baseProperty,
+      nearbyProperties: nearbyProperties || [],
+    };
+  }
+
+  /**
    * 物件番号から買主を取得
    */
   async getByPropertyNumber(propertyNumber: string): Promise<any[]> {

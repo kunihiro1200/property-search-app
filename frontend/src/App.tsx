@@ -19,6 +19,7 @@ import PropertyListingDetailPage from './pages/PropertyListingDetailPage';
 import BuyersPage from './pages/BuyersPage';
 import NewBuyerPage from './pages/NewBuyerPage';
 import BuyerDetailPage from './pages/BuyerDetailPage';
+import BuyerNearbyPropertiesPage from './pages/BuyerNearbyPropertiesPage';
 import BuyerInquiryHistoryPage from './pages/BuyerInquiryHistoryPage';
 import BuyerDesiredConditionsPage from './pages/BuyerDesiredConditionsPage';
 import BuyerViewingResultPage from './pages/BuyerViewingResultPage';
@@ -187,6 +188,14 @@ function App() {
         element={
           <ProtectedRoute>
             <BuyerDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/buyers/:buyer_number/nearby-properties"
+        element={
+          <ProtectedRoute>
+            <BuyerNearbyPropertiesPage />
           </ProtectedRoute>
         }
       />

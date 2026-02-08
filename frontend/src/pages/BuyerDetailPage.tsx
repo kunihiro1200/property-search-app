@@ -1031,6 +1031,20 @@ Email: <<会社メールアドレス>>`;
 
         {/* ヘッダー右側のボタン */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/* 物件近隣物件ボタン */}
+          {linkedProperties.length > 0 && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                const firstProperty = linkedProperties[0];
+                navigate(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`);
+              }}
+            >
+              物件近隣物件
+            </Button>
+          )}
+          
           {/* Email送信ドロップダウン */}
           <FormControl size="small" sx={{ minWidth: 150 }}>
             <InputLabel>Email送信</InputLabel>
