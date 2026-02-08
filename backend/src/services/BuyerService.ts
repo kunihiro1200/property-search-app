@@ -17,6 +17,7 @@ export interface BuyerQueryOptions {
   dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  includeDeleted?: boolean; // 削除済み買主を含めるかどうか
 }
 
 export interface SyncResult {
@@ -93,6 +94,7 @@ export class BuyerService {
       dateTo,
       sortBy = 'reception_date',
       sortOrder = 'desc',
+      includeDeleted = false, // デフォルトで削除済みを除外
     } = options;
 
     const offset = (page - 1) * limit;
@@ -100,6 +102,11 @@ export class BuyerService {
     let query = this.supabase
       .from('buyers')
       .select('*', { count: 'exact' });
+
+    // 削除済みを除外（デフォルト）
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
 
     // 検索
     if (search) {
@@ -178,13 +185,20 @@ export class BuyerService {
   /**
    * 買主番号で買主を取得
    */
-  async getByBuyerNumber(buyerNumber: string): Promise<any | null> {
-    console.log(`[BuyerService.getByBuyerNumber] buyerNumber=${buyerNumber}`);
-    const { data, error } = await this.supabase
+  async getByBuyerNumber(buyerNumber: string, includeDeleted: boolean = false): Promise<any | null> {
+    console.log(`[BuyerService.getByBuyerNumber] buyerNumber=${buyerNumber}, includeDeleted=${includeDeleted}`);
+    
+    let query = this.supabase
       .from('buyers')
       .select('*')
-      .eq('buyer_number', buyerNumber)
-      .single();
+      .eq('buyer_number', buyerNumber);
+
+    // 削除済みを除外（デフォルト）
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       console.log(`[BuyerService.getByBuyerNumber] error:`, error);
@@ -206,6 +220,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .select('id, buyer_number, name, phone_number, email, property_number, latest_status, initial_assignee')
+      .is('deleted_at', null) // 削除済みを除外
       .or(
         `buyer_number.ilike.%${query}%,name.ilike.%${query}%,phone_number.ilike.%${query}%,property_number.ilike.%${query}%`
       )
@@ -1549,6 +1564,227 @@ export class BuyerService {
     }
 
     return { min, max };
+  }
+
+  /**
+   * 全買主を取得し、各買主のステータスを算出
+   * @returns 買主リスト（calculated_statusフィールド付き）
+   */
+  async getBuyersWithStatus(options: BuyerQueryOptions = {}): Promise<PaginatedResult<any>> {
+    try {
+      // BuyerStatusCalculatorをインポート
+      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      
+      // 買主リストを取得
+      const result = await this.getAll(options);
+      
+      // 各買主のステータスを算出
+      const buyersWithStatus = result.data.map(buyer => {
+        try {
+          const statusResult = calculateBuyerStatus(buyer);
+          return {
+            ...buyer,
+            calculated_status: statusResult.status,
+            status_priority: statusResult.priority,
+            status_color: statusResult.color
+          };
+        } catch (error) {
+          // ステータス算出エラー時はデフォルト値を返す
+          console.error(`[BuyerService.getBuyersWithStatus] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+          return {
+            ...buyer,
+            calculated_status: '',
+            status_priority: 999,
+            status_color: '#9E9E9E'
+          };
+        }
+      });
+      
+      return {
+        ...result,
+        data: buyersWithStatus
+      };
+    } catch (error) {
+      console.error('[BuyerService.getBuyersWithStatus] Error:', error);
+      throw new Error(`Failed to get buyers with status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * ステータスごとの買主数をカウント
+   * @returns ステータスカテゴリーの配列
+   */
+  async getStatusCategories(): Promise<Array<{
+    status: string;
+    count: number;
+    priority: number;
+    color: string;
+  }>> {
+    try {
+      // BuyerStatusCalculatorとステータス定義をインポート
+      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      const { STATUS_DEFINITIONS } = await import('../config/buyer-status-definitions');
+      
+      // 全買主を取得（ページネーションなし、削除済みを除外）
+      const { data: allBuyers, error } = await this.supabase
+        .from('buyers')
+        .select('*')
+        .is('deleted_at', null); // 削除済みを除外
+      
+      if (error) {
+        console.error('[BuyerService.getStatusCategories] Database error:', error);
+        throw new Error(`Failed to fetch buyers for status categories: ${error.message}`);
+      }
+      
+      // ステータスごとのカウントマップ
+      const statusCountMap = new Map<string, number>();
+      
+      // 各買主のステータスを算出してカウント
+      (allBuyers || []).forEach(buyer => {
+        try {
+          const statusResult = calculateBuyerStatus(buyer);
+          const status = statusResult.status || ''; // 空文字列の場合もカウント
+          
+          statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
+        } catch (error) {
+          // ステータス算出エラー時は空文字列としてカウント
+          console.error(`[BuyerService.getStatusCategories] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+          statusCountMap.set('', (statusCountMap.get('') || 0) + 1);
+        }
+      });
+      
+      // ステータスカテゴリーの配列を作成
+      const categories: Array<{
+        status: string;
+        count: number;
+        priority: number;
+        color: string;
+      }> = [];
+      
+      // 全てのステータス定義を走査
+      STATUS_DEFINITIONS.forEach((definition) => {
+        const count = statusCountMap.get(definition.status) || 0;
+        
+        // カウントが0でも表示する（UIで全てのステータスを表示するため）
+        categories.push({
+          status: definition.status,
+          count,
+          priority: definition.priority,
+          color: definition.color
+        });
+      });
+      
+      // 空文字列のステータス（該当なし）も追加
+      const emptyStatusCount = statusCountMap.get('') || 0;
+      if (emptyStatusCount > 0) {
+        categories.push({
+          status: '',
+          count: emptyStatusCount,
+          priority: 999, // 最低優先度
+          color: '#9E9E9E' // グレー
+        });
+      }
+      
+      // 優先順位でソート（昇順）
+      categories.sort((a, b) => a.priority - b.priority);
+      
+      return categories;
+    } catch (error) {
+      console.error('[BuyerService.getStatusCategories] Error:', error);
+      throw new Error(`Failed to get status categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 特定のステータスに該当する買主を取得
+   * @param status - ステータス文字列
+   * @param options - クエリオプション
+   * @returns 該当する買主のリスト
+   */
+  async getBuyersByStatus(
+    status: string,
+    options: BuyerQueryOptions = {}
+  ): Promise<PaginatedResult<any>> {
+    try {
+      // BuyerStatusCalculatorをインポート
+      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      
+      // 全買主を取得（ページネーションなし - フィルタリング後にページネーション、削除済みを除外）
+      const { data: allBuyers, error } = await this.supabase
+        .from('buyers')
+        .select('*')
+        .is('deleted_at', null); // 削除済みを除外
+      
+      if (error) {
+        console.error('[BuyerService.getBuyersByStatus] Database error:', error);
+        throw new Error(`Failed to fetch buyers by status: ${error.message}`);
+      }
+      
+      // ステータスでフィルタリング
+      const filteredBuyers = (allBuyers || [])
+        .map(buyer => {
+          try {
+            const statusResult = calculateBuyerStatus(buyer);
+            return {
+              ...buyer,
+              calculated_status: statusResult.status,
+              status_priority: statusResult.priority,
+              status_color: statusResult.color
+            };
+          } catch (error) {
+            // ステータス算出エラー時はデフォルト値を返す
+            console.error(`[BuyerService.getBuyersByStatus] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+            return {
+              ...buyer,
+              calculated_status: '',
+              status_priority: 999,
+              status_color: '#9E9E9E'
+            };
+          }
+        })
+        .filter(buyer => buyer.calculated_status === status);
+      
+      // ページネーション
+      const {
+        page = 1,
+        limit = 50,
+        sortBy = 'reception_date',
+        sortOrder = 'desc'
+      } = options;
+      
+      const offset = (page - 1) * limit;
+      const total = filteredBuyers.length;
+      const totalPages = Math.ceil(total / limit);
+      
+      // ソート
+      filteredBuyers.sort((a, b) => {
+        const aValue = a[sortBy];
+        const bValue = b[sortBy];
+        
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+      
+      // ページネーション適用
+      const paginatedData = filteredBuyers.slice(offset, offset + limit);
+      
+      return {
+        data: paginatedData,
+        total,
+        page,
+        limit,
+        totalPages
+      };
+    } catch (error) {
+      console.error('[BuyerService.getBuyersByStatus] Error:', error);
+      throw new Error(`Failed to get buyers by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 

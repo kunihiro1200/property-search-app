@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -14,11 +14,6 @@ import {
   TextField,
   InputAdornment,
   Chip,
-  List,
-  ListItemButton,
-  ListItemText,
-  Badge,
-  Divider,
   Button,
   CircularProgress,
 } from '@mui/material';
@@ -26,6 +21,7 @@ import { Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PageNavigation from '../components/PageNavigation';
+import BuyerStatusSidebar from '../components/BuyerStatusSidebar';
 
 interface Buyer {
   id: string;
@@ -42,6 +38,8 @@ interface Buyer {
   next_call_date: string;
   desired_area: string;
   desired_property_type: string;
+  calculated_status?: string;
+  status_color?: string;
 }
 
 export default function BuyersPage() {
@@ -53,19 +51,11 @@ export default function BuyersPage() {
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [stats, setStats] = useState<{
-    total: number;
-    byStatus: Record<string, number>;
-    byAssignee: Record<string, number>;
-    byConfidence: Record<string, number>;
-  } | null>(null);
 
   useEffect(() => {
     fetchBuyers();
-    fetchStats();
-  }, [page, rowsPerPage, searchQuery, selectedAssignee, selectedStatus]);
+  }, [page, rowsPerPage, searchQuery, selectedStatus]);
 
   const fetchBuyers = async () => {
     try {
@@ -75,9 +65,9 @@ export default function BuyersPage() {
         limit: rowsPerPage,
         sortBy: 'reception_date',
         sortOrder: 'desc',
+        withStatus: 'true', // ステータス算出を有効化
       };
       if (searchQuery) params.search = searchQuery;
-      if (selectedAssignee) params.assignee = selectedAssignee;
       if (selectedStatus) params.status = selectedStatus;
 
       const res = await api.get('/api/buyers', { params });
@@ -90,21 +80,11 @@ export default function BuyersPage() {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const res = await api.get('/api/buyers/stats');
-      setStats(res.data);
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  };
-
   const handleSync = async () => {
     try {
       setSyncing(true);
       await api.post('/api/buyers/sync');
       await fetchBuyers();
-      await fetchStats();
     } catch (error) {
       console.error('Failed to sync:', error);
     } finally {
@@ -125,29 +105,10 @@ export default function BuyersPage() {
     }
   };
 
-  // サイドバー用の担当者リスト
-  const assigneeList = useMemo(() => {
-    if (!stats) return [];
-    const list = [{ key: 'all', label: 'All', count: stats.total }];
-    Object.entries(stats.byAssignee)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([key, count]) => {
-        list.push({ key, label: key, count });
-      });
-    return list;
-  }, [stats]);
-
-  // サイドバー用のステータスリスト
-  const statusList = useMemo(() => {
-    if (!stats) return [];
-    const list = [{ key: 'all', label: 'All', count: stats.total }];
-    Object.entries(stats.byStatus)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([key, count]) => {
-        list.push({ key, label: key, count });
-      });
-    return list;
-  }, [stats]);
+  const handleStatusSelect = (status: string | null) => {
+    setSelectedStatus(status);
+    setPage(0);
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -175,48 +136,11 @@ export default function BuyersPage() {
       <PageNavigation />
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        {/* 左サイドバー */}
-        <Paper sx={{ width: 220, flexShrink: 0 }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
-            <Typography variant="subtitle1" fontWeight="bold">ステータス</Typography>
-          </Box>
-          <List dense sx={{ maxHeight: 'calc(40vh - 100px)', overflow: 'auto' }}>
-            {statusList.map((item) => (
-              <ListItemButton
-                key={item.key}
-                selected={selectedStatus === item.key || (!selectedStatus && item.key === 'all')}
-                onClick={() => { setSelectedStatus(item.key === 'all' ? null : item.key); setPage(0); }}
-                sx={{ py: 0.5 }}
-              >
-                <ListItemText 
-                  primary={item.label} 
-                  primaryTypographyProps={{ variant: 'body2', noWrap: true }}
-                  sx={{ flex: 1, minWidth: 0 }}
-                />
-                <Badge badgeContent={item.count} color="primary" max={9999} sx={{ ml: 1 }} />
-              </ListItemButton>
-            ))}
-          </List>
-          
-          <Divider />
-          
-          <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
-            <Typography variant="subtitle1" fontWeight="bold">担当者</Typography>
-          </Box>
-          <List dense sx={{ maxHeight: 'calc(40vh - 100px)', overflow: 'auto' }}>
-            {assigneeList.map((item) => (
-              <ListItemButton
-                key={item.key}
-                selected={selectedAssignee === item.key || (!selectedAssignee && item.key === 'all')}
-                onClick={() => { setSelectedAssignee(item.key === 'all' ? null : item.key); setPage(0); }}
-                sx={{ py: 0.5 }}
-              >
-                <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2' }} />
-                <Badge badgeContent={item.count} color="primary" max={9999} sx={{ ml: 1 }} />
-              </ListItemButton>
-            ))}
-          </List>
-        </Paper>
+        {/* 左サイドバー - 新しいステータスサイドバー */}
+        <BuyerStatusSidebar 
+          selectedStatus={selectedStatus}
+          onStatusSelect={handleStatusSelect}
+        />
 
         {/* メインコンテンツ */}
         <Box sx={{ flex: 1 }}>
@@ -304,11 +228,15 @@ export default function BuyersPage() {
                         <TableCell>{formatDate(buyer.reception_date)}</TableCell>
                         <TableCell>{formatDate(buyer.next_call_date)}</TableCell>
                         <TableCell>
-                          {buyer.latest_status && (
+                          {buyer.calculated_status && (
                             <Chip 
-                              label={buyer.latest_status.substring(0, 20)} 
+                              label={buyer.calculated_status.substring(0, 20)} 
                               size="small" 
-                              sx={{ maxWidth: 150 }}
+                              sx={{ 
+                                maxWidth: 150,
+                                backgroundColor: buyer.status_color || '#9E9E9E',
+                                color: '#fff'
+                              }}
                             />
                           )}
                         </TableCell>

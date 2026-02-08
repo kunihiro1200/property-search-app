@@ -45,9 +45,11 @@ router.get('/', async (req: Request, res: Response) => {
       dateTo,
       sortBy = 'reception_date',
       sortOrder = 'desc',
+      withStatus, // 新しいパラメータ: calculated_statusを含めるかどうか
+      includeDeleted, // 削除済み買主を含めるかどうか
     } = req.query;
 
-    const result = await buyerService.getAll({
+    const options = {
       page: parseInt(page as string, 10),
       limit: parseInt(limit as string, 10),
       search: search as string,
@@ -57,8 +59,25 @@ router.get('/', async (req: Request, res: Response) => {
       dateTo: dateTo as string,
       sortBy: sortBy as string,
       sortOrder: sortOrder as 'asc' | 'desc',
-    });
+      includeDeleted: includeDeleted === 'true', // クエリパラメータをbooleanに変換
+    };
 
+    // withStatus=trueの場合、またはstatusパラメータが指定されている場合は
+    // ステータス算出を含む結果を返す
+    if (withStatus === 'true' || status) {
+      // statusパラメータがある場合は、そのステータスでフィルタリング
+      if (status) {
+        const result = await buyerService.getBuyersByStatus(status, options);
+        return res.json(result);
+      }
+      
+      // withStatus=trueの場合は、全買主にステータスを付与
+      const result = await buyerService.getBuyersWithStatus(options);
+      return res.json(result);
+    }
+
+    // デフォルトの動作（既存の動作を維持）
+    const result = await buyerService.getAll(options);
     res.json(result);
   } catch (error: any) {
     console.error('Error fetching buyers:', error);
@@ -77,6 +96,17 @@ router.get('/stats', async (_req: Request, res: Response) => {
   }
 });
 
+// ステータスカテゴリー一覧取得
+router.get('/status-categories', async (_req: Request, res: Response) => {
+  try {
+    const categories = await buyerService.getStatusCategories();
+    res.json(categories);
+  } catch (error: any) {
+    console.error('[GET /buyers/status-categories] Error:', error);
+    res.status(500).json({ error: error.message || 'ステータスカテゴリーの取得に失敗しました' });
+  }
+});
+
 // 同期実行
 router.post('/sync', async (_req: Request, res: Response) => {
   try {
@@ -84,8 +114,23 @@ router.post('/sync', async (_req: Request, res: Response) => {
       return res.status(409).json({ error: 'Sync is already in progress' });
     }
 
+    // EnhancedAutoSyncServiceを使用して完全同期（削除同期を含む）
+    await enhancedAutoSyncService.initializeBuyer();
+    const enhancedResult = await enhancedAutoSyncService.syncBuyers();
+    
+    // 従来のBuyerSyncServiceも実行（互換性のため）
     const result = await buyerSyncService.syncAll();
-    res.json(result);
+    
+    // 結果を統合
+    const combinedResult = {
+      ...result,
+      missingBuyers: enhancedResult.missingBuyers.length,
+      updatedBuyers: enhancedResult.updatedBuyers.length,
+      deletedBuyers: enhancedResult.deletedBuyers.length,
+      deletionSyncResult: enhancedResult.deletionSyncResult,
+    };
+    
+    res.json(combinedResult);
   } catch (error: any) {
     console.error('Error syncing buyers:', error);
     res.status(500).json({ error: error.message });
@@ -660,7 +705,7 @@ router.post('/:id/conflict', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { force } = req.query;
+    const { force, includeDeleted } = req.query;
     
     // UUIDかどうかで判定
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -692,9 +737,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       }
     }
     
+    // includeDeletedパラメータを考慮
+    const includeDeletedFlag = includeDeleted === 'true';
+    
     const data = isUuid 
       ? await buyerService.getById(id)
-      : await buyerService.getByBuyerNumber(id);
+      : await buyerService.getByBuyerNumber(id, includeDeletedFlag);
     
     if (!data) {
       return res.status(404).json({ error: 'Buyer not found' });
@@ -1130,6 +1178,90 @@ ${detailUrl}`;
       success: false,
       error: `メッセージの送信に失敗しました: ${error.message}`
     });
+  }
+});
+
+// 買主を論理削除
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).employee?.id || 'manual';
+    
+    // UUIDかどうかで判定
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    // 買主番号を取得
+    let buyerNumber: string;
+    if (isUuid) {
+      const buyer = await buyerService.getById(id);
+      if (!buyer) {
+        return res.status(404).json({ error: 'Buyer not found' });
+      }
+      buyerNumber = buyer.buyer_number;
+    } else {
+      buyerNumber = id;
+    }
+    
+    // EnhancedAutoSyncServiceを使用して論理削除
+    await enhancedAutoSyncService.initializeBuyer();
+    const result = await (enhancedAutoSyncService as any).executeBuyerSoftDelete(buyerNumber);
+    
+    if (result.success) {
+      res.json({ 
+        success: true, 
+        deletedAt: result.deletedAt,
+        message: `Buyer ${buyerNumber} deleted successfully`
+      });
+    } else {
+      res.status(500).json({ 
+        error: result.error || 'Failed to delete buyer'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error deleting buyer:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 削除された買主を復元
+router.post('/:id/restore', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).employee?.id || 'manual';
+    
+    // UUIDかどうかで判定
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    // 買主番号を取得
+    let buyerNumber: string;
+    if (isUuid) {
+      const buyer = await buyerService.getByBuyerNumber(id, true); // includeDeleted=true
+      if (!buyer) {
+        return res.status(404).json({ error: 'Buyer not found' });
+      }
+      buyerNumber = buyer.buyer_number;
+    } else {
+      buyerNumber = id;
+    }
+    
+    // EnhancedAutoSyncServiceを使用して復元
+    await enhancedAutoSyncService.initializeBuyer();
+    const result = await (enhancedAutoSyncService as any).recoverDeletedBuyer(buyerNumber, userId);
+    
+    if (result.success) {
+      res.json({ 
+        success: true, 
+        recoveredAt: result.recoveredAt,
+        message: `Buyer ${buyerNumber} restored successfully`
+      });
+    } else {
+      res.status(500).json({ 
+        error: result.error || 'Failed to restore buyer'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error restoring buyer:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

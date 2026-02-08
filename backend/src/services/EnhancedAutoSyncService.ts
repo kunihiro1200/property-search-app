@@ -2931,13 +2931,409 @@ export class EnhancedAutoSyncService {
   }
 
   /**
-   * 買主の完全同期を実行
+   * DBから全アクティブ買主番号を取得（削除済みを除外）
+   * ページネーション対応で全件取得
+   */
+  private async getAllActiveBuyerNumbers(): Promise<Set<string>> {
+    const allBuyerNumbers = new Set<string>();
+    const pageSize = 1000;
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('buyers')
+        .select('buyer_number')
+        .is('deleted_at', null) // 削除済みを除外
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        throw new Error(`Failed to fetch active DB buyers: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        hasMore = false;
+      } else {
+        for (const buyer of data) {
+          if (buyer.buyer_number) {
+            allBuyerNumbers.add(buyer.buyer_number);
+          }
+        }
+        offset += pageSize;
+        
+        // 取得件数がページサイズ未満なら終了
+        if (data.length < pageSize) {
+          hasMore = false;
+        }
+      }
+    }
+
+    return allBuyerNumbers;
+  }
+
+  /**
+   * DBにあってスプレッドシートにない買主番号を検出（削除された買主）
+   * 全件比較方式で削除された買主を検出します
+   */
+  async detectDeletedBuyers(): Promise<string[]> {
+    if (!this.isBuyerInitialized || !this.buyerSheetsClient) {
+      await this.initializeBuyer();
+    }
+
+    console.log('🔍 Detecting deleted buyers (full comparison)...');
+
+    // スプレッドシートから全買主番号を取得（キャッシュ対応）
+    const allRows = await this.getBuyerSpreadsheetData();
+    const sheetBuyerNumbers = new Set<string>();
+    
+    for (const row of allRows) {
+      const buyerNumber = row['買主番号'];
+      if (buyerNumber && typeof buyerNumber === 'string') {
+        sheetBuyerNumbers.add(buyerNumber);
+      }
+    }
+    console.log(`📊 Spreadsheet buyers: ${sheetBuyerNumbers.size}`);
+
+    // DBから全アクティブ買主番号を取得（ページネーション対応、削除済みを除外）
+    const dbBuyerNumbers = await this.getAllActiveBuyerNumbers();
+    console.log(`📊 Active database buyers: ${dbBuyerNumbers.size}`);
+
+    // 差分を計算（DBにあってスプレッドシートにないもの = 削除された買主）
+    const deletedBuyers: string[] = [];
+    for (const buyerNumber of dbBuyerNumbers) {
+      if (!sheetBuyerNumbers.has(buyerNumber)) {
+        deletedBuyers.push(buyerNumber);
+      }
+    }
+
+    // 買主番号でソート
+    deletedBuyers.sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      return numA - numB;
+    });
+
+    console.log(`🗑️  Deleted buyers: ${deletedBuyers.length}`);
+    if (deletedBuyers.length > 0) {
+      console.log(`   First few: ${deletedBuyers.slice(0, 5).join(', ')}${deletedBuyers.length > 5 ? '...' : ''}`);
+    }
+
+    return deletedBuyers;
+  }
+
+  /**
+   * 削除前のバリデーション（買主用）
+   * アクティブな問い合わせ、最近のアクティビティをチェック
+   */
+  private async validateBuyerDeletion(buyerNumber: string): Promise<ValidationResult> {
+    try {
+      // 買主情報を取得
+      const { data: buyer, error } = await this.supabase
+        .from('buyers')
+        .select('*')
+        .eq('buyer_number', buyerNumber)
+        .is('deleted_at', null)
+        .single();
+
+      if (error || !buyer) {
+        return {
+          canDelete: false,
+          reason: 'Buyer not found in database',
+          requiresManualReview: false,
+        };
+      }
+
+      const details: ValidationResult['details'] = {};
+
+      // 1. アクティブな問い合わせをチェック
+      // 最新状況が「成約」「購入見送り」以外の場合は、アクティブな問い合わせとみなす
+      const inactiveStatuses = ['成約', '購入見送り', ''];
+      if (buyer.latest_status && !inactiveStatuses.includes(buyer.latest_status)) {
+        details.hasActiveInquiries = true;
+        // 注意: 買主の場合は、アクティブな問い合わせがあっても削除を許可する
+        // スプレッドシートから削除されたら即座に削除同期する
+      }
+
+      // 2. 最近のアクティビティをチェック（7日以内の更新）
+      if (buyer.updated_at) {
+        const updatedAt = new Date(buyer.updated_at);
+        const now = new Date();
+        const daysSinceUpdate = (now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysSinceUpdate <= 7) {
+          details.hasRecentActivity = true;
+          details.lastActivityDate = updatedAt;
+          // 注意: 買主の場合は、最近のアクティビティがあっても削除を許可する
+          // スプレッドシートから削除されたら即座に削除同期する
+        }
+      }
+
+      // すべてのチェックをパス（買主の場合は常に削除を許可）
+      return {
+        canDelete: true,
+        requiresManualReview: false,
+        details,
+      };
+
+    } catch (error: any) {
+      console.error(`❌ Validation error for buyer ${buyerNumber}:`, error.message);
+      return {
+        canDelete: false,
+        reason: `Validation error: ${error.message}`,
+        requiresManualReview: true,
+      };
+    }
+  }
+
+  /**
+   * ソフトデリートを実行（買主用）
+   * トランザクションで買主を削除し、監査ログに記録
+   */
+  private async executeBuyerSoftDelete(buyerNumber: string): Promise<DeletionResult> {
+    try {
+      // 買主情報を取得
+      const { data: buyer, error: fetchError } = await this.supabase
+        .from('buyers')
+        .select('*')
+        .eq('buyer_number', buyerNumber)
+        .is('deleted_at', null)
+        .single();
+
+      if (fetchError || !buyer) {
+        return {
+          sellerNumber: buyerNumber, // DeletionResultはsellerNumberを使用（汎用的な名前）
+          success: false,
+          error: 'Buyer not found',
+        };
+      }
+
+      const deletedAt = new Date();
+
+      // 1. 監査ログにバックアップを作成
+      const { data: auditRecord, error: auditError } = await this.supabase
+        .from('buyer_deletion_audit')
+        .insert({
+          buyer_id: buyer.id,
+          buyer_number: buyerNumber,
+          deleted_at: deletedAt.toISOString(),
+          deleted_by: 'auto_sync',
+          reason: 'Removed from spreadsheet',
+          buyer_data: buyer,
+          can_recover: true,
+        })
+        .select()
+        .single();
+
+      if (auditError) {
+        console.error(`❌ Failed to create audit record for buyer ${buyerNumber}:`, auditError.message);
+        return {
+          sellerNumber: buyerNumber,
+          success: false,
+          error: `Audit creation failed: ${auditError.message}`,
+        };
+      }
+
+      // 2. 買主をソフトデリート
+      const { error: buyerDeleteError } = await this.supabase
+        .from('buyers')
+        .update({ deleted_at: deletedAt.toISOString() })
+        .eq('buyer_number', buyerNumber);
+
+      if (buyerDeleteError) {
+        console.error(`❌ Failed to soft delete buyer ${buyerNumber}:`, buyerDeleteError.message);
+        return {
+          sellerNumber: buyerNumber,
+          success: false,
+          error: `Buyer deletion failed: ${buyerDeleteError.message}`,
+        };
+      }
+
+      console.log(`✅ Buyer ${buyerNumber}: Soft deleted successfully`);
+      
+      return {
+        sellerNumber: buyerNumber,
+        success: true,
+        auditId: auditRecord.id,
+        deletedAt,
+      };
+
+    } catch (error: any) {
+      console.error(`❌ Soft delete error for buyer ${buyerNumber}:`, error.message);
+      return {
+        sellerNumber: buyerNumber,
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 削除された買主を一括同期
+   */
+  async syncDeletedBuyers(buyerNumbers: string[]): Promise<DeletionSyncResult> {
+    const startedAt = new Date();
+    const deletedBuyerNumbers: string[] = [];
+    const manualReviewBuyerNumbers: string[] = [];
+    const errors: Array<{ sellerNumber: string; error: string }> = [];
+
+    console.log(`🗑️  Syncing ${buyerNumbers.length} deleted buyers...`);
+
+    for (const buyerNumber of buyerNumbers) {
+      // バリデーション
+      const validation = await this.validateBuyerDeletion(buyerNumber);
+      
+      if (!validation.canDelete) {
+        if (validation.requiresManualReview) {
+          manualReviewBuyerNumbers.push(buyerNumber);
+          console.log(`⚠️  Buyer ${buyerNumber}: Requires manual review - ${validation.reason}`);
+        } else {
+          errors.push({
+            sellerNumber: buyerNumber,
+            error: validation.reason || 'Validation failed',
+          });
+          console.log(`❌ Buyer ${buyerNumber}: ${validation.reason}`);
+        }
+        continue;
+      }
+
+      // ソフトデリート実行
+      const result = await this.executeBuyerSoftDelete(buyerNumber);
+      
+      if (result.success) {
+        deletedBuyerNumbers.push(buyerNumber);
+      } else {
+        errors.push({
+          sellerNumber: buyerNumber,
+          error: result.error || 'Unknown error',
+        });
+      }
+    }
+
+    const completedAt = new Date();
+    const durationMs = completedAt.getTime() - startedAt.getTime();
+
+    const syncResult: DeletionSyncResult = {
+      totalDetected: buyerNumbers.length,
+      successfullyDeleted: deletedBuyerNumbers.length,
+      failedToDelete: errors.length,
+      requiresManualReview: manualReviewBuyerNumbers.length,
+      deletedSellerNumbers: deletedBuyerNumbers, // DeletionSyncResultはdeletedSellerNumbersを使用（汎用的な名前）
+      manualReviewSellerNumbers: manualReviewBuyerNumbers,
+      errors,
+      startedAt,
+      completedAt,
+      durationMs,
+    };
+
+    console.log(`🎉 Buyer deletion sync completed:`);
+    console.log(`   ✅ Deleted: ${deletedBuyerNumbers.length}`);
+    console.log(`   ⚠️  Manual review: ${manualReviewBuyerNumbers.length}`);
+    console.log(`   ❌ Errors: ${errors.length}`);
+
+    return syncResult;
+  }
+
+  /**
+   * 削除された買主を復元
+   * 
+   * @param buyerNumber - 復元する買主番号
+   * @param recoveredBy - 復元を実行したユーザー (default: 'manual')
+   * @returns 復元結果
+   */
+  async recoverDeletedBuyer(buyerNumber: string, recoveredBy: string = 'manual'): Promise<RecoveryResult> {
+    try {
+      console.log(`🔄 Attempting to recover buyer: ${buyerNumber}`);
+
+      // 1. 削除監査ログを確認
+      const { data: auditLog, error: auditError } = await this.supabase
+        .from('buyer_deletion_audit')
+        .select('*')
+        .eq('buyer_number', buyerNumber)
+        .is('recovered_at', null)
+        .order('deleted_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (auditError || !auditLog) {
+        console.error(`❌ Audit log not found for buyer ${buyerNumber}`);
+        return {
+          success: false,
+          sellerNumber: buyerNumber, // RecoveryResultはsellerNumberを使用（汎用的な名前）
+          error: 'Audit log not found or buyer was not deleted',
+        };
+      }
+
+      if (!auditLog.can_recover) {
+        console.error(`❌ Recovery not allowed for buyer ${buyerNumber}`);
+        return {
+          success: false,
+          sellerNumber: buyerNumber,
+          error: 'Recovery is not allowed for this buyer',
+        };
+      }
+
+      // 2. 買主を復元 (deleted_at を NULL に設定)
+      const { error: buyerRecoverError } = await this.supabase
+        .from('buyers')
+        .update({ deleted_at: null })
+        .eq('buyer_number', buyerNumber);
+
+      if (buyerRecoverError) {
+        console.error(`❌ Failed to recover buyer ${buyerNumber}:`, buyerRecoverError.message);
+        throw new Error(`Failed to recover buyer: ${buyerRecoverError.message}`);
+      }
+
+      console.log(`✅ Buyer ${buyerNumber} recovered`);
+
+      // 3. 監査ログを更新
+      const recoveredAt = new Date().toISOString();
+      const { error: auditUpdateError } = await this.supabase
+        .from('buyer_deletion_audit')
+        .update({ 
+          recovered_at: recoveredAt,
+          recovered_by: recoveredBy,
+        })
+        .eq('id', auditLog.id);
+
+      const auditRecordUpdated = !auditUpdateError;
+      
+      if (auditUpdateError) {
+        console.warn(`⚠️ Warning: Failed to update audit log for buyer ${buyerNumber}:`, auditUpdateError.message);
+      }
+
+      console.log(`🎉 Recovery completed for buyer ${buyerNumber}`);
+
+      return {
+        success: true,
+        sellerNumber: buyerNumber,
+        recoveredAt: new Date(recoveredAt),
+        recoveredBy,
+        details: {
+          buyerRestored: true,
+          auditRecordUpdated,
+        },
+      };
+
+    } catch (error: any) {
+      console.error(`❌ Recovery failed for buyer ${buyerNumber}:`, error.message);
+      return {
+        success: false,
+        sellerNumber: buyerNumber,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 買主の完全同期を実行（削除同期を含む）
    */
   async syncBuyers(): Promise<{
     missingBuyers: string[];
     updatedBuyers: string[];
+    deletedBuyers: string[];
     syncMissingResult: SyncResult | null;
     syncUpdatedResult: SyncResult | null;
+    deletionSyncResult: DeletionSyncResult | null;
   }> {
     console.log('🔄 Starting buyer sync...');
 
@@ -2946,6 +3342,9 @@ export class EnhancedAutoSyncService {
 
     // 更新が必要な買主を検出
     const updatedBuyers = await this.detectUpdatedBuyers();
+
+    // 削除された買主を検出
+    const deletedBuyers = await this.detectDeletedBuyers();
 
     // 不足している買主を同期
     let syncMissingResult: SyncResult | null = null;
@@ -2959,13 +3358,21 @@ export class EnhancedAutoSyncService {
       syncUpdatedResult = await this.syncUpdatedBuyers(updatedBuyers);
     }
 
+    // 削除された買主を同期
+    let deletionSyncResult: DeletionSyncResult | null = null;
+    if (deletedBuyers.length > 0) {
+      deletionSyncResult = await this.syncDeletedBuyers(deletedBuyers);
+    }
+
     console.log('✅ Buyer sync completed');
 
     return {
       missingBuyers,
       updatedBuyers,
+      deletedBuyers,
       syncMissingResult,
       syncUpdatedResult,
+      deletionSyncResult,
     };
   }
 }
