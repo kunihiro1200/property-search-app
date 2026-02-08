@@ -290,7 +290,7 @@ export class BuyerService {
    * 近隣物件を取得
    * 条件：
    * - 種別：基準物件と同じ種別（戸建て、マンション等）
-   * - 市区町村：基準物件と同じ市区町村
+   * - 町名：基準物件と同じ市区町村+町名（例：大分市明野）
    * - 価格帯：基準物件の価格に応じた範囲
    * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
    */
@@ -335,14 +335,22 @@ export class BuyerService {
     // 種別を取得
     const propertyType = baseProperty.property_type || '';
 
-    // 住所から市区町村を抽出（簡易版）
+    // 住所から市区町村と町名を抽出
     const address = baseProperty.address || '';
     let city = '';
+    let town = '';
     
     // 大分市、別府市などを抽出
     const cityMatch = address.match(/(大分市|別府市|由布市|日出町|杵築市|国東市|豊後高田市|宇佐市|中津市|日田市|竹田市|豊後大野市|臼杵市|津久見市|佐伯市)/);
     if (cityMatch) {
       city = cityMatch[1];
+      
+      // 市区町村の後の町名を抽出（最初の漢字部分）
+      const afterCity = address.substring(address.indexOf(city) + city.length);
+      const townMatch = afterCity.match(/^([^\d\-\s]+)/);
+      if (townMatch) {
+        town = townMatch[1];
+      }
     }
 
     console.log('[BuyerService.getNearbyProperties] Search criteria:', {
@@ -351,6 +359,7 @@ export class BuyerService {
       priceRange: `${minPrice} - ${maxPrice}`,
       propertyType,
       city,
+      town,
     });
 
     // 近隣物件を検索
@@ -366,8 +375,11 @@ export class BuyerService {
       query = query.eq('property_type', propertyType);
     }
 
-    // 市区町村条件：基準物件と同じ市区町村
-    if (city) {
+    // 町名条件：基準物件と同じ市区町村+町名
+    if (city && town) {
+      query = query.ilike('address', `%${city}${town}%`);
+    } else if (city) {
+      // 町名が抽出できない場合は市区町村のみ
       query = query.ilike('address', `%${city}%`);
     }
 
