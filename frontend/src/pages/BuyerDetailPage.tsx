@@ -1038,7 +1038,7 @@ Email: <<会社メールアドレス>>`;
               size="small"
               onClick={() => {
                 const firstProperty = linkedProperties[0];
-                navigate(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`);
+                window.open(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`, '_blank');
               }}
             >
               物件近隣物件
