@@ -290,7 +290,7 @@ export class BuyerService {
    * 近隣物件を取得
    * 条件：
    * - 種別：基準物件と同じ種別（戸建て、マンション等）
-   * - エリア：基準物件のdistribution_areasに含まれるエリア
+   * - エリア：基準物件の住所から計算したエリアに該当する物件
    * - 価格帯：基準物件の価格に応じた範囲
    * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
    */
@@ -332,25 +332,51 @@ export class BuyerService {
       maxPrice = 999999999;
     }
 
-    // エリアを抽出（distribution_areasから）
-    const distributionAreas = baseProperty.distribution_areas || '';
-    const areaNumbers = distributionAreas
-      .split(',')
-      .map((a: string) => a.trim())
-      .filter((a: string) => a);
-
     // 種別を取得
     const propertyType = baseProperty.property_type || '';
+
+    // 基準物件の住所からエリアを計算
+    // PropertyDistributionAreaCalculatorを使用して、住所とGoogle Map URLからエリアを計算
+    const { PropertyDistributionAreaCalculator } = await import('./PropertyDistributionAreaCalculator');
+    const { CityNameExtractor } = await import('./CityNameExtractor');
+    
+    const distributionCalculator = new PropertyDistributionAreaCalculator();
+    const cityExtractor = new CityNameExtractor();
+    
+    const address = baseProperty.address || '';
+    const googleMapUrl = baseProperty.google_map_url || '';
+    const city = cityExtractor.extractCityFromAddress(address);
+    
+    let areaNumbers: string[] = [];
+    
+    try {
+      const result = await distributionCalculator.calculateDistributionAreas(
+        address,
+        googleMapUrl,
+        city,
+        propertyNumber
+      );
+      
+      // エリア番号を抽出（③, ㊵ など）
+      areaNumbers = result.areas.map((a: any) => a.areaNumber);
+      
+      console.log('[BuyerService.getNearbyProperties] Calculated areas:', areaNumbers);
+    } catch (error) {
+      console.error('[BuyerService.getNearbyProperties] Failed to calculate areas:', error);
+      // エリア計算に失敗した場合は空配列
+      areaNumbers = [];
+    }
 
     console.log('[BuyerService.getNearbyProperties] Search criteria:', {
       propertyNumber,
       price,
       priceRange: `${minPrice} - ${maxPrice}`,
-      areaNumbers,
       propertyType,
+      areaNumbers,
     });
 
     // 近隣物件を検索
+    // エリアが計算できなかった場合は、価格帯と種別のみで検索
     let query = this.supabase
       .from('property_listings')
       .select('*')
@@ -366,26 +392,54 @@ export class BuyerService {
     // ステータス条件：公開中または公開前
     query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%');
 
-    // エリア条件（distribution_areasに含まれる）
-    if (areaNumbers.length > 0) {
-      const areaConditions = areaNumbers.map((area: string) => 
-        `distribution_areas.ilike.%${area}%`
-      ).join(',');
-      query = query.or(areaConditions);
-    }
-
-    const { data: nearbyProperties, error: nearbyError } = await query;
+    const { data: allProperties, error: nearbyError } = await query;
 
     if (nearbyError) {
       console.error('[BuyerService.getNearbyProperties] Error:', nearbyError);
       throw new Error(`Failed to fetch nearby properties: ${nearbyError.message}`);
     }
 
-    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties?.length || 0);
+    // エリアが計算できた場合は、各物件のエリアを計算してフィルタリング
+    let nearbyProperties = allProperties || [];
+    
+    if (areaNumbers.length > 0) {
+      const filteredProperties = [];
+      
+      for (const property of nearbyProperties) {
+        try {
+          const propAddress = property.address || '';
+          const propGoogleMapUrl = property.google_map_url || '';
+          const propCity = cityExtractor.extractCityFromAddress(propAddress);
+          
+          const propResult = await distributionCalculator.calculateDistributionAreas(
+            propAddress,
+            propGoogleMapUrl,
+            propCity,
+            property.property_number
+          );
+          
+          const propAreaNumbers = propResult.areas.map((a: any) => a.areaNumber);
+          
+          // 基準物件のエリアと重複があるかチェック
+          const hasCommonArea = propAreaNumbers.some((area: string) => areaNumbers.includes(area));
+          
+          if (hasCommonArea) {
+            filteredProperties.push(property);
+          }
+        } catch (error) {
+          console.error(`[BuyerService.getNearbyProperties] Failed to calculate areas for ${property.property_number}:`, error);
+          // エリア計算に失敗した物件は除外
+        }
+      }
+      
+      nearbyProperties = filteredProperties;
+    }
+
+    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties.length);
 
     return {
       baseProperty,
-      nearbyProperties: nearbyProperties || [],
+      nearbyProperties,
     };
   }
 
