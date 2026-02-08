@@ -152,7 +152,7 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'email', label: 'メールアドレス', inlineEditable: true },
       { key: 'email_confirmation', label: 'メアド確認', inlineEditable: true, fieldType: 'dropdown', conditionalDisplay: true },
       { key: 'company_name', label: '法人名', inlineEditable: true },
-      { key: 'business_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
+      { key: 'broker_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
     ],
   },
   // 希望条件セクションは別ページに移動
@@ -943,21 +943,21 @@ Email: <<会社メールアドレス>>`;
               // 必須フィールドのバリデーション
               const errors = [];
               
-              // パターン1: 内覧促進メールが必須（電話問合せ）
+              // パターン1: 内覧促進メールが必須（メール問合せ AND 【問合メール】電話対応 = 済）
+              const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+              const isViewingPromotionEmailRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+              
+              // パターン2: 内覧促進メールが必須（電話問合せ AND 問合時ヒアリングに入力がある）
               const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
               const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
-              const isViewingPromotionEmailRequiredPattern1 = hasPhoneInquiry && hasInquiryHearing;
-              
-              // パターン2: 内覧促進メールが必須（メール問合せ・不通）
-              const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
-              const isViewingPromotionEmailRequiredPattern2 = hasMailInquiry && buyer.inquiry_email_phone === '不通';
+              const isViewingPromotionEmailRequiredPattern2 = hasPhoneInquiry && hasInquiryHearing;
               
               if ((isViewingPromotionEmailRequiredPattern1 || isViewingPromotionEmailRequiredPattern2) && !buyer.viewing_promotion_email) {
                 errors.push('内覧促進メールを選択してください');
               }
               
-              // パターン3: 3回架電確認済みが必須
-              const isThreeCallsConfirmedRequired = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+              // パターン3: 3回架電確認済みが必須（【問合メール】電話対応 = 不通 の場合のみ）
+              const isThreeCallsConfirmedRequired = buyer.inquiry_email_phone === '不通';
               
               if (isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
                 errors.push('3回架電確認済みを選択してください');
@@ -966,7 +966,7 @@ Email: <<会社メールアドレス>>`;
               // パターン4: 業者問合せが必須（法人名に入力がある場合）
               const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
               
-              if (hasCompanyName && !buyer.business_inquiry) {
+              if (hasCompanyName && !buyer.broker_inquiry) {
                 errors.push('業者問合せを選択してください');
               }
               
@@ -1979,7 +1979,7 @@ Email: <<会社メールアドレス>>`;
                     }
 
                     // 業者問合せ（条件付き表示・ボタン形式）
-                    if (field.key === 'business_inquiry') {
+                    if (field.key === 'broker_inquiry') {
                       // 表示条件：法人名に入力がある場合のみ表示
                       const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
                       
