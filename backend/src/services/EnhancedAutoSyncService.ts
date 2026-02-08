@@ -2852,6 +2852,7 @@ export class EnhancedAutoSyncService {
 
     // 主キーはbuyer_numberなので、buyer_idの自動生成は不要
     // buyer_idがNULLの場合はそのままNULLで保存
+    // 注意: buyer_idカラムのNOT NULL制約を削除する必要がある（Migration 103）
 
     // nameがNULLの場合はデフォルト値を設定（NOT NULL制約対応）
     if (!mappedData.name || mappedData.name === null || mappedData.name === 'null' || mappedData.name.trim() === '') {
