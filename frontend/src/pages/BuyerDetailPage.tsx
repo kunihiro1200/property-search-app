@@ -1498,16 +1498,19 @@ Email: <<会社メールアドレス>>`;
                       }
 
                       const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
                         try {
-                          console.log('[inquiry_email_phone] Button clicked, current value:', value, 'new value:', newValue);
-                          
-                          // 同じボタンを2度クリックしたら値をクリア
-                          const valueToSave = value === newValue ? '' : newValue;
-                          console.log('[inquiry_email_phone] Setting value:', valueToSave);
-                          
                           const result = await handleInlineFieldSave(field.key, valueToSave);
                           
                           if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                             setSnackbar({
                               open: true,
                               message: result.error,
@@ -1515,7 +1518,8 @@ Email: <<会社メールアドレス>>`;
                             });
                           }
                         } catch (error: any) {
-                          console.error('[inquiry_email_phone] Error:', error);
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                           setSnackbar({
                             open: true,
                             message: error.message || '保存に失敗しました',
@@ -1569,9 +1573,14 @@ Email: <<会社メールアドレス>>`;
                                   variant="outlined"
                                   size="small"
                                   onClick={async () => {
+                                    // 先にローカル状態を更新
+                                    setBuyer(prev => prev ? { ...prev, [field.key]: '' } : prev);
+                                    
                                     try {
                                       const result = await handleInlineFieldSave(field.key, '');
                                       if (result && !result.success && result.error) {
+                                        // エラー時は元の値に戻す
+                                        setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                                         setSnackbar({
                                           open: true,
                                           message: result.error,
@@ -1579,6 +1588,8 @@ Email: <<会社メールアドレス>>`;
                                         });
                                       }
                                     } catch (error: any) {
+                                      // エラー時は元の値に戻す
+                                      setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                                       setSnackbar({
                                         open: true,
                                         message: error.message || 'クリアに失敗しました',
@@ -1611,16 +1622,19 @@ Email: <<会社メールアドレス>>`;
                       const isRequired = !value || value.trim() === '';
 
                       const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
                         try {
-                          console.log('[three_calls_confirmed] Button clicked, current value:', value, 'new value:', newValue);
-                          
-                          // 同じボタンを2度クリックしたら値をクリア
-                          const valueToSave = value === newValue ? '' : newValue;
-                          console.log('[three_calls_confirmed] Setting value:', valueToSave);
-                          
                           const result = await handleInlineFieldSave(field.key, valueToSave);
                           
                           if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                             setSnackbar({
                               open: true,
                               message: result.error,
@@ -1628,7 +1642,8 @@ Email: <<会社メールアドレス>>`;
                             });
                           }
                         } catch (error: any) {
-                          console.error('[three_calls_confirmed] Error:', error);
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                           setSnackbar({
                             open: true,
                             message: error.message || '保存に失敗しました',
@@ -1683,30 +1698,28 @@ Email: <<会社メールアドレス>>`;
                     // initial_assigneeフィールドは特別処理（スタッフイニシャルボタン形式）
                     if (field.key === 'initial_assignee') {
                       const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
                         try {
-                          console.log('[initial_assignee] Button clicked, current value:', value, 'new value:', newValue);
-                          
-                          // 同じボタンを2度クリックしたら値をクリア
-                          const valueToSave = value === newValue ? '' : newValue;
-                          console.log('[initial_assignee] Setting value:', valueToSave);
-                          
                           const result = await handleInlineFieldSave(field.key, valueToSave);
                           
                           if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                             setSnackbar({
                               open: true,
                               message: result.error,
                               severity: 'error'
                             });
-                          } else {
-                            setSnackbar({
-                              open: true,
-                              message: '保存しました',
-                              severity: 'success'
-                            });
                           }
                         } catch (error: any) {
-                          console.error('[initial_assignee] Error:', error);
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                           setSnackbar({
                             open: true,
                             message: error.message || '保存に失敗しました',
@@ -1816,16 +1829,19 @@ Email: <<会社メールアドレス>>`;
                       const isRequired = (isRequiredPattern1 || isRequiredPattern2) && (!value || value.trim() === '');
 
                       const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
                         try {
-                          console.log('[viewing_promotion_email] Button clicked, current value:', value, 'new value:', newValue);
-                          
-                          // 同じボタンを2度クリックしたら値をクリア
-                          const valueToSave = value === newValue ? '' : newValue;
-                          console.log('[viewing_promotion_email] Setting value:', valueToSave);
-                          
                           const result = await handleInlineFieldSave(field.key, valueToSave);
                           
                           if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                             setSnackbar({
                               open: true,
                               message: result.error,
@@ -1833,7 +1849,8 @@ Email: <<会社メールアドレス>>`;
                             });
                           }
                         } catch (error: any) {
-                          console.error('[viewing_promotion_email] Error:', error);
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                           setSnackbar({
                             open: true,
                             message: error.message || '保存に失敗しました',
@@ -2050,30 +2067,28 @@ Email: <<会社メールアドレス>>`;
                     // distribution_typeフィールドは特別処理（ボタン形式）
                     if (field.key === 'distribution_type') {
                       const handleButtonClick = async (newValue: string) => {
+                        // 同じボタンを2度クリックしたら値をクリア
+                        const valueToSave = value === newValue ? '' : newValue;
+                        
+                        // 先にローカル状態を更新（即座にUIに反映）
+                        setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                        
+                        // バックグラウンドで保存
                         try {
-                          console.log('[distribution_type] Button clicked, current value:', value, 'new value:', newValue);
-                          
-                          // 同じボタンを2度クリックしたら値をクリア
-                          const valueToSave = value === newValue ? '' : newValue;
-                          console.log('[distribution_type] Setting value:', valueToSave);
-                          
                           const result = await handleInlineFieldSave(field.key, valueToSave);
                           
                           if (result && !result.success && result.error) {
+                            // エラー時は元の値に戻す
+                            setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                             setSnackbar({
                               open: true,
                               message: result.error,
                               severity: 'error'
                             });
-                          } else {
-                            setSnackbar({
-                              open: true,
-                              message: '保存しました',
-                              severity: 'success'
-                            });
                           }
                         } catch (error: any) {
-                          console.error('[distribution_type] Error:', error);
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
                           setSnackbar({
                             open: true,
                             message: error.message || '保存に失敗しました',
