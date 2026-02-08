@@ -267,13 +267,20 @@ export default function BuyerDetailPage() {
     try {
       if (linkedProperties.length > 0) {
         const firstProperty = linkedProperties[0];
+        console.log('[BuyerDetailPage] Fetching nearby properties count for:', firstProperty.property_number);
         const res = await api.get(`/api/buyers/${buyer_number}/nearby-properties`, {
           params: { propertyNumber: firstProperty.property_number }
         });
-        setNearbyPropertiesCount(res.data.nearbyProperties?.length || 0);
+        const count = res.data.nearbyProperties?.length || 0;
+        console.log('[BuyerDetailPage] Nearby properties count:', count);
+        setNearbyPropertiesCount(count);
+      } else {
+        console.log('[BuyerDetailPage] No linked properties, setting count to 0');
+        setNearbyPropertiesCount(0);
       }
     } catch (error) {
       console.error('Failed to fetch nearby properties count:', error);
+      setNearbyPropertiesCount(0);
     }
   };
 
