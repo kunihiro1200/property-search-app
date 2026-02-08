@@ -1573,7 +1573,7 @@ export class BuyerService {
   async getBuyersWithStatus(options: BuyerQueryOptions = {}): Promise<PaginatedResult<any>> {
     try {
       // BuyerStatusCalculatorをインポート
-      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      const { calculateBuyerStatus, calculateBuyerStatusComplete } = await import('./BuyerStatusCalculator');
       
       // 買主リストを取得
       const result = await this.getAll(options);
@@ -1581,7 +1581,14 @@ export class BuyerService {
       // 各買主のステータスを算出
       const buyersWithStatus = result.data.map(buyer => {
         try {
-          const statusResult = calculateBuyerStatus(buyer);
+          // まずPriority 1-16を評価
+          let statusResult = calculateBuyerStatus(buyer);
+          
+          // Priority 1-16で一致しなければPriority 17-37を評価
+          if (!statusResult.status || statusResult.priority === 0) {
+            statusResult = calculateBuyerStatusComplete(buyer);
+          }
+          
           return {
             ...buyer,
             calculated_status: statusResult.status,
@@ -1622,7 +1629,7 @@ export class BuyerService {
   }>> {
     try {
       // BuyerStatusCalculatorとステータス定義をインポート
-      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      const { calculateBuyerStatus, calculateBuyerStatusComplete } = await import('./BuyerStatusCalculator');
       const { STATUS_DEFINITIONS } = await import('../config/buyer-status-definitions');
       
       // 全買主を取得（ページネーションなし、削除済みを除外）
@@ -1642,7 +1649,14 @@ export class BuyerService {
       // 各買主のステータスを算出してカウント
       (allBuyers || []).forEach(buyer => {
         try {
-          const statusResult = calculateBuyerStatus(buyer);
+          // まずPriority 1-16を評価
+          let statusResult = calculateBuyerStatus(buyer);
+          
+          // Priority 1-16で一致しなければPriority 17-37を評価
+          if (!statusResult.status || statusResult.priority === 0) {
+            statusResult = calculateBuyerStatusComplete(buyer);
+          }
+          
           const status = statusResult.status || ''; // 空文字列の場合もカウント
           
           statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
