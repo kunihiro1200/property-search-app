@@ -1633,15 +1633,34 @@ export class BuyerService {
       const { STATUS_DEFINITIONS } = await import('../config/buyer-status-definitions');
       
       // 全買主を取得（ページネーションなし、削除済みを除外）
-      const { data: allBuyers, error } = await this.supabase
-        .from('buyers')
-        .select('*')
-        .is('deleted_at', null); // 削除済みを除外
+      // Supabaseのデフォルト制限（1000件）を回避するために、全件取得
+      let allBuyers: any[] = [];
+      let fetchPage = 0;
+      const pageSize = 1000;
+      let hasMore = true;
       
-      if (error) {
-        console.error('[BuyerService.getStatusCategories] Database error:', error);
-        throw new Error(`Failed to fetch buyers for status categories: ${error.message}`);
+      while (hasMore) {
+        const { data, error, count } = await this.supabase
+          .from('buyers')
+          .select('*', { count: 'exact' })
+          .is('deleted_at', null)
+          .range(fetchPage * pageSize, (fetchPage + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('[BuyerService.getStatusCategories] Database error:', error);
+          throw new Error(`Failed to fetch buyers for status categories: ${error.message}`);
+        }
+        
+        if (data && data.length > 0) {
+          allBuyers = allBuyers.concat(data);
+          fetchPage++;
+          hasMore = data.length === pageSize; // 1000件取得できた場合は次のページがある可能性
+        } else {
+          hasMore = false;
+        }
       }
+      
+      console.log(`[BuyerService.getStatusCategories] Fetched ${allBuyers.length} buyers total`);
       
       // ステータスごとのカウントマップ
       const statusCountMap = new Map<string, number>();
@@ -1724,15 +1743,34 @@ export class BuyerService {
       const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
       
       // 全買主を取得（ページネーションなし - フィルタリング後にページネーション、削除済みを除外）
-      const { data: allBuyers, error } = await this.supabase
-        .from('buyers')
-        .select('*')
-        .is('deleted_at', null); // 削除済みを除外
+      // Supabaseのデフォルト制限（1000件）を回避するために、全件取得
+      let allBuyers: any[] = [];
+      let fetchPage = 0;
+      const pageSize = 1000;
+      let hasMore = true;
       
-      if (error) {
-        console.error('[BuyerService.getBuyersByStatus] Database error:', error);
-        throw new Error(`Failed to fetch buyers by status: ${error.message}`);
+      while (hasMore) {
+        const { data, error } = await this.supabase
+          .from('buyers')
+          .select('*')
+          .is('deleted_at', null)
+          .range(fetchPage * pageSize, (fetchPage + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('[BuyerService.getBuyersByStatus] Database error:', error);
+          throw new Error(`Failed to fetch buyers by status: ${error.message}`);
+        }
+        
+        if (data && data.length > 0) {
+          allBuyers = allBuyers.concat(data);
+          fetchPage++;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
+      
+      console.log(`[BuyerService.getBuyersByStatus] Fetched ${allBuyers.length} buyers total for status filtering`);
       
       // ステータスでフィルタリング
       const filteredBuyers = (allBuyers || [])
