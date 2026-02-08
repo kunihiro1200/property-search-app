@@ -67,13 +67,48 @@ router.get('/', async (req: Request, res: Response) => {
     if (withStatus === 'true' || status) {
       // statusパラメータがある場合は、そのステータスでフィルタリング
       if (status) {
+        // 注意: ステータスフィルタリングは全買主を取得する必要があるため、時間がかかる
+        // 将来的にはステータスをDBに保存して直接フィルタリングすることを推奨
         const result = await buyerService.getBuyersByStatus(status, options);
         return res.json(result);
       }
       
-      // withStatus=trueの場合は、全買主にステータスを付与
-      const result = await buyerService.getBuyersWithStatus(options);
-      return res.json(result);
+      // withStatus=trueの場合は、ページネーション後にステータスを付与（高速化）
+      const result = await buyerService.getAll(options);
+      
+      // ページネーション後の買主のみステータスを計算
+      const { calculateBuyerStatus, calculateBuyerStatusComplete } = await import('../services/BuyerStatusCalculator');
+      const buyersWithStatus = result.data.map((buyer: any) => {
+        try {
+          // まずPriority 1-16を評価
+          let statusResult = calculateBuyerStatus(buyer);
+          
+          // Priority 1-16で一致しなければPriority 17-37を評価
+          if (!statusResult.status || statusResult.priority === 0) {
+            statusResult = calculateBuyerStatusComplete(buyer);
+          }
+          
+          return {
+            ...buyer,
+            calculated_status: statusResult.status,
+            status_priority: statusResult.priority,
+            status_color: statusResult.color
+          };
+        } catch (error) {
+          console.error(`Error calculating status for buyer ${buyer.buyer_number}:`, error);
+          return {
+            ...buyer,
+            calculated_status: '',
+            status_priority: 999,
+            status_color: '#9E9E9E'
+          };
+        }
+      });
+      
+      return res.json({
+        ...result,
+        data: buyersWithStatus
+      });
     }
 
     // デフォルトの動作（既存の動作を維持）

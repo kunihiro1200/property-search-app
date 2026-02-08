@@ -404,11 +404,17 @@ export class BuyerService {
     if (cityMatch) {
       city = cityMatch[1];
       
-      // 市区町村の後の町名を抽出（最初の漢字部分）
+      // 市区町村の後の町名を抽出（最初の漢字部分、「字」以降は除外）
       const afterCity = address.substring(address.indexOf(city) + city.length);
       const townMatch = afterCity.match(/^([^\d\-\s]+)/);
       if (townMatch) {
-        town = townMatch[1];
+        let extractedTown = townMatch[1];
+        // 「字」以降を除外（例：「挾間町北方字和尚」→「挾間町北方」）
+        const aざIndex = extractedTown.indexOf('字');
+        if (aざIndex !== -1) {
+          extractedTown = extractedTown.substring(0, aざIndex);
+        }
+        town = extractedTown;
       }
     }
 
