@@ -176,6 +176,7 @@ export default function BuyerDetailPage() {
   const [emailModalProperties, setEmailModalProperties] = useState<PropertyListing[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [relatedBuyersCount, setRelatedBuyersCount] = useState(0);
+  const [nearbyPropertiesCount, setNearbyPropertiesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copiedBuyerNumber, setCopiedBuyerNumber] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
@@ -259,6 +260,20 @@ export default function BuyerDetailPage() {
       setRelatedBuyersCount(res.data.total_count || 0);
     } catch (error) {
       console.error('Failed to fetch related buyers count:', error);
+    }
+  };
+
+  const fetchNearbyPropertiesCount = async () => {
+    try {
+      if (linkedProperties.length > 0) {
+        const firstProperty = linkedProperties[0];
+        const res = await api.get(`/api/buyers/${buyer_number}/nearby-properties`, {
+          params: { propertyNumber: firstProperty.property_number }
+        });
+        setNearbyPropertiesCount(res.data.nearbyProperties?.length || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch nearby properties count:', error);
     }
   };
 
@@ -572,6 +587,13 @@ export default function BuyerDetailPage() {
       console.error('Failed to fetch linked properties:', error);
     }
   };
+
+  // linkedPropertiesが取得されたら近隣物件数を取得
+  useEffect(() => {
+    if (linkedProperties.length > 0) {
+      fetchNearbyPropertiesCount();
+    }
+  }, [linkedProperties]);
 
   const fetchInquiryHistory = async () => {
     try {
@@ -1043,7 +1065,7 @@ Email: <<会社メールアドレス>>`;
                 window.open(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`, '_blank');
               }}
             >
-              近隣物件
+              近隣物件 ({nearbyPropertiesCount})
             </Button>
           )}
           
