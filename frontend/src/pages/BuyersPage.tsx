@@ -136,6 +136,24 @@ export default function BuyersPage() {
     return null;
   };
 
+  // atbb_statusの表示を簡略化
+  const formatAtbbStatus = (atbbStatus: string | null | undefined) => {
+    if (!atbbStatus) return '-';
+    
+    // 「専任・公開中」→「専任」
+    if (atbbStatus.includes('専任') && atbbStatus.includes('公開中')) {
+      return '専任';
+    }
+    
+    // 「一般・公開中」→「一般」
+    if (atbbStatus.includes('一般') && atbbStatus.includes('公開中')) {
+      return '一般';
+    }
+    
+    // その他はそのまま表示
+    return atbbStatus;
+  };
+
   const handleStatusSelect = (status: string | null) => {
     setSelectedStatus(status);
     setPage(0);
@@ -248,7 +266,7 @@ export default function BuyersPage() {
                         <TableCell>{buyer.name || '-'}</TableCell>
                         <TableCell>{buyer.property_address || '-'}</TableCell>
                         <TableCell>{buyer.property_type || '-'}</TableCell>
-                        <TableCell>{buyer.atbb_status || '-'}</TableCell>
+                        <TableCell>{formatAtbbStatus(buyer.atbb_status)}</TableCell>
                         <TableCell>{buyer.follow_up_assignee || buyer.initial_assignee || '-'}</TableCell>
                         <TableCell>
                           {displayConfidence && (
