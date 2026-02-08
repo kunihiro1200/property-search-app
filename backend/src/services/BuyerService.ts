@@ -148,33 +148,8 @@ export class BuyerService {
       throw new Error(`Failed to fetch buyers: ${error.message}`);
     }
 
-    // 各買主に物件情報を追加
-    const buyersWithPropertyInfo = await Promise.all(
-      (data || []).map(async (buyer) => {
-        // property_numberがある場合、最初の物件情報を取得
-        if (buyer.property_number) {
-          const propertyNumbers = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
-          if (propertyNumbers.length > 0) {
-            const firstPropertyNumber = propertyNumbers[0];
-            const { data: property } = await this.supabase
-              .from('property_listings')
-              .select('address, display_address, property_type, atbb_status')
-              .eq('property_number', firstPropertyNumber)
-              .single();
-            
-            if (property) {
-              return {
-                ...buyer,
-                property_address: property.display_address || property.address,
-                property_type: property.property_type,
-                atbb_status: property.atbb_status,
-              };
-            }
-          }
-        }
-        return buyer;
-      })
-    );
+    // 各買主に物件情報を追加（一括取得で最適化）
+    const buyersWithPropertyInfo = await this.addPropertyInfoToBuyers(data || []);
 
     const total = count || 0;
     const totalPages = Math.ceil(total / limit);
@@ -186,6 +161,62 @@ export class BuyerService {
       limit,
       totalPages
     };
+  }
+
+  /**
+   * 買主リストに物件情報を追加（一括取得で最適化）
+   */
+  private async addPropertyInfoToBuyers(buyers: any[]): Promise<any[]> {
+    if (buyers.length === 0) {
+      return [];
+    }
+
+    // 全買主の最初の物件番号を収集
+    const propertyNumbers = new Set<string>();
+    const buyerPropertyMap = new Map<string, string>(); // buyer_number -> property_number
+
+    buyers.forEach(buyer => {
+      if (buyer.property_number) {
+        const propertyNumberList = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+        if (propertyNumberList.length > 0) {
+          const firstPropertyNumber = propertyNumberList[0];
+          propertyNumbers.add(firstPropertyNumber);
+          buyerPropertyMap.set(buyer.buyer_number, firstPropertyNumber);
+        }
+      }
+    });
+
+    // 物件情報を一括取得
+    let propertyInfoMap = new Map<string, any>();
+    if (propertyNumbers.size > 0) {
+      const { data: properties } = await this.supabase
+        .from('property_listings')
+        .select('property_number, address, display_address, property_type, atbb_status')
+        .in('property_number', Array.from(propertyNumbers));
+      
+      if (properties) {
+        properties.forEach(property => {
+          propertyInfoMap.set(property.property_number, property);
+        });
+      }
+    }
+
+    // 買主に物件情報を追加
+    return buyers.map(buyer => {
+      const propertyNumber = buyerPropertyMap.get(buyer.buyer_number);
+      if (propertyNumber) {
+        const property = propertyInfoMap.get(propertyNumber);
+        if (property) {
+          return {
+            ...buyer,
+            property_address: property.display_address || property.address,
+            property_type: property.property_type,
+            atbb_status: property.atbb_status,
+          };
+        }
+      }
+      return buyer;
+    });
   }
 
   /**
@@ -1969,8 +2000,11 @@ export class BuyerService {
       // ページネーション適用
       const paginatedData = filteredBuyers.slice(offset, offset + limit);
       
+      // 物件情報を追加
+      const paginatedDataWithPropertyInfo = await this.addPropertyInfoToBuyers(paginatedData);
+      
       return {
-        data: paginatedData,
+        data: paginatedDataWithPropertyInfo,
         total,
         page,
         limit,
