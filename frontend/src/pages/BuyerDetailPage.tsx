@@ -938,7 +938,42 @@ Email: <<会社メールアドレス>>`;
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
-            onClick={() => navigate('/buyers')} 
+            onClick={() => {
+              // 必須フィールドのバリデーション
+              const errors = [];
+              
+              // パターン1: 内覧促進メールが必須（電話問合せ）
+              const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+              const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+              const isViewingPromotionEmailRequiredPattern1 = hasPhoneInquiry && hasInquiryHearing;
+              
+              // パターン2: 内覧促進メールが必須（メール問合せ・不通）
+              const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+              const isViewingPromotionEmailRequiredPattern2 = hasMailInquiry && buyer.inquiry_email_phone === '不通';
+              
+              if ((isViewingPromotionEmailRequiredPattern1 || isViewingPromotionEmailRequiredPattern2) && !buyer.viewing_promotion_email) {
+                errors.push('内覧促進メールを選択してください');
+              }
+              
+              // パターン3: 3回架電確認済みが必須
+              const isThreeCallsConfirmedRequired = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+              
+              if (isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
+                errors.push('3回架電確認済みを選択してください');
+              }
+              
+              if (errors.length > 0) {
+                setSnackbar({
+                  open: true,
+                  message: errors.join('\n'),
+                  severity: 'error'
+                });
+                return; // 遷移をキャンセル
+              }
+              
+              // バリデーションOKなら遷移
+              navigate('/buyers');
+            }} 
             sx={{ mr: 2 }}
             aria-label="買主一覧に戻る"
           >
@@ -1564,21 +1599,16 @@ Email: <<会社メールアドレス>>`;
 
                     // three_calls_confirmedフィールドは条件付き表示（ボタン形式）
                     if (field.key === 'three_calls_confirmed') {
-                      // 表示条件の判定
+                      // パターン3: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応が"未"または"不通"
                       const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
-                      const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
-                      const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
-                      
-                      // パターン1: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応 = "済"
-                      const shouldDisplayPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
-                      // パターン2: 問合せ元に"電話"が含まれる AND 問合時ヒアリングに入力がある
-                      const shouldDisplayPattern2 = hasPhoneInquiry && hasInquiryHearing;
-                      
-                      const shouldDisplay = shouldDisplayPattern1 || shouldDisplayPattern2;
+                      const shouldDisplay = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
 
                       if (!shouldDisplay) {
                         return null; // 条件を満たさない場合は表示しない
                       }
+
+                      // 必須条件: 値が空の場合のみ赤字表示
+                      const isRequired = !value || value.trim() === '';
 
                       const handleButtonClick = async (newValue: string) => {
                         try {
@@ -1611,7 +1641,8 @@ Email: <<会社メールアドレス>>`;
                         <Grid item {...gridSize} key={field.key}>
                           <Box sx={{ mb: 1 }}>
                             <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
-                              {field.label} <span style={{ color: 'red', fontWeight: 'bold' }}>*必須</span>
+                              {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                               <Button
@@ -1777,11 +1808,12 @@ Email: <<会社メールアドレス>>`;
                       }
 
                       // 必須条件の判定
-                      // パターン1: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応 = "済"
-                      const isRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
-                      // パターン2: 問合せ元に"電話"が含まれる AND 問合時ヒアリングに入力がある
-                      const isRequiredPattern2 = hasPhoneInquiry && buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
-                      const isRequired = isRequiredPattern1 || isRequiredPattern2;
+                      // パターン1: 問合せ元に"電話"が含まれる AND 問合時ヒアリングに入力がある
+                      const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+                      const isRequiredPattern1 = hasPhoneInquiry && hasInquiryHearing;
+                      // パターン2: 問合せ元に"メール"が含まれる AND 【問合メール】電話対応 = "不通"
+                      const isRequiredPattern2 = hasMailInquiry && buyer.inquiry_email_phone === '不通';
+                      const isRequired = (isRequiredPattern1 || isRequiredPattern2) && (!value || value.trim() === '');
 
                       const handleButtonClick = async (newValue: string) => {
                         try {
