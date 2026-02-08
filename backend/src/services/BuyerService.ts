@@ -290,7 +290,7 @@ export class BuyerService {
    * 近隣物件を取得
    * 条件：
    * - 種別：基準物件と同じ種別（戸建て、マンション等）
-   * - エリア：基準物件の住所から計算したエリアに該当する物件
+   * - 市区町村：基準物件と同じ市区町村
    * - 価格帯：基準物件の価格に応じた範囲
    * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
    */
@@ -335,36 +335,14 @@ export class BuyerService {
     // 種別を取得
     const propertyType = baseProperty.property_type || '';
 
-    // 基準物件の住所からエリアを計算
-    // PropertyDistributionAreaCalculatorを使用して、住所とGoogle Map URLからエリアを計算
-    const { PropertyDistributionAreaCalculator } = await import('./PropertyDistributionAreaCalculator');
-    const { CityNameExtractor } = await import('./CityNameExtractor');
-    
-    const distributionCalculator = new PropertyDistributionAreaCalculator();
-    const cityExtractor = new CityNameExtractor();
-    
+    // 住所から市区町村を抽出（簡易版）
     const address = baseProperty.address || '';
-    const googleMapUrl = baseProperty.google_map_url || '';
-    const city = cityExtractor.extractCityFromAddress(address);
+    let city = '';
     
-    let areaNumbers: string[] = [];
-    
-    try {
-      const result = await distributionCalculator.calculateDistributionAreas(
-        address,
-        googleMapUrl,
-        city,
-        propertyNumber
-      );
-      
-      // エリア番号を抽出（③, ㊵ など）
-      areaNumbers = result.areas.map((a: any) => a.areaNumber);
-      
-      console.log('[BuyerService.getNearbyProperties] Calculated areas:', areaNumbers);
-    } catch (error) {
-      console.error('[BuyerService.getNearbyProperties] Failed to calculate areas:', error);
-      // エリア計算に失敗した場合は空配列
-      areaNumbers = [];
+    // 大分市、別府市などを抽出
+    const cityMatch = address.match(/(大分市|別府市|由布市|日出町|杵築市|国東市|豊後高田市|宇佐市|中津市|日田市|竹田市|豊後大野市|臼杵市|津久見市|佐伯市)/);
+    if (cityMatch) {
+      city = cityMatch[1];
     }
 
     console.log('[BuyerService.getNearbyProperties] Search criteria:', {
@@ -372,11 +350,10 @@ export class BuyerService {
       price,
       priceRange: `${minPrice} - ${maxPrice}`,
       propertyType,
-      areaNumbers,
+      city,
     });
 
     // 近隣物件を検索
-    // エリアが計算できなかった場合は、価格帯と種別のみで検索
     let query = this.supabase
       .from('property_listings')
       .select('*')
@@ -389,57 +366,26 @@ export class BuyerService {
       query = query.eq('property_type', propertyType);
     }
 
+    // 市区町村条件：基準物件と同じ市区町村
+    if (city) {
+      query = query.ilike('address', `%${city}%`);
+    }
+
     // ステータス条件：公開中または公開前
     query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%');
 
-    const { data: allProperties, error: nearbyError } = await query;
+    const { data: nearbyProperties, error: nearbyError } = await query;
 
     if (nearbyError) {
       console.error('[BuyerService.getNearbyProperties] Error:', nearbyError);
       throw new Error(`Failed to fetch nearby properties: ${nearbyError.message}`);
     }
 
-    // エリアが計算できた場合は、各物件のエリアを計算してフィルタリング
-    let nearbyProperties = allProperties || [];
-    
-    if (areaNumbers.length > 0) {
-      const filteredProperties = [];
-      
-      for (const property of nearbyProperties) {
-        try {
-          const propAddress = property.address || '';
-          const propGoogleMapUrl = property.google_map_url || '';
-          const propCity = cityExtractor.extractCityFromAddress(propAddress);
-          
-          const propResult = await distributionCalculator.calculateDistributionAreas(
-            propAddress,
-            propGoogleMapUrl,
-            propCity,
-            property.property_number
-          );
-          
-          const propAreaNumbers = propResult.areas.map((a: any) => a.areaNumber);
-          
-          // 基準物件のエリアと重複があるかチェック
-          const hasCommonArea = propAreaNumbers.some((area: string) => areaNumbers.includes(area));
-          
-          if (hasCommonArea) {
-            filteredProperties.push(property);
-          }
-        } catch (error) {
-          console.error(`[BuyerService.getNearbyProperties] Failed to calculate areas for ${property.property_number}:`, error);
-          // エリア計算に失敗した物件は除外
-        }
-      }
-      
-      nearbyProperties = filteredProperties;
-    }
-
-    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties.length);
+    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties?.length || 0);
 
     return {
       baseProperty,
-      nearbyProperties,
+      nearbyProperties: nearbyProperties || [],
     };
   }
 
