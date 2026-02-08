@@ -41,6 +41,7 @@ import emailRoutes from './routes/emails';
 import activityLogRoutes from './routes/activityLogs';
 import followUpRoutes from './routes/followUps';
 import appointmentRoutes from './routes/appointments';
+import buyerAppointmentRoutes from './routes/buyer-appointments';
 import summarizeRoutes from './routes/summarize';
 import googleCalendarRoutes from './routes/googleCalendar';
 import employeeRoutes from './routes/employees';
@@ -269,6 +270,7 @@ app.use('/api/sellers', emailRoutes);
 app.use('/api/emails', emailRoutes);  // 画像添付機能用の追加ルート
 app.use('/api/sellers', followUpRoutes);
 app.use('/appointments', appointmentRoutes);
+app.use('/api/buyer-appointments', buyerAppointmentRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/summarize', summarizeRoutes);
 app.use('/api/auth/google/calendar', googleCalendarRoutes);

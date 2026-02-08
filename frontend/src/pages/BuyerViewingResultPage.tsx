@@ -18,6 +18,7 @@ import api, { buyerApi, employeeApi } from '../services/api';
 import { InlineEditableField } from '../components/InlineEditableField';
 import { LATEST_STATUS_OPTIONS } from '../utils/buyerLatestStatusOptions';
 import { VIEWING_UNCONFIRMED_OPTIONS } from '../utils/buyerDetailFieldOptions';
+import { ValidationService } from '../services/ValidationService';
 
 interface Buyer {
   [key: string]: any;
@@ -196,6 +197,85 @@ export default function BuyerViewingResultPage() {
     }
   };
 
+  const handleCalendarButtonClick = async () => {
+    if (!buyer) return;
+
+    // バリデーション実行
+    const validationResult = ValidationService.validateRequiredFields(
+      buyer,
+      linkedProperties
+    );
+
+    // バリデーション失敗時
+    if (!validationResult.isValid) {
+      const errorMessage = ValidationService.getValidationErrorMessage(
+        validationResult.errors
+      );
+      
+      // スナックバーで警告メッセージを表示
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'warning',
+      });
+      
+      return; // カレンダーを開かない
+    }
+
+    // バリデーション成功時：バックエンドAPIを呼び出してカレンダーに登録
+    try {
+      // 内覧日時を取得
+      const viewingDate = new Date(buyer.latest_viewing_date);
+      const viewingTime = buyer.viewing_time || '14:00';
+      
+      // 時間をパース
+      const [hours, minutes] = viewingTime.split(':').map(Number);
+      viewingDate.setHours(hours, minutes, 0, 0);
+      
+      // 終了時刻（1時間後）
+      const endDate = new Date(viewingDate);
+      endDate.setHours(viewingDate.getHours() + 1);
+
+      // 紐づいた物件情報を取得（最初の物件を使用）
+      const property = linkedProperties && linkedProperties.length > 0 ? linkedProperties[0] : null;
+
+      // バックエンドAPIを呼び出し
+      const response = await api.post('/api/buyer-appointments', {
+        buyerNumber: buyer.buyer_number,
+        startTime: viewingDate.toISOString(),
+        endTime: endDate.toISOString(),
+        assignedTo: buyer.follow_up_assignee,
+        buyerName: buyer.name,
+        buyerPhone: buyer.phone_number,
+        buyerEmail: buyer.email,
+        viewingMobile: buyer.viewing_mobile, // 内覧形態
+        propertyAddress: property?.address || '', // 物件住所
+        propertyGoogleMapUrl: property?.google_map_url || '', // GoogleMap URL
+        inquiryHearing: buyer.inquiry_hearing || '', // 問合時ヒアリング
+        creatorName: buyer.name, // 内覧取得者名（買主名を使用）
+      });
+
+      console.log('[BuyerViewingResultPage] Calendar event created:', response.data);
+
+      // 成功メッセージを表示
+      setSnackbar({
+        open: true,
+        message: `後続担当（${buyer.follow_up_assignee}）のGoogleカレンダーに内覧予約を登録しました`,
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('[BuyerViewingResultPage] Calendar event creation error:', error);
+      
+      // エラーメッセージを表示
+      const errorMessage = error.response?.data?.error?.message || 'カレンダー登録に失敗しました';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error',
+      });
+    }
+  };
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
@@ -292,62 +372,7 @@ export default function BuyerViewingResultPage() {
                   variant="outlined"
                   fullWidth
                   sx={{ mt: 0.5, fontSize: '0.7rem', padding: '2px 4px' }}
-                  onClick={() => {
-                    // 内覧日時を取得
-                    const viewingDate = new Date(buyer.latest_viewing_date);
-                    const viewingTime = buyer.viewing_time || '14:00'; // デフォルト14:00
-                    
-                    // 時間をパース
-                    const [hours, minutes] = viewingTime.split(':').map(Number);
-                    viewingDate.setHours(hours, minutes, 0, 0);
-                    
-                    // 終了時刻（1時間後）
-                    const endDate = new Date(viewingDate);
-                    endDate.setHours(viewingDate.getHours() + 1);
-                    
-                    // Googleカレンダー用の日時フォーマット（YYYYMMDDTHHmmss）
-                    const formatDateForCalendar = (date: Date) => {
-                      const year = date.getFullYear();
-                      const month = String(date.getMonth() + 1).padStart(2, '0');
-                      const day = String(date.getDate()).padStart(2, '0');
-                      const hour = String(date.getHours()).padStart(2, '0');
-                      const minute = String(date.getMinutes()).padStart(2, '0');
-                      const second = String(date.getSeconds()).padStart(2, '0');
-                      return `${year}${month}${day}T${hour}${minute}${second}`;
-                    };
-                    
-                    const startDateStr = formatDateForCalendar(viewingDate);
-                    const endDateStr = formatDateForCalendar(endDate);
-                    
-                    // イベントタイトル
-                    const title = encodeURIComponent(`内覧: ${buyer.name || buyer.buyer_number}`);
-                    
-                    // 詳細情報
-                    const details = encodeURIComponent(
-                      `買主名: ${buyer.name || buyer.buyer_number}\n` +
-                      `買主番号: ${buyer.buyer_number}\n` +
-                      `電話: ${buyer.phone_number || 'なし'}\n` +
-                      `メール: ${buyer.email || 'なし'}\n` +
-                      `\n` +
-                      `買主詳細ページ:\n${window.location.origin}/buyers/${buyer.buyer_number}\n` +
-                      `\n` +
-                      `内覧前伝達事項: ${buyer.pre_viewing_notes || 'なし'}`
-                    );
-                    
-                    // 後続担当のメールアドレスを取得
-                    const assignedToValue = buyer.follow_up_assignee;
-                    const assignedEmployee = employees.find(e => 
-                      e.name === assignedToValue || 
-                      e.initials === assignedToValue || 
-                      e.email === assignedToValue
-                    );
-                    const assignedEmail = assignedEmployee?.email || '';
-                    
-                    // 後続担当のカレンダーに直接作成（srcパラメータを使用）
-                    const srcParam = assignedEmail ? `&src=${encodeURIComponent(assignedEmail)}` : '';
-                    
-                    window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateStr}/${endDateStr}&details=${details}${srcParam}`, '_blank');
-                  }}
+                  onClick={handleCalendarButtonClick}
                 >
                   📅 カレンダーで開く
                 </Button>

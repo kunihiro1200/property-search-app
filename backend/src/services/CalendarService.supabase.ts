@@ -32,6 +32,78 @@ export class CalendarService extends BaseRepository {
   }
 
   /**
+   * Google Calendarイベントを作成（従業員のカレンダーに直接作成）
+   * 会社アカウント（tenant@ifoo-oita.com）のトークンを使用して、従業員のカレンダーに代理でイベントを作成
+   * @param employeeId 従業員ID（使用しない - 互換性のため残す）
+   * @param employeeEmail スタッフのメールアドレス
+   * @param eventData イベントデータ
+   * @returns カレンダーイベントID
+   */
+  async createGoogleCalendarEventForEmployee(
+    employeeId: string,
+    employeeEmail: string,
+    eventData: CalendarEventData
+  ): Promise<string> {
+    try {
+      // 会社アカウント（tenant@ifoo-oita.com）の認証済みクライアントを取得
+      const auth = await this.googleAuthService.getAuthenticatedClient();
+      const calendar = google.calendar({ version: 'v3', auth });
+
+      // イベントを作成
+      const event = {
+        summary: eventData.summary,
+        location: eventData.location,
+        description: eventData.description,
+        start: {
+          dateTime: eventData.startTime.toISOString(),
+          timeZone: 'Asia/Tokyo',
+        },
+        end: {
+          dateTime: eventData.endTime.toISOString(),
+          timeZone: 'Asia/Tokyo',
+        },
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'email', minutes: 24 * 60 }, // 1日前
+            { method: 'popup', minutes: 30 }, // 30分前
+          ],
+        },
+      };
+
+      // スタッフのメールアドレスをcalendarIdとして使用
+      console.log('[CalendarService] Creating Google Calendar event for employee (using company account: tenant@ifoo-oita.com)');
+      console.log('[CalendarService] Employee ID:', employeeId);
+      console.log('[CalendarService] Target calendar (email):', employeeEmail);
+      console.log('[CalendarService] Event details:', {
+        summary: event.summary,
+        location: event.location,
+        start: event.start.dateTime,
+        end: event.end.dateTime,
+      });
+      
+      const response = await calendar.events.insert({
+        calendarId: employeeEmail,
+        requestBody: event,
+      });
+
+      console.log('[CalendarService] Google Calendar event created successfully');
+      console.log('[CalendarService] Event ID:', response.data.id);
+      console.log('[CalendarService] Confirmed calendar ID:', employeeEmail);
+      return response.data.id!;
+    } catch (error: any) {
+      console.error('Create Google Calendar event for employee error:', error);
+      
+      // 認証エラーの場合は特別なエラーを投げる
+      if (error.message === 'GOOGLE_AUTH_REQUIRED') {
+        throw error;
+      }
+      
+      throw new Error(`Failed to create calendar event: ${error.message}`);
+    }
+  }
+
+  /**
    * Google Calendarイベントを作成
    * @param employeeEmail スタッフのメールアドレス
    * @param eventData イベントデータ

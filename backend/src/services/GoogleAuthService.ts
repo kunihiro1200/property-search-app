@@ -30,13 +30,25 @@ export class GoogleAuthService extends BaseRepository {
   }
 
   /**
-   * 会社アカウント用のemployee IDを初期化（管理者ユーザーを使用）
+   * 会社アカウント用のemployee IDを初期化（tenant@ifoo-oita.comを優先）
    */
   private async initializeCompanyAccountId() {
     try {
-      // 管理者ユーザーを取得（role='admin'の最初のユーザー）
+      // tenant@ifoo-oita.com を優先的に取得
+      const { data: tenantAccount, error: tenantError } = await this.table('employees')
+        .select('id, email')
+        .eq('email', 'tenant@ifoo-oita.com')
+        .single();
+
+      if (tenantAccount) {
+        this.companyAccountId = tenantAccount.id;
+        console.log('✅ Company calendar account ID initialized (tenant@ifoo-oita.com):', this.companyAccountId);
+        return;
+      }
+
+      // tenant@ifoo-oita.com が見つからない場合は、role='admin'の最初のユーザーを使用
       const { data, error } = await this.table('employees')
-        .select('id')
+        .select('id, email')
         .eq('role', 'admin')
         .limit(1)
         .single();
@@ -47,7 +59,7 @@ export class GoogleAuthService extends BaseRepository {
       }
 
       this.companyAccountId = data.id;
-      console.log('✅ Company calendar account ID initialized:', this.companyAccountId);
+      console.log('✅ Company calendar account ID initialized (fallback to admin):', this.companyAccountId, data.email);
     } catch (error) {
       console.error('Error initializing company account ID:', error);
     }
@@ -360,6 +372,53 @@ export class GoogleAuthService extends BaseRepository {
         access_token: accessToken,
         refresh_token: refreshToken,
       });
+    }
+
+    return client;
+  }
+
+  /**
+   * 認証済みOAuth2クライアントを取得（特定の従業員用）
+   * @param employeeId 従業員ID
+   * @returns 認証済みOAuth2クライアント
+   */
+  async getAuthenticatedClientForEmployee(employeeId: string) {
+    if (!this.oauth2Client) {
+      throw new Error('Google Calendar API is not configured');
+    }
+
+    // 新しいクライアントインスタンスを作成
+    const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+
+    const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+
+    // データベースから従業員のリフレッシュトークンを取得
+    const { data: tokenData, error } = await this.table(
+      'google_calendar_tokens'
+    )
+      .select('*')
+      .eq('employee_id', employeeId)
+      .single();
+
+    if (error || !tokenData) {
+      console.error('[GoogleAuthService] No calendar token found for employee:', employeeId);
+      throw new Error('GOOGLE_AUTH_REQUIRED');
+    }
+
+    const refreshToken = decrypt(tokenData.encrypted_refresh_token);
+    client.setCredentials({
+      refresh_token: refreshToken,
+    });
+
+    // アクセストークンを自動的に更新
+    try {
+      const { credentials } = await client.refreshAccessToken();
+      client.setCredentials(credentials);
+    } catch (error) {
+      console.error('[GoogleAuthService] Failed to refresh access token for employee:', employeeId, error);
+      throw new Error('GOOGLE_AUTH_REQUIRED');
     }
 
     return client;
