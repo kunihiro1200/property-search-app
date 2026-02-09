@@ -459,8 +459,25 @@ export default function BuyerDetailPage() {
     // プレースホルダーを置換
     const replacedContent = replacePlaceholders(contentWithLink);
     
+    // 2箇所目以降の「所在地：[住所]」を削除
+    const addressPattern = /所在地\s*[:：]\s*[^\n]+/g;
+    const addressMatches = replacedContent.match(addressPattern);
+    let finalContent = replacedContent;
+    
+    if (addressMatches && addressMatches.length > 1) {
+      // 1箇所目を保持し、2箇所目以降を削除
+      let firstFound = false;
+      finalContent = replacedContent.replace(addressPattern, (match) => {
+        if (!firstFound) {
+          firstFound = true;
+          return match; // 1箇所目は保持
+        }
+        return ''; // 2箇所目以降は削除
+      });
+    }
+    
     // 3行以上の連続した空行を1行に圧縮
-    const compressedContent = replacedContent.replace(/\n{3,}/g, '\n\n');
+    const compressedContent = finalContent.replace(/\n{3,}/g, '\n\n');
 
     // メッセージ長の検証（日本語SMS制限: 670文字）
     const isOverLimit = compressedContent.length > 670;
@@ -769,9 +786,23 @@ export default function BuyerDetailPage() {
   const simplifySmsSignature = (content: string): string => {
     let result = content;
 
-    // 内覧予約フォームのURLを含む文章を削除
-    const viewingFormPattern = /また、ご内覧希望の場合は、こちらからご予約お願いいたします[↓\s]*https:\/\/docs\.google\.com\/forms\/[^\s]+/g;
-    result = result.replace(viewingFormPattern, '');
+    // 「また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡くださいませ。」を削除
+    const otherPropertiesPattern = /また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡くださいませ。/g;
+    result = result.replace(otherPropertiesPattern, '');
+    
+    // 「ご不明な点等ございましたら」を「他社物件もご紹介できますので、」に置換
+    result = result.replace(/ご不明な点等ございましたら/g, '他社物件もご紹介できますので、');
+
+    // 内覧予約フォームのURLを含む文章を削除（複数のパターンに対応）
+    const viewingFormPatterns = [
+      /また、ご内覧希望の場合は、こちらからご予約お願いいたします[↓\s]*https:\/\/docs\.google\.com\/forms\/[^\s]+/g,
+      /内覧のご予約はこちらから[↓\s]*https:\/\/docs\.google\.com\/forms\/[^\s]+/g,
+      /ご内覧のご予約はこちらから[↓\s]*https:\/\/docs\.google\.com\/forms\/[^\s]+/g,
+    ];
+    
+    for (const pattern of viewingFormPatterns) {
+      result = result.replace(pattern, '');
+    }
 
     // 署名部分を簡略化（最後の署名欄を会社名、住所、電話番号、メアドのみに）
     const signaturePattern = /---+\s*\n([\s\S]*?)$/;
@@ -855,10 +886,12 @@ Email: <<会社メールアドレス>>`;
         nearbyPropertyLink,
       });
 
-      // 挿入位置を検索（「お気軽にお問い合わせください」の直前）
+      // 挿入位置を検索（「お気軽にお問い合わせください」の直後）
       const insertMarkers = [
+        'お気軽にお問い合わせくださいませ。',
         'お気軽にお問い合わせください。',
         'お気軽にお問い合わせください',
+        'お気軽にご連絡くださいませ。',
         'お気軽にご連絡ください。',
         'お気軽にご連絡ください',
       ];
