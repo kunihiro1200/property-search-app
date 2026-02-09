@@ -205,9 +205,24 @@ app.get('/api/public/properties', async (req, res) => {
           
           console.log(`✅ Returning ${paginatedProperties.length} nearby properties (total: ${total})`);
           
-          // 価格フィールドを計算
+          // 価格フィールドと画像を計算
           const propertiesWithPrice = paginatedProperties.map((property: any) => {
             const calculatedPrice = property.sales_price || property.listing_price || 0;
+            
+            // image_urlをimagesに変換（JSON配列または単一文字列に対応）
+            let images = [];
+            if (property.image_url) {
+              try {
+                // JSON配列としてパースを試みる
+                images = JSON.parse(property.image_url);
+              } catch (e) {
+                // パースに失敗した場合は単一の文字列として扱う
+                // 空文字列でない場合のみ配列に追加
+                if (property.image_url.trim()) {
+                  images = [property.image_url];
+                }
+              }
+            }
             
             return {
               ...property,
@@ -216,7 +231,7 @@ app.get('/api/public/properties', async (req, res) => {
                          property.atbb_status === '非公開（専任）' || property.atbb_status === 'E外し非公開' ? 'sold' : 
                          'available',
               is_clickable: true,
-              images: [], // 画像は後で取得
+              images,
             };
           });
           
