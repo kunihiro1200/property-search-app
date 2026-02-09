@@ -787,11 +787,14 @@ export default function BuyerDetailPage() {
     let result = content;
 
     // 「また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡くださいませ。」を削除
-    const otherPropertiesPattern = /また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡くださいませ。/g;
-    result = result.replace(otherPropertiesPattern, '');
+    result = result.replace(/また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡くださいませ。/g, '');
+    result = result.replace(/また、他社物件もご紹介できますので、気になる物件がございましたらお気軽にご連絡ください。/g, '');
     
     // 「ご不明な点等ございましたら」を「他社物件もご紹介できますので、」に置換
     result = result.replace(/ご不明な点等ございましたら/g, '他社物件もご紹介できますので、');
+    
+    // カンマの重複を修正（「、、」→「、」）
+    result = result.replace(/、、/g, '、');
 
     // 内覧予約フォームのURLを含む文章を削除（複数のパターンに対応）
     const viewingFormPatterns = [
