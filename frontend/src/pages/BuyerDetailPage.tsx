@@ -249,7 +249,7 @@ export default function BuyerDetailPage() {
       fetchInquiryHistoryTable();
       fetchRelatedBuyersCount();
       fetchActivities();
-      fetchTemplates();
+      // fetchTemplates(); // linkedPropertiesが取得された後に自動的に呼ばれるため、ここでは呼ばない
       fetchStaffInitials();
     }
   }, [buyer_number, isValidBuyerNumber]);
@@ -636,6 +636,8 @@ export default function BuyerDetailPage() {
   useEffect(() => {
     if (linkedProperties.length > 0) {
       fetchNearbyPropertiesCount();
+      // 物件種別に応じてSMSテンプレートを再フィルタリング
+      fetchTemplates();
     }
   }, [linkedProperties]);
 
@@ -668,13 +670,79 @@ export default function BuyerDetailPage() {
       const res = await api.get('/api/buyers/templates');
       const templates = res.data || [];
       
+      console.log('[fetchTemplates] 取得したテンプレート数:', templates.length);
+      console.log('[fetchTemplates] linkedProperties:', linkedProperties?.length || 0, '件');
+      
       // 全てのテンプレートをメールとSMS両方で使用可能にする
       // （ユーザーがどちらでも選択できるように）
       setEmailTemplates(templates);
-      setSmsTemplates(templates);
+      
+      // SMSテンプレートは物件種別に応じてフィルタリング
+      const filteredSmsTemplates = filterSmsTemplatesByPropertyType(templates);
+      console.log('[fetchTemplates] フィルタリング後のSMSテンプレート数:', filteredSmsTemplates.length);
+      console.log('[fetchTemplates] フィルタリング後のSMSテンプレート:', filteredSmsTemplates.map(t => t.subject));
+      setSmsTemplates(filteredSmsTemplates);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
     }
+  };
+  
+  /**
+   * 物件種別に応じてSMSテンプレートをフィルタリング
+   */
+  const filterSmsTemplatesByPropertyType = (templates: BuyerTemplate[]): BuyerTemplate[] => {
+    // 紐づいた物件がない場合は「資料請求メール（戸、マ）」のみ表示
+    if (!linkedProperties || linkedProperties.length === 0) {
+      console.log('[filterSmsTemplatesByPropertyType] 紐づいた物件なし → 資料請求メール（戸、マ）のみ表示');
+      return templates.filter(template => {
+        const templateName = template.subject || '';
+        // 「資料請求」以外のテンプレートは全て表示
+        if (!templateName.includes('資料請求')) {
+          return true;
+        }
+        // 「資料請求（戸、マ）」のみ表示
+        return templateName.includes('資料請求') && templateName.includes('戸') && templateName.includes('マ');
+      });
+    }
+    
+    // 最初の物件の種別を取得
+    const firstProperty = linkedProperties[0];
+    const propertyType = firstProperty.property_type;
+    console.log('[filterSmsTemplatesByPropertyType] 物件種別:', propertyType, '物件番号:', firstProperty.property_number);
+    console.log('[filterSmsTemplatesByPropertyType] テンプレート数:', templates.length);
+    console.log('[filterSmsTemplatesByPropertyType] テンプレート種別一覧:', templates.map(t => t.type));
+    
+    // 物件種別に応じてフィルタリング
+    return templates.filter(template => {
+      const templateType = template.type || '';
+      console.log('[filterSmsTemplatesByPropertyType] フィルタリング中:', templateType, '件名:', template.subject);
+      
+      // 「資料請求」以外のテンプレートは全て表示
+      if (!templateType.includes('資料請求')) {
+        console.log('[filterSmsTemplatesByPropertyType] 資料請求以外 → true');
+        return true;
+      }
+      
+      // 物件種別が「戸建」または「マンション」の場合
+      if (propertyType === '戸建' || propertyType === 'マンション') {
+        // 「資料請求（戸、マ）」のみ表示
+        const shouldShow = templateType.includes('資料請求') && templateType.includes('戸') && templateType.includes('マ');
+        console.log('[filterSmsTemplatesByPropertyType] 戸建/マンション:', templateType, '→', shouldShow);
+        return shouldShow;
+      }
+      
+      // 物件種別が「土地」の場合
+      if (propertyType === '土地') {
+        // 「資料請求（土）」のみ表示
+        const shouldShow = templateType.includes('資料請求') && templateType.includes('土') && !templateType.includes('マ');
+        console.log('[filterSmsTemplatesByPropertyType] 土地:', templateType, '→', shouldShow);
+        return shouldShow;
+      }
+      
+      // その他の場合（種別が土地/戸建/マンション以外）は「資料請求メール（戸、マ）」を表示
+      console.log('[filterSmsTemplatesByPropertyType] その他の種別:', propertyType, '→ 資料請求メール（戸、マ）のみ表示');
+      return templateType.includes('資料請求') && templateType.includes('戸') && templateType.includes('マ');
+    });
   };
 
   const fetchStaffInitials = async () => {
