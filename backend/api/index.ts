@@ -201,43 +201,48 @@ app.get('/api/public/properties', async (req, res) => {
         if (nearbyProperties.length > 0) {
           // ページネーション用の計算
           const total = nearbyProperties.length;
-          const paginatedProperties = nearbyProperties.slice(offset, offset + limit);
+          const paginatedPropertyNumbers = nearbyProperties
+            .slice(offset, offset + limit)
+            .map((p: any) => p.property_number);
           
-          console.log(`✅ Returning ${paginatedProperties.length} nearby properties (total: ${total})`);
+          console.log(`✅ Fetching details for ${paginatedPropertyNumbers.length} nearby properties (total: ${total})`);
           
-          // 価格フィールドと画像を計算
-          const propertiesWithPrice = paginatedProperties.map((property: any) => {
-            const calculatedPrice = property.sales_price || property.listing_price || 0;
-            
-            // image_urlをimagesに変換（JSON配列または単一文字列に対応）
-            let images = [];
-            if (property.image_url) {
+          // PropertyListingServiceを使用して物件詳細を取得（画像を含む）
+          const propertiesWithImages = await Promise.all(
+            paginatedPropertyNumbers.map(async (propertyNumber: string) => {
               try {
-                // JSON配列としてパースを試みる
-                images = JSON.parse(property.image_url);
-              } catch (e) {
-                // パースに失敗した場合は単一の文字列として扱う
-                // 空文字列でない場合のみ配列に追加
-                if (property.image_url.trim()) {
-                  images = [property.image_url];
+                const property = await propertyListingService.getPublicPropertyByNumber(propertyNumber);
+                if (!property) {
+                  console.error(`[API Endpoint] Property not found: ${propertyNumber}`);
+                  return null;
                 }
+                
+                // 価格フィールドを計算
+                const calculatedPrice = property.sales_price || property.listing_price || 0;
+                
+                return {
+                  ...property,
+                  price: calculatedPrice,
+                  badge_type: property.atbb_status === 'atbb成約済み' ? 'sold' : 
+                             property.atbb_status === '非公開（専任）' || property.atbb_status === 'E外し非公開' ? 'sold' : 
+                             'available',
+                  is_clickable: true,
+                };
+              } catch (error: any) {
+                console.error(`[API Endpoint] Error fetching property ${propertyNumber}:`, error);
+                return null;
               }
-            }
-            
-            return {
-              ...property,
-              price: calculatedPrice,
-              badge_type: property.atbb_status === 'atbb成約済み' ? 'sold' : 
-                         property.atbb_status === '非公開（専任）' || property.atbb_status === 'E外し非公開' ? 'sold' : 
-                         'available',
-              is_clickable: true,
-              images,
-            };
-          });
+            })
+          );
+          
+          // nullを除外
+          const validProperties = propertiesWithImages.filter((p: any) => p !== null);
+          
+          console.log(`✅ Returning ${validProperties.length} nearby properties with images (total: ${total})`);
           
           return res.json({ 
             success: true, 
-            properties: propertiesWithPrice,
+            properties: validProperties,
             pagination: {
               total,
               limit,
