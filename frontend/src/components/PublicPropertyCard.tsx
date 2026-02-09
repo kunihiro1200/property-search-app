@@ -42,10 +42,12 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       return;
     }
     
-    // useSearchParamsから確実にcanHideパラメータを取得
+    // useSearchParamsから確実にcanHideパラメータとnearbyパラメータを取得
     const canHide = searchParams.get('canHide');
+    const nearby = searchParams.get('nearby');
     
     console.log('[PublicPropertyCard] handleClick - canHide:', canHide);
+    console.log('[PublicPropertyCard] handleClick - nearby:', nearby);
     console.log('[PublicPropertyCard] handleClick - property:', property.property_number);
     console.log('[PublicPropertyCard] handleClick - current URL:', window.location.href);
     console.log('[PublicPropertyCard] handleClick - searchParams:', Object.fromEntries(searchParams.entries()));
@@ -65,16 +67,21 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     const currentScrollPosition = window.scrollY || window.pageYOffset;
     
     // ナビゲーション状態にスクロール位置を追加
+    // nearbyパラメータがURLにある場合は、navigationState.filtersに含める
     const fullNavigationState: NavigationState = {
       currentPage: navigationState.currentPage,
       scrollPosition: currentScrollPosition,
       viewMode: navigationState.viewMode, // viewModeを保存
-      filters: navigationState.filters
+      filters: {
+        ...navigationState.filters,
+        nearby: nearby || navigationState.filters.nearby // URLのnearbyパラメータを優先
+      }
     };
     
     // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
     sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify(fullNavigationState));
     console.log('[PublicPropertyCard] Saved state to sessionStorage:', fullNavigationState);
+    console.log('[PublicPropertyCard] Saved nearby parameter:', fullNavigationState.filters.nearby);
     
     // canHideパラメータを引き継ぐ
     const targetUrl = canHide === 'true' 
