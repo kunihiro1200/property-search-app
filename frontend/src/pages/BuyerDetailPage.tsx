@@ -1757,6 +1757,7 @@ Email: <<会社メールアドレス>>`;
                             buyerId={buyer?.id || buyer_number}
                             enableConflictDetection={true}
                             showEditIndicator={true}
+                            oneClickDropdown={true}
                           />
                         </Grid>
                       );
@@ -1783,6 +1784,7 @@ Email: <<会社メールアドレス>>`;
                             buyerId={buyer?.id || buyer_number}
                             enableConflictDetection={true}
                             showEditIndicator={true}
+                            oneClickDropdown={true}
                           />
                         </Grid>
                       );
@@ -2078,6 +2080,7 @@ Email: <<会社メールアドレス>>`;
                             buyerId={buyer?.id || buyer_number}
                             enableConflictDetection={true}
                             showEditIndicator={true}
+                            oneClickDropdown={true}
                           />
                         </Grid>
                       );
@@ -2104,6 +2107,7 @@ Email: <<会社メールアドレス>>`;
                             buyerId={buyer?.id || buyer_number}
                             enableConflictDetection={true}
                             showEditIndicator={true}
+                            oneClickDropdown={true}
                           />
                         </Grid>
                       );
@@ -2238,6 +2242,7 @@ Email: <<会社メールアドレス>>`;
                               buyerId={buyer?.id || buyer_number}
                               enableConflictDetection={true}
                               showEditIndicator={true}
+                              oneClickDropdown={true}
                             />
                           </Box>
                         </Grid>
@@ -2265,6 +2270,7 @@ Email: <<会社メールアドレス>>`;
                             buyerId={buyer?.id || buyer_number}
                             enableConflictDetection={true}
                             showEditIndicator={true}
+                            oneClickDropdown={true}
                           />
                         </Grid>
                       );
@@ -2432,6 +2438,7 @@ Email: <<会社メールアドレス>>`;
                               buyerId={buyer?.id || buyer_number}
                               enableConflictDetection={true}
                               showEditIndicator={true}
+                              oneClickDropdown={true}
                             />
                           </Box>
                         </Grid>

@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Tooltip,
   Autocomplete,
+  ClickAwayListener,
 } from '@mui/material';
 import {
   Lock as LockIcon,
@@ -38,6 +39,7 @@ export interface InlineEditableFieldProps {
   alwaysShowBorder?: boolean;  // 常に囲い枠を表示するかどうか
   borderPlaceholder?: string;  // 囲い枠内に表示するプレースホルダー
   showEditIndicator?: boolean;  // 編集可能インジケーターを常時表示するか（デフォルト: true）
+  oneClickDropdown?: boolean;  // プルダウンを1クリックで開くか（デフォルト: false）
 }
 
 export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
@@ -58,9 +60,11 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
   alwaysShowBorder = false,
   borderPlaceholder,
   showEditIndicator = true,
+  oneClickDropdown = false,
 }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Cache field metadata to avoid repeated lookups
   const fieldMetadata = useMemo(() => getFieldMetadata(fieldName), [fieldName]);
@@ -122,8 +126,26 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
 
   // Handle click to activate edit mode
   const handleClick = () => {
-    if (isEditable && !isEditing) {
+    if (!isEditable) return;
+    
+    if (fieldType === 'dropdown' && oneClickDropdown) {
+      // プルダウンの1クリック編集が有効な場合は即座に開く
+      setDropdownOpen(true);
+    } else if (!isEditing) {
+      // その他のフィールドは従来通り編集モードに入る
       startEdit();
+    }
+  };
+
+  // Handle dropdown change with auto-save (for one-click dropdown)
+  const handleDropdownChange = async (newValue: any) => {
+    if (!oneClickDropdown) return;
+    
+    try {
+      await onSave(newValue);
+      setDropdownOpen(false);
+    } catch (err) {
+      console.error('Failed to save dropdown value:', err);
     }
   };
 
@@ -388,7 +410,7 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
       {label && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
           {label}
-          {isEditing && (
+          {isEditing && !(fieldType === 'dropdown' && oneClickDropdown) && (
             <Typography component="span" variant="caption" color="primary" sx={{ ml: 1 }}>
               編集中
             </Typography>
@@ -396,7 +418,8 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
         </Typography>
       )}
       
-      {isEditing ? (
+      {/* oneClickDropdownが有効な場合は編集モードをスキップ */}
+      {isEditing && !(fieldType === 'dropdown' && oneClickDropdown) ? (
         <Box sx={{ position: 'relative' }}>
           {renderInput()}
           {isSaving && (
@@ -406,69 +429,166 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
           )}
         </Box>
       ) : (
-        <Box
-          onClick={handleClick}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          sx={{
-            display: 'flex',
-            alignItems: (alwaysShowBorder || showEditIndicator) && fieldType === 'textarea' ? 'flex-start' : 'center',
-            justifyContent: 'space-between',
-            px: 1.5,
-            py: 1,
-            borderRadius: 1,
-            cursor: isEditable ? 'pointer' : 'default',
-            border: '1px solid',
-            // 編集可能フィールドには常時ボーダーを表示（showEditIndicator有効時）
-            borderColor: isEditable && showEditIndicator
-              ? (isHovered ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
-              : (alwaysShowBorder 
-                  ? (isEditable && isHovered ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
-                  : (isEditable && isHovered ? 'primary.main' : 'transparent')),
-            bgcolor: isEditable && isHovered ? 'action.hover' : 
-                     (alwaysShowBorder || (isEditable && showEditIndicator) ? 'background.paper' : 'transparent'),
-            transition: 'all 0.2s ease',
-            minHeight: (alwaysShowBorder || showEditIndicator) && fieldType === 'textarea' ? 120 : 36,
-            '&:hover': isEditable ? {
-              borderColor: 'primary.main',
-              bgcolor: 'action.hover',
-            } : {},
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: fieldType === 'textarea' ? 'pre-wrap' : 'normal',
-              wordBreak: 'break-word',
-              flex: 1,
-              color: (value === null || value === undefined || value === '') ? 'text.disabled' : 'text.primary',
-            }}
-          >
-            {getDisplayValue()}
-          </Typography>
-          
-          {/* ドロップダウンフィールドには常時矢印アイコンを表示 */}
-          {isEditable && fieldType === 'dropdown' && showEditIndicator && (
-            <ArrowDropDownIcon 
-              sx={{ 
-                ml: 0.5, 
-                fontSize: 20, 
-                color: isHovered ? 'primary.main' : 'text.secondary',
-                transition: 'color 0.2s ease',
-              }} 
-            />
-          )}
-          
-          {!isEditable && (
-            <Tooltip title={effectivePermissions.reason || '編集不可'}>
-              <LockIcon sx={{ ml: 1, fontSize: 16, color: 'text.disabled' }} />
-            </Tooltip>
-          )}
-          
-          {isEditable && isHovered && (
-            <Typography variant="caption" color="primary" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
-              クリックして編集
-            </Typography>
+        <Box sx={{ position: 'relative' }}>
+          {/* oneClickDropdownが有効な場合はAutocompleteを追加 */}
+          {fieldType === 'dropdown' && oneClickDropdown ? (
+            <ClickAwayListener onClickAway={() => setDropdownOpen(false)}>
+              <Box sx={{ position: 'relative' }}>
+                {/* 表示用のBox */}
+                <Box
+                  onClick={() => {
+                    if (isEditable) {
+                      setDropdownOpen(true);
+                    }
+                  }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                    cursor: isEditable ? 'pointer' : 'default',
+                    border: '1px solid',
+                    borderColor: isEditable && showEditIndicator
+                      ? (isHovered || dropdownOpen ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
+                      : 'transparent',
+                    bgcolor: isEditable && (isHovered || dropdownOpen) ? 'action.hover' : 
+                             (isEditable && showEditIndicator ? 'background.paper' : 'transparent'),
+                    transition: 'all 0.2s ease',
+                    minHeight: 36,
+                    '&:hover': isEditable ? {
+                      borderColor: 'primary.main',
+                      bgcolor: 'action.hover',
+                    } : {},
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      flex: 1,
+                      color: (value === null || value === undefined || value === '') ? 'text.disabled' : 'text.primary',
+                    }}
+                  >
+                    {getDisplayValue()}
+                  </Typography>
+                  
+                  {isEditable && showEditIndicator && (
+                    <ArrowDropDownIcon 
+                      sx={{ 
+                        ml: 0.5, 
+                        fontSize: 20, 
+                        color: isHovered || dropdownOpen ? 'primary.main' : 'text.secondary',
+                        transition: 'color 0.2s ease',
+                      }} 
+                    />
+                  )}
+                  
+                  {!isEditable && (
+                    <Tooltip title={effectivePermissions.reason || '編集不可'}>
+                      <LockIcon sx={{ ml: 1, fontSize: 16, color: 'text.disabled' }} />
+                    </Tooltip>
+                  )}
+                </Box>
+                
+                {/* Autocompleteドロップダウン */}
+                {dropdownOpen && (
+                  <Box sx={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1300, mt: 0.5 }}>
+                    <Autocomplete
+                      open={true}
+                      options={options}
+                      groupBy={options.some(opt => opt.category) ? (option) => option.category || '' : undefined}
+                      getOptionLabel={(option) => option.label}
+                      value={options.find(opt => opt.value === value) || null}
+                      onChange={(_, newValue) => {
+                        if (newValue) {
+                          handleDropdownChange(newValue.value);
+                        }
+                      }}
+                      disabled={!isEditable}
+                      disableCloseOnSelect={false}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          autoFocus
+                          placeholder="検索..."
+                          size="small"
+                        />
+                      )}
+                    />
+                  </Box>
+                )}
+              </Box>
+            </ClickAwayListener>
+          ) : (
+            <Box
+              onClick={handleClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              sx={{
+                display: 'flex',
+                alignItems: (alwaysShowBorder || showEditIndicator) && fieldType === 'textarea' ? 'flex-start' : 'center',
+                justifyContent: 'space-between',
+                px: 1.5,
+                py: 1,
+                borderRadius: 1,
+                cursor: isEditable ? 'pointer' : 'default',
+                border: '1px solid',
+                // 編集可能フィールドには常時ボーダーを表示（showEditIndicator有効時）
+                borderColor: isEditable && showEditIndicator
+                  ? (isHovered ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
+                  : (alwaysShowBorder 
+                      ? (isEditable && isHovered ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
+                      : (isEditable && isHovered ? 'primary.main' : 'transparent')),
+                bgcolor: isEditable && isHovered ? 'action.hover' : 
+                         (alwaysShowBorder || (isEditable && showEditIndicator) ? 'background.paper' : 'transparent'),
+                transition: 'all 0.2s ease',
+                minHeight: (alwaysShowBorder || showEditIndicator) && fieldType === 'textarea' ? 120 : 36,
+                '&:hover': isEditable ? {
+                  borderColor: 'primary.main',
+                  bgcolor: 'action.hover',
+                } : {},
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  whiteSpace: fieldType === 'textarea' ? 'pre-wrap' : 'normal',
+                  wordBreak: 'break-word',
+                  flex: 1,
+                  color: (value === null || value === undefined || value === '') ? 'text.disabled' : 'text.primary',
+                }}
+              >
+                {getDisplayValue()}
+              </Typography>
+              
+              {/* ドロップダウンフィールドには常時矢印アイコンを表示 */}
+              {isEditable && fieldType === 'dropdown' && showEditIndicator && (
+                <ArrowDropDownIcon 
+                  sx={{ 
+                    ml: 0.5, 
+                    fontSize: 20, 
+                    color: isHovered ? 'primary.main' : 'text.secondary',
+                    transition: 'color 0.2s ease',
+                  }} 
+                />
+              )}
+              
+              {!isEditable && (
+                <Tooltip title={effectivePermissions.reason || '編集不可'}>
+                  <LockIcon sx={{ ml: 1, fontSize: 16, color: 'text.disabled' }} />
+                </Tooltip>
+              )}
+              
+              {/* oneClickDropdownが有効な場合は「クリックして編集」を非表示 */}
+              {isEditable && isHovered && !(fieldType === 'dropdown' && oneClickDropdown) && (
+                <Typography variant="caption" color="primary" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
+                  クリックして編集
+                </Typography>
+              )}
+            </Box>
           )}
         </Box>
       )}
@@ -511,6 +631,7 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
     prevProps.alwaysShowBorder === nextProps.alwaysShowBorder &&
     prevProps.borderPlaceholder === nextProps.borderPlaceholder &&
     prevProps.showEditIndicator === nextProps.showEditIndicator &&
+    prevProps.oneClickDropdown === nextProps.oneClickDropdown &&
     JSON.stringify(prevProps.options) === JSON.stringify(nextProps.options) &&
     JSON.stringify(prevProps.permissions) === JSON.stringify(nextProps.permissions)
   );

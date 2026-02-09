@@ -664,6 +664,11 @@ export default function BuyerViewingResultPage() {
               onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
               fieldType="dropdown"
               options={LATEST_STATUS_OPTIONS}
+              fieldName="latest_status"
+              buyerId={buyer_number}
+              enableConflictDetection={true}
+              showEditIndicator={true}
+              oneClickDropdown={true}
             />
           </Box>
         </Box>

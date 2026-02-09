@@ -32,6 +32,7 @@ import DuplicateIndicatorBadge from '../components/DuplicateIndicatorBadge';
 import DuplicateDetailsModal from '../components/DuplicateDetailsModal';
 import DocumentModal from '../components/DocumentModal';
 import ImageSelectorModal from '../components/ImageSelectorModal';
+import { InlineEditableField } from '../components/InlineEditableField';
 import RichTextEmailEditor from '../components/RichTextEmailEditor';
 import RichTextCommentEditor from '../components/RichTextCommentEditor';
 import { PerformanceMetricsSection } from '../components/PerformanceMetricsSection';
@@ -67,6 +68,59 @@ interface SMSTemplate {
   label: string;
   generator: (seller: Seller, property: PropertyInfo | null, employees?: any[]) => string;
 }
+
+// ドロップダウンフィールドの選択肢定数
+const PROPERTY_TYPE_OPTIONS = [
+  { label: '戸建て', value: 'detached_house' },
+  { label: 'マンション', value: 'apartment' },
+  { label: '土地', value: 'land' },
+  { label: '商業用', value: 'commercial' },
+];
+
+const STRUCTURE_OPTIONS = [
+  { label: '未選択', value: '' },
+  { label: '木造', value: '木造' },
+  { label: '軽量鉄骨', value: '軽量鉄骨' },
+  { label: '鉄骨', value: '鉄骨' },
+  { label: '他', value: '他' },
+];
+
+const SELLER_SITUATION_OPTIONS = [
+  { label: '未選択', value: '' },
+  { label: '居（居住中）', value: '居' },
+  { label: '空（空き家）', value: '空' },
+  { label: '賃（賃貸中）', value: '賃' },
+  { label: '古有（古屋あり）', value: '古有' },
+  { label: '更（更地）', value: '更' },
+];
+
+const STATUS_OPTIONS = [
+  { label: '追客中', value: '追客中' },
+  { label: '追客不要(未訪問）', value: '追客不要(未訪問）' },
+  { label: '除外済追客不要', value: '除外済追客不要' },
+  { label: '除外後追客中', value: '除外後追客中' },
+  { label: '専任媒介', value: '専任媒介' },
+  { label: '一般媒介', value: '一般媒介' },
+  { label: 'リースバック（専任）', value: 'リースバック（専任）' },
+  { label: '他決→追客', value: '他決→追客' },
+  { label: '他決→追客不要', value: '他決→追客不要' },
+  { label: '他決→専任', value: '他決→専任' },
+  { label: '他決→一般', value: '他決→一般' },
+  { label: '専任→他社専任', value: '専任→他社専任' },
+  { label: '一般→他決', value: '一般→他決' },
+  { label: '他社買取', value: '他社買取' },
+  { label: '訪問後（担当付）追客不要', value: '訪問後（担当付）追客不要' },
+];
+
+const CONFIDENCE_OPTIONS = [
+  { label: 'A（売る気あり）', value: 'A' },
+  { label: 'B（売る気あるがまだ先の話）', value: 'B' },
+  { label: 'B\'（売る気は全く無い）', value: 'B\'' },
+  { label: 'C（電話が繋がらない）', value: 'C' },
+  { label: 'D（再建築不可）', value: 'D' },
+  { label: 'E（収益物件）', value: 'E' },
+  { label: 'ダブり（重複している）', value: 'ダブり' },
+];
 
 const CallModePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -409,6 +463,12 @@ const CallModePage = () => {
     'at-homeの掲載を見て',
     '2件目以降査定'
   ];
+
+  // サイトオプション（InlineEditableField用）
+  const SITE_OPTIONS = siteOptions.map(option => ({
+    label: option,
+    value: option,
+  }));
 
   // 競合会社リスト
   const competitorCompanies = [
@@ -2817,70 +2877,125 @@ HP：https://ifoo-oita.com/
                 
                 // 表示モード（propertyまたはsellerの直接フィールドから表示）
                 return (
-                  <>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        物件住所
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {property?.address || seller?.propertyAddress || '未登録'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        物件種別
-                      </Typography>
-                      <Typography variant="body1">{getPropertyTypeLabel(property?.propertyType || seller?.propertyType || '')}</Typography>
-                    </Box>
-                    {(property?.landArea || seller?.landArea) && (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary">
-                          土地面積
+                          物件住所
                         </Typography>
-                        <Typography variant="body1">{property?.landArea || seller?.landArea} m²</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {property?.address || seller?.propertyAddress || '未登録'}
+                        </Typography>
                       </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <InlineEditableField
+                        label="物件種別"
+                        value={property?.propertyType || seller?.propertyType || ''}
+                        fieldName="propertyType"
+                        fieldType="dropdown"
+                        options={PROPERTY_TYPE_OPTIONS}
+                        onSave={async (newValue) => {
+                          await api.put(`/api/sellers/${id}`, {
+                            propertyType: newValue,
+                          });
+                          // ローカル状態を更新
+                          setSeller(prev => prev ? { ...prev, propertyType: newValue } : prev);
+                          setEditedPropertyType(newValue);
+                        }}
+                        buyerId={id}
+                        enableConflictDetection={true}
+                        showEditIndicator={true}
+                        oneClickDropdown={true}
+                      />
+                    </Grid>
+                    
+                    {(property?.landArea || seller?.landArea) && (
+                      <Grid item xs={12}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            土地面積
+                          </Typography>
+                          <Typography variant="body1">{property?.landArea || seller?.landArea} m²</Typography>
+                        </Box>
+                      </Grid>
                     )}
                     {(property?.buildingArea || seller?.buildingArea) && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          建物面積
-                        </Typography>
-                        <Typography variant="body1">{property?.buildingArea || seller?.buildingArea} m²</Typography>
-                      </Box>
+                      <Grid item xs={12}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            建物面積
+                          </Typography>
+                          <Typography variant="body1">{property?.buildingArea || seller?.buildingArea} m²</Typography>
+                        </Box>
+                      </Grid>
                     )}
                     {(property?.buildYear || seller?.buildYear) && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          築年
-                        </Typography>
-                        <Typography variant="body1">{property?.buildYear || seller?.buildYear}年</Typography>
-                      </Box>
+                      <Grid item xs={12}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            築年
+                          </Typography>
+                          <Typography variant="body1">{property?.buildYear || seller?.buildYear}年</Typography>
+                        </Box>
+                      </Grid>
                     )}
                     {(property?.floorPlan || seller?.floorPlan) && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          間取り
-                        </Typography>
-                        <Typography variant="body1">{property?.floorPlan || seller?.floorPlan}</Typography>
-                      </Box>
+                      <Grid item xs={12}>
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            間取り
+                          </Typography>
+                          <Typography variant="body1">{property?.floorPlan || seller?.floorPlan}</Typography>
+                        </Box>
+                      </Grid>
                     )}
-                    {(property?.structure || seller?.structure) && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          構造
-                        </Typography>
-                        <Typography variant="body1">{property?.structure || seller?.structure}</Typography>
-                      </Box>
-                    )}
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        状況（売主）
-                      </Typography>
-                      <Typography variant="body1">
-                        {(property?.currentStatus || seller?.currentStatus) ? getSellerSituationLabel(property?.currentStatus || seller?.currentStatus || '') : '未設定'}
-                      </Typography>
-                    </Box>
-                  </>
+                    
+                    <Grid item xs={12}>
+                      <InlineEditableField
+                        label="構造"
+                        value={property?.structure || seller?.structure || ''}
+                        fieldName="structure"
+                        fieldType="dropdown"
+                        options={STRUCTURE_OPTIONS}
+                        onSave={async (newValue) => {
+                          await api.put(`/api/sellers/${id}`, {
+                            structure: newValue,
+                          });
+                          // ローカル状態を更新
+                          setSeller(prev => prev ? { ...prev, structure: newValue } : prev);
+                          setEditedStructure(newValue);
+                        }}
+                        buyerId={id}
+                        enableConflictDetection={true}
+                        showEditIndicator={true}
+                        oneClickDropdown={true}
+                      />
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <InlineEditableField
+                        label="状況（売主）"
+                        value={property?.currentStatus || seller?.currentStatus || ''}
+                        fieldName="currentStatus"
+                        fieldType="dropdown"
+                        options={SELLER_SITUATION_OPTIONS}
+                        onSave={async (newValue) => {
+                          await api.put(`/api/sellers/${id}`, {
+                            currentStatus: newValue,
+                          });
+                          // ローカル状態を更新
+                          setSeller(prev => prev ? { ...prev, currentStatus: newValue } : prev);
+                          setEditedSellerSituation(newValue);
+                        }}
+                        buyerId={id}
+                        enableConflictDetection={true}
+                        showEditIndicator={true}
+                        oneClickDropdown={true}
+                      />
+                    </Grid>
+                  </Grid>
                 );
               })()}
             </Paper>
@@ -3285,22 +3400,25 @@ HP：https://ifoo-oita.com/
                 )}
 
                 <Grid item xs={12}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>確度</InputLabel>
-                    <Select
-                      value={editedConfidence}
-                      label="確度"
-                      onChange={(e) => setEditedConfidence(e.target.value as ConfidenceLevel)}
-                    >
-                      <MenuItem value={ConfidenceLevel.A}>A（売る気あり）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.B}>B（売る気あるがまだ先の話）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.B_PRIME}>B'（売る気は全く無い）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.C}>C（電話が繋がらない）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.D}>D（再建築不可）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.E}>E（収益物件）</MenuItem>
-                      <MenuItem value={ConfidenceLevel.DUPLICATE}>ダブり（重複している）</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <InlineEditableField
+                    label="確度"
+                    value={seller?.confidence || 'B'}
+                    fieldName="confidence"
+                    fieldType="dropdown"
+                    options={CONFIDENCE_OPTIONS}
+                    onSave={async (newValue) => {
+                      await api.put(`/api/sellers/${id}`, {
+                        confidence: newValue,
+                      });
+                      // ローカル状態を更新
+                      setSeller(prev => prev ? { ...prev, confidence: newValue } : prev);
+                      setEditedConfidence(newValue as ConfidenceLevel);
+                    }}
+                    buyerId={id}
+                    enableConflictDetection={true}
+                    showEditIndicator={true}
+                    oneClickDropdown={true}
+                  />
                 </Grid>
 
                 <Grid item xs={12}>
@@ -4355,29 +4473,32 @@ HP：https://ifoo-oita.com/
               <Typography variant="h6">
                 📌 他
               </Typography>
-              <Button
-                size="small"
-                onClick={() => {
-                  if (editingSite) {
-                    setEditedSite(seller?.site || '');
-                  }
-                  setEditingSite(!editingSite);
-                }}
-              >
-                {editingSite ? 'キャンセル' : '編集'}
-              </Button>
             </Box>
             <Paper sx={{ p: 2, mb: 3 }}>
-              {!editingSite ? (
-                // 表示モード
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    サイト
-                  </Typography>
-                  <Typography variant="body1" sx={{ mb: 2 }}>
-                    {seller?.site || '未設定'}
-                  </Typography>
-                  
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <InlineEditableField
+                    label="サイト"
+                    value={seller?.site || ''}
+                    fieldName="site"
+                    fieldType="dropdown"
+                    options={SITE_OPTIONS}
+                    onSave={async (newValue) => {
+                      await api.put(`/api/sellers/${id}`, {
+                        site: newValue,
+                      });
+                      // ローカル状態を更新
+                      setSeller(prev => prev ? { ...prev, site: newValue } : prev);
+                      setEditedSite(newValue);
+                    }}
+                    buyerId={id}
+                    enableConflictDetection={true}
+                    showEditIndicator={true}
+                    oneClickDropdown={true}
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
                   {/* 除外サイト */}
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                     除外サイト
@@ -4419,42 +4540,8 @@ HP：https://ifoo-oita.com/
                   >
                     {getExclusionCriteria()}
                   </Typography>
-                </Box>
-              ) : (
-                // 編集モード
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>サイト</InputLabel>
-                      <Select
-                        value={editedSite}
-                        label="サイト"
-                        onChange={(e) => setEditedSite(e.target.value)}
-                      >
-                        <MenuItem value="">
-                          <em>未選択</em>
-                        </MenuItem>
-                        {siteOptions.map((option) => (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={savingSite ? <CircularProgress size={20} /> : <Save />}
-                      onClick={handleSaveSite}
-                      disabled={savingSite}
-                    >
-                      {savingSite ? '保存中...' : '保存'}
-                    </Button>
-                  </Grid>
                 </Grid>
-              )}
+              </Grid>
             </Paper>
           </Grid>
 

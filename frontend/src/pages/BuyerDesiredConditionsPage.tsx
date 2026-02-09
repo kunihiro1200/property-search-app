@@ -220,8 +220,13 @@ export default function BuyerDesiredConditionsPage() {
                     value={buyer[field.key]}
                     onSave={(newValue) => handleInlineFieldSave(field.key, newValue)}
                     fieldType={field.fieldType || 'text'}
+                    fieldName={field.key}
                     options={field.options}
                     multiline={false}
+                    buyerId={buyer_number}
+                    enableConflictDetection={true}
+                    showEditIndicator={true}
+                    oneClickDropdown={field.fieldType === 'dropdown'}
                   />
                 ) : (
                   <Typography variant="body2">
