@@ -259,6 +259,28 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
 });
 
 // Routes
+// 短縮URLリダイレクト（最優先 - 他のルートより前に定義）
+app.get('/p/:propertyNumber', (req, res) => {
+  const { propertyNumber } = req.params;
+  
+  // バリデーション: 物件番号の形式チェック（例: AA9831, AA13501-2）
+  const propertyNumberPattern = /^[A-Z]{2}\d{4,5}(-\d+)?$/;
+  if (!propertyNumberPattern.test(propertyNumber)) {
+    return res.status(400).json({
+      error: '無効な物件番号形式です'
+    });
+  }
+  
+  // リダイレクト先URL
+  const redirectUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
+  
+  // HTTP 301 Permanent Redirect
+  res.setHeader('Location', redirectUrl);
+  res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1年間キャッシュ
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains'); // HSTS
+  res.status(301).end();
+});
+
 // 認証ルート（ローカルと本番の両方に対応）
 app.use('/auth', authSupabaseRoutes);
 app.use('/api/auth', authSupabaseRoutes);  // 本番環境用

@@ -423,7 +423,7 @@ export default function BuyerDetailPage() {
     });
   };
 
-  const handleSmsTemplateSelect = (templateId: string) => {
+  const handleSmsTemplateSelect = async (templateId: string) => {
     if (!templateId) return;
 
     const template = smsTemplates.find(t => t.id === templateId);
@@ -436,15 +436,19 @@ export default function BuyerDetailPage() {
       contentLength: template.content.length,
     });
 
-    // SMS用に署名を簡略化してからプレースホルダーを置換
+    // SMS用に署名を簡略化
     const simplifiedContent = simplifySmsSignature(template.content);
-    const replacedContent = replacePlaceholders(simplifiedContent);
+    
+    // 近隣物件リンクを挿入（プレースホルダー置換前にチェック）
+    const contentWithLink = await insertNearbyPropertyLink(simplifiedContent);
+    
+    // プレースホルダーを置換
+    const replacedContent = replacePlaceholders(contentWithLink);
 
     // メッセージ長の検証（日本語SMS制限: 670文字）
     const isOverLimit = replacedContent.length > 670;
     
     if (isOverLimit) {
-      // エラーメッセージを表示するが、ダイアログも開く
       setSnackbar({
         open: true,
         message: `メッセージが長すぎます（${replacedContent.length}文字 / 670文字制限）。内容を確認してください。`,
@@ -452,14 +456,13 @@ export default function BuyerDetailPage() {
       });
     }
 
-    // 確認ダイアログを表示（文字数オーバーでも表示）
-    // 確認ダイアログを表示（文字数オーバーでも表示）
+    // 確認ダイアログを表示
     setConfirmDialog({
       open: true,
       type: 'sms',
       template: {
         ...template,
-        content: replacedContent,
+        content: replacedContent, // プレースホルダー置換後の本文
       },
     });
   };
@@ -764,6 +767,115 @@ Email: <<会社メールアドレス>>`;
     }
 
     return result;
+  };
+
+  /**
+   * 近隣物件リンクをSMS本文に挿入（単一リンク方式）
+   * @param content - プレースホルダー置換前のSMS本文
+   * @returns 近隣物件リンクが挿入されたSMS本文
+   */
+  const insertNearbyPropertyLink = async (content: string): Promise<string> => {
+    console.log('[insertNearbyPropertyLink] Starting...', {
+      contentLength: content.length,
+      linkedPropertiesCount: linkedProperties?.length || 0,
+      hasAddressPlaceholder: content.includes('<<住居表示>>') || content.includes('<<住居表示Pinrich>>'),
+    });
+
+    // 条件1: 所在地プレースホルダーが含まれているか確認
+    const hasAddressPlaceholder = content.includes('<<住居表示>>') || 
+                                   content.includes('<<住居表示Pinrich>>');
+    
+    // 条件2: 買主に紐づいた物件が存在するか確認
+    const hasLinkedProperty = linkedProperties && linkedProperties.length > 0;
+    
+    console.log('[insertNearbyPropertyLink] Conditions:', {
+      hasAddressPlaceholder,
+      hasLinkedProperty,
+      linkedProperties: linkedProperties?.map(p => p.property_number),
+    });
+
+    // 条件を満たさない場合は元の本文をそのまま返す
+    if (!hasAddressPlaceholder || !hasLinkedProperty) {
+      console.log('[insertNearbyPropertyLink] Conditions not met, returning original content');
+      return content;
+    }
+    
+    // 近隣物件を取得
+    try {
+      const firstProperty = linkedProperties[0];
+      const res = await api.get(`/api/buyers/${buyer_number}/nearby-properties`, {
+        params: { propertyNumber: firstProperty.property_number }
+      });
+      
+      const nearbyProperties = res.data.nearbyProperties || [];
+      
+      console.log('[insertNearbyPropertyLink] Nearby properties:', {
+        count: nearbyProperties.length,
+        properties: nearbyProperties.map((p: any) => p.property_number),
+      });
+      
+      // 近隣物件がない場合は元の本文をそのまま返す
+      if (nearbyProperties.length === 0) {
+        console.log('[insertNearbyPropertyLink] No nearby properties found');
+        return content;
+      }
+      
+      // 単一リンク方式：公開物件サイトの一覧ページに nearbyパラメータを付与
+      const nearbyPropertyUrl = `https://property-site-frontend-kappa.vercel.app/public/properties?nearby=${firstProperty.property_number}`;
+      
+      // 近隣物件リンクテキスト
+      const nearbyPropertyLink = `\n類似物件はこちらから\n${nearbyPropertyUrl}\n`;
+      
+      console.log('[insertNearbyPropertyLink] Generated single link:', {
+        count: nearbyProperties.length,
+        basePropertyNumber: firstProperty.property_number,
+        nearbyPropertyLink,
+      });
+
+      // 挿入位置を検索（「お気軽にお問い合わせください」の直前）
+      const insertMarkers = [
+        'お気軽にお問い合わせください。',
+        'お気軽にお問い合わせください',
+        'お気軽にご連絡ください。',
+        'お気軽にご連絡ください',
+      ];
+      
+      let insertIndex = -1;
+      let foundMarker = '';
+      
+      for (const marker of insertMarkers) {
+        const index = content.indexOf(marker);
+        if (index !== -1) {
+          insertIndex = index;
+          foundMarker = marker;
+          break;
+        }
+      }
+      
+      console.log('[insertNearbyPropertyLink] Insert position:', {
+        insertMarkers,
+        insertIndex,
+        foundMarker,
+        found: insertIndex !== -1,
+      });
+
+      if (insertIndex !== -1) {
+        // マーカーが見つかった場合、その直前に挿入
+        const result = content.slice(0, insertIndex) + 
+                       nearbyPropertyLink + 
+                       content.slice(insertIndex);
+        console.log('[insertNearbyPropertyLink] Inserted before marker, result length:', result.length);
+        return result;
+      } else {
+        // マーカーが見つからない場合、末尾に追加
+        const result = content + nearbyPropertyLink;
+        console.log('[insertNearbyPropertyLink] Appended to end, result length:', result.length);
+        return result;
+      }
+    } catch (error) {
+      console.error('[insertNearbyPropertyLink] Error fetching nearby properties:', error);
+      return content;
+    }
   };
 
   const fetchInquiryHistoryTable = async () => {

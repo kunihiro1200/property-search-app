@@ -503,6 +503,7 @@ const PublicPropertiesPage: React.FC = () => {
       const minAgeParam = searchParams.get('minAge');
       const maxAgeParam = searchParams.get('maxAge');
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
+      const nearbyParam = searchParams.get('nearby'); // 近隣物件フィルター
       
       // クエリパラメータを構築
       const params = new URLSearchParams({
@@ -540,6 +541,11 @@ const PublicPropertiesPage: React.FC = () => {
       
       if (showPublicOnlyParam === 'true') {
         params.set('showPublicOnly', 'true');
+      }
+      
+      if (nearbyParam) {
+        params.set('nearby', nearbyParam);
+        console.log('🔍 [fetchProperties] Nearby filter enabled for property:', nearbyParam);
       }
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
