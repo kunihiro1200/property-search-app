@@ -63,36 +63,38 @@
   - 全てのテストが通ることを確認
   - 問題があればユーザーに報告
 
-- [x] 3. バックエンド実装（短縮URLリダイレクト機能）
-  - [x] 3.1 backend/api/redirect.tsを作成
-    - Vercel Serverless Function形式で実装
-    - パスパラメータから物件番号を取得
-    - 物件番号のバリデーション実装（正規表現: `/^[A-Z]{2}\d{4,5}(-\d+)?$/`）
-    - HTTP 301リダイレクトレスポンスを返す
-    - リダイレクト先URL: `https://property-site-frontend-kappa.vercel.app/public/properties/{物件番号}`
-    - キャッシュヘッダー設定（`Cache-Control: public, max-age=31536000`）
-    - セキュリティヘッダー設定（`Strict-Transport-Security`）
-    - エラーハンドリング実装（400, 500エラー）
-    - _Requirements: 7.1, 7.2, 7.3, 8.1, 8.2, 8.3_
-
-  - [x] 3.2 backend/vercel.jsonを更新
-    - `/p/:propertyNumber`のルーティング設定を追加
-    - 既存のルーティング設定を維持
-    - キャッシュヘッダー設定を追加
-    - セキュリティヘッダー設定を追加
-    - _Requirements: 7.1_
-
-  - [ ]* 3.3 バックエンド単体テストを実装
-    - 有効な物件番号（"AA9831"） → 301リダイレクト
-    - 有効な物件番号（ハイフン付き "AA13527-2"） → 301リダイレクト
-    - 無効な物件番号（"INVALID"） → 400エラー
-    - 物件番号なし → 400エラー
-    - リダイレクト先URLの検証
-    - キャッシュヘッダーの検証
+- [x] 3. バックエンド実装（近隣物件API）
+  - [x] 3.1 backend/api/index.tsにnearbyパラメータ処理を追加
+    - `/api/public/properties?nearby={物件番号}`エンドポイントを実装
+    - `BuyerService.getNearbyProperties`を使用して近隣物件を取得
+    - `PropertyListingService.getPublicPropertyByNumber`を使用して物件詳細と画像を取得
+    - ページネーション対応（limit, offset）
+    - 価格フィールド計算（sales_price || listing_price）
+    - バッジタイプ設定（sold, available）
     - _Requirements: 7.1, 7.2, 7.3_
 
-  - [ ]* 3.4 バックエンドプロパティベーステストを実装
-    - **Property 7: リダイレクト処理**
+  - [x] 3.2 PropertyListingService.getPublicPropertyByNumberで画像を取得
+    - `image_url`または`storage_location`から画像を取得
+    - `PropertyImageService`を使用してGoogle Driveから画像を取得
+    - 画像オブジェクト形式に変換（thumbnailUrl, fullImageUrl）
+    - _Requirements: 7.1_
+
+  - [x] 3.3 フロントエンド近隣物件フィルター対応
+    - `PublicPropertiesPage.tsx`の`fetchProperties`関数に`nearby`パラメータ処理を追加
+    - URLクエリパラメータから`nearby`を取得
+    - APIリクエストに`nearby`パラメータを追加
+    - _Requirements: 7.1_
+
+  - [ ]* 3.4 バックエンド単体テストを実装
+    - 有効な物件番号（"AA3333"） → 近隣物件4件取得
+    - 無効な物件番号（"INVALID"） → 500エラー
+    - 物件番号なし → 通常の物件一覧取得
+    - ページネーション動作確認
+    - 画像取得動作確認
+    - _Requirements: 7.1, 7.2, 7.3_
+
+  - [ ]* 3.5 バックエンドプロパティベーステストを実装
+    - **Property 7: 近隣物件API処理**
     - **Validates: Requirements 7.1, 7.2, 7.3**
     - fast-checkライブラリを使用
     - 有効な物件番号と無効な物件番号をランダム生成
@@ -100,72 +102,65 @@
     - _Requirements: 7.1, 7.2, 7.3_
 
 - [x] 4. Checkpoint - バックエンド動作確認
-  - ローカル環境でバックエンドを起動（`vercel dev`）
-  - `/p/AA9831`にアクセスして301リダイレクトを確認
-  - 無効な物件番号で400エラーを確認
-  - 全てのテストが通ることを確認
+  - 近隣物件API（`/api/public/properties?nearby=AA3333`）にアクセスして近隣物件4件が返ることを確認
+  - 各物件に画像が含まれることを確認
+  - フロントエンドで近隣物件ページ（`/public/properties?nearby=AA3333`）を開いて近隣物件が表示されることを確認
+  - 画像が正しく表示されることを確認
   - 問題があればユーザーに報告
 
-- [ ] 5. インフラ設定（ドメインとSSL）
-  - [ ] 5.1 ifoo.jpドメインのDNSレコード設定
-    - ドメインレジストラにログイン
-    - Aレコードを追加（`ifoo.jp` → Vercelのエッジネットワーク）
-    - AAAAレコードを追加（IPv6対応）
-    - CNAMEレコードを追加（`www.ifoo.jp` → `cname.vercel-dns.com`）
-    - TTLを3600秒（1時間）に設定
-    - DNSレコードの伝播を確認（`dig ifoo.jp A`）
+- [ ] 5. インフラ設定（ドメインとSSL）- **オプション3では不要**
+  - [ ] 5.1 ifoo.jpドメインのDNSレコード設定 - **スキップ**
+    - オプション3（単一リンク方式）では短縮URLを使用しないため、ドメイン設定は不要
     - _Requirements: 9.1, 9.2_
 
-  - [ ] 5.2 Vercelプロジェクトにドメインを追加
-    - Vercelダッシュボードにログイン
-    - プロジェクト設定 → Domains
-    - `ifoo.jp`を追加
-    - DNSレコードの確認（Vercel自動チェック）
-    - SSL証明書の自動発行を待つ（約5-10分）
-    - HTTPS通信の確認（`curl -I https://ifoo.jp`）
+  - [ ] 5.2 Vercelプロジェクトにドメインを追加 - **スキップ**
+    - オプション3（単一リンク方式）では短縮URLを使用しないため、ドメイン設定は不要
     - _Requirements: 9.3, 9.4_
 
-- [ ] 6. Checkpoint - インフラ動作確認
-  - `https://ifoo.jp/p/AA9831`にアクセス
-  - 物件詳細ページにリダイレクトされることを確認
-  - SSL証明書が有効であることを確認
-  - 問題があればユーザーに報告
+- [ ] 6. Checkpoint - インフラ動作確認 - **オプション3では不要**
+  - オプション3（単一リンク方式）では短縮URLを使用しないため、インフラ確認は不要
 
-- [ ] 7. 統合テストとデプロイ
-  - [ ] 7.1 プレビュー環境へのデプロイ
-    - Gitブランチを作成（`feature/buyer-sms-nearby-property-link`）
+- [x] 7. 統合テストとデプロイ
+  - [x] 7.1 本番環境へのデプロイ
     - フロントエンドとバックエンドの変更をコミット
     - GitHubにプッシュ
-    - Vercelが自動的にプレビュー環境をデプロイ
-    - プレビューURLで動作確認
+    - Vercelが自動的に本番環境をデプロイ
+    - 本番環境で動作確認
     - _Requirements: 全要件_
 
-  - [ ] 7.2 E2Eテスト実行
-    - プレビュー環境で買主詳細ページを開く
+  - [x] 7.2 近隣物件API動作確認
+    - 本番環境で近隣物件API（`/api/public/properties?nearby=AA3333`）にアクセス
+    - 近隣物件4件が返ることを確認
+    - 各物件に画像が含まれることを確認
+    - _Requirements: 全要件_
+
+  - [x] 7.3 フロントエンド動作確認
+    - 本番環境で近隣物件ページ（`/public/properties?nearby=AA3333`）を開く
+    - 近隣物件が表示されることを確認
+    - 画像が正しく表示されることを確認
+    - _Requirements: 全要件_
+
+  - [ ] 7.4 E2Eテスト実行
+    - 本番環境で買主詳細ページを開く
     - SMSテンプレートを選択
     - プレビューに近隣物件リンクが表示されることを確認
-    - 短縮URLをクリックして物件詳細ページに遷移することを確認
+    - 近隣物件リンクをクリックして近隣物件ページに遷移することを確認
     - SMS送信記録が正しく保存されることを確認
     - _Requirements: 全要件_
 
-  - [ ]* 7.3 統合テストを実装
+  - [ ]* 7.5 統合テストを実装
     - フロントエンドからバックエンドまでのE2Eテスト
-    - SMS本文生成 → 短縮URLリダイレクト → 物件詳細ページ表示
-    - _Requirements: 全要件_
-
-  - [ ] 7.4 本番環境へのデプロイ
-    - プレビュー環境でのテストが完了したことを確認
-    - mainブランチにマージ
-    - Vercelが自動的に本番環境をデプロイ
-    - 本番環境で動作確認
+    - SMS本文生成 → 近隣物件リンク → 近隣物件ページ表示
     - _Requirements: 全要件_
 
 - [ ] 8. Final Checkpoint - 本番環境動作確認
   - 本番環境で買主詳細ページを開く
   - SMSテンプレートを選択
   - プレビューに近隣物件リンクが表示されることを確認
-  - 短縮URL（`https://ifoo.jp/p/AA9831`）をクリック
-  - 物件詳細ページに正しくリダイレクトされることを確認
+  - 近隣物件リンク（`https://property-site-frontend-kappa.vercel.app/public/properties?nearby=AA9831`）をクリック
+  - 近隣物件ページに正しく遷移することを確認
+  - 近隣物件が4件表示されることを確認
+  - 画像が正しく表示されることを確認
   - SMS送信記録が正しく保存されることを確認
   - 全てのテストが通ることを確認
   - 問題があればユーザーに報告

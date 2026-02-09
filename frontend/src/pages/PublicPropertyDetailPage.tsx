@@ -303,13 +303,20 @@ const PublicPropertyDetailPage: React.FC = () => {
     // sessionStorageから保存された状態を取得
     const savedStateStr = sessionStorage.getItem('publicPropertiesNavigationState');
     
+    console.log('[PublicPropertyDetailPage] handleBackClick - savedStateStr:', savedStateStr);
+    
     if (savedStateStr) {
       try {
         const savedState = JSON.parse(savedStateStr);
         
+        console.log('[PublicPropertyDetailPage] handleBackClick - savedState:', savedState);
+        console.log('[PublicPropertyDetailPage] handleBackClick - nearby:', savedState.filters?.nearby);
+        
         // nearbyパラメータがある場合は、それを含めてナビゲート
         if (savedState.filters?.nearby) {
-          navigate(`/public/properties?nearby=${savedState.filters.nearby}`, {
+          const targetUrl = `/public/properties?nearby=${savedState.filters.nearby}`;
+          console.log('[PublicPropertyDetailPage] handleBackClick - navigating to:', targetUrl);
+          navigate(targetUrl, {
             state: savedState
           });
           return;
@@ -320,6 +327,7 @@ const PublicPropertyDetailPage: React.FC = () => {
     }
     
     // デフォルトの動作（ブラウザの戻るボタンと同じ）
+    console.log('[PublicPropertyDetailPage] handleBackClick - using navigate(-1)');
     navigate(-1);
   };
 
