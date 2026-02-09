@@ -177,9 +177,94 @@ app.get('/api/public/properties', async (req, res) => {
     const showPublicOnly = req.query.showPublicOnly === 'true';
     const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
     const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
+    const nearby = req.query.nearby as string; // 近隣物件フィルター
     
     console.log('🔍🔍🔍 [API Endpoint] skipImages param:', req.query.skipImages, 'parsed:', skipImages);
-    console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages });
+    console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages, nearby });
+    
+    // 近隣物件フィルターが指定されている場合、近隣物件APIを使用
+    if (nearby) {
+      console.log('🔍 [API Endpoint] Nearby filter enabled for property:', nearby);
+      
+      // 近隣物件を取得
+      const { data: nearbyProperties, error: nearbyError } = await supabase
+        .rpc('get_nearby_properties', {
+          p_property_number: nearby,
+          p_radius_km: 1.0,
+          p_limit: 100
+        });
+      
+      if (nearbyError) {
+        console.error('❌ Error fetching nearby properties:', nearbyError);
+        throw nearbyError;
+      }
+      
+      console.log(`✅ Found ${nearbyProperties?.length || 0} nearby properties for ${nearby}`);
+      
+      // 近隣物件のIDリストを取得
+      const nearbyPropertyIds = (nearbyProperties || []).map((p: any) => p.id);
+      
+      // 近隣物件の詳細情報を取得（Supabaseから直接取得）
+      if (nearbyPropertyIds.length > 0) {
+        // ページネーション用の計算
+        const total = nearbyPropertyIds.length;
+        const paginatedIds = nearbyPropertyIds.slice(offset, offset + limit);
+        
+        // Supabaseから近隣物件の詳細を取得
+        const { data: properties, error: propertiesError } = await supabase
+          .from('property_listings')
+          .select('*')
+          .in('id', paginatedIds);
+        
+        if (propertiesError) {
+          console.error('❌ Error fetching property details:', propertiesError);
+          throw propertiesError;
+        }
+        
+        console.log(`✅ Returning ${properties?.length || 0} nearby properties (total: ${total})`);
+        
+        // 価格フィールドを計算
+        const propertiesWithPrice = (properties || []).map((property: any) => {
+          const calculatedPrice = property.sales_price || property.listing_price || 0;
+          
+          return {
+            ...property,
+            price: calculatedPrice,
+            badge_type: property.atbb_status === 'atbb成約済み' ? 'sold' : 
+                       property.atbb_status === '非公開（専任）' || property.atbb_status === 'E外し非公開' ? 'sold' : 
+                       'available',
+            is_clickable: true,
+            images: [], // 画像は後で取得
+          };
+        });
+        
+        return res.json({ 
+          success: true, 
+          properties: propertiesWithPrice,
+          pagination: {
+            total,
+            limit,
+            offset,
+            page: Math.floor(offset / limit) + 1,
+            totalPages: Math.ceil(total / limit)
+          }
+        });
+      } else {
+        // 近隣物件が見つからない場合
+        console.log('⚠️ No nearby properties found for:', nearby);
+        return res.json({ 
+          success: true, 
+          properties: [],
+          pagination: {
+            total: 0,
+            limit,
+            offset,
+            page: 1,
+            totalPages: 0
+          }
+        });
+      }
+    }
     
     // 価格範囲のバリデーション
     let priceFilter: { min?: number; max?: number } | undefined;
