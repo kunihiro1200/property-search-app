@@ -435,12 +435,26 @@ export default function BuyerDetailPage() {
       type: template.type,
       contentLength: template.content.length,
     });
+    
+    console.log('[handleSmsTemplateSelect] Current state:', {
+      linkedPropertiesCount: linkedProperties?.length || 0,
+      linkedProperties: linkedProperties?.map(p => p.property_number),
+      buyerNumber: buyer_number,
+    });
 
     // SMS用に署名を簡略化
     const simplifiedContent = simplifySmsSignature(template.content);
+    console.log('[handleSmsTemplateSelect] After simplifySmsSignature:', {
+      contentLength: simplifiedContent.length,
+      hasAddressPlaceholder: simplifiedContent.includes('<<住居表示>>') || simplifiedContent.includes('<<住居表示Pinrich>>'),
+    });
     
     // 近隣物件リンクを挿入（プレースホルダー置換前にチェック）
     const contentWithLink = await insertNearbyPropertyLink(simplifiedContent);
+    console.log('[handleSmsTemplateSelect] After insertNearbyPropertyLink:', {
+      contentLength: contentWithLink.length,
+      changed: contentWithLink !== simplifiedContent,
+    });
     
     // プレースホルダーを置換
     const replacedContent = replacePlaceholders(contentWithLink);
