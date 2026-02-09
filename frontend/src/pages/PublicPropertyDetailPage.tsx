@@ -300,7 +300,26 @@ const PublicPropertyDetailPage: React.FC = () => {
   };
 
   const handleBackClick = () => {
-    // ブラウザの戻るボタンと同じ動作（location.stateを保持）
+    // sessionStorageから保存された状態を取得
+    const savedStateStr = sessionStorage.getItem('publicPropertiesNavigationState');
+    
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        
+        // nearbyパラメータがある場合は、それを含めてナビゲート
+        if (savedState.filters?.nearby) {
+          navigate(`/public/properties?nearby=${savedState.filters.nearby}`, {
+            state: savedState
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('[PublicPropertyDetailPage] Failed to parse saved state:', error);
+      }
+    }
+    
+    // デフォルトの動作（ブラウザの戻るボタンと同じ）
     navigate(-1);
   };
 

@@ -36,5 +36,8 @@ export interface NavigationState {
     
     // 公開中のみ表示フラグ
     showPublicOnly?: boolean;
+    
+    // 近隣物件フィルター（物件番号）
+    nearby?: string;
   };
 }

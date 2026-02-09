@@ -763,7 +763,8 @@ const PublicPropertiesPage: React.FC = () => {
       minAge !== '' ||
       maxAge !== '' ||
       showPublicOnly ||
-      searchQuery.trim() !== ''
+      searchQuery.trim() !== '' ||
+      searchParams.get('nearby') !== null // 近隣物件フィルターを追加
     );
   };
 
@@ -1163,7 +1164,8 @@ const PublicPropertiesPage: React.FC = () => {
                         } : undefined,
                         searchQuery: searchQuery || undefined,
                         searchType: searchType || undefined,
-                        showPublicOnly: showPublicOnly || undefined
+                        showPublicOnly: showPublicOnly || undefined,
+                        nearby: searchParams.get('nearby') || undefined // 近隣物件フィルターを追加
                       }
                     };
                     
