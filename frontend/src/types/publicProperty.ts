@@ -66,6 +66,7 @@ export interface PublicPropertyFilters {
   areas?: string[];
   location?: string;
   propertyNumber?: string;
+  nearby?: string; // 近隣物件フィルター（物件番号）
   q?: string; // 統一検索クエリ（物件番号または所在地）
   minAge?: number;
   maxAge?: number;

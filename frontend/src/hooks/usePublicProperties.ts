@@ -34,6 +34,8 @@ export const usePublicProperties = (
       if (filters.location) params.append('location', filters.location);
       // NEW: 物件番号フィルター
       if (filters.propertyNumber) params.append('propertyNumber', filters.propertyNumber);
+      // NEW: 近隣物件フィルター
+      if (filters.nearby) params.append('nearby', filters.nearby);
       // NEW: 築年数フィルター
       if (filters.minAge !== undefined) params.append('minAge', filters.minAge.toString());
       if (filters.maxAge !== undefined) params.append('maxAge', filters.maxAge.toString());

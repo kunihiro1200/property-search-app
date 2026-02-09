@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Grid,
@@ -6,6 +6,7 @@ import {
   Pagination,
   Alert,
 } from '@mui/material';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import PublicPropertyHero from '../components/PublicPropertyHero';
 import PublicPropertyCard from '../components/PublicPropertyCard';
 import PropertyCardSkeleton from '../components/PropertyCardSkeleton';
@@ -15,11 +16,50 @@ import { PublicPropertyFilters } from '../types/publicProperty';
 import { detectSearchType } from '../utils/searchQueryDetector';
 
 const PublicPropertyListingPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  
   const [filters, setFilters] = useState<PublicPropertyFilters>({
     page: 1,
     limit: 12,
   });
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // URLパラメータからnearbyを読み取り、filtersに設定
+  useEffect(() => {
+    const nearbyParam = searchParams.get('nearby');
+    
+    console.log('[PublicPropertyListingPage] URL params:', {
+      nearby: nearbyParam,
+      locationState: location.state,
+    });
+    
+    if (nearbyParam) {
+      // nearbyパラメータがある場合、filtersに設定
+      setFilters(prev => ({
+        ...prev,
+        nearby: nearbyParam,
+        page: 1,
+      }));
+      
+      // sessionStorageに保存（詳細ページから戻るときのため）
+      sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify({
+        filters: {
+          nearby: nearbyParam,
+          page: 1,
+          limit: 12,
+        },
+        scrollPosition: 0,
+      }));
+    } else if (location.state) {
+      // location.stateから復元
+      const savedState = location.state as any;
+      if (savedState.filters) {
+        setFilters(savedState.filters);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('nearby'), location.state]);
 
   const { data, isLoading, isError, error } = usePublicProperties(filters);
 

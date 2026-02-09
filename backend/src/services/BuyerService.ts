@@ -404,8 +404,13 @@ export class BuyerService {
     if (cityMatch) {
       city = cityMatch[1];
       
-      // 市区町村の後の町名を抽出（最初の漢字部分、「字」以降は除外）
-      const afterCity = address.substring(address.indexOf(city) + city.length);
+      // 市区町村の後の町名を抽出
+      let afterCity = address.substring(address.indexOf(city) + city.length);
+      
+      // 「大字」を除外
+      afterCity = afterCity.replace(/^大字/, '');
+      
+      // 町名を抽出（最初の漢字部分、「字」以降は除外）
       const townMatch = afterCity.match(/^([^\d\-\s]+)/);
       if (townMatch) {
         let extractedTown = townMatch[1];

@@ -217,8 +217,17 @@ app.get('/api/public/properties', async (req, res) => {
                   return null;
                 }
                 
+                // デバッグ: 価格フィールドを確認
+                console.log(`[API Endpoint] Property ${propertyNumber} price fields:`, {
+                  sales_price: property.sales_price,
+                  listing_price: property.listing_price,
+                  price: property.price,
+                });
+                
                 // 価格フィールドを計算
-                const calculatedPrice = property.sales_price || property.listing_price || 0;
+                const calculatedPrice = property.sales_price || property.listing_price || property.price || 0;
+                
+                console.log(`[API Endpoint] Property ${propertyNumber} calculated price:`, calculatedPrice);
                 
                 return {
                   ...property,
