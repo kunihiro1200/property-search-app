@@ -631,6 +631,44 @@ export class PropertyListingService {
         }
       }
       
+      // 画像を取得
+      let images: any[] = [];
+      try {
+        // 1. image_urlがある場合はそれを使用
+        if (data.image_url) {
+          console.log(`[PropertyListingService] Using image_url for ${propertyNumber}`);
+          // image_urlをオブジェクト形式に変換
+          images = [{
+            id: 'legacy',
+            name: 'Property Image',
+            thumbnailUrl: data.image_url,
+            fullImageUrl: data.image_url,
+            mimeType: 'image/jpeg',
+            size: 0,
+            modifiedTime: new Date().toISOString()
+          }];
+        }
+        // 2. storage_locationがある場合はGoogle Driveから取得
+        else if (storageLocation) {
+          console.log(`[PropertyListingService] Fetching images from Google Drive for ${propertyNumber}`);
+          
+          // PropertyImageServiceを使用して画像オブジェクトを取得
+          const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
+          
+          if (imageResult.images.length > 0) {
+            // 最初の画像のみを使用
+            images = [imageResult.images[0]];
+            console.log(`[PropertyListingService] Got image for ${propertyNumber}: ${images[0].thumbnailUrl}`);
+          } else {
+            console.log(`[PropertyListingService] No images found for ${propertyNumber}`);
+          }
+        } else {
+          console.log(`[PropertyListingService] No image source for ${propertyNumber}`);
+        }
+      } catch (imageError: any) {
+        console.error(`[PropertyListingService] Failed to fetch image for ${propertyNumber}:`, imageError.message);
+      }
+      
       // property_detailsテーブルから追加データを取得
       const { PropertyDetailsService } = await import('./PropertyDetailsService');
       const propertyDetailsService = new PropertyDetailsService();
@@ -645,7 +683,9 @@ export class PropertyListingService {
         property_about: details.property_about,
         recommended_comments: details.recommended_comments,
         athome_data: details.athome_data,
-        favorite_comment: details.favorite_comment
+        favorite_comment: details.favorite_comment,
+        // 画像を含める
+        images
       };
     } catch (error: any) {
       console.error('Error in getPublicPropertyByNumber:', error);
