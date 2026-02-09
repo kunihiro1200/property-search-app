@@ -458,14 +458,17 @@ export default function BuyerDetailPage() {
     
     // プレースホルダーを置換
     const replacedContent = replacePlaceholders(contentWithLink);
+    
+    // 3行以上の連続した空行を1行に圧縮
+    const compressedContent = replacedContent.replace(/\n{3,}/g, '\n\n');
 
     // メッセージ長の検証（日本語SMS制限: 670文字）
-    const isOverLimit = replacedContent.length > 670;
+    const isOverLimit = compressedContent.length > 670;
     
     if (isOverLimit) {
       setSnackbar({
         open: true,
-        message: `メッセージが長すぎます（${replacedContent.length}文字 / 670文字制限）。内容を確認してください。`,
+        message: `メッセージが長すぎます（${compressedContent.length}文字 / 670文字制限）。内容を確認してください。`,
         severity: 'warning',
       });
     }
@@ -476,7 +479,7 @@ export default function BuyerDetailPage() {
       type: 'sms',
       template: {
         ...template,
-        content: replacedContent, // プレースホルダー置換後の本文
+        content: compressedContent, // プレースホルダー置換後の本文
       },
     });
   };
@@ -703,15 +706,17 @@ export default function BuyerDetailPage() {
       result = result.replace(/<<住居表示>>/g, firstProperty.display_address || firstProperty.address || '');
       result = result.replace(/<<住居表示Pinrich>>/g, firstProperty.display_address || firstProperty.address || '');
       result = result.replace(/<<建物名\/価格 内覧物件は赤表示（★は他社物件）>>/g, firstProperty.property_number || '');
-      result = result.replace(/<<athome URL>>/g, firstProperty.suumo_url || '');
       
-      // SUUMO URLの表示: URLがある場合のみ「SUUMO: URL」形式で表示
-      const suumoUrlDisplay = firstProperty.suumo_url ? `SUUMO: ${firstProperty.suumo_url}` : '';
-      result = result.replace(/<<SUUMO　URLの表示>>/g, suumoUrlDisplay);
-      result = result.replace(/<<SUUMO URLの表示>>/g, suumoUrlDisplay);
+      // SUUMO URLは削除（空文字に置換）
+      result = result.replace(/<<athome URL>>/g, '');
+      result = result.replace(/<<SUUMO　URLの表示>>/g, '');
+      result = result.replace(/<<SUUMO URLの表示>>/g, '');
+      result = result.replace(/<<SUUMO URL>>/g, '');
       
-      result = result.replace(/<<SUUMO URL>>/g, firstProperty.suumo_url || '');
-      result = result.replace(/<<GoogleMap>>/g, firstProperty.google_map_url || '');
+      // Google MapのURLに「地図：」を追加
+      const googleMapDisplay = firstProperty.google_map_url ? `地図：${firstProperty.google_map_url}` : '';
+      result = result.replace(/<<GoogleMap>>/g, googleMapDisplay);
+      
       result = result.replace(/<<現況v>>/g, ''); // TODO: 現況フィールドを追加
       result = result.replace(/<<鍵等v>>/g, ''); // TODO: 鍵等フィールドを追加
       
@@ -763,6 +768,10 @@ export default function BuyerDetailPage() {
    */
   const simplifySmsSignature = (content: string): string => {
     let result = content;
+
+    // 内覧予約フォームのURLを含む文章を削除
+    const viewingFormPattern = /また、ご内覧希望の場合は、こちらからご予約お願いいたします[↓\s]*https:\/\/docs\.google\.com\/forms\/[^\s]+/g;
+    result = result.replace(viewingFormPattern, '');
 
     // 署名部分を簡略化（最後の署名欄を会社名、住所、電話番号、メアドのみに）
     const signaturePattern = /---+\s*\n([\s\S]*?)$/;
@@ -837,8 +846,8 @@ Email: <<会社メールアドレス>>`;
       // 単一リンク方式：公開物件サイトの一覧ページに nearbyパラメータを付与
       const nearbyPropertyUrl = `https://property-site-frontend-kappa.vercel.app/public/properties?nearby=${firstProperty.property_number}`;
       
-      // 近隣物件リンクテキスト
-      const nearbyPropertyLink = `\n類似物件はこちらから\n${nearbyPropertyUrl}\n`;
+      // 近隣物件リンクテキスト（前に空行を追加）
+      const nearbyPropertyLink = `\n\n類似物件はこちらから\n${nearbyPropertyUrl}\n`;
       
       console.log('[insertNearbyPropertyLink] Generated single link:', {
         count: nearbyProperties.length,
@@ -874,11 +883,12 @@ Email: <<会社メールアドレス>>`;
       });
 
       if (insertIndex !== -1) {
-        // マーカーが見つかった場合、その直前に挿入
-        const result = content.slice(0, insertIndex) + 
+        // マーカーが見つかった場合、その直後に挿入
+        const markerEndIndex = insertIndex + foundMarker.length;
+        const result = content.slice(0, markerEndIndex) + 
                        nearbyPropertyLink + 
-                       content.slice(insertIndex);
-        console.log('[insertNearbyPropertyLink] Inserted before marker, result length:', result.length);
+                       content.slice(markerEndIndex);
+        console.log('[insertNearbyPropertyLink] Inserted after marker, result length:', result.length);
         return result;
       } else {
         // マーカーが見つからない場合、末尾に追加
