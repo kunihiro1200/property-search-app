@@ -167,6 +167,12 @@ const PublicPropertyListingPage: React.FC = () => {
                       <PublicPropertyCard 
                         property={property} 
                         animationDelay={index * 0.1}
+                        navigationState={{
+                          currentPage: filters.page || 1,
+                          scrollPosition: 0,
+                          viewMode: 'grid',
+                          filters: filters,
+                        }}
                       />
                     </Grid>
                   ))}
