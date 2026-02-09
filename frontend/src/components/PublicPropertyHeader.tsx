@@ -13,6 +13,7 @@ interface PublicPropertyHeaderProps {
   atbbStatus?: string | null;
   navigationState?: any; // NavigationState型
   showInquiryButton?: boolean; // お問合せボタンを表示するか
+  onBackClick?: () => void; // カスタム戻るボタンハンドラー（詳細ページから渡される）
 }
 
 const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({ 
@@ -20,6 +21,7 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
   atbbStatus,
   navigationState,
   showInquiryButton = false,
+  onBackClick,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,7 +30,14 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
   const badgeType = getBadgeType(atbbStatus);
 
   const handleBackClick = () => {
-    // 現在のURLからcanHideパラメータを取得
+    // カスタムハンドラーが渡されている場合はそれを使用（詳細ページから）
+    if (onBackClick) {
+      console.log('[PublicPropertyHeader] Using custom onBackClick handler');
+      onBackClick();
+      return;
+    }
+    
+    // デフォルトの動作（一覧ページなど）
     const searchParams = new URLSearchParams(location.search);
     const canHide = searchParams.get('canHide');
     
@@ -42,9 +51,6 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
     
     console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
     
-    // ⚠️ 重要: 一覧画面から一覧画面に戻る場合はnavigationStateを渡さない
-    // これにより、フィルターがリセットされず、表示も遅くならない
-    // navigationStateは詳細画面から戻る場合のみ使用される
     navigate(backUrl);
   };
 
