@@ -1617,10 +1617,10 @@ Email: <<会社メールアドレス>>`;
                       py: 1, 
                       px: 1.5,
                       mb: 0.5,
-                      bgcolor: history.isCurrent ? 'primary.light' : 'background.paper',
+                      bgcolor: history.isCurrent ? SECTION_COLORS.buyer.light : 'background.paper',
                       borderRadius: 1,
                       border: history.isCurrent ? '2px solid' : '1px solid',
-                      borderColor: history.isCurrent ? 'primary.main' : 'divider'
+                      borderColor: history.isCurrent ? SECTION_COLORS.buyer.main : 'divider'
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -1628,7 +1628,7 @@ Email: <<会社メールアドレス>>`;
                         買主番号: {history.buyerNumber}
                       </Typography>
                       {history.isCurrent && (
-                        <Chip label="現在" color="primary" size="small" />
+                        <Chip label="現在" sx={{ backgroundColor: SECTION_COLORS.buyer.main, color: SECTION_COLORS.buyer.contrastText }} size="small" />
                       )}
                     </Box>
                     <Grid container spacing={1}>
@@ -1687,7 +1687,7 @@ Email: <<会社メールアドレス>>`;
                   sx={{
                     // 内覧結果グループのタイトルを強調
                     ...(section.isViewingResultGroup && {
-                      color: 'primary.main',
+                      color: SECTION_COLORS.buyer.main,
                       fontWeight: 'bold',
                     }),
                   }}
@@ -1816,10 +1816,25 @@ Email: <<会社メールアドレス>>`;
                                 <Button
                                   key={option}
                                   variant={value === option ? 'contained' : 'outlined'}
-                                  color="primary"
+                                  sx={{ 
+                                    flex: '1 1 auto', 
+                                    minWidth: '80px',
+                                    ...(value === option ? {
+                                      backgroundColor: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        backgroundColor: SECTION_COLORS.buyer.dark,
+                                      },
+                                    } : {
+                                      borderColor: SECTION_COLORS.buyer.main,
+                                      color: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        borderColor: SECTION_COLORS.buyer.dark,
+                                        backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                      },
+                                    }),
+                                  }}
                                   size="small"
                                   onClick={() => handleButtonClick(option)}
-                                  sx={{ flex: '1 1 auto', minWidth: '80px' }}
                                 >
                                   {option}
                                 </Button>
@@ -1904,13 +1919,16 @@ Email: <<会社メールアドレス>>`;
                           </Typography>
                           <Button
                             variant="contained"
-                            color="primary"
                             size="medium"
                             onClick={() => {
                               window.open(GOOGLE_CHAT_URL, '_blank');
                             }}
                             sx={{ 
                               fontWeight: 'bold',
+                              backgroundColor: SECTION_COLORS.buyer.main,
+                              '&:hover': {
+                                backgroundColor: SECTION_COLORS.buyer.dark,
+                              },
                             }}
                           >
                             送信
@@ -2033,10 +2051,25 @@ Email: <<会社メールアドレス>>`;
                                   <Button
                                     key={option}
                                     variant={value === option ? 'contained' : 'outlined'}
-                                    color="primary"
+                                    sx={{ 
+                                      flex: '1 1 auto', 
+                                      minWidth: '60px',
+                                      ...(value === option ? {
+                                        backgroundColor: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          backgroundColor: SECTION_COLORS.buyer.dark,
+                                        },
+                                      } : {
+                                        borderColor: SECTION_COLORS.buyer.main,
+                                        color: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          borderColor: SECTION_COLORS.buyer.dark,
+                                          backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                        },
+                                      }),
+                                    }}
                                     size="small"
                                     onClick={() => handleButtonClick(option)}
-                                    sx={{ flex: '1 1 auto', minWidth: '60px' }}
                                   >
                                     {option}
                                   </Button>
@@ -2150,28 +2183,73 @@ Email: <<会社メールアドレス>>`;
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                               <Button
                                 variant={value === '3回架電OK' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '90px',
+                                  ...(value === '3回架電OK' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('3回架電OK')}
-                                sx={{ flex: '1 1 auto', minWidth: '90px' }}
                               >
                                 3回架電OK
                               </Button>
                               <Button
                                 variant={value === '3回架電未' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '90px',
+                                  ...(value === '3回架電未' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('3回架電未')}
-                                sx={{ flex: '1 1 auto', minWidth: '90px' }}
                               >
                                 3回架電未
                               </Button>
                               <Button
                                 variant={value === '他' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '60px',
+                                  ...(value === '他' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('他')}
-                                sx={{ flex: '1 1 auto', minWidth: '60px' }}
                               >
                                 他
                               </Button>
@@ -2227,14 +2305,26 @@ Email: <<会社メールアドレス>>`;
                                 <Button
                                   key={initial}
                                   variant={value === initial ? 'contained' : 'outlined'}
-                                  color="primary"
-                                  size="small"
-                                  onClick={() => handleButtonClick(initial)}
                                   sx={{ 
                                     minWidth: '40px',
                                     padding: '4px 8px',
                                     fontSize: '0.75rem',
+                                    ...(value === initial ? {
+                                      backgroundColor: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        backgroundColor: SECTION_COLORS.buyer.dark,
+                                      },
+                                    } : {
+                                      borderColor: SECTION_COLORS.buyer.main,
+                                      color: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        borderColor: SECTION_COLORS.buyer.dark,
+                                        backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                      },
+                                    }),
                                   }}
+                                  size="small"
+                                  onClick={() => handleButtonClick(initial)}
                                 >
                                   {initial}
                                 </Button>
@@ -2359,19 +2449,47 @@ Email: <<会社メールアドレス>>`;
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               <Button
                                 variant={value === '要' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('要')}
-                                sx={{ flex: 1 }}
                               >
                                 要
                               </Button>
                               <Button
                                 variant={value === '不要' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '不要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('不要')}
-                                sx={{ flex: 1 }}
                               >
                                 不要
                               </Button>
@@ -2515,19 +2633,49 @@ Email: <<会社メールアドレス>>`;
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                               <Button
                                 variant={value === '業者問合せ' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '100px',
+                                  ...(value === '業者問合せ' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('業者問合せ')}
-                                sx={{ flex: '1 1 auto', minWidth: '100px' }}
                               >
                                 業者問合せ
                               </Button>
                               <Button
                                 variant={value === '業者（両手）' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '100px',
+                                  ...(value === '業者（両手）' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('業者（両手）')}
-                                sx={{ flex: '1 1 auto', minWidth: '100px' }}
                               >
                                 業者（両手）
                               </Button>
@@ -2584,7 +2732,7 @@ Email: <<会社メールアドレス>>`;
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   sx={{ 
-                                    color: 'primary.main',
+                                    color: SECTION_COLORS.buyer.main,
                                     textDecoration: 'none',
                                     '&:hover': {
                                       textDecoration: 'underline',
@@ -2605,7 +2753,7 @@ Email: <<会社メールアドレス>>`;
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   sx={{ 
-                                    color: 'primary.main',
+                                    color: SECTION_COLORS.buyer.main,
                                     textDecoration: 'none',
                                     fontSize: '0.75rem',
                                     '&:hover': {
@@ -2674,19 +2822,47 @@ Email: <<会社メールアドレス>>`;
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               <Button
                                 variant={value === '要' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('要')}
-                                sx={{ flex: 1 }}
                               >
                                 要
                               </Button>
                               <Button
                                 variant={value === '不要' ? 'contained' : 'outlined'}
-                                color="primary"
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '不要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
                                 size="small"
                                 onClick={() => handleButtonClick('不要')}
-                                sx={{ flex: 1 }}
                               >
                                 不要
                               </Button>
@@ -2728,10 +2904,15 @@ Email: <<会社メールアドレス>>`;
                                       onClick={() => handleInquiryHearingQuickInput(item.text, item.label)}
                                       size="small"
                                       clickable
-                                      color="primary"
                                       variant="outlined"
                                       sx={{
                                         cursor: 'pointer',
+                                        borderColor: SECTION_COLORS.buyer.main,
+                                        color: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          borderColor: SECTION_COLORS.buyer.dark,
+                                          backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                        },
                                       }}
                                     />
                                   </Tooltip>
@@ -2798,7 +2979,7 @@ Email: <<会社メールアドレス>>`;
           {/* メール・SMS送信履歴セクション */}
           <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <EmailIcon sx={{ mr: 1, color: 'primary.main' }} />
+              <EmailIcon sx={{ mr: 1, color: SECTION_COLORS.buyer.main }} />
               <Typography variant="h6">メール・SMS送信履歴</Typography>
             </Box>
             <Divider sx={{ mb: 2 }} />
@@ -3021,7 +3202,12 @@ Email: <<会社メールアドレス>>`;
           <Button
             onClick={handleConfirmSend}
             variant="contained"
-            color="primary"
+            sx={{
+              backgroundColor: SECTION_COLORS.buyer.main,
+              '&:hover': {
+                backgroundColor: SECTION_COLORS.buyer.dark,
+              },
+            }}
             disabled={sendingTemplate}
           >
             {sendingTemplate ? '送信中...' : '送信'}
