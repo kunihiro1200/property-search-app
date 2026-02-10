@@ -1269,18 +1269,25 @@ Email: <<会社メールアドレス>>`;
             <>
               <Chip 
                 label={buyer.buyer_number} 
-                size="small" 
-                color="primary"
+                size="small"
                 onClick={() => {
                   navigator.clipboard.writeText(buyer.buyer_number || '');
                   setCopiedBuyerNumber(true);
                   setTimeout(() => setCopiedBuyerNumber(false), 1500);
                 }}
-                sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                sx={{ 
+                  cursor: 'pointer', 
+                  backgroundColor: SECTION_COLORS.buyer.main,
+                  color: SECTION_COLORS.buyer.contrastText,
+                  '&:hover': { 
+                    opacity: 0.8,
+                    backgroundColor: SECTION_COLORS.buyer.dark,
+                  } 
+                }}
                 title="クリックでコピー"
               />
               {copiedBuyerNumber && (
-                <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>✓</Typography>
+                <Typography variant="body2" sx={{ color: SECTION_COLORS.buyer.main, fontWeight: 'bold' }}>✓</Typography>
               )}
             </>
           )}
@@ -1292,9 +1299,15 @@ Email: <<会社メールアドレス>>`;
             // 頭文字を抽出（A, B, C, D, E, AZ, BZ等）
             const match = status.match(/^[A-Z]+/);
             const label = match ? match[0] : status.substring(0, 2);
-            const color = buyer.latest_status ? 'secondary' : 'info';
             
-            return <Chip label={label} color={color} sx={{ ml: 2 }} />;
+            return <Chip 
+              label={label} 
+              sx={{ 
+                ml: 2,
+                backgroundColor: buyer.latest_status ? SECTION_COLORS.buyer.dark : SECTION_COLORS.buyer.light,
+                color: SECTION_COLORS.buyer.contrastText,
+              }} 
+            />;
           })()}
           <RelatedBuyerNotificationBadge 
             count={relatedBuyersCount} 
@@ -1313,6 +1326,14 @@ Email: <<会社メールアドレス>>`;
               onClick={() => {
                 const firstProperty = linkedProperties[0];
                 window.open(`/buyers/${buyer_number}/nearby-properties?propertyNumber=${firstProperty.property_number}`, '_blank');
+              }}
+              sx={{
+                borderColor: SECTION_COLORS.buyer.main,
+                color: SECTION_COLORS.buyer.main,
+                '&:hover': {
+                  borderColor: SECTION_COLORS.buyer.dark,
+                  backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                },
               }}
             >
               近隣物件 ({nearbyPropertiesCount})

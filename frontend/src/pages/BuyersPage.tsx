@@ -283,7 +283,7 @@ export default function BuyersPage() {
                         onClick={() => handleRowClick(buyer.buyer_number)}
                       >
                         <TableCell>
-                          <Typography variant="body2" color="primary" fontWeight="bold">
+                          <Typography variant="body2" fontWeight="bold" sx={{ color: SECTION_COLORS.buyer.main }}>
                             {buyer.buyer_number || '-'}
                           </Typography>
                         </TableCell>
@@ -294,7 +294,14 @@ export default function BuyersPage() {
                         <TableCell>{buyer.follow_up_assignee || buyer.initial_assignee || '-'}</TableCell>
                         <TableCell>
                           {displayConfidence && (
-                            <Chip label={displayConfidence.label} size="small" color={displayConfidence.color} />
+                            <Chip 
+                              label={displayConfidence.label} 
+                              size="small" 
+                              sx={{
+                                backgroundColor: displayConfidence.color === 'secondary' ? SECTION_COLORS.buyer.dark : SECTION_COLORS.buyer.light,
+                                color: SECTION_COLORS.buyer.contrastText,
+                              }}
+                            />
                           )}
                         </TableCell>
                         <TableCell>{formatDate(buyer.reception_date)}</TableCell>
