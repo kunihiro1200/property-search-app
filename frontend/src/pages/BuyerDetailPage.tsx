@@ -1682,6 +1682,19 @@ Email: <<会社メールアドレス>>`;
                 {section.fields.map((field: any) => {
                   const value = buyer[field.key];
                   
+                  // グリッドサイズの決定（最初に定義）
+                  // 1. fullWidthプロパティがtrueの場合は全幅
+                  // 2. columnプロパティがある場合は半幅（左右の列）
+                  // 3. multilineフィールドは全幅
+                  // 4. それ以外は半幅
+                  const gridSize = field.fullWidth 
+                    ? { xs: 12 } 
+                    : field.column 
+                      ? { xs: 12, sm: 6 } 
+                      : field.multiline 
+                        ? { xs: 12 } 
+                        : { xs: 12, sm: 6 };
+                  
                   // broker_surveyフィールドは値がある場合のみ表示（ボタン形式）
                   if (field.key === 'broker_survey') {
                     // 値がない場合は表示しない
@@ -1812,19 +1825,6 @@ Email: <<会社メールアドレス>>`;
                       return null; // 値がある場合は非表示
                     }
                   }
-                  
-                  // グリッドサイズの決定
-                  // 1. fullWidthプロパティがtrueの場合は全幅
-                  // 2. columnプロパティがある場合は半幅（左右の列）
-                  // 3. multilineフィールドは全幅
-                  // 4. それ以外は半幅
-                  const gridSize = field.fullWidth 
-                    ? { xs: 12 } 
-                    : field.column 
-                      ? { xs: 12, sm: 6 } 
-                      : field.multiline 
-                        ? { xs: 12 } 
-                        : { xs: 12, sm: 6 };
 
                   // 買付チャット送信（Google Chatへのリンクボタン）- inlineEditableチェックの前に処理
                   if (field.key === 'image_chat_sent') {
