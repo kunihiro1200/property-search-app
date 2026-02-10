@@ -131,6 +131,8 @@ const BUYER_FIELD_SECTIONS = [
     fields: [
       // 一番上：問合時ヒアリング（全幅）
       { key: 'inquiry_hearing', label: '問合時ヒアリング', multiline: true, inlineEditable: true, fullWidth: true },
+      // 業者向けアンケート（問合時ヒアリングの直下、条件付き表示）
+      { key: 'broker_survey', label: '業者向けアンケート', inlineEditable: true, fullWidth: true, conditionalDisplay: true },
       // 左の列
       { key: 'inquiry_email_phone', label: '【問合メール】電話対応', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
       { key: 'three_calls_confirmed', label: '3回架電確認済み', inlineEditable: true, fieldType: 'dropdown', column: 'left', conditionalDisplay: true, required: true },
@@ -1679,6 +1681,11 @@ Email: <<会社メールアドレス>>`;
               <Grid container spacing={2}>
                 {section.fields.map((field: any) => {
                   const value = buyer[field.key];
+                  
+                  // broker_surveyフィールドは値がある場合のみ表示
+                  if (field.key === 'broker_survey' && (!value || value.trim() === '')) {
+                    return null;
+                  }
                   
                   // 問合せ内容セクションで、値がある場合は非表示にするフィールド
                   if (section.title === '問合せ内容') {
