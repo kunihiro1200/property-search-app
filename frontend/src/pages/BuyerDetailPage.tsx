@@ -63,6 +63,7 @@ import {
 import { formatDateTime } from '../utils/dateFormat';
 import { getDisplayName } from '../utils/employeeUtils';
 import { useAuthStore } from '../store/authStore';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface Buyer {
   [key: string]: any;
@@ -1260,7 +1261,7 @@ Email: <<会社メールアドレス>>`;
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h5" fontWeight="bold">
+          <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.buyer.main }}>
             {buyer.name ? `${buyer.name}様` : buyer.buyer_number}
           </Typography>
           {/* 買主番号（クリックでコピー） */}
