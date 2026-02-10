@@ -2601,7 +2601,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbBuyers, error } = await this.supabase
         .from('buyers')
-        .select('buyer_number, latest_viewing_date, viewing_time, follow_up_assignee, latest_status, updated_at')
+        .select('buyer_number, latest_viewing_date, viewing_time, follow_up_assignee, latest_status, three_calls_confirmed, inquiry_email_phone, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -2626,6 +2626,8 @@ export class EnhancedAutoSyncService {
           const sheetViewingTime = sheetRow['●時間'];
           const sheetFollowUpAssignee = sheetRow['後続担当'];
           const sheetLatestStatus = sheetRow['★最新状況\n'];  // 改行文字を含む
+          const sheetThreeCallsConfirmed = sheetRow['3回架電確認済み'];
+          const sheetInquiryEmailPhone = sheetRow['【問合メール】電話対応'];
 
           // データが異なる場合は更新対象
           let needsUpdate = false;
@@ -2653,6 +2655,16 @@ export class EnhancedAutoSyncService {
 
           // latest_statusの比較
           if (sheetLatestStatus && sheetLatestStatus !== dbBuyer.latest_status) {
+            needsUpdate = true;
+          }
+
+          // three_calls_confirmedの比較
+          if (sheetThreeCallsConfirmed !== undefined && sheetThreeCallsConfirmed !== dbBuyer.three_calls_confirmed) {
+            needsUpdate = true;
+          }
+
+          // inquiry_email_phoneの比較
+          if (sheetInquiryEmailPhone !== undefined && sheetInquiryEmailPhone !== dbBuyer.inquiry_email_phone) {
             needsUpdate = true;
           }
 
