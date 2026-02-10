@@ -1455,16 +1455,18 @@ Email: <<会社メールアドレス>>`;
 
           {/* 内覧ボタン */}
           <Button
-            variant="outlined"
+            variant="contained"
             size="medium"
             onClick={() => navigate(`/buyers/${buyer_number}/viewing-result`)}
             sx={{
               whiteSpace: 'nowrap',
-              borderColor: SECTION_COLORS.buyer.main,
-              color: SECTION_COLORS.buyer.main,
+              backgroundColor: SECTION_COLORS.buyer.main,
+              color: '#fff',
+              fontWeight: 'bold',
+              boxShadow: 2,
               '&:hover': {
-                borderColor: SECTION_COLORS.buyer.dark,
-                backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                backgroundColor: SECTION_COLORS.buyer.dark,
+                boxShadow: 4,
               },
             }}
           >
