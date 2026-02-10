@@ -353,11 +353,21 @@ export class BuyerService {
    * - 種別：基準物件と同じ種別（戸建て、マンション等）
    * - 町名：基準物件と同じ市区町村+町名（例：大分市明野）
    * - 価格帯：基準物件の価格に応じた範囲
-   * - ステータス：atbb_statusに"公開中"または"公開前"が含まれる
+   * - ステータス：atbb_statusに"公開中"、"公開前"、または"非公開（配信メールのみ）"が含まれる
+   * 
+   * 拡張機能：
+   * - 距離ベース検索（半径3km以内）
+   * - 配信エリアベース検索（共通エリア番号）
    */
   async getNearbyProperties(propertyNumber: string): Promise<{
     baseProperty: any;
     nearbyProperties: any[];
+    searchMethods?: {
+      location: number;
+      distance: number;
+      distribution_area: number;
+      total: number;
+    };
   }> {
     // 基準物件を取得
     const { data: baseProperty, error: baseError } = await this.supabase
@@ -370,34 +380,144 @@ export class BuyerService {
       throw new Error(`Base property not found: ${propertyNumber}`);
     }
 
-    // 価格帯を決定（priceカラムを使用）
-    const price = baseProperty.price || 0;
-    let minPrice = 0;
-    let maxPrice = 0;
+    // 共通フィルタを準備
+    const { minPrice, maxPrice } = this.calculatePriceRange(baseProperty.price || 0);
+    const commonFilters = {
+      minPrice,
+      maxPrice,
+      propertyType: baseProperty.property_type || '',
+      excludePropertyNumber: propertyNumber
+    };
 
+    console.log('[BuyerService.getNearbyProperties] Search criteria:', {
+      propertyNumber,
+      price: baseProperty.price,
+      priceRange: `${minPrice} - ${maxPrice}`,
+      propertyType: commonFilters.propertyType,
+    });
+
+    // 3つの検索方法を並列実行
+    const [locationResults, distanceResults, distributionAreaResults] = await Promise.all([
+      this.searchByLocation(baseProperty, commonFilters),
+      this.searchByDistance(baseProperty, commonFilters),
+      this.searchByDistributionArea(baseProperty, commonFilters)
+    ]);
+
+    console.log('[BuyerService.getNearbyProperties] Search results:', {
+      location: locationResults.length,
+      distance: distanceResults.length,
+      distribution_area: distributionAreaResults.length
+    });
+
+    // 結果を統合
+    const mergedResults = this.mergeResults(
+      locationResults,
+      distanceResults,
+      distributionAreaResults
+    );
+
+    // ソート
+    const sortedResults = this.sortResults(mergedResults);
+
+    console.log('[BuyerService.getNearbyProperties] Total unique properties:', sortedResults.length);
+
+    return {
+      baseProperty,
+      nearbyProperties: sortedResults,
+      searchMethods: {
+        location: locationResults.length,
+        distance: distanceResults.length,
+        distribution_area: distributionAreaResults.length,
+        total: sortedResults.length
+      }
+    };
+  }
+
+  /**
+   * 価格帯を計算
+   */
+  private calculatePriceRange(price: number): { minPrice: number; maxPrice: number } {
     if (price < 10000000) {
       // 1000万円未満
-      minPrice = 0;
-      maxPrice = 9999999;
+      return { minPrice: 0, maxPrice: 9999999 };
     } else if (price < 30000000) {
       // 1000万～2999万円
-      minPrice = 10000000;
-      maxPrice = 29999999;
+      return { minPrice: 10000000, maxPrice: 29999999 };
     } else if (price < 50000000) {
       // 3000万～4999万円
-      minPrice = 30000000;
-      maxPrice = 49999999;
+      return { minPrice: 30000000, maxPrice: 49999999 };
     } else {
       // 5000万円以上
-      minPrice = 50000000;
-      maxPrice = 999999999;
+      return { minPrice: 50000000, maxPrice: 999999999 };
     }
+  }
 
-    // 種別を取得
-    const propertyType = baseProperty.property_type || '';
+  /**
+   * 2点間の距離を計算（Haversine公式）
+   * @param lat1 地点1の緯度
+   * @param lng1 地点1の経度
+   * @param lat2 地点2の緯度
+   * @param lng2 地点2の経度
+   * @returns 距離（km、小数点第1位まで）
+   */
+  private calculateDistance(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
+    const R = 6371; // 地球の半径（km）
+    
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLng = this.toRadians(lng2 - lng1);
+    
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+      Math.cos(this.toRadians(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    
+    return Math.round(distance * 10) / 10; // 小数点第1位まで
+  }
 
-    // 住所から市区町村と町名を抽出
-    const address = baseProperty.address || '';
+  /**
+   * 度をラジアンに変換
+   */
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * 配信エリア番号をパース
+   * @param distributionAreas カンマ区切りの配信エリア番号（例："①,②,③"）
+   * @returns 配信エリア番号の配列
+   */
+  private parseDistributionAreas(distributionAreas: string | null | undefined): string[] {
+    if (!distributionAreas || distributionAreas.trim() === '') {
+      return [];
+    }
+    
+    return distributionAreas
+      .split(',')
+      .map(area => area.trim())
+      .filter(area => area.length > 0);
+  }
+
+  /**
+   * 2つの配列の共通要素を検出
+   */
+  private findCommonAreas(areas1: string[], areas2: string[]): string[] {
+    return areas1.filter(area => areas2.includes(area));
+  }
+
+  /**
+   * 住所から市区町村と町名を抽出
+   */
+  private extractCityAndTown(address: string): { city: string; town: string } {
     let city = '';
     let town = '';
     
@@ -424,53 +544,227 @@ export class BuyerService {
         town = extractedTown;
       }
     }
+    
+    return { city, town };
+  }
 
-    console.log('[BuyerService.getNearbyProperties] Search criteria:', {
-      propertyNumber,
-      price,
-      priceRange: `${minPrice} - ${maxPrice}`,
-      propertyType,
-      city,
-      town,
-    });
-
-    // 近隣物件を検索
+  /**
+   * 所在地ベース検索
+   */
+  private async searchByLocation(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 住所から市区町村と町名を抽出
+    const { city, town } = this.extractCityAndTown(baseProperty.address || '');
+    
     let query = this.supabase
       .from('property_listings')
       .select('*')
-      .neq('property_number', propertyNumber) // 基準物件を除外
-      .gte('price', minPrice)
-      .lte('price', maxPrice);
-
-    // 種別条件：基準物件と同じ種別
-    if (propertyType) {
-      query = query.eq('property_type', propertyType);
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
     }
-
-    // 町名条件：基準物件と同じ市区町村+町名
+    
+    // 町名条件
     if (city && town) {
       query = query.ilike('address', `%${city}${town}%`);
     } else if (city) {
-      // 町名が抽出できない場合は市区町村のみ
       query = query.ilike('address', `%${city}%`);
     }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // マッチ情報を追加
+    return (data || []).map(property => ({
+      ...property,
+      matched_by: ['location']
+    }));
+  }
 
-    // ステータス条件：公開中または公開前
-    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%');
-
-    const { data: nearbyProperties, error: nearbyError } = await query;
-
-    if (nearbyError) {
-      console.error('[BuyerService.getNearbyProperties] Error:', nearbyError);
-      throw new Error(`Failed to fetch nearby properties: ${nearbyError.message}`);
+  /**
+   * 距離ベース検索（半径3km以内）
+   */
+  private async searchByDistance(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 基準物件に座標データがない場合は空配列を返す
+    if (!baseProperty.latitude || !baseProperty.longitude) {
+      console.log('[searchByDistance] Base property has no coordinates');
+      return [];
     }
+    
+    // 座標データがある物件を全て取得（共通フィルタ適用）
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
+    }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // 距離を計算してフィルタリング
+    const RADIUS_KM = 3;
+    const baseLat = parseFloat(baseProperty.latitude);
+    const baseLng = parseFloat(baseProperty.longitude);
+    
+    const propertiesWithDistance = (data || [])
+      .map(property => {
+        const distance = this.calculateDistance(
+          baseLat,
+          baseLng,
+          parseFloat(property.latitude),
+          parseFloat(property.longitude)
+        );
+        return {
+          ...property,
+          distance_km: distance,
+          matched_by: ['distance']
+        };
+      })
+      .filter(property => property.distance_km <= RADIUS_KM);
+    
+    console.log('[searchByDistance] Found properties within 3km:', propertiesWithDistance.length);
+    
+    return propertiesWithDistance;
+  }
 
-    console.log('[BuyerService.getNearbyProperties] Found properties:', nearbyProperties?.length || 0);
+  /**
+   * 配信エリアベース検索
+   */
+  private async searchByDistributionArea(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 基準物件に配信エリアがない場合は空配列を返す
+    if (!baseProperty.distribution_areas || baseProperty.distribution_areas.trim() === '') {
+      console.log('[searchByDistributionArea] Base property has no distribution areas');
+      return [];
+    }
+    
+    // 基準物件の配信エリア番号を配列に変換
+    const baseAreas = this.parseDistributionAreas(baseProperty.distribution_areas);
+    
+    if (baseAreas.length === 0) {
+      return [];
+    }
+    
+    console.log('[searchByDistributionArea] Base property areas:', baseAreas);
+    
+    // 配信エリアがある物件を全て取得（共通フィルタ適用）
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice)
+      .not('distribution_areas', 'is', null);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
+    }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // 共通エリアがある物件をフィルタリング
+    const propertiesWithCommonAreas = (data || [])
+      .map(property => {
+        const propertyAreas = this.parseDistributionAreas(property.distribution_areas);
+        const commonAreas = this.findCommonAreas(baseAreas, propertyAreas);
+        
+        return {
+          ...property,
+          common_areas: commonAreas,
+          matched_by: ['distribution_area']
+        };
+      })
+      .filter(property => property.common_areas.length > 0);
+    
+    console.log('[searchByDistributionArea] Found properties with common areas:', propertiesWithCommonAreas.length);
+    
+    return propertiesWithCommonAreas;
+  }
 
-    return {
-      baseProperty,
-      nearbyProperties: nearbyProperties || [],
-    };
+  /**
+   * 検索結果を統合
+   */
+  private mergeResults(
+    locationResults: any[],
+    distanceResults: any[],
+    distributionAreaResults: any[]
+  ): any[] {
+    // 物件番号をキーとしたMapを作成
+    const propertyMap = new Map<string, any>();
+    
+    // 所在地ベースの結果を追加
+    locationResults.forEach(property => {
+      propertyMap.set(property.property_number, property);
+    });
+    
+    // 距離ベースの結果を追加（既存の場合はmatched_byとdistance_kmを追加）
+    distanceResults.forEach(property => {
+      const existing = propertyMap.get(property.property_number);
+      if (existing) {
+        existing.matched_by.push('distance');
+        existing.distance_km = property.distance_km;
+      } else {
+        propertyMap.set(property.property_number, property);
+      }
+    });
+    
+    // 配信エリアベースの結果を追加（既存の場合はmatched_byとcommon_areasを追加）
+    distributionAreaResults.forEach(property => {
+      const existing = propertyMap.get(property.property_number);
+      if (existing) {
+        existing.matched_by.push('distribution_area');
+        existing.common_areas = property.common_areas;
+      } else {
+        propertyMap.set(property.property_number, property);
+      }
+    });
+    
+    return Array.from(propertyMap.values());
+  }
+
+  /**
+   * 検索結果をソート
+   */
+  private sortResults(properties: any[]): any[] {
+    return properties.sort((a, b) => {
+      // 配信日で降順ソート
+      if (a.distribution_date && b.distribution_date) {
+        const dateCompare = new Date(b.distribution_date).getTime() - new Date(a.distribution_date).getTime();
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+      }
+      
+      // 配信日が同じ場合は物件番号で降順ソート
+      return b.property_number.localeCompare(a.property_number);
+    });
   }
 
   /**
