@@ -475,128 +475,122 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
         <Box sx={{ position: 'relative' }}>
           {/* oneClickDropdownが有効な場合はAutocompleteを追加 */}
           {fieldType === 'dropdown' && oneClickDropdown ? (
-            <Box sx={{ position: 'relative' }}>
-              {/* 表示用のBox */}
-              <Box
-                onClick={() => {
-                  if (isEditable) {
-                    setDropdownOpen(true);
-                  }
-                }}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 1.5,
-                  py: 1,
-                  borderRadius: 1,
-                  cursor: isEditable ? 'pointer' : 'default',
-                  border: '1px solid',
-                  borderColor: isEditable && showEditIndicator
-                    ? (isHovered || dropdownOpen ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
-                    : 'transparent',
-                  bgcolor: isEditable && (isHovered || dropdownOpen) ? 'action.hover' : 
-                           (isEditable && showEditIndicator ? 'background.paper' : 'transparent'),
-                  transition: 'all 0.2s ease',
-                  minHeight: 36,
-                  '&:hover': isEditable ? {
-                    borderColor: 'primary.main',
-                    bgcolor: 'action.hover',
-                  } : {},
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    flex: 1,
-                    color: (value === null || value === undefined || value === '') ? 'text.disabled' : 'text.primary',
+            <ClickAwayListener onClickAway={() => setDropdownOpen(false)}>
+              <Box sx={{ position: 'relative' }}>
+                {/* 表示用のBox */}
+                <Box
+                  onClick={() => {
+                    if (isEditable) {
+                      setDropdownOpen(true);
+                    }
                   }}
-                >
-                  {getDisplayValue()}
-                </Typography>
-                
-                {isEditable && showEditIndicator && (
-                  <ArrowDropDownIcon 
-                    sx={{ 
-                      ml: 0.5, 
-                      fontSize: 20, 
-                      color: isHovered || dropdownOpen ? 'primary.main' : 'text.secondary',
-                      transition: 'color 0.2s ease',
-                    }} 
-                  />
-                )}
-                
-                {!isEditable && (
-                  <Tooltip title={effectivePermissions.reason || '編集不可'}>
-                    <LockIcon sx={{ ml: 1, fontSize: 16, color: 'text.disabled' }} />
-                  </Tooltip>
-                )}
-              </Box>
-              
-              {/* Modalでドロップダウンを表示（背景クリックで閉じる） */}
-              {dropdownOpen && (
-                <Modal
-                  open={dropdownOpen}
-                  onClose={() => setDropdownOpen(false)}
-                  BackdropComponent={Backdrop}
-                  BackdropProps={{
-                    sx: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                    },
-                  }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
                   sx={{
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    pt: 2,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                    cursor: isEditable ? 'pointer' : 'default',
+                    border: '1px solid',
+                    borderColor: isEditable && showEditIndicator
+                      ? (isHovered || dropdownOpen ? 'primary.main' : 'rgba(0, 0, 0, 0.23)')
+                      : 'transparent',
+                    bgcolor: isEditable && (isHovered || dropdownOpen) ? 'action.hover' : 
+                             (isEditable && showEditIndicator ? 'background.paper' : 'transparent'),
+                    transition: 'all 0.2s ease',
+                    minHeight: 36,
+                    '&:hover': isEditable ? {
+                      borderColor: 'primary.main',
+                      bgcolor: 'action.hover',
+                    } : {},
                   }}
                 >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      flex: 1,
+                      color: (value === null || value === undefined || value === '') ? 'text.disabled' : 'text.primary',
+                    }}
+                  >
+                    {getDisplayValue()}
+                  </Typography>
+                  
+                  {isEditable && showEditIndicator && (
+                    <ArrowDropDownIcon 
+                      sx={{ 
+                        ml: 0.5, 
+                        fontSize: 20, 
+                        color: isHovered || dropdownOpen ? 'primary.main' : 'text.secondary',
+                        transition: 'color 0.2s ease',
+                      }} 
+                    />
+                  )}
+                  
+                  {!isEditable && (
+                    <Tooltip title={effectivePermissions.reason || '編集不可'}>
+                      <LockIcon sx={{ ml: 1, fontSize: 16, color: 'text.disabled' }} />
+                    </Tooltip>
+                  )}
+                </Box>
+                
+                {/* ドロップダウンをフィールド直下に表示 */}
+                {dropdownOpen && (
                   <Box 
                     sx={{ 
-                      width: '90%', 
-                      maxWidth: 600, 
-                      bgcolor: 'background.paper', 
-                      borderRadius: 1, 
-                      boxShadow: 5, 
-                      p: 2,
-                      maxHeight: '80vh',
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      zIndex: 10000,
+                      mt: 0.5,
+                      bgcolor: 'background.paper',
+                      borderRadius: 1,
+                      boxShadow: 5,
+                      maxHeight: 400,
                       overflow: 'auto',
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Autocomplete
-                      open={true}
-                      options={options}
-                      groupBy={options.some(opt => opt.category) ? (option) => option.category || '' : undefined}
-                      getOptionLabel={(option) => option.label}
-                      value={options.find(opt => opt.value === value) || null}
-                      onChange={(_, newValue) => {
-                        if (newValue) {
-                          handleDropdownChange(newValue.value);
-                        }
-                      }}
-                      disabled={!isEditable}
-                      disableCloseOnSelect={false}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          autoFocus
-                          placeholder="検索..."
-                          size="small"
-                        />
-                      )}
-                      ListboxProps={{
-                        sx: {
-                          maxHeight: 400,
-                        },
-                      }}
-                    />
+                    <Box sx={{ p: 1 }}>
+                      <TextField
+                        autoFocus
+                        placeholder="検索..."
+                        size="small"
+                        fullWidth
+                        sx={{ mb: 1 }}
+                        onChange={(e) => {
+                          // 検索フィルタリング用（オプション）
+                        }}
+                      />
+                      <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                        {options.map((option) => (
+                          <Box
+                            key={option.value}
+                            onClick={() => {
+                              handleDropdownChange(option.value);
+                            }}
+                            sx={{
+                              px: 2,
+                              py: 1,
+                              cursor: 'pointer',
+                              borderRadius: 1,
+                              bgcolor: value === option.value ? 'action.selected' : 'transparent',
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                              },
+                            }}
+                          >
+                            <Typography variant="body2">{option.label}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
                   </Box>
-                </Modal>
-              )}
-            </Box>
+                )}
+              </Box>
+            </ClickAwayListener>
           ) : (
             <Box
               onClick={handleClick}
