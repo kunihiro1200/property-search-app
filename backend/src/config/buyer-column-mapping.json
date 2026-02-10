@@ -187,7 +187,8 @@
     "next_call_date": "date",
     "campaign_date": "date",
     "phone_duplicate_count": "number",
-    "price": "number"
+    "price": "number",
+    "viewing_time": "time"
   },
   "requiredFields": ["buyer_number"]
 }
