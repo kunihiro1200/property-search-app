@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyFullDetails {
   id: number;
@@ -57,6 +58,7 @@ interface PropertyInfoCardProps {
   buyer?: Buyer;
   onClose?: () => void;
   showCloseButton?: boolean;
+  themeColor?: 'buyer' | 'property' | 'seller' | 'workTask'; // テーマカラーを指定
 }
 
 export default function PropertyInfoCard({ 
@@ -64,6 +66,7 @@ export default function PropertyInfoCard({
   buyer, 
   onClose, 
   showCloseButton = true,
+  themeColor = 'property', // デフォルトは物件（青）
 }: PropertyInfoCardProps) {
   const navigate = useNavigate();
   const [property, setProperty] = useState<PropertyFullDetails | null>(null);
@@ -71,6 +74,9 @@ export default function PropertyInfoCard({
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // テーマカラーを取得
+  const colorTheme = SECTION_COLORS[themeColor];
 
   useEffect(() => {
     fetchPropertyDetails();
@@ -178,13 +184,22 @@ export default function PropertyInfoCard({
         mb: 3, 
         position: 'relative',
         border: '2px solid',
-        borderColor: 'primary.main',
-        bgcolor: '#f8f9ff',
+        borderColor: colorTheme.main,
+        bgcolor: `${colorTheme.main}08`,
       }}
     >
       {/* Header - 外部リンクアイコンと閉じるボタンのみ */}
       <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5 }}>
-        <IconButton size="small" onClick={handleNavigateToProperty} color="primary">
+        <IconButton 
+          size="small" 
+          onClick={handleNavigateToProperty} 
+          sx={{ 
+            color: colorTheme.main,
+            '&:hover': {
+              backgroundColor: `${colorTheme.main}15`,
+            },
+          }}
+        >
           <OpenInNewIcon fontSize="small" />
         </IconButton>
         {showCloseButton && onClose && (
@@ -205,7 +220,7 @@ export default function PropertyInfoCard({
                 物件番号
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                <Typography variant="body1" fontWeight="bold" color="primary.main">
+                <Typography variant="body1" fontWeight="bold" sx={{ color: colorTheme.main }}>
                   {property.property_number}
                 </Typography>
                 <IconButton 

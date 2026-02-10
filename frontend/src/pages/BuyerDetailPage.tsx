@@ -1544,6 +1544,7 @@ Email: <<会社メールアドレス>>`;
                     buyer={buyer}
                     onClose={() => {}}
                     showCloseButton={false}
+                    themeColor="buyer"
                   />
                 </Box>
               ))
