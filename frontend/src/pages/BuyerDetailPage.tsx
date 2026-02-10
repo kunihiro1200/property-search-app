@@ -1341,7 +1341,17 @@ Email: <<会社メールアドレス>>`;
           )}
           
           {/* Email送信ドロップダウン */}
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ 
+            minWidth: 150,
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: SECTION_COLORS.buyer.main,
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: SECTION_COLORS.buyer.main,
+            },
+          }}>
             <InputLabel>Email送信</InputLabel>
             <Select
               value=""
@@ -1358,7 +1368,17 @@ Email: <<会社メールアドレス>>`;
           </FormControl>
 
           {/* SMS送信ドロップダウン */}
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ 
+            minWidth: 150,
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: SECTION_COLORS.buyer.main,
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: SECTION_COLORS.buyer.main,
+            },
+          }}>
             <InputLabel>SMS送信</InputLabel>
             <Select
               value=""
@@ -1378,10 +1398,16 @@ Email: <<会社メールアドレス>>`;
           {buyer?.phone_number && (
             <Button
               variant="contained"
-              color="primary"
               startIcon={<Phone />}
               href={`tel:${buyer.phone_number}`}
-              sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}
+              sx={{ 
+                fontWeight: 'bold', 
+                whiteSpace: 'nowrap',
+                backgroundColor: SECTION_COLORS.buyer.main,
+                '&:hover': {
+                  backgroundColor: SECTION_COLORS.buyer.dark,
+                },
+              }}
             >
               {buyer.phone_number}
             </Button>
@@ -1397,6 +1423,12 @@ Email: <<会社メールアドレス>>`;
               onClick={() => navigate(`/buyers/${buyer_number}/inquiry-history`)}
               sx={{
                 whiteSpace: 'nowrap',
+                borderColor: SECTION_COLORS.buyer.main,
+                color: SECTION_COLORS.buyer.main,
+                '&:hover': {
+                  borderColor: SECTION_COLORS.buyer.dark,
+                  backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                },
               }}
             >
               問い合わせ履歴 ({inquiryHistoryTable.length})
@@ -1410,6 +1442,12 @@ Email: <<会社メールアドレス>>`;
             onClick={() => navigate(`/buyers/${buyer_number}/desired-conditions`)}
             sx={{
               whiteSpace: 'nowrap',
+              borderColor: SECTION_COLORS.buyer.main,
+              color: SECTION_COLORS.buyer.main,
+              '&:hover': {
+                borderColor: SECTION_COLORS.buyer.dark,
+                backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+              },
             }}
           >
             希望条件
@@ -1422,6 +1460,12 @@ Email: <<会社メールアドレス>>`;
             onClick={() => navigate(`/buyers/${buyer_number}/viewing-result`)}
             sx={{
               whiteSpace: 'nowrap',
+              borderColor: SECTION_COLORS.buyer.main,
+              color: SECTION_COLORS.buyer.main,
+              '&:hover': {
+                borderColor: SECTION_COLORS.buyer.dark,
+                backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+              },
             }}
           >
             内覧
