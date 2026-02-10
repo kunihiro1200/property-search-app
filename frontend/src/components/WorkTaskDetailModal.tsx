@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, Save as SaveIcon } from '@mui/icons-material';
 import api from '../services/api';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface WorkTaskDetailModalProps {
   open: boolean;
@@ -82,6 +83,7 @@ interface WorkTaskData {
 const ASSIGNEE_OPTIONS = ['K', 'Y', 'I', '生', 'U', 'R', '久', 'H'];
 
 export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onUpdate }: WorkTaskDetailModalProps) {
+  const workTaskColor = SECTION_COLORS.workTask;
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -212,8 +214,17 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
             <Button
               key={opt}
               variant={getValue(field) === opt ? 'contained' : 'outlined'}
-              color={getValue(field) === opt ? 'primary' : 'inherit'}
               onClick={() => handleFieldChange(field, opt)}
+              sx={getValue(field) === opt ? {
+                bgcolor: workTaskColor.main,
+                color: workTaskColor.contrastText,
+                '&:hover': {
+                  bgcolor: workTaskColor.dark,
+                }
+              } : {
+                borderColor: 'divider',
+                color: 'text.secondary',
+              }}
             >
               {opt}
             </Button>
@@ -233,13 +244,31 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <ButtonGroup size="small" variant="outlined">
           <Button
             variant={getValue(field) === 'Y' ? 'contained' : 'outlined'}
-            color={getValue(field) === 'Y' ? 'primary' : 'inherit'}
             onClick={() => handleFieldChange(field, 'Y')}
+            sx={getValue(field) === 'Y' ? {
+              bgcolor: workTaskColor.main,
+              color: workTaskColor.contrastText,
+              '&:hover': {
+                bgcolor: workTaskColor.dark,
+              }
+            } : {
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
           >Y</Button>
           <Button
             variant={getValue(field) === 'N' ? 'contained' : 'outlined'}
-            color={getValue(field) === 'N' ? 'inherit' : 'inherit'}
             onClick={() => handleFieldChange(field, 'N')}
+            sx={getValue(field) === 'N' ? {
+              bgcolor: workTaskColor.main,
+              color: workTaskColor.contrastText,
+              '&:hover': {
+                bgcolor: workTaskColor.dark,
+              }
+            } : {
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
           >N</Button>
         </ButtonGroup>
       </Grid>
@@ -396,8 +425,8 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
             scrollButtons="auto"
             sx={{
               '& .MuiTab-root': { minWidth: 'auto', px: 2 },
-              '& .Mui-selected': { color: 'error.main' },
-              '& .MuiTabs-indicator': { backgroundColor: 'error.main' },
+              '& .Mui-selected': { color: workTaskColor.main },
+              '& .MuiTabs-indicator': { backgroundColor: workTaskColor.main },
             }}
           >
             {tabLabels.map((label, index) => (<Tab key={index} label={label} />))}
@@ -426,9 +455,19 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
           <Button
             onClick={handleSave}
             variant="contained"
-            color="primary"
             disabled={!hasChanges || saving}
             startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+            sx={{
+              bgcolor: workTaskColor.main,
+              color: workTaskColor.contrastText,
+              '&:hover': {
+                bgcolor: workTaskColor.dark,
+              },
+              '&:disabled': {
+                bgcolor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
           >
             {saving ? '保存中...' : '保存'}
           </Button>

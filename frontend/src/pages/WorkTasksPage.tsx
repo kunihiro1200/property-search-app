@@ -24,8 +24,10 @@ import api from '../services/api';
 import WorkTaskDetailModal from '../components/WorkTaskDetailModal';
 import { WorkTask, getStatusCategories, filterTasksByStatus, calculateTaskStatus } from '../utils/workTaskStatusUtils';
 import PageNavigation from '../components/PageNavigation';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 export default function WorkTasksPage() {
+  const workTaskColor = SECTION_COLORS.workTask;
   const [allWorkTasks, setAllWorkTasks] = useState<WorkTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -125,7 +127,7 @@ export default function WorkTasksPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>業務依頼</Typography>
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, color: workTaskColor.main }}>業務依頼</Typography>
       
       {/* ページナビゲーション */}
       <PageNavigation />
@@ -146,7 +148,13 @@ export default function WorkTasksPage() {
                 onClick={() => handleCategoryChange(cat.key)}
                 sx={{ 
                   py: 0.5,
-                  '&.Mui-selected': { bgcolor: 'action.selected' }
+                  '&.Mui-selected': { 
+                    bgcolor: `${workTaskColor.light}30`,
+                    color: workTaskColor.dark,
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 600,
+                    }
+                  }
                 }}
               >
                 <ListItemText 
@@ -162,9 +170,14 @@ export default function WorkTasksPage() {
                 />
                 <Badge
                   badgeContent={cat.count}
-                  color="primary"
                   max={999}
-                  sx={{ ml: 1 }}
+                  sx={{ 
+                    ml: 1,
+                    '& .MuiBadge-badge': {
+                      bgcolor: workTaskColor.main,
+                      color: workTaskColor.contrastText,
+                    }
+                  }}
                 />
               </ListItemButton>
             ))}
@@ -215,7 +228,7 @@ export default function WorkTasksPage() {
           <TableContainer component={Paper}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: `${workTaskColor.light}20` }}>
                   <TableCell>物件番号</TableCell>
                   <TableCell>物件所在</TableCell>
                   <TableCell>売主</TableCell>
@@ -252,7 +265,7 @@ export default function WorkTasksPage() {
                         sx={{ cursor: 'pointer' }}
                       >
                         <TableCell>
-                          <Typography variant="body2" color="primary" fontWeight="bold">
+                          <Typography variant="body2" fontWeight="bold" sx={{ color: workTaskColor.main }}>
                             {task.property_number || '-'}
                           </Typography>
                         </TableCell>

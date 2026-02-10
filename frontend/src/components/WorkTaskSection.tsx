@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface WorkTaskData {
   id: string;
@@ -55,6 +56,7 @@ const CATEGORIES = {
 };
 
 const WorkTaskSection: React.FC<WorkTaskSectionProps> = ({ sellerNumber }) => {
+  const workTaskColor = SECTION_COLORS.workTask;
   const [workTask, setWorkTask] = useState<WorkTaskData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +132,7 @@ const WorkTaskSection: React.FC<WorkTaskSectionProps> = ({ sellerNumber }) => {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-4">業務依頼</h3>
+        <h3 className="text-lg font-semibold mb-4" style={{ color: workTaskColor.main }}>業務依頼</h3>
         <div className="text-gray-500">読み込み中...</div>
       </div>
     );
@@ -139,7 +141,7 @@ const WorkTaskSection: React.FC<WorkTaskSectionProps> = ({ sellerNumber }) => {
   if (error) {
     return (
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-4">業務依頼</h3>
+        <h3 className="text-lg font-semibold mb-4" style={{ color: workTaskColor.main }}>業務依頼</h3>
         <div className="text-red-500">エラー: {error}</div>
       </div>
     );
@@ -148,7 +150,7 @@ const WorkTaskSection: React.FC<WorkTaskSectionProps> = ({ sellerNumber }) => {
   if (!workTask) {
     return (
       <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-4">業務依頼</h3>
+        <h3 className="text-lg font-semibold mb-4" style={{ color: workTaskColor.main }}>業務依頼</h3>
         <div className="text-gray-500">業務依頼データなし</div>
       </div>
     );
@@ -156,14 +158,24 @@ const WorkTaskSection: React.FC<WorkTaskSectionProps> = ({ sellerNumber }) => {
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-lg font-semibold mb-4">業務依頼</h3>
+      <h3 className="text-lg font-semibold mb-4" style={{ color: workTaskColor.main }}>業務依頼</h3>
       
       <div className="space-y-2">
         {Object.entries(CATEGORIES).map(([category, fields]) => (
           <div key={category} className="border rounded">
             <button
               onClick={() => toggleCategory(category)}
-              className="w-full px-4 py-2 text-left font-medium bg-gray-50 hover:bg-gray-100 flex justify-between items-center"
+              className="w-full px-4 py-2 text-left font-medium flex justify-between items-center"
+              style={{
+                backgroundColor: `${workTaskColor.light}20`,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `${workTaskColor.light}30`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = `${workTaskColor.light}20`;
+              }}
             >
               <span>{category}</span>
               <span>{expandedCategories.has(category) ? '▼' : '▶'}</span>
