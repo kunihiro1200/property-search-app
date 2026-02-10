@@ -604,10 +604,11 @@ export class BuyerService {
 
   /**
    * 買主情報を更新
+   * @param buyerNumber - 買主番号（主キー）
    */
-  async update(id: string, updateData: Partial<any>, userId?: string, userEmail?: string): Promise<any> {
+  async update(buyerNumber: string, updateData: Partial<any>, userId?: string, userEmail?: string): Promise<any> {
     // 存在確認
-    const existing = await this.getById(id);
+    const existing = await this.getByBuyerNumber(buyerNumber);
     if (!existing) {
       throw new Error('Buyer not found');
     }
@@ -633,7 +634,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('buyer_id', id)
+      .eq('buyer_number', buyerNumber)
       .select()
       .single();
 
@@ -648,7 +649,7 @@ export class BuyerService {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
-              id,
+              existing.buyer_id || buyerNumber, // buyer_idがあればそれを使用、なければbuyer_number
               key,
               existing[key],
               allowedData[key],
@@ -668,7 +669,7 @@ export class BuyerService {
 
   /**
    * 買主情報を更新し、スプレッドシートに同期
-   * @param id 買主ID
+   * @param buyerNumber - 買主番号（主キー）
    * @param updateData 更新データ
    * @param userId ユーザーID
    * @param userEmail ユーザーメール
@@ -676,7 +677,7 @@ export class BuyerService {
    * @returns 更新結果と同期ステータス
    */
   async updateWithSync(
-    id: string,
+    buyerNumber: string,
     updateData: Partial<any>,
     userId?: string,
     userEmail?: string,
@@ -686,12 +687,10 @@ export class BuyerService {
     await this.initSyncServices();
 
     // 存在確認
-    const existing = await this.getById(id);
+    const existing = await this.getByBuyerNumber(buyerNumber);
     if (!existing) {
       throw new Error('Buyer not found');
     }
-
-    const buyerNumber = existing.buyer_number;
 
     // 更新不可フィールドを除外
     const protectedFields = ['buyer_id', 'created_at', 'synced_at', 'buyer_number'];
@@ -754,7 +753,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('buyer_id', id)
+      .eq('buyer_number', buyerNumber)
       .select()
       .single();
 
@@ -783,7 +782,7 @@ export class BuyerService {
           await this.supabase
             .from('buyers')
             .update({ last_synced_at: new Date().toISOString() })
-            .eq('buyer_id', id);
+            .eq('buyer_number', buyerNumber);
 
           syncResult = {
             success: true,
@@ -849,7 +848,7 @@ export class BuyerService {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
-              id,
+              existing.buyer_id || buyerNumber, // buyer_idがあればそれを使用、なければbuyer_number
               key,
               existing[key],
               allowedData[key],
