@@ -21,6 +21,7 @@ import { Close as CloseIcon, Save as SaveIcon, Add as AddIcon } from '@mui/icons
 import api from '../services/api';
 import BuyerTable from './BuyerTable';
 import { getDisplayStatus } from '../utils/atbbStatusDisplayMapper';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface Props {
   open: boolean;
@@ -276,7 +277,12 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
                     <Typography variant="h6">買主リスト</Typography>
                     <Button
                       variant="contained"
-                      color="primary"
+                      sx={{
+                        backgroundColor: SECTION_COLORS.property.main,
+                        '&:hover': {
+                          backgroundColor: SECTION_COLORS.property.dark,
+                        },
+                      }}
                       startIcon={<AddIcon />}
                       onClick={handleCreateBuyer}
                     >

@@ -45,6 +45,7 @@ import {
   createWorkTaskMap,
 } from '../utils/propertyListingStatusUtils';
 import { getDisplayStatus } from '../utils/atbbStatusDisplayMapper';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 export default function PropertyListingsPage() {
   const navigate = useNavigate();
@@ -415,7 +416,17 @@ export default function PropertyListingsPage() {
                   primaryTypographyProps={{ variant: 'body2', noWrap: true }}
                   sx={{ flex: 1, minWidth: 0 }}
                 />
-                <Badge badgeContent={item.count} color="primary" max={9999} sx={{ ml: 1 }} />
+                <Badge 
+                  badgeContent={item.count} 
+                  max={9999} 
+                  sx={{ 
+                    ml: 1,
+                    '& .MuiBadge-badge': {
+                      backgroundColor: SECTION_COLORS.property.main,
+                      color: SECTION_COLORS.property.contrastText,
+                    },
+                  }} 
+                />
               </ListItemButton>
             ))}
           </List>
@@ -434,7 +445,17 @@ export default function PropertyListingsPage() {
                 sx={{ py: 0.5 }}
               >
                 <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2' }} />
-                <Badge badgeContent={item.count} color="primary" max={9999} sx={{ ml: 1 }} />
+                <Badge 
+                  badgeContent={item.count} 
+                  max={9999} 
+                  sx={{ 
+                    ml: 1,
+                    '& .MuiBadge-badge': {
+                      backgroundColor: SECTION_COLORS.property.main,
+                      color: SECTION_COLORS.property.contrastText,
+                    },
+                  }} 
+                />
               </ListItemButton>
             ))}
           </List>
@@ -473,7 +494,7 @@ export default function PropertyListingsPage() {
             
             {selectedPropertyNumbers.size > 0 && (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Typography variant="body2" color="primary">
+                <Typography variant="body2" sx={{ color: SECTION_COLORS.property.main }}>
                   {selectedPropertyNumbers.size}件選択中
                 </Typography>
                 <Button
@@ -550,7 +571,7 @@ export default function PropertyListingsPage() {
                           <Checkbox checked={isSelected} />
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
-                          <Typography variant="body2" color="primary" fontWeight="bold">
+                          <Typography variant="body2" sx={{ color: SECTION_COLORS.property.main }} fontWeight="bold">
                             {listing.property_number || '-'}
                           </Typography>
                         </TableCell>
