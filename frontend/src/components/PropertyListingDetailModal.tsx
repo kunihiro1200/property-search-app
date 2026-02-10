@@ -249,12 +249,39 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
-          <Typography variant="h6">物件詳細 - {propertyNumber || ''}</Typography>
+        <DialogTitle 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            pb: 0,
+            backgroundColor: `${SECTION_COLORS.property.main}08`,
+            borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+          }}
+        >
+          <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+            物件詳細 - {propertyNumber || ''}
+          </Typography>
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
-          <Tabs value={tabIndex} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+          <Tabs 
+            value={tabIndex} 
+            onChange={handleTabChange} 
+            variant="scrollable" 
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': {
+                color: 'text.secondary',
+                '&.Mui-selected': {
+                  color: SECTION_COLORS.property.main,
+                },
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: SECTION_COLORS.property.main,
+              },
+            }}
+          >
             {tabLabels.map((label, i) => <Tab key={i} label={label} />)}
           </Tabs>
         </Box>
@@ -274,7 +301,9 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
               {tabIndex === 2 && (
                 <Box sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">買主リスト</Typography>
+                    <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+                      買主リスト
+                    </Typography>
                     <Button
                       variant="contained"
                       sx={{
