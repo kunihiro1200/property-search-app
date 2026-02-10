@@ -2567,13 +2567,14 @@ export class EnhancedAutoSyncService {
 
   /**
    * 更新が必要な買主を検出
+   * 全フィールドを比較して、スプレッドシートとDBで差異がある買主を検出
    */
   async detectUpdatedBuyers(): Promise<string[]> {
     if (!this.isBuyerInitialized || !this.buyerSheetsClient) {
       await this.initializeBuyer();
     }
 
-    console.log('🔍 Detecting updated buyers (comparing data)...');
+    console.log('🔍 Detecting updated buyers (comparing all fields)...');
 
     // スプレッドシートから全データを取得（キャッシュ対応）
     const allRows = await this.getBuyerSpreadsheetData();
@@ -2592,6 +2593,7 @@ export class EnhancedAutoSyncService {
     console.log(`📊 Spreadsheet buyers: ${sheetDataByBuyerNumber.size}`);
 
     // DBから全買主データを取得（ページネーション対応）
+    // 全フィールドを取得して比較
     const updatedBuyers: string[] = [];
     const pageSize = 1000;
     let offset = 0;
@@ -2601,7 +2603,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbBuyers, error } = await this.supabase
         .from('buyers')
-        .select('buyer_number, latest_viewing_date, viewing_time, follow_up_assignee, latest_status, three_calls_confirmed, inquiry_email_phone, updated_at')
+        .select('*')  // 全フィールドを取得
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -2621,51 +2623,32 @@ export class EnhancedAutoSyncService {
             continue;
           }
 
-          // 重要なフィールドを比較
-          const sheetViewingDate = sheetRow['●内覧日(最新）'];
-          const sheetViewingTime = sheetRow['●時間'];
-          const sheetFollowUpAssignee = sheetRow['後続担当'];
-          const sheetLatestStatus = sheetRow['★最新状況\n'];  // 改行文字を含む
-          const sheetThreeCallsConfirmed = sheetRow['3回架電確認済み'];
-          const sheetInquiryEmailPhone = sheetRow['【問合メール】電話対応'];
+          // スプレッドシートのデータをDBフォーマットにマッピング
+          const mappedSheetData = this.buyerColumnMapper.mapSpreadsheetToDatabase(
+            Object.keys(sheetRow),
+            Object.values(sheetRow)
+          );
 
-          // データが異なる場合は更新対象
+          // 全フィールドを比較（システムフィールドを除く）
+          const systemFields = ['buyer_id', 'created_at', 'updated_at', 'synced_at', 'last_synced_at', 'deleted_at'];
           let needsUpdate = false;
 
-          // latest_viewing_dateの比較
-          if (sheetViewingDate && sheetViewingDate !== '') {
-            const formattedDate = this.formatBuyerDate(sheetViewingDate);
-            const dbDate = dbBuyer.latest_viewing_date ? String(dbBuyer.latest_viewing_date).substring(0, 10) : null;
-            if (formattedDate !== dbDate) {
-              needsUpdate = true;
+          for (const [key, sheetValue] of Object.entries(mappedSheetData)) {
+            // システムフィールドはスキップ
+            if (systemFields.includes(key)) {
+              continue;
             }
-          } else if (dbBuyer.latest_viewing_date !== null) {
-            needsUpdate = true;
-          }
 
-          // viewing_timeの比較
-          if (sheetViewingTime && sheetViewingTime !== dbBuyer.viewing_time) {
-            needsUpdate = true;
-          }
+            const dbValue = dbBuyer[key];
 
-          // follow_up_assigneeの比較
-          if (sheetFollowUpAssignee && sheetFollowUpAssignee !== dbBuyer.follow_up_assignee) {
-            needsUpdate = true;
-          }
+            // 値を正規化して比較
+            const normalizedSheetValue = this.normalizeValue(sheetValue);
+            const normalizedDbValue = this.normalizeValue(dbValue);
 
-          // latest_statusの比較
-          if (sheetLatestStatus && sheetLatestStatus !== dbBuyer.latest_status) {
-            needsUpdate = true;
-          }
-
-          // three_calls_confirmedの比較
-          if (sheetThreeCallsConfirmed !== undefined && sheetThreeCallsConfirmed !== dbBuyer.three_calls_confirmed) {
-            needsUpdate = true;
-          }
-
-          // inquiry_email_phoneの比較
-          if (sheetInquiryEmailPhone !== undefined && sheetInquiryEmailPhone !== dbBuyer.inquiry_email_phone) {
-            needsUpdate = true;
+            if (normalizedSheetValue !== normalizedDbValue) {
+              needsUpdate = true;
+              break;  // 1つでも差異があれば更新対象
+            }
           }
 
           if (needsUpdate) {
@@ -2687,6 +2670,33 @@ export class EnhancedAutoSyncService {
     }
 
     return updatedBuyers;
+  }
+
+  /**
+   * 値を正規化（比較用）
+   */
+  private normalizeValue(value: any): string {
+    if (value === null || value === undefined || value === '') {
+      return '';
+    }
+    
+    // 日付型の場合はYYYY-MM-DD形式に変換
+    if (value instanceof Date) {
+      return value.toISOString().substring(0, 10);
+    }
+    
+    // 文字列の場合はトリムして小文字化
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    
+    // 数値の場合は文字列に変換
+    if (typeof value === 'number') {
+      return String(value);
+    }
+    
+    // その他の場合はJSON文字列化
+    return JSON.stringify(value);
   }
 
   /**
