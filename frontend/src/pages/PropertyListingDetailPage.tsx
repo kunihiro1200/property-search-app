@@ -30,6 +30,7 @@ import DistributionAreaField from '../components/DistributionAreaField';
 import BuyerCandidateList from '../components/BuyerCandidateList';
 import EditableUrlField from '../components/EditableUrlField';
 import PublicUrlCell from '../components/PublicUrlCell';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyListing {
   id: number;
@@ -552,7 +553,7 @@ export default function PropertyListingDetailPage() {
             <ArrowBackIcon />
           </IconButton>
           <Box>
-            <Typography variant="h5" fontWeight="bold">
+            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
               物件詳細 - {data.property_number}
             </Typography>
             {/* 公開URL表示 */}
@@ -570,7 +571,7 @@ export default function PropertyListingDetailPage() {
               <Typography variant="body2" color="text.secondary">
                 買主から遷移:
               </Typography>
-              <Typography variant="body2" fontWeight="medium" color="primary">
+              <Typography variant="body2" fontWeight="medium" sx={{ color: SECTION_COLORS.property.main }}>
                 {buyerContext.buyerName || `買主ID: ${buyerContext.buyerId}`}
               </Typography>
             </Box>
@@ -589,6 +590,12 @@ export default function PropertyListingDetailPage() {
             startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
             onClick={handleSave}
             disabled={!hasChanges || saving}
+            sx={{
+              backgroundColor: SECTION_COLORS.property.main,
+              '&:hover': {
+                backgroundColor: SECTION_COLORS.property.dark,
+              },
+            }}
           >
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -654,9 +661,15 @@ export default function PropertyListingDetailPage() {
             {/* 特記・備忘録 - 67% */}
             <Box sx={{ flex: '0 0 67%', maxWidth: '800px' }}>
               <Paper sx={{ p: 2, mb: 0, bgcolor: '#fff9e6', height: '100%' }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold" color="warning.dark" sx={{ fontSize: '1.25rem' }}>
-                  特記・備忘録
-                </Typography>
+                <Box sx={{ 
+                  mb: 2, 
+                  pb: 1, 
+                  borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+                }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main, fontSize: '1.25rem' }}>
+                    特記・備忘録
+                  </Typography>
+                </Box>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="text.secondary" fontWeight="bold" sx={{ fontSize: '1rem' }}>特記</Typography>
                   <TextField
@@ -1042,9 +1055,15 @@ export default function PropertyListingDetailPage() {
 
           {/* 地図・サイトURL */}
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              地図・サイトURL
-            </Typography>
+            <Box sx={{ 
+              mb: 2, 
+              pb: 1, 
+              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+            }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                地図・サイトURL
+              </Typography>
+            </Box>
             
             <EditableUrlField
               label="地図URL"
@@ -1067,6 +1086,14 @@ export default function PropertyListingDetailPage() {
                   onClick={handleAutoRetrieveStorageUrl}
                   disabled={retrievingStorageUrl}
                   startIcon={retrievingStorageUrl ? <CircularProgress size={16} /> : null}
+                  sx={{
+                    borderColor: SECTION_COLORS.property.main,
+                    color: SECTION_COLORS.property.main,
+                    '&:hover': {
+                      borderColor: SECTION_COLORS.property.dark,
+                      backgroundColor: `${SECTION_COLORS.property.main}08`,
+                    },
+                  }}
                 >
                   {retrievingStorageUrl ? '取得中...' : '自動取得'}
                 </Button>
@@ -1113,9 +1140,15 @@ export default function PropertyListingDetailPage() {
 
           {/* 配信エリア番号 */}
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              配信エリア番号
-            </Typography>
+            <Box sx={{ 
+              mb: 2, 
+              pb: 1, 
+              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+            }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                配信エリア番号
+              </Typography>
+            </Box>
             <DistributionAreaField
               propertyNumber={propertyNumber || ''}
               googleMapUrl={data.google_map_url}
@@ -1282,9 +1315,15 @@ export default function PropertyListingDetailPage() {
 
           {/* 手数料情報 */}
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              手数料情報
-            </Typography>
+            <Box sx={{ 
+              mb: 2, 
+              pb: 1, 
+              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+            }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                手数料情報
+              </Typography>
+            </Box>
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary" fontWeight="bold">手数料（計）</Typography>
@@ -1316,9 +1355,15 @@ export default function PropertyListingDetailPage() {
           {/* 買付情報 */}
           {(data.offer_date || data.offer_status || data.offer_amount) && (
             <Paper sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                買付情報
-              </Typography>
+              <Box sx={{ 
+                mb: 2, 
+                pb: 1, 
+                borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+              }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                  買付情報
+                </Typography>
+              </Box>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary" fontWeight="bold">買付日</Typography>
@@ -1346,9 +1391,15 @@ export default function PropertyListingDetailPage() {
 
           {/* 添付画像・資料 */}
           <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              添付画像・資料
-            </Typography>
+            <Box sx={{ 
+              mb: 2, 
+              pb: 1, 
+              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+            }}>
+              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                添付画像・資料
+              </Typography>
+            </Box>
             <Grid container spacing={2}>
               {data.image_url && (
                 <Grid item xs={12} sm={4}>
