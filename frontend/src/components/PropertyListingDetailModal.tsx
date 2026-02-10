@@ -180,6 +180,19 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
   // 基本情報セクション
   const BasicInfoSection = () => (
     <Box sx={{ p: 2 }}>
+      <Box sx={{ 
+        mb: 2, 
+        pb: 1, 
+        borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+        backgroundColor: `${SECTION_COLORS.property.main}15`,
+        px: 2,
+        py: 1,
+        borderRadius: 1,
+      }}>
+        <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+          基本情報
+        </Typography>
+      </Box>
       <Field label="物件番号" field="property_number" />
       <Field label="担当名（営業）" field="sales_assignee" />
       <Field label="種別" field="property_type" />
@@ -207,7 +220,19 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
   // 売主情報
   const SellerInfoSection = () => (
     <Box sx={{ p: 2 }}>
-      <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>売主情報</Typography>
+      <Box sx={{ 
+        mb: 2, 
+        pb: 1, 
+        borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+        backgroundColor: `${SECTION_COLORS.property.main}15`,
+        px: 2,
+        py: 1,
+        borderRadius: 1,
+      }}>
+        <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+          売主情報
+        </Typography>
+      </Box>
       <Field label="名前（売主）" field="seller_name" />
       <Field label="住所（売主）" field="seller_address" />
       <Field label="連絡先（売主）" field="seller_contact" />
@@ -218,6 +243,19 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
   // 手数料・価格
   const FinanceSection = () => (
     <Box sx={{ p: 2 }}>
+      <Box sx={{ 
+        mb: 2, 
+        pb: 1, 
+        borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+        backgroundColor: `${SECTION_COLORS.property.main}15`,
+        px: 2,
+        py: 1,
+        borderRadius: 1,
+      }}>
+        <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+          手数料・価格
+        </Typography>
+      </Box>
       <Field label="手数料（計）" field="total_commission" type="number" />
       <Field label="転売差額" field="resale_margin" type="number" />
       <Field label="売主から" field="commission_from_seller" type="number" />
@@ -230,6 +268,19 @@ export default function PropertyListingDetailModal({ open, onClose, propertyNumb
   // 物件詳細
   const DetailSection = () => (
     <Box sx={{ p: 2 }}>
+      <Box sx={{ 
+        mb: 2, 
+        pb: 1, 
+        borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+        backgroundColor: `${SECTION_COLORS.property.main}15`,
+        px: 2,
+        py: 1,
+        borderRadius: 1,
+      }}>
+        <Typography variant="h6" sx={{ color: SECTION_COLORS.property.main, fontWeight: 'bold' }}>
+          物件詳細
+        </Typography>
+      </Box>
       <Field label="構造" field="structure" />
       <Field label="新築年月" field="construction_year_month" />
       <Field label="間取り" field="floor_plan" />
