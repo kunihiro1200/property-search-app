@@ -2179,8 +2179,10 @@ export class EnhancedAutoSyncService {
     
     // 手動トリガーまたは明示的にキャッシュクリアが指定された場合、キャッシュをクリア
     if (clearCache || triggeredBy === 'manual') {
-      this.clearSpreadsheetCache();
+      this.clearSpreadsheetCache(); // 売主スプレッドシートのキャッシュをクリア
+      this.clearBuyerSpreadsheetCache(); // 買主スプレッドシートのキャッシュをクリア
       this.clearWorkTasksCache(); // 業務依頼シートのキャッシュもクリア
+      console.log('🗑️ All caches cleared (seller, buyer, work tasks)');
     }
     
     try {
@@ -3530,7 +3532,9 @@ export class EnhancedPeriodicSyncManager {
     try {
       const { getSyncHealthChecker } = await import('./SyncHealthChecker');
       
-      const result = await this.syncService.runFullSync('scheduled');
+      // 🔄 キャッシュをクリアして最新のスプレッドシートデータを取得
+      // これにより、スプレッドシートで変更された値が確実に同期される
+      const result = await this.syncService.runFullSync('scheduled', true);
       this.lastSyncTime = new Date();
       
       // ログ記録は runFullSync 内で既に実行されている
