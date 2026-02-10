@@ -272,20 +272,8 @@ router.get('/:id/properties', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    // UUIDかどうかで判定
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    
-    // 買主番号の場合は、まずbuyer_idを取得
-    let buyerId = id;
-    if (!isUuid) {
-      const buyer = await buyerService.getByBuyerNumber(id);
-      if (!buyer) {
-        return res.status(404).json({ error: 'Buyer not found' });
-      }
-      buyerId = buyer.buyer_id; // ✅ buyer.buyer_idを使用
-    }
-    
-    const properties = await buyerService.getLinkedProperties(buyerId);
+    // buyer_numberをそのまま使用（UUID判定不要）
+    const properties = await buyerService.getLinkedProperties(id);
     res.json(properties);
   } catch (error: any) {
     console.error('Error fetching linked properties:', error);

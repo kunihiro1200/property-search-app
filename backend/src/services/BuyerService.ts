@@ -300,14 +300,16 @@ export class BuyerService {
    * 
    * 注意: inquiry_historyテーブルは現在存在しないため、
    * buyers.property_numberのみから物件を取得します。
+   * 
+   * @param buyerNumber - 買主番号（主キー）
    */
-  async getLinkedProperties(buyerId: string): Promise<any[]> {
+  async getLinkedProperties(buyerNumber: string): Promise<any[]> {
     const propertyNumbersSet = new Set<string>();
 
     // buyers.property_number から物件番号を取得
-    const buyer = await this.getById(buyerId);
+    const buyer = await this.getByBuyerNumber(buyerNumber);
     if (!buyer) {
-      console.log(`[BuyerService.getLinkedProperties] Buyer not found: ${buyerId}`);
+      console.log(`[BuyerService.getLinkedProperties] Buyer not found: ${buyerNumber}`);
       return [];
     }
 
@@ -323,7 +325,7 @@ export class BuyerService {
 
     // 物件番号が1つもない場合は空配列を返す
     if (propertyNumbersSet.size === 0) {
-      console.log(`[BuyerService.getLinkedProperties] No property numbers found for buyer ${buyerId}`);
+      console.log(`[BuyerService.getLinkedProperties] No property numbers found for buyer ${buyerNumber}`);
       return [];
     }
 
