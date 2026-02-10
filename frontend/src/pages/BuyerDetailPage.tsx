@@ -2036,7 +2036,7 @@ Email: <<会社メールアドレス>>`;
                       };
 
                       // 標準的な選択肢
-                      const standardOptions = ['済', '未', '不通'];
+                      const standardOptions = ['済', '未', '不通', '不要'];
                       const isStandardValue = standardOptions.includes(value);
 
                       return (

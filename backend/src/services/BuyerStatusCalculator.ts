@@ -217,25 +217,18 @@ export function calculateBuyerStatus(buyer: BuyerData): StatusResult {
     }
     
     // Priority 8: 問合メール未対応
+    // 「不要」を選択した場合は、このカテゴリーから除外
     // OR(
     //   [【問合メール】電話対応] = "未",
-    //   [【問合メール】メール返信] = "未",
-    //   AND(ISBLANK([●内覧日(最新）]),OR([【問合メール】電話対応]="不要",[【問合メール】電話対応]="不要"),OR([【問合メール】メール返信] = "未", ISBLANK([【問合メール】メール返信])))
+    //   [【問合メール】メール返信] = "未"
     // )
+    // ただし、[【問合メール】電話対応] = "不要" の場合は除外
     if (
-      or(
-        equals(buyer.inquiry_email_phone, '未'),
-        equals(buyer.inquiry_email_reply, '未'),
-        and(
-          isBlank(buyer.latest_viewing_date),
-          or(
-            equals(buyer.inquiry_email_phone, '不要'),
-            equals(buyer.inquiry_email_phone, '不要')
-          ),
-          or(
-            equals(buyer.inquiry_email_reply, '未'),
-            isBlank(buyer.inquiry_email_reply)
-          )
+      and(
+        notEquals(buyer.inquiry_email_phone, '不要'),
+        or(
+          equals(buyer.inquiry_email_phone, '未'),
+          equals(buyer.inquiry_email_reply, '未')
         )
       )
     ) {
