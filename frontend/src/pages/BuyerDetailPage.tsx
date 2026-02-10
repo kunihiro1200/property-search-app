@@ -1682,11 +1682,124 @@ Email: <<会社メールアドレス>>`;
                 {section.fields.map((field: any) => {
                   const value = buyer[field.key];
                   
-                  // broker_surveyフィールドは値がある場合のみ表示
-                  if (field.key === 'broker_survey' && (!value || value.trim() === '')) {
-                    return null;
+                  // broker_surveyフィールドは値がある場合のみ表示（ボタン形式）
+                  if (field.key === 'broker_survey') {
+                    // 値がない場合は表示しない
+                    if (!value || value.trim() === '') {
+                      return null;
+                    }
+
+                    const handleButtonClick = async (newValue: string) => {
+                      // 同じボタンを2度クリックしたら値をクリア
+                      const valueToSave = value === newValue ? '' : newValue;
+                      
+                      // 先にローカル状態を更新（即座にUIに反映）
+                      setBuyer(prev => prev ? { ...prev, [field.key]: valueToSave } : prev);
+                      
+                      // バックグラウンドで保存
+                      try {
+                        const result = await handleInlineFieldSave(field.key, valueToSave);
+                        
+                        if (result && !result.success && result.error) {
+                          // エラー時は元の値に戻す
+                          setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                          setSnackbar({
+                            open: true,
+                            message: result.error,
+                            severity: 'error'
+                          });
+                        }
+                      } catch (error: any) {
+                        // エラー時は元の値に戻す
+                        setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                        setSnackbar({
+                          open: true,
+                          message: error.message || '保存に失敗しました',
+                          severity: 'error'
+                        });
+                      }
+                    };
+
+                    // 標準的な選択肢
+                    const standardOptions = ['確認済み', '未確認'];
+                    const isStandardValue = standardOptions.includes(value);
+
+                    return (
+                      <Grid item {...gridSize} key={field.key}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                            {field.label}
+                          </Typography>
+                          {isStandardValue ? (
+                            // 標準的な値の場合はボタンを表示
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              {standardOptions.map((option) => (
+                                <Button
+                                  key={option}
+                                  variant={value === option ? 'contained' : 'outlined'}
+                                  color="primary"
+                                  size="small"
+                                  onClick={() => handleButtonClick(option)}
+                                  sx={{ flex: '1 1 auto', minWidth: '80px' }}
+                                >
+                                  {option}
+                                </Button>
+                              ))}
+                            </Box>
+                          ) : (
+                            // 想定外の値の場合はテキストとして表示
+                            <Box sx={{ 
+                              p: 1, 
+                              border: '1px solid', 
+                              borderColor: 'warning.main',
+                              borderRadius: 1,
+                              bgcolor: 'warning.light',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {value}
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={async () => {
+                                  // 先にローカル状態を更新
+                                  setBuyer(prev => prev ? { ...prev, [field.key]: '' } : prev);
+                                  
+                                  try {
+                                    const result = await handleInlineFieldSave(field.key, '');
+                                    if (result && !result.success && result.error) {
+                                      // エラー時は元の値に戻す
+                                      setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                                      setSnackbar({
+                                        open: true,
+                                        message: result.error,
+                                        severity: 'error'
+                                      });
+                                    }
+                                  } catch (error: any) {
+                                    // エラー時は元の値に戻す
+                                    setBuyer(prev => prev ? { ...prev, [field.key]: value } : prev);
+                                    setSnackbar({
+                                      open: true,
+                                      message: error.message || 'クリアに失敗しました',
+                                      severity: 'error'
+                                    });
+                                  }
+                                }}
+                                sx={{ ml: 1 }}
+                              >
+                                クリア
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+                      </Grid>
+                    );
                   }
-                  
+
                   // 問合せ内容セクションで、値がある場合は非表示にするフィールド
                   if (section.title === '問合せ内容') {
                     if (field.key === 'initial_assignee' && buyer.initial_assignee) {
