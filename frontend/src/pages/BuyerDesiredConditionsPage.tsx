@@ -11,12 +11,15 @@ import {
   IconButton,
   Alert,
   Snackbar,
+  Tooltip,
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import { InlineEditableField } from '../components/InlineEditableField';
+import { SECTION_COLORS } from '../theme/sectionColors';
 import {
   AREA_OPTIONS,
   DESIRED_PROPERTY_TYPE_OPTIONS,
@@ -64,6 +67,7 @@ export default function BuyerDesiredConditionsPage() {
   const navigate = useNavigate();
   const [buyer, setBuyer] = useState<Buyer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedBuyerNumber, setCopiedBuyerNumber] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
     open: false,
     message: '',
@@ -139,6 +143,14 @@ export default function BuyerDesiredConditionsPage() {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  const handleCopyBuyerNumber = () => {
+    if (buyer?.buyer_number) {
+      navigator.clipboard.writeText(buyer.buyer_number);
+      setCopiedBuyerNumber(true);
+      setTimeout(() => setCopiedBuyerNumber(false), 2000);
+    }
+  };
+
   const formatValue = (value: any) => {
     if (value === null || value === undefined || value === '') return '-';
     return String(value);
@@ -188,24 +200,46 @@ export default function BuyerDesiredConditionsPage() {
   return (
     <Container maxWidth="xl" sx={{ py: 3, px: 2 }}>
       {/* ヘッダー */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        mb: 3,
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
             onClick={() => navigate(`/buyers/${buyer_number}`)} 
-            sx={{ mr: 2 }}
             aria-label="買主詳細に戻る"
           >
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h5" fontWeight="bold">
-            希望条件 - {buyer.name || buyer.buyer_number}
-          </Typography>
+          <Box>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.buyer.main }}>
+              希望条件 - {buyer.name ? `${buyer.name}様` : buyer.buyer_number}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                買主番号: {buyer.buyer_number}
+              </Typography>
+              <Tooltip title={copiedBuyerNumber ? 'コピーしました！' : '買主番号をコピー'}>
+                <IconButton
+                  size="small"
+                  onClick={handleCopyBuyerNumber}
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
       {/* 希望条件フィールド */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+      <Paper sx={{ 
+        p: 3,
+        borderTop: `4px solid ${SECTION_COLORS.buyer.main}`,
+      }}>
+        <Typography variant="h6" sx={{ mb: 2, color: SECTION_COLORS.buyer.main }}>
           希望条件
         </Typography>
         <Grid container spacing={2}>
