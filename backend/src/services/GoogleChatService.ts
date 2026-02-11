@@ -1,205 +1,130 @@
-import axios, { AxiosError } from 'axios';
-
 /**
- * Google Chatメッセージの構造
- */
-interface GoogleChatMessage {
-  text: string;
-}
-
-/**
- * メッセージ送信結果
- */
-export interface SendMessageResult {
-  success: boolean;
-  error?: string;
-}
-
-/**
- * Google Chat Webhook APIへのメッセージ送信を担当するサービス
+ * Google Chat メッセージ送信サービス
  * 
- * Requirements: 4.1
+ * 買付情報をGoogle Chatに送信する機能を提供します。
  */
+
 export class GoogleChatService {
-  private readonly timeout: number = 10000; // 10秒
+  private readonly GOOGLE_CHAT_WEBHOOK_URL = 
+    'https://chat.googleapis.com/v1/spaces/AAAA6iEDkiU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=azlyf21pENCpLLUdJPjnRNXOzsIAP550xebOMVxYRMQ';
 
   /**
-   * Google ChatにメッセージをPOST
+   * 買付情報をGoogle Chatに送信
    * 
-   * @param webhookUrl - Webhook URL
-   * @param message - 送信するメッセージ
-   * @returns 送信結果
-   * 
-   * Requirements: 4.1
+   * @param buyer 買主データ
+   * @param property 物件データ
+   * @param offerComment 買付コメント（任意）
+   * @throws Error Google Chat APIへのリクエストが失敗した場合
    */
-  async sendMessage(
-    webhookUrl: string,
-    message: string
-  ): Promise<SendMessageResult> {
+  async sendOfferMessage(
+    buyer: any,
+    property: any,
+    offerComment: string
+  ): Promise<void> {
     try {
-      // Webhook URLの基本的なバリデーション
-      if (!webhookUrl || !this.isValidWebhookUrl(webhookUrl)) {
-        return {
-          success: false,
-          error: '無効なWebhook URLです'
-        };
-      }
-
-      // メッセージが空でないことを確認
-      if (!message || message.trim().length === 0) {
-        return {
-          success: false,
-          error: 'メッセージが空です'
-        };
-      }
-
-      // Google Chat APIにPOSTリクエストを送信
-      const payload: GoogleChatMessage = {
-        text: message
-      };
-
-      const response = await axios.post(webhookUrl, payload, {
-        timeout: this.timeout,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // 成功レスポンス（2xx）
-      if (response.status >= 200 && response.status < 300) {
-        console.log('[GoogleChatService] Message sent successfully:', {
-          status: response.status,
-          timestamp: new Date().toISOString()
-        });
-
-        return {
-          success: true
-        };
-      }
-
-      // 予期しないステータスコード
-      return {
-        success: false,
-        error: `予期しないレスポンス: ${response.status}`
-      };
-
-    } catch (error: any) {
-      // エラーハンドリング
-      return this.handleError(error);
-    }
-  }
-
-  /**
-   * Webhook URLの妥当性を検証
-   * 
-   * @param url - 検証するURL
-   * @returns URLが有効な場合はtrue
-   */
-  private isValidWebhookUrl(url: string): boolean {
-    try {
-      const parsedUrl = new URL(url);
+      // メッセージ内容を生成
+      const message = this.generateOfferMessage(buyer, property, offerComment);
       
-      // Google Chat Webhook URLの基本的な形式チェック
-      // https://chat.googleapis.com/v1/spaces/... の形式
-      return (
-        parsedUrl.protocol === 'https:' &&
-        parsedUrl.hostname === 'chat.googleapis.com' &&
-        parsedUrl.pathname.startsWith('/v1/spaces/')
-      );
-    } catch {
-      return false;
+      console.log('[GoogleChatService] Sending message to Google Chat:', {
+        buyerNumber: buyer.buyer_number,
+        propertyNumber: property.property_number,
+        messageLength: message.length,
+      });
+      
+      // Google Chat APIにPOST
+      const response = await fetch(this.GOOGLE_CHAT_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: message,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[GoogleChatService] Google Chat API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText,
+        });
+        throw new Error(`Google Chat API error: ${response.statusText}`);
+      }
+
+      console.log('[GoogleChatService] Message sent successfully');
+    } catch (error: any) {
+      console.error('[GoogleChatService] Error:', {
+        buyerNumber: buyer.buyer_number,
+        propertyNumber: property.property_number,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
     }
   }
 
   /**
-   * エラーを処理して適切なエラーメッセージを返す
+   * メッセージ内容を動的生成
    * 
-   * @param error - キャッチされたエラー
-   * @returns 送信結果（エラー）
+   * 4つのパターンに対応：
+   * 1. 業者問合せ以外 × 専任媒介
+   * 2. 業者問合せ以外 × 一般媒介
+   * 3. 業者問合せ × 専任媒介
+   * 4. 業者問合せ × 一般媒介
+   * 
+   * @param buyer 買主データ
+   * @param property 物件データ
+   * @param offerComment 買付コメント（任意）
+   * @returns 生成されたメッセージ
    */
-  private handleError(error: any): SendMessageResult {
-    // Axiosエラーの場合
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-
-      // タイムアウトエラー
-      if (axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')) {
-        console.error('[GoogleChatService] Timeout error:', {
-          error: axiosError.message,
-          timestamp: new Date().toISOString()
-        });
-
-        return {
-          success: false,
-          error: 'メッセージの送信がタイムアウトしました'
-        };
-      }
-
-      // ネットワークエラー
-      if (axiosError.code === 'ENOTFOUND' || axiosError.code === 'ECONNREFUSED') {
-        console.error('[GoogleChatService] Network error:', {
-          code: axiosError.code,
-          error: axiosError.message,
-          timestamp: new Date().toISOString()
-        });
-
-        return {
-          success: false,
-          error: 'ネットワークエラーが発生しました'
-        };
-      }
-
-      // HTTPエラーレスポンス（4xx, 5xx）
-      if (axiosError.response) {
-        const status = axiosError.response.status;
-        const statusText = axiosError.response.statusText;
-
-        console.error('[GoogleChatService] HTTP error:', {
-          status,
-          statusText,
-          data: axiosError.response.data,
-          timestamp: new Date().toISOString()
-        });
-
-        // 4xxエラー（クライアントエラー）
-        if (status >= 400 && status < 500) {
-          return {
-            success: false,
-            error: `メッセージの送信に失敗しました: ${statusText} (${status})`
-          };
-        }
-
-        // 5xxエラー（サーバーエラー）
-        if (status >= 500) {
-          return {
-            success: false,
-            error: `Google Chatサーバーエラー: ${statusText} (${status})`
-          };
-        }
-      }
-
-      // その他のAxiosエラー
-      console.error('[GoogleChatService] Axios error:', {
-        error: axiosError.message,
-        timestamp: new Date().toISOString()
-      });
-
-      return {
-        success: false,
-        error: `メッセージの送信に失敗しました: ${axiosError.message}`
-      };
+  private generateOfferMessage(
+    buyer: any,
+    property: any,
+    offerComment: string
+  ): string {
+    const brokerInquiry = buyer.broker_inquiry || '';
+    const atbbStatus = property.atbb_status || '';
+    
+    // 業者問合せかどうか
+    const isBrokerInquiry = brokerInquiry === '業者問合せ';
+    
+    // 専任媒介かどうか（専任を優先的にチェック）
+    const isExclusive = atbbStatus.includes('専任');
+    const isGeneral = !isExclusive && atbbStatus.includes('一般');
+    
+    // メッセージのヘッダー部分（買主番号と<<>>記号を削除）
+    let message = `${buyer.latest_status}\n`;
+    
+    // 媒介契約種別による警告メッセージ
+    if (isExclusive) {
+      message += '⚠atbbの業者向けを非公開お願いします！！\n';
+    } else if (isGeneral) {
+      message += '⚠一般媒介なので、atbbは公開のままにしてください！！\n';
     }
-
-    // その他の予期しないエラー
-    console.error('[GoogleChatService] Unexpected error:', {
-      error: error.message || error,
-      stack: error.stack,
-      timestamp: new Date().toISOString()
-    });
-
-    return {
-      success: false,
-      error: `予期しないエラーが発生しました: ${error.message || error}`
-    };
+    
+    // 業者問合せの場合は他社名を追加
+    if (isBrokerInquiry && buyer.other_company_name) {
+      message += `他社名：${buyer.other_company_name}\n`;
+    }
+    
+    // キャンペーン該当/未（空でない場合のみ表示）
+    if (buyer.campaign_applicable && buyer.campaign_applicable.trim()) {
+      message += `${buyer.campaign_applicable}\n`;
+    }
+    
+    // 買付コメント（空でない場合のみ表示）
+    if (offerComment && offerComment.trim()) {
+      message += `${offerComment}\n`;
+    }
+    
+    // 物件情報（買主番号と<<>>記号を削除）
+    message += `物件番号: ${property.property_number}\n`;
+    message += `物件所在地: ${property.display_address || property.address}\n`;
+    message += `価格: ${property.price}\n`;
+    message += `物件担当: ${property.sales_assignee}\n`;
+    message += `内覧担当: ${buyer.follow_up_assignee}\n`;
+    
+    return message;
   }
 }
