@@ -87,6 +87,11 @@ export class InquiryHearingParser {
    * - ~1900万円
    * - 1000万円~2999万円
    * - 2000万円以上
+   * 
+   * マッピングルール:
+   * - 予算900万円 → ~1900万円
+   * - 予算2500万円 → 1000万円~2999万円
+   * - 予算3000万円 → 2000万円以上
    */
   private mapPriceRange(budgetText: string): string | undefined {
     if (!budgetText) {
