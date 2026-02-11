@@ -912,7 +912,7 @@ export class BuyerService {
       try {
         const { InquiryHearingParser } = await import('./InquiryHearingParser');
         const parser = new InquiryHearingParser();
-        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing);
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, existing.desired_property_type);
         
         const inquiryHearingUpdatedAt = new Date();
         
@@ -944,17 +944,45 @@ export class BuyerService {
           }
         }
         
-        // 予算の上書き判定
-        if (parsed.desired_price_range !== undefined) {
+        // 価格帯（戸建）の上書き判定
+        if (parsed.price_range_house !== undefined) {
           if (parser.shouldOverwrite(
-            'desired_price_range',
-            existing.desired_price_range,
-            existing.desired_price_range_updated_at ? new Date(existing.desired_price_range_updated_at) : null,
+            'price_range_house',
+            existing.price_range_house,
+            existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
             inquiryHearingUpdatedAt
           )) {
-            updateData.desired_price_range = parsed.desired_price_range;
-            updateData.desired_price_range_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService] Auto-synced desired_price_range: ${parsed.desired_price_range}`);
+            updateData.price_range_house = parsed.price_range_house;
+            updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced price_range_house: ${parsed.price_range_house}`);
+          }
+        }
+        
+        // 価格帯（マンション）の上書き判定
+        if (parsed.price_range_apartment !== undefined) {
+          if (parser.shouldOverwrite(
+            'price_range_apartment',
+            existing.price_range_apartment,
+            existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.price_range_apartment = parsed.price_range_apartment;
+            updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+          }
+        }
+        
+        // 価格帯（土地）の上書き判定
+        if (parsed.price_range_land !== undefined) {
+          if (parser.shouldOverwrite(
+            'price_range_land',
+            existing.price_range_land,
+            existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.price_range_land = parsed.price_range_land;
+            updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced price_range_land: ${parsed.price_range_land}`);
           }
         }
         

@@ -7,14 +7,18 @@
 export interface ParsedInquiryHearing {
   desired_timing?: string;
   parking_spaces?: string;
-  desired_price_range?: string;
+  price_range_house?: string;
+  price_range_apartment?: string;
+  price_range_land?: string;
 }
 
 export class InquiryHearingParser {
   /**
    * 問合せ時ヒアリングをパースして希望条件フィールドの値を抽出
+   * @param inquiryHearing 問合せ時ヒアリングのテキスト
+   * @param desiredPropertyType 希望種別（戸建て、マンション、土地）
    */
-  parseInquiryHearing(inquiryHearing: string): ParsedInquiryHearing {
+  parseInquiryHearing(inquiryHearing: string, desiredPropertyType?: string): ParsedInquiryHearing {
     if (!inquiryHearing || inquiryHearing.trim() === '') {
       return {};
     }
@@ -39,7 +43,19 @@ export class InquiryHearingParser {
       if (budget) {
         const priceRange = this.mapPriceRange(budget);
         if (priceRange) {
-          result.desired_price_range = priceRange;
+          // 希望種別に応じて適切なフィールドに設定
+          if (desiredPropertyType?.includes('戸建')) {
+            result.price_range_house = priceRange;
+          } else if (desiredPropertyType?.includes('マンション')) {
+            result.price_range_apartment = priceRange;
+          } else if (desiredPropertyType?.includes('土地')) {
+            result.price_range_land = priceRange;
+          } else {
+            // 希望種別が不明な場合は全てのフィールドに設定
+            result.price_range_house = priceRange;
+            result.price_range_apartment = priceRange;
+            result.price_range_land = priceRange;
+          }
         }
       }
     } catch (error) {
