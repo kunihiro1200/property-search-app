@@ -46,15 +46,18 @@ export class InquiryHearingParser {
           // 希望種別に応じて適切なフィールドに設定
           if (desiredPropertyType?.includes('戸建')) {
             result.price_range_house = priceRange;
+            console.log('[InquiryHearingParser] 価格帯を戸建に設定:', priceRange);
           } else if (desiredPropertyType?.includes('マンション')) {
             result.price_range_apartment = priceRange;
+            console.log('[InquiryHearingParser] 価格帯をマンションに設定:', priceRange);
           } else if (desiredPropertyType?.includes('土地')) {
             result.price_range_land = priceRange;
+            console.log('[InquiryHearingParser] 価格帯を土地に設定:', priceRange);
           } else {
-            // 希望種別が不明な場合は全てのフィールドに設定
-            result.price_range_house = priceRange;
-            result.price_range_apartment = priceRange;
-            result.price_range_land = priceRange;
+            // 希望種別が不明な場合はエラーログを出力し、価格帯を設定しない
+            console.error('[InquiryHearingParser] 希望種別が不明なため、価格帯を設定できません。desired_property_type:', desiredPropertyType);
+            console.error('[InquiryHearingParser] 予算:', budget);
+            console.error('[InquiryHearingParser] 価格帯:', priceRange);
           }
         }
       }

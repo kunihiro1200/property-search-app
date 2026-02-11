@@ -947,45 +947,67 @@ export class BuyerService {
           }
         }
         
-        // 価格帯（戸建）の上書き判定
-        if (parsed.price_range_house !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_house',
-            existing.price_range_house,
-            existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_house = parsed.price_range_house;
+        // 価格帯の処理：希望種別に応じて適切なフィールドのみに設定し、他はクリア
+        const hasPriceRange = parsed.price_range_house !== undefined || 
+                             parsed.price_range_apartment !== undefined || 
+                             parsed.price_range_land !== undefined;
+        
+        if (hasPriceRange) {
+          // 価格帯（戸建）の処理
+          if (parsed.price_range_house !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_house',
+              existing.price_range_house,
+              existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_house = parsed.price_range_house;
+              updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            }
+          } else {
+            // 戸建の価格帯が設定されていない場合はクリア
+            updateData.price_range_house = null;
             updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            console.log(`[BuyerService] Cleared price_range_house (not applicable for this property type)`);
           }
-        }
-        
-        // 価格帯（マンション）の上書き判定
-        if (parsed.price_range_apartment !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_apartment',
-            existing.price_range_apartment,
-            existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_apartment = parsed.price_range_apartment;
+          
+          // 価格帯（マンション）の処理
+          if (parsed.price_range_apartment !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_apartment',
+              existing.price_range_apartment,
+              existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_apartment = parsed.price_range_apartment;
+              updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            }
+          } else {
+            // マンションの価格帯が設定されていない場合はクリア
+            updateData.price_range_apartment = null;
             updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            console.log(`[BuyerService] Cleared price_range_apartment (not applicable for this property type)`);
           }
-        }
-        
-        // 価格帯（土地）の上書き判定
-        if (parsed.price_range_land !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_land',
-            existing.price_range_land,
-            existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_land = parsed.price_range_land;
+          
+          // 価格帯（土地）の処理
+          if (parsed.price_range_land !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_land',
+              existing.price_range_land,
+              existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_land = parsed.price_range_land;
+              updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            }
+          } else {
+            // 土地の価格帯が設定されていない場合はクリア
+            updateData.price_range_land = null;
             updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            console.log(`[BuyerService] Cleared price_range_land (not applicable for this property type)`);
           }
         }
         
@@ -1116,45 +1138,67 @@ export class BuyerService {
           }
         }
         
-        // 価格帯（戸建）の上書き判定
-        if (parsed.price_range_house !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_house',
-            existing.price_range_house,
-            existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_house = parsed.price_range_house;
+        // 価格帯の処理：希望種別に応じて適切なフィールドのみに設定し、他はクリア
+        const hasPriceRange = parsed.price_range_house !== undefined || 
+                             parsed.price_range_apartment !== undefined || 
+                             parsed.price_range_land !== undefined;
+        
+        if (hasPriceRange) {
+          // 価格帯（戸建）の処理
+          if (parsed.price_range_house !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_house',
+              existing.price_range_house,
+              existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_house = parsed.price_range_house;
+              updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            }
+          } else {
+            // 戸建の価格帯が設定されていない場合はクリア
+            updateData.price_range_house = null;
             updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_house (not applicable for this property type)`);
           }
-        }
-        
-        // 価格帯（マンション）の上書き判定
-        if (parsed.price_range_apartment !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_apartment',
-            existing.price_range_apartment,
-            existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_apartment = parsed.price_range_apartment;
+          
+          // 価格帯（マンション）の処理
+          if (parsed.price_range_apartment !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_apartment',
+              existing.price_range_apartment,
+              existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_apartment = parsed.price_range_apartment;
+              updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            }
+          } else {
+            // マンションの価格帯が設定されていない場合はクリア
+            updateData.price_range_apartment = null;
             updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_apartment (not applicable for this property type)`);
           }
-        }
-        
-        // 価格帯（土地）の上書き判定
-        if (parsed.price_range_land !== undefined) {
-          if (parser.shouldOverwrite(
-            'price_range_land',
-            existing.price_range_land,
-            existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
-            inquiryHearingUpdatedAt
-          )) {
-            updateData.price_range_land = parsed.price_range_land;
+          
+          // 価格帯（土地）の処理
+          if (parsed.price_range_land !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_land',
+              existing.price_range_land,
+              existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_land = parsed.price_range_land;
+              updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            }
+          } else {
+            // 土地の価格帯が設定されていない場合はクリア
+            updateData.price_range_land = null;
             updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_land (not applicable for this property type)`);
           }
         }
         
