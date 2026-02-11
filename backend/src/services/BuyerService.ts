@@ -931,16 +931,16 @@ export class BuyerService {
         }
         
         // 駐車場希望台数の上書き判定
-        if (parsed.desired_parking_spaces !== undefined) {
+        if (parsed.parking_spaces !== undefined) {
           if (parser.shouldOverwrite(
-            'desired_parking_spaces',
-            existing.desired_parking_spaces,
-            existing.desired_parking_spaces_updated_at ? new Date(existing.desired_parking_spaces_updated_at) : null,
+            'parking_spaces',
+            existing.parking_spaces,
+            existing.parking_spaces_updated_at ? new Date(existing.parking_spaces_updated_at) : null,
             inquiryHearingUpdatedAt
           )) {
-            updateData.desired_parking_spaces = parsed.desired_parking_spaces;
-            updateData.desired_parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
-            console.log(`[BuyerService] Auto-synced desired_parking_spaces: ${parsed.desired_parking_spaces}`);
+            updateData.parking_spaces = parsed.parking_spaces;
+            updateData.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced parking_spaces: ${parsed.parking_spaces}`);
           }
         }
         

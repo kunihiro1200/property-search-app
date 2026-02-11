@@ -6,7 +6,7 @@
 
 export interface ParsedInquiryHearing {
   desired_timing?: string;
-  desired_parking_spaces?: string;
+  parking_spaces?: string;
   desired_price_range?: string;
 }
 
@@ -31,7 +31,7 @@ export class InquiryHearingParser {
       // 駐車場希望台数を抽出
       const parkingSpaces = this.extractFieldValue(inquiryHearing, /駐車場希望台数[：:]\s*([^\n]+)/);
       if (parkingSpaces) {
-        result.desired_parking_spaces = parkingSpaces;
+        result.parking_spaces = parkingSpaces;
       }
 
       // 予算を抽出してマッピング

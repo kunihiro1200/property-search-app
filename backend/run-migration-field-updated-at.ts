@@ -32,9 +32,9 @@ async function runMigration() {
     });
     if (error2) console.log('Note:', error2.message);
     
-    console.log('Adding desired_parking_spaces_updated_at column...');
+    console.log('Adding parking_spaces_updated_at column...');
     const { error: error3 } = await supabase.rpc('exec', {
-      sql: 'ALTER TABLE buyers ADD COLUMN IF NOT EXISTS desired_parking_spaces_updated_at TIMESTAMP'
+      sql: 'ALTER TABLE buyers ADD COLUMN IF NOT EXISTS parking_spaces_updated_at TIMESTAMP'
     });
     if (error3) console.log('Note:', error3.message);
     
