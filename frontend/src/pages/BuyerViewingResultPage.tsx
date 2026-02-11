@@ -832,6 +832,7 @@ export default function BuyerViewingResultPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* 買付コメント or 買付ハズレコメント */}
             <Box>
+              {/* 買付外れの場合 */}
               {isOfferFailed() && (
                 <Box 
                   sx={{ 
@@ -845,8 +846,8 @@ export default function BuyerViewingResultPage() {
                   }}
                 >
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    {isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
-                    {isOfferFailed() && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                    買付ハズレコメント
+                    <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>
                   </Typography>
                   <InlineEditableField
                     label=""
@@ -858,15 +859,33 @@ export default function BuyerViewingResultPage() {
                   />
                 </Box>
               )}
+              {/* 通常の買付の場合 */}
               {!isOfferFailed() && (
-                <InlineEditableField
-                  label={isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
-                  value={buyer.offer_comment || ''}
-                  onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
-                  fieldType="textarea"
-                  multiline
-                  rows={3}
-                />
+                <Box 
+                  sx={{ 
+                    p: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 1 : 0,
+                    border: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? '2px solid' : 'none',
+                    borderColor: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 'error.main' : 'transparent',
+                    borderRadius: 2,
+                    bgcolor: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 'rgba(255, 205, 210, 0.3)' : 'transparent',
+                    boxShadow: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? '0 2px 8px rgba(211, 47, 47, 0.2)' : 'none',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    買付コメント
+                    <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>
+                  </Typography>
+                  <InlineEditableField
+                    label=""
+                    value={buyer.offer_comment || ''}
+                    onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
+                    fieldType="textarea"
+                    multiline
+                    rows={3}
+                    placeholder="価格交渉がある場合は、書いてください。仮審査をいつ受けて、いつまでの決済希望等、スケジュール感もあれば記載してください。"
+                  />
+                </Box>
               )}
             </Box>
 
