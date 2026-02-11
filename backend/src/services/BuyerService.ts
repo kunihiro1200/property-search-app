@@ -2398,29 +2398,53 @@ export class BuyerService {
         color: string;
       }> = [];
       
-      // 全てのステータス定義を走査
-      STATUS_DEFINITIONS.forEach((definition) => {
-        const count = statusCountMap.get(definition.status) || 0;
+      // 実際に算出されたステータスをすべて収集
+      statusCountMap.forEach((count, status) => {
+        if (count === 0) return; // カウントが0のステータスはスキップ
         
-        // カウントが0でも表示する（UIで全てのステータスを表示するため）
-        categories.push({
-          status: definition.status,
-          count,
-          priority: definition.priority,
-          color: definition.color
-        });
+        // STATUS_DEFINITIONSから定義を検索
+        const definition = STATUS_DEFINITIONS.find(d => d.status === status);
+        
+        if (definition) {
+          // 定義が見つかった場合
+          categories.push({
+            status: definition.status,
+            count,
+            priority: definition.priority,
+            color: definition.color
+          });
+        } else {
+          // 動的に生成されたステータス（担当カテゴリーなど）
+          let priority = 999; // デフォルト優先度
+          let color = '#66ccff'; // デフォルト色（水色）
+          
+          // ステータス名から優先度と色を推測
+          if (status.startsWith('⑯当日TEL（') && status.endsWith('）')) {
+            // ⑯当日TEL（担当者名）
+            priority = 7;
+            color = '#cc0000'; // 濃い赤
+          } else if (status.startsWith('担当(') && status.endsWith(')次電日空欄')) {
+            // 担当(担当者名)次電日空欄
+            priority = 17;
+            color = '#ccccff'; // 非常に薄い青
+          } else if (status.startsWith('担当(') && status.endsWith(')')) {
+            // 担当(担当者名)
+            priority = 24;
+            color = '#66ccff'; // 水色
+          } else if (status === '') {
+            // 該当なし
+            priority = 999;
+            color = '#9E9E9E'; // グレー
+          }
+          
+          categories.push({
+            status,
+            count,
+            priority,
+            color
+          });
+        }
       });
-      
-      // 空文字列のステータス（該当なし）も追加
-      const emptyStatusCount = statusCountMap.get('') || 0;
-      if (emptyStatusCount > 0) {
-        categories.push({
-          status: '',
-          count: emptyStatusCount,
-          priority: 999, // 最低優先度
-          color: '#9E9E9E' // グレー
-        });
-      }
       
       // 優先順位でソート（昇順）
       categories.sort((a, b) => a.priority - b.priority);
