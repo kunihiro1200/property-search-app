@@ -366,7 +366,14 @@ export default function BuyerDetailPage() {
   };
   
   const handleSaveInquiryHearing = async () => {
-    if (!buyer || inquiryHearingDraft === null) return;
+    console.log('[handleSaveInquiryHearing] Called');
+    console.log('[handleSaveInquiryHearing] buyer:', buyer?.buyer_number);
+    console.log('[handleSaveInquiryHearing] inquiryHearingDraft:', inquiryHearingDraft);
+    
+    if (!buyer || inquiryHearingDraft === null) {
+      console.log('[handleSaveInquiryHearing] Early return - buyer or draft is null');
+      return;
+    }
     
     setIsSavingInquiryHearing(true);
     
