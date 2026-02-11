@@ -1076,6 +1076,96 @@ export class BuyerService {
       throw new Error('Buyer not found');
     }
 
+    // 問合せ時ヒアリングが更新される場合、自動パース処理を実行
+    if (updateData.inquiry_hearing !== undefined) {
+      console.log('[BuyerService.updateWithSync] inquiry_hearing update detected, starting auto-parse');
+      console.log('[BuyerService.updateWithSync] inquiry_hearing value:', updateData.inquiry_hearing);
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, existing.desired_property_type);
+        console.log('[BuyerService.updateWithSync] Parsed result:', parsed);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期の上書き判定
+        if (parsed.desired_timing !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_timing',
+            existing.desired_timing,
+            existing.desired_timing_updated_at ? new Date(existing.desired_timing_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_timing = parsed.desired_timing;
+            updateData.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced desired_timing: ${parsed.desired_timing}`);
+          }
+        }
+        
+        // 駐車場希望台数の上書き判定
+        if (parsed.parking_spaces !== undefined) {
+          if (parser.shouldOverwrite(
+            'parking_spaces',
+            existing.parking_spaces,
+            existing.parking_spaces_updated_at ? new Date(existing.parking_spaces_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.parking_spaces = parsed.parking_spaces;
+            updateData.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced parking_spaces: ${parsed.parking_spaces}`);
+          }
+        }
+        
+        // 価格帯（戸建）の上書き判定
+        if (parsed.price_range_house !== undefined) {
+          if (parser.shouldOverwrite(
+            'price_range_house',
+            existing.price_range_house,
+            existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.price_range_house = parsed.price_range_house;
+            updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_house: ${parsed.price_range_house}`);
+          }
+        }
+        
+        // 価格帯（マンション）の上書き判定
+        if (parsed.price_range_apartment !== undefined) {
+          if (parser.shouldOverwrite(
+            'price_range_apartment',
+            existing.price_range_apartment,
+            existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.price_range_apartment = parsed.price_range_apartment;
+            updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+          }
+        }
+        
+        // 価格帯（土地）の上書き判定
+        if (parsed.price_range_land !== undefined) {
+          if (parser.shouldOverwrite(
+            'price_range_land',
+            existing.price_range_land,
+            existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.price_range_land = parsed.price_range_land;
+            updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced price_range_land: ${parsed.price_range_land}`);
+          }
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        updateData.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        // パースエラーが発生しても、問合せ時ヒアリングの保存は継続
+        console.error('[BuyerService.updateWithSync] Failed to parse inquiry hearing:', error);
+      }
+    }
+
     // 更新不可フィールドを除外
     const protectedFields = ['buyer_id', 'created_at', 'synced_at', 'buyer_number'];
     const allowedData: any = {};
