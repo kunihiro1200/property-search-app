@@ -2908,6 +2908,14 @@ Email: <<会社メールアドレス>>`;
 
                     // inquiry_hearingフィールドには常に囲い枠を表示
                     const isInquiryHearing = field.key === 'inquiry_hearing';
+                    
+                    // inquiry_hearingフィールドの場合は自動保存を無効化（保存ボタンで保存）
+                    const handleInquiryHearingSave = async (newValue: any) => {
+                      // ドラフトとして保存（DBには保存しない）
+                      setInquiryHearingDraft(newValue);
+                      setBuyer(prev => prev ? { ...prev, inquiry_hearing: newValue } : prev);
+                      // 何もしない（保存ボタンで保存）
+                    };
 
                     return (
                       <Grid item {...gridSize} key={field.key}>
@@ -2980,7 +2988,7 @@ Email: <<会社メールアドレス>>`;
                             field.multiline ? 'textarea' :
                             'text'
                           }
-                          onSave={handleFieldSave}
+                          onSave={isInquiryHearing ? handleInquiryHearingSave : handleFieldSave}
                           readOnly={field.readOnly === true}
                           buyerId={buyer?.id || buyer_number}
                           enableConflictDetection={true}
