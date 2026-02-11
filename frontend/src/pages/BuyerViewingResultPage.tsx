@@ -773,14 +773,14 @@ export default function BuyerViewingResultPage() {
             </Box>
 
             {/* 買付外れましたボタン（「買」を含む場合のみ表示） */}
-            {buyer.latest_status && buyer.latest_status.includes('買') && !buyer.latest_status.includes('買付外れました') && (
+            {buyer.latest_status && buyer.latest_status.includes('買') && buyer.latest_status !== '買付外れました' && (
               <Box sx={{ flex: '0 0 auto', pt: 3 }}>
                 <Button
                   variant="outlined"
                   color="error"
                   size="medium"
                   onClick={async () => {
-                    // 「買付外れました」を選択
+                    // 空欄に設定し、「買付外れました」フラグを立てる
                     await handleInlineFieldSave('latest_status', '買付外れました');
                   }}
                   sx={{ 
@@ -814,20 +814,49 @@ export default function BuyerViewingResultPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* 買付コメント or 買付ハズレコメント */}
             <Box>
-              <InlineEditableField
-                label={isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
-                value={buyer.offer_comment || ''}
-                onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
-                fieldType="textarea"
-                multiline
-                rows={3}
-              />
+              {isOfferFailed() && (
+                <Box 
+                  sx={{ 
+                    p: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 1 : 0,
+                    border: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? '2px solid' : 'none',
+                    borderColor: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 'error.main' : 'transparent',
+                    borderRadius: 2,
+                    bgcolor: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? 'rgba(255, 205, 210, 0.3)' : 'transparent',
+                    boxShadow: (!buyer.offer_comment || buyer.offer_comment.trim() === '') ? '0 2px 8px rgba(211, 47, 47, 0.2)' : 'none',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    {isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
+                    {isOfferFailed() && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                  </Typography>
+                  <InlineEditableField
+                    label=""
+                    value={buyer.offer_comment || ''}
+                    onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
+                    fieldType="textarea"
+                    multiline
+                    rows={3}
+                  />
+                </Box>
+              )}
+              {!isOfferFailed() && (
+                <InlineEditableField
+                  label={isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
+                  value={buyer.offer_comment || ''}
+                  onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
+                  fieldType="textarea"
+                  multiline
+                  rows={3}
+                />
+              )}
             </Box>
 
             {/* 買付チャット送信ボタン or 買付ハズレチャット送信ボタン */}
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 {isOfferFailed() ? '買付ハズレチャット送信' : '買付チャット送信'}
+                {isOfferFailed() && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
               </Typography>
               <Button
                 variant="contained"
