@@ -175,6 +175,32 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
         return;
       }
     }
+
+    // テキストエリアで選択範囲がある場合、DeleteキーやBackspaceキーで選択範囲全体を削除
+    if (fieldType === 'textarea' && (e.key === 'Delete' || e.key === 'Backspace')) {
+      const target = e.target as HTMLTextAreaElement;
+      const selectionStart = target.selectionStart;
+      const selectionEnd = target.selectionEnd;
+      
+      // 選択範囲がある場合（選択開始位置と終了位置が異なる）
+      if (selectionStart !== selectionEnd) {
+        e.preventDefault();
+        
+        // 選択範囲を削除
+        const newValue = 
+          editValue.substring(0, selectionStart) + 
+          editValue.substring(selectionEnd);
+        
+        updateValue(newValue);
+        
+        // カーソル位置を選択開始位置に設定（次のレンダリング後）
+        setTimeout(() => {
+          if (inputRef.current) {
+            (inputRef.current as HTMLTextAreaElement).setSelectionRange(selectionStart, selectionStart);
+          }
+        }, 0);
+      }
+    }
   };
 
   // Format display value
