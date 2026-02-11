@@ -282,6 +282,7 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
               componentsProps={{
                 popper: {
                   disablePortal: false,
+                  placement: 'top-start',
                   sx: {
                     zIndex: 9999,
                   },
@@ -323,11 +324,11 @@ export const InlineEditableField: React.FC<InlineEditableFieldProps> = memo(({
                   },
                 },
                 anchorOrigin: {
-                  vertical: 'bottom',
+                  vertical: 'top',
                   horizontal: 'left',
                 },
                 transformOrigin: {
-                  vertical: 'top',
+                  vertical: 'bottom',
                   horizontal: 'left',
                 },
               }}

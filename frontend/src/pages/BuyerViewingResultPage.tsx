@@ -780,8 +780,8 @@ export default function BuyerViewingResultPage() {
                   color="error"
                   size="medium"
                   onClick={async () => {
-                    // 空欄に設定（ユーザーに選択を促す）
-                    await handleInlineFieldSave('latest_status', '');
+                    // 「買付外れました」を選択
+                    await handleInlineFieldSave('latest_status', '買付外れました');
                   }}
                   sx={{ 
                     fontWeight: 'bold',
