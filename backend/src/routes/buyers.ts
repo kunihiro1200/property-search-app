@@ -1058,6 +1058,95 @@ router.post('/:id/send-sms', async (req: Request, res: Response) => {
   }
 });
 
+// 買付チャット送信
+router.post('/:buyer_number/send-offer-chat', async (req: Request, res: Response) => {
+  try {
+    const { buyer_number } = req.params;
+    const { propertyNumber, offerComment } = req.body;
+
+    console.log('[POST /buyers/:buyer_number/send-offer-chat] Request received:', {
+      buyer_number,
+      propertyNumber,
+      offerCommentLength: offerComment?.length || 0,
+    });
+
+    // バリデーション
+    if (!propertyNumber) {
+      console.error('[POST /buyers/:buyer_number/send-offer-chat] Validation failed: propertyNumber is required');
+      return res.status(400).json({
+        success: false,
+        error: '物件番号は必須です',
+      });
+    }
+
+    // 1. 買主データを取得
+    const buyer = await buyerService.getByBuyerNumber(buyer_number);
+    if (!buyer) {
+      console.error('[POST /buyers/:buyer_number/send-offer-chat] Buyer not found:', buyer_number);
+      return res.status(404).json({
+        success: false,
+        error: '買主が見つかりませんでした',
+      });
+    }
+
+    console.log('[POST /buyers/:buyer_number/send-offer-chat] Buyer found:', {
+      buyer_number: buyer.buyer_number,
+      name: buyer.name,
+      latest_status: buyer.latest_status,
+    });
+
+    // 2. 物件データを取得（property_listingsテーブルから）
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+    
+    const { data: property, error: propertyError } = await supabase
+      .from('property_listings')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .single();
+    
+    if (propertyError || !property) {
+      console.error('[POST /buyers/:buyer_number/send-offer-chat] Property not found:', propertyNumber, propertyError);
+      return res.status(404).json({
+        success: false,
+        error: '物件が見つかりませんでした',
+      });
+    }
+
+    console.log('[POST /buyers/:buyer_number/send-offer-chat] Property found:', {
+      property_number: property.property_number,
+      address: property.address,
+      atbb_status: property.atbb_status,
+    });
+
+    // 3. GoogleChatServiceを使用してメッセージ送信
+    const { GoogleChatService } = require('../services/GoogleChatService');
+    const chatService = new GoogleChatService();
+    
+    await chatService.sendOfferMessage(buyer, property, offerComment || '');
+
+    console.log('[POST /buyers/:buyer_number/send-offer-chat] Message sent successfully');
+
+    // 成功レスポンス
+    res.json({
+      success: true,
+      message: 'Google Chatに送信しました',
+    });
+
+  } catch (error: any) {
+    console.error('[POST /buyers/:buyer_number/send-offer-chat] Exception:', error);
+    console.error('[POST /buyers/:buyer_number/send-offer-chat] Error stack:', error.stack);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message || 'チャット送信に失敗しました',
+    });
+  }
+});
+
 // 担当への確認事項をGoogle Chatに送信
 router.post('/:buyer_number/send-confirmation', async (req: Request, res: Response) => {
   try {
