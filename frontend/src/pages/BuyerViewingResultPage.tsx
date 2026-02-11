@@ -752,19 +752,42 @@ export default function BuyerViewingResultPage() {
           </Box>
 
           {/* ★最新状況 */}
-          <Box>
-            <InlineEditableField
-              label="★最新状況"
-              value={buyer.latest_status || ''}
-              onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
-              fieldType="dropdown"
-              options={getFilteredLatestStatusOptions()}
-              fieldName="latest_status"
-              buyerId={buyer_number}
-              enableConflictDetection={true}
-              showEditIndicator={true}
-              oneClickDropdown={true}
-            />
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            {/* ★最新状況ドロップダウン（幅を半分に） */}
+            <Box sx={{ flex: '0 0 50%' }}>
+              <InlineEditableField
+                label="★最新状況"
+                value={buyer.latest_status || ''}
+                onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
+                fieldType="dropdown"
+                options={getFilteredLatestStatusOptions()}
+                fieldName="latest_status"
+                buyerId={buyer_number}
+                enableConflictDetection={true}
+                showEditIndicator={true}
+                oneClickDropdown={true}
+              />
+            </Box>
+
+            {/* 買付外れましたボタン（「買」を含む場合のみ表示） */}
+            {buyer.latest_status && buyer.latest_status.includes('買') && !buyer.latest_status.includes('買付外れました') && (
+              <Box sx={{ flex: '0 0 auto', pt: 3 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="medium"
+                  onClick={async () => {
+                    await handleInlineFieldSave('latest_status', '買付外れました');
+                  }}
+                  sx={{ 
+                    fontWeight: 'bold',
+                    minWidth: '160px',
+                  }}
+                >
+                  買付外れました
+                </Button>
+              </Box>
+            )}
           </Box>
         </Box>
       </Paper>
