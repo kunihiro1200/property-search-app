@@ -25,14 +25,15 @@ interface PropertyListing {
   address: string;
   display_address?: string;
   property_type: string;
-  sales_price: number;
-  listing_price?: number;
+  price: number;               // 価格（BS列）
+  sales_price?: number;        // 売出価格（オプショナル）
   atbb_status: string;
   sales_assignee?: string;
-  distribution_areas?: string;
-  land_area?: number;
-  building_area?: number;
   floor_plan?: string;
+  pet_consultation?: string;  // ペット相談（マンションの場合のみ表示）
+  parking?: string;            // 駐車場（AL列）
+  property_about?: string;     // 内覧前伝達事項（BQ列）
+  pre_viewing_notes?: string;  // 内覧前伝達事項（旧カラム）
 }
 
 export default function BuyerNearbyPropertiesPage() {
@@ -82,6 +83,19 @@ export default function BuyerNearbyPropertiesPage() {
     return `${area.toFixed(2)}㎡`;
   };
 
+  const formatPropertyAbout = (property: PropertyListing) => {
+    let text = property.property_about || property.pre_viewing_notes;
+    if (!text) return '-';
+    
+    // 「【こちらの物件について】」を省略
+    text = text.replace(/【こちらの物件について】\s*/g, '');
+    
+    return text;
+  };
+
+  // マンションが含まれているか確認
+  const hasApartment = nearbyProperties.some(p => p.property_type === 'マンション');
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -115,7 +129,7 @@ export default function BuyerNearbyPropertiesPage() {
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <Chip label={`物件番号: ${baseProperty.property_number}`} />
             <Chip label={`住所: ${baseProperty.address}`} />
-            <Chip label={`価格: ${formatPrice(baseProperty.sales_price)}`} />
+            <Chip label={`価格: ${formatPrice(baseProperty.price)}`} />
             <Chip label={`種別: ${baseProperty.property_type}`} />
           </Box>
         </Paper>
@@ -137,18 +151,18 @@ export default function BuyerNearbyPropertiesPage() {
                 <TableCell>住所</TableCell>
                 <TableCell>種別</TableCell>
                 <TableCell align="right">価格</TableCell>
-                <TableCell align="right">売出価格</TableCell>
                 <TableCell>ステータス</TableCell>
                 <TableCell>担当</TableCell>
                 <TableCell>間取り</TableCell>
-                <TableCell align="right">土地面積</TableCell>
-                <TableCell align="right">建物面積</TableCell>
+                {hasApartment && <TableCell>ペット</TableCell>}
+                <TableCell>駐車場</TableCell>
+                <TableCell>内覧前伝達事項</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {nearbyProperties.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center">
+                  <TableCell colSpan={hasApartment ? 10 : 9} align="center">
                     近隣物件が見つかりませんでした
                   </TableCell>
                 </TableRow>
@@ -163,8 +177,7 @@ export default function BuyerNearbyPropertiesPage() {
                     <TableCell>{property.property_number}</TableCell>
                     <TableCell>{property.display_address || property.address}</TableCell>
                     <TableCell>{property.property_type}</TableCell>
-                    <TableCell align="right">{formatPrice(property.sales_price)}</TableCell>
-                    <TableCell align="right">{formatPrice(property.listing_price)}</TableCell>
+                    <TableCell align="right">{formatPrice(property.price)}</TableCell>
                     <TableCell>
                       <Chip 
                         label={property.atbb_status} 
@@ -174,8 +187,25 @@ export default function BuyerNearbyPropertiesPage() {
                     </TableCell>
                     <TableCell>{property.sales_assignee || '-'}</TableCell>
                     <TableCell>{property.floor_plan || '-'}</TableCell>
-                    <TableCell align="right">{formatArea(property.land_area)}</TableCell>
-                    <TableCell align="right">{formatArea(property.building_area)}</TableCell>
+                    {hasApartment && (
+                      <TableCell>
+                        {property.property_type === 'マンション' 
+                          ? (property.pet_consultation || '-')
+                          : '-'
+                        }
+                      </TableCell>
+                    )}
+                    <TableCell>{property.parking || '-'}</TableCell>
+                    <TableCell 
+                      sx={{ 
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        maxWidth: '300px',
+                        minWidth: '200px'
+                      }}
+                    >
+                      {formatPropertyAbout(property)}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
