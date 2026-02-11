@@ -26,7 +26,7 @@ async function testIntegration() {
     // 現在の状態を取得
     const { data: before, error: beforeError } = await supabase
       .from('buyers')
-      .select('buyer_number, inquiry_hearing, desired_timing, parking_spaces, desired_price_range, inquiry_hearing_updated_at, desired_timing_updated_at, parking_spaces_updated_at, desired_price_range_updated_at')
+      .select('buyer_number, inquiry_hearing, desired_timing, parking_spaces, price_range_house, price_range_apartment, price_range_land, inquiry_hearing_updated_at, desired_timing_updated_at, parking_spaces_updated_at, price_range_house_updated_at, price_range_apartment_updated_at, price_range_land_updated_at')
       .eq('buyer_number', testBuyerNumber)
       .single();
     
@@ -39,7 +39,9 @@ async function testIntegration() {
     console.log('問合せ時ヒアリング:', before.inquiry_hearing || '(空)');
     console.log('希望時期:', before.desired_timing || '(空)');
     console.log('駐車場希望台数:', before.parking_spaces || '(空)');
-    console.log('予算:', before.desired_price_range || '(空)');
+    console.log('価格帯（戸建）:', before.price_range_house || '(空)');
+    console.log('価格帯（マンション）:', before.price_range_apartment || '(空)');
+    console.log('価格帯（土地）:', before.price_range_land || '(空)');
     console.log('');
 
     // 問合せ時ヒアリングを更新（テストデータ）
@@ -82,7 +84,7 @@ async function testIntegration() {
     // 更新後の状態を取得
     const { data: after, error: afterError } = await supabase
       .from('buyers')
-      .select('buyer_number, inquiry_hearing, desired_timing, parking_spaces, desired_price_range, inquiry_hearing_updated_at, desired_timing_updated_at, parking_spaces_updated_at, desired_price_range_updated_at')
+      .select('buyer_number, inquiry_hearing, desired_timing, parking_spaces, price_range_house, price_range_apartment, price_range_land, inquiry_hearing_updated_at, desired_timing_updated_at, parking_spaces_updated_at, price_range_house_updated_at, price_range_apartment_updated_at, price_range_land_updated_at')
       .eq('buyer_number', testBuyerNumber)
       .single();
     
@@ -95,7 +97,9 @@ async function testIntegration() {
     console.log('問合せ時ヒアリング:', after.inquiry_hearing || '(空)');
     console.log('希望時期:', after.desired_timing || '(空)');
     console.log('駐車場希望台数:', after.parking_spaces || '(空)');
-    console.log('予算:', after.desired_price_range || '(空)');
+    console.log('価格帯（戸建）:', after.price_range_house || '(空)');
+    console.log('価格帯（マンション）:', after.price_range_apartment || '(空)');
+    console.log('価格帯（土地）:', after.price_range_land || '(空)');
     console.log('');
 
     console.log('【推奨テスト方法】');
