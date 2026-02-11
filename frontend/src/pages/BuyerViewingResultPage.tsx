@@ -287,6 +287,96 @@ export default function BuyerViewingResultPage() {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // 買付情報セクションの表示条件を判定
+  const shouldShowOfferSection = (): boolean => {
+    if (!buyer?.latest_status) return false;
+    
+    const status = buyer.latest_status.trim();
+    
+    // 「買付外れました」を含む場合は非表示
+    if (status.includes('買付外れました')) return false;
+    
+    // 「買」を含む場合は表示
+    return status.includes('買');
+  };
+
+  // ★最新状況の選択肢を物件のatbb_statusに応じてフィルタリング
+  const getFilteredLatestStatusOptions = (): typeof LATEST_STATUS_OPTIONS => {
+    // 紐づいた物件がない場合は全ての選択肢を表示
+    if (!linkedProperties || linkedProperties.length === 0) {
+      return LATEST_STATUS_OPTIONS;
+    }
+
+    // 紐づいた物件のatbb_statusを取得
+    const atbbStatus = linkedProperties[0]?.atbb_status || '';
+
+    // 専任媒介の場合
+    if (atbbStatus.includes('専任')) {
+      return LATEST_STATUS_OPTIONS.filter(option => {
+        // 「買（専任 両手）」「買（専任 片手）」のみ表示
+        // その他の「買（）」は非表示
+        if (option.value.startsWith('買（')) {
+          return option.value === '買（専任 両手）' || option.value === '買（専任 片手）';
+        }
+        // 「買（」で始まらない選択肢はそのまま表示
+        return true;
+      });
+    }
+
+    // 一般媒介の場合
+    if (atbbStatus.includes('一般')) {
+      return LATEST_STATUS_OPTIONS.filter(option => {
+        // 「買（一般 両手）」「買（一般 片手）」のみ表示
+        // その他の「買（）」は非表示
+        if (option.value.startsWith('買（')) {
+          return option.value === '買（一般 両手）' || option.value === '買（一般 片手）';
+        }
+        // 「買（」で始まらない選択肢はそのまま表示
+        return true;
+      });
+    }
+
+    // 専任も一般も含まれない場合は全ての選択肢を表示
+    return LATEST_STATUS_OPTIONS;
+  };
+
+  // 買付チャット送信ハンドラー
+  const handleOfferChatSend = async () => {
+    if (!buyer || !linkedProperties || linkedProperties.length === 0) {
+      setSnackbar({
+        open: true,
+        message: '買主または物件情報が不足しています',
+        severity: 'error',
+      });
+      return;
+    }
+
+    try {
+      // バックエンドAPIを呼び出し
+      const response = await api.post(`/api/buyers/${buyer.buyer_number}/send-offer-chat`, {
+        propertyNumber: linkedProperties[0].property_number,
+        offerComment: buyer.offer_comment || '',
+      });
+
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: 'Google Chatに送信しました',
+          severity: 'success',
+        });
+      } else {
+        throw new Error(response.data.error || 'チャット送信に失敗しました');
+      }
+    } catch (error: any) {
+      console.error('Failed to send chat message:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || error.message || 'チャット送信に失敗しました',
+        severity: 'error',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3, px: 2, textAlign: 'center' }}>
@@ -663,7 +753,7 @@ export default function BuyerViewingResultPage() {
               value={buyer.latest_status || ''}
               onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
               fieldType="dropdown"
-              options={LATEST_STATUS_OPTIONS}
+              options={getFilteredLatestStatusOptions()}
               fieldName="latest_status"
               buyerId={buyer_number}
               enableConflictDetection={true}
@@ -674,97 +764,54 @@ export default function BuyerViewingResultPage() {
         </Box>
       </Paper>
 
-      {/* 買付情報セクション */}
-      <Paper 
-        sx={{ 
-          p: 3,
-          mt: 3,
-          bgcolor: 'rgba(76, 175, 80, 0.08)',
-          border: '1px solid',
-          borderColor: 'rgba(76, 175, 80, 0.3)',
-        }}
-      >
-        <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-          買付情報
-        </Typography>
+      {/* 買付情報セクション（条件付き表示） */}
+      {shouldShowOfferSection() && (
+        <Paper 
+          sx={{ 
+            p: 3,
+            mt: 3,
+            bgcolor: 'rgba(76, 175, 80, 0.08)',
+            border: '1px solid',
+            borderColor: 'rgba(76, 175, 80, 0.3)',
+          }}
+        >
+          <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+            買付情報
+          </Typography>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* 買付有無 */}
-          <Box>
-            <InlineEditableField
-              label="買付有無"
-              value={buyer.offer_status || ''}
-              onSave={(newValue) => handleInlineFieldSave('offer_status', newValue)}
-              fieldType="text"
-            />
-          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* 買付コメント */}
+            <Box>
+              <InlineEditableField
+                label="買付コメント"
+                value={buyer.offer_comment || ''}
+                onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
+                fieldType="textarea"
+                multiline
+                rows={3}
+              />
+            </Box>
 
-          {/* 買付コメント */}
-          <Box>
-            <InlineEditableField
-              label="買付コメント"
-              value={buyer.offer_comment || ''}
-              onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
-              fieldType="textarea"
-              multiline
-              rows={3}
-            />
+            {/* 買付チャット送信ボタン */}
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                買付チャット送信
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                size="medium"
+                onClick={handleOfferChatSend}
+                sx={{ 
+                  fontWeight: 'bold',
+                }}
+              >
+                送信
+              </Button>
+            </Box>
           </Box>
-
-          {/* 買付（物件シート） */}
-          <Box>
-            <InlineEditableField
-              label="買付（物件シート）"
-              value={buyer.offer_property_sheet || ''}
-              onSave={(newValue) => handleInlineFieldSave('offer_property_sheet', newValue)}
-              fieldType="text"
-            />
-          </Box>
-
-          {/* 買付外れコメント */}
-          <Box>
-            <InlineEditableField
-              label="買付外れコメント"
-              value={buyer.offer_lost_comment || ''}
-              onSave={(newValue) => handleInlineFieldSave('offer_lost_comment', newValue)}
-              fieldType="textarea"
-              multiline
-              rows={3}
-            />
-          </Box>
-
-          {/* 買付外れチャット */}
-          <Box>
-            <InlineEditableField
-              label="買付外れチャット"
-              value={buyer.offer_lost_chat || ''}
-              onSave={(newValue) => handleInlineFieldSave('offer_lost_chat', newValue)}
-              fieldType="text"
-            />
-          </Box>
-
-          {/* 買付チャット送信（Google Chatへのリンクボタン） */}
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-              買付チャット送信
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              size="medium"
-              onClick={() => {
-                const GOOGLE_CHAT_URL = 'https://chat.googleapis.com/v1/spaces/AAAA6iEDkiU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=azlyf21pENCpLLUdJPjnRNXOzsIAP550xebOMVxYRMQ';
-                window.open(GOOGLE_CHAT_URL, '_blank');
-              }}
-              sx={{ 
-                fontWeight: 'bold',
-              }}
-            >
-              送信
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
+        </Paper>
+      )}
 
       {/* スナックバー */}
       <Snackbar
