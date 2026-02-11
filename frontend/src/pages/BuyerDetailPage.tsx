@@ -1232,7 +1232,7 @@ Email: <<会社メールアドレス>>`;
               
               // パターン3: 3回架電確認済みが必須（【問合メール】電話対応 = 不通 の場合のみ）
               // ただし、フィールドが表示されている場合のみチェック
-              const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+              // hasMailInquiryは既に上で宣言済み
               const isThreeCallsConfirmedDisplayed = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
               const isThreeCallsConfirmedRequired = buyer.inquiry_email_phone === '不通';
               
