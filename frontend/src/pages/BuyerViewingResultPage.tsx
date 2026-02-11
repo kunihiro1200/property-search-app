@@ -893,7 +893,7 @@ export default function BuyerViewingResultPage() {
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 {isOfferFailed() ? '買付ハズレチャット送信' : '買付チャット送信'}
-                {isOfferFailed() && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>
               </Typography>
               <Button
                 variant="contained"
