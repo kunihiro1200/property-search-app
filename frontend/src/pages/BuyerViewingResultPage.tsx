@@ -302,9 +302,12 @@ export default function BuyerViewingResultPage() {
 
   // ★最新状況の選択肢を物件のatbb_statusに応じてフィルタリング
   const getFilteredLatestStatusOptions = (): typeof LATEST_STATUS_OPTIONS => {
+    // 空欄選択肢を先頭に追加
+    const emptyOption = { value: '', label: '（空欄）' };
+    
     // 紐づいた物件がない場合は全ての選択肢を表示
     if (!linkedProperties || linkedProperties.length === 0) {
-      return LATEST_STATUS_OPTIONS;
+      return [emptyOption, ...LATEST_STATUS_OPTIONS];
     }
 
     // 紐づいた物件のatbb_statusを取得
@@ -312,7 +315,7 @@ export default function BuyerViewingResultPage() {
 
     // 専任媒介の場合
     if (atbbStatus.includes('専任')) {
-      return LATEST_STATUS_OPTIONS.filter(option => {
+      const filtered = LATEST_STATUS_OPTIONS.filter(option => {
         // 「買（専任 両手）」「買（専任 片手）」のみ表示
         // その他の「買（）」は非表示
         if (option.value.startsWith('買（')) {
@@ -321,11 +324,12 @@ export default function BuyerViewingResultPage() {
         // 「買（」で始まらない選択肢はそのまま表示
         return true;
       });
+      return [emptyOption, ...filtered];
     }
 
     // 一般媒介の場合
     if (atbbStatus.includes('一般')) {
-      return LATEST_STATUS_OPTIONS.filter(option => {
+      const filtered = LATEST_STATUS_OPTIONS.filter(option => {
         // 「買（一般 両手）」「買（一般 片手）」のみ表示
         // その他の「買（）」は非表示
         if (option.value.startsWith('買（')) {
@@ -334,10 +338,11 @@ export default function BuyerViewingResultPage() {
         // 「買（」で始まらない選択肢はそのまま表示
         return true;
       });
+      return [emptyOption, ...filtered];
     }
 
     // 専任も一般も含まれない場合は全ての選択肢を表示
-    return LATEST_STATUS_OPTIONS;
+    return [emptyOption, ...LATEST_STATUS_OPTIONS];
   };
 
   // 買付チャット送信ハンドラー
