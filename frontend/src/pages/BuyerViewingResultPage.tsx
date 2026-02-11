@@ -293,11 +293,14 @@ export default function BuyerViewingResultPage() {
     
     const status = buyer.latest_status.trim();
     
-    // 「買付外れました」を含む場合は非表示
-    if (status.includes('買付外れました')) return false;
-    
-    // 「買」を含む場合は表示
+    // 「買」を含む場合は表示（「買付外れました」も含む）
     return status.includes('買');
+  };
+
+  // 買付外れましたかどうかを判定
+  const isOfferFailed = (): boolean => {
+    if (!buyer?.latest_status) return false;
+    return buyer.latest_status.includes('買付外れました');
   };
 
   // ★最新状況の選択肢を物件のatbb_statusに応じてフィルタリング
@@ -777,7 +780,8 @@ export default function BuyerViewingResultPage() {
                   color="error"
                   size="medium"
                   onClick={async () => {
-                    await handleInlineFieldSave('latest_status', '買付外れました');
+                    // 空欄に設定（ユーザーに選択を促す）
+                    await handleInlineFieldSave('latest_status', '');
                   }}
                   sx={{ 
                     fontWeight: 'bold',
@@ -798,20 +802,20 @@ export default function BuyerViewingResultPage() {
           sx={{ 
             p: 3,
             mt: 3,
-            bgcolor: 'rgba(76, 175, 80, 0.08)',
+            bgcolor: isOfferFailed() ? 'rgba(211, 47, 47, 0.08)' : 'rgba(76, 175, 80, 0.08)',
             border: '1px solid',
-            borderColor: 'rgba(76, 175, 80, 0.3)',
+            borderColor: isOfferFailed() ? 'rgba(211, 47, 47, 0.3)' : 'rgba(76, 175, 80, 0.3)',
           }}
         >
           <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-            買付情報
+            {isOfferFailed() ? '買付外れ情報' : '買付情報'}
           </Typography>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* 買付コメント */}
+            {/* 買付コメント or 買付ハズレコメント */}
             <Box>
               <InlineEditableField
-                label="買付コメント"
+                label={isOfferFailed() ? '買付ハズレコメント' : '買付コメント'}
                 value={buyer.offer_comment || ''}
                 onSave={(newValue) => handleInlineFieldSave('offer_comment', newValue)}
                 fieldType="textarea"
@@ -820,14 +824,14 @@ export default function BuyerViewingResultPage() {
               />
             </Box>
 
-            {/* 買付チャット送信ボタン */}
+            {/* 買付チャット送信ボタン or 買付ハズレチャット送信ボタン */}
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                買付チャット送信
+                {isOfferFailed() ? '買付ハズレチャット送信' : '買付チャット送信'}
               </Typography>
               <Button
                 variant="contained"
-                color="primary"
+                color={isOfferFailed() ? 'error' : 'primary'}
                 size="medium"
                 onClick={handleOfferChatSend}
                 sx={{ 
