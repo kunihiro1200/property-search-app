@@ -337,48 +337,68 @@ export default function BuyerDetailPage() {
   // 問合時ヒアリング用クイック入力ボタンのクリックハンドラー
   // inquiry_hearingフィールドの強制再レンダリング用キー
   const [inquiryHearingKey, setInquiryHearingKey] = useState(0);
+  const [inquiryHearingDraft, setInquiryHearingDraft] = useState<string | null>(null);
+  const [isSavingInquiryHearing, setIsSavingInquiryHearing] = useState(false);
   
-  const handleInquiryHearingQuickInput = async (text: string, buttonLabel: string) => {
+  const handleInquiryHearingQuickInput = (text: string, buttonLabel: string) => {
     if (!buyer) return;
     
     console.log('[handleInquiryHearingQuickInput] Called with:', { text, buttonLabel });
-    console.log('[handleInquiryHearingQuickInput] Current buyer.inquiry_hearing:', buyer.inquiry_hearing);
     
-    // 現在の値を取得（buyerの最新状態から）
-    const currentValue = buyer.inquiry_hearing || '';
+    // 現在の値を取得（ドラフトがあればそれを使用、なければbuyerの値）
+    const currentValue = inquiryHearingDraft !== null ? inquiryHearingDraft : (buyer.inquiry_hearing || '');
     
     // 新しいテキストを先頭に追加（既存内容がある場合は改行を挟む）
     const newValue = currentValue 
       ? `${text}\n${currentValue}` 
       : text;
     
-    console.log('[handleInquiryHearingQuickInput] New value to save:', newValue);
+    console.log('[handleInquiryHearingQuickInput] New draft value:', newValue);
     
-    // 先にローカル状態を更新して即座にUIに反映
+    // ドラフトとして保存（まだDBには保存しない）
+    setInquiryHearingDraft(newValue);
+    
+    // ローカル状態を更新して即座にUIに反映
     setBuyer(prev => prev ? { ...prev, inquiry_hearing: newValue } : prev);
+    
     // キーを更新してInlineEditableFieldを強制再レンダリング
     setInquiryHearingKey(prev => prev + 1);
+  };
+  
+  const handleSaveInquiryHearing = async () => {
+    if (!buyer || inquiryHearingDraft === null) return;
     
-    // DB → スプレッドシートに即座に同期
+    setIsSavingInquiryHearing(true);
+    
     try {
+      console.log('[handleSaveInquiryHearing] Saving:', inquiryHearingDraft);
+      
       const result = await buyerApi.update(
         buyer_number!,
-        { inquiry_hearing: newValue },
+        { inquiry_hearing: inquiryHearingDraft },
         { sync: true, force: true }  // スプレッドシート同期を有効化
       );
       
-      console.log('[handleInquiryHearingQuickInput] Save result:', result);
+      console.log('[handleSaveInquiryHearing] Save result:', result);
+      
+      // ドラフトをクリア
+      setInquiryHearingDraft(null);
+      
+      setSnackbar({
+        open: true,
+        message: '問合せ時ヒアリングを保存しました',
+        severity: 'success'
+      });
       
     } catch (error: any) {
-      console.error('[handleInquiryHearingQuickInput] Exception:', error);
-      // エラー時は元の値に戻す
-      setBuyer(prev => prev ? { ...prev, inquiry_hearing: currentValue } : prev);
-      setInquiryHearingKey(prev => prev + 1);
+      console.error('[handleSaveInquiryHearing] Exception:', error);
       setSnackbar({
         open: true,
         message: error.response?.data?.error || '保存に失敗しました',
         severity: 'error'
       });
+    } finally {
+      setIsSavingInquiryHearing(false);
     }
   };
 
@@ -2894,9 +2914,32 @@ Email: <<会社メールアドレス>>`;
                         {/* 問合時ヒアリング用クイック入力ボタン */}
                         {isInquiryHearing && (
                           <Box sx={{ mb: 1 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              ヒアリング項目
-                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="subtitle2">
+                                ヒアリング項目
+                              </Typography>
+                              {/* 保存ボタン（ドラフトがある場合のみ有効） */}
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleSaveInquiryHearing}
+                                disabled={inquiryHearingDraft === null || isSavingInquiryHearing}
+                                startIcon={isSavingInquiryHearing ? <CircularProgress size={16} /> : null}
+                                sx={{
+                                  backgroundColor: SECTION_COLORS.buyer.main,
+                                  color: '#fff',
+                                  '&:hover': {
+                                    backgroundColor: SECTION_COLORS.buyer.dark,
+                                  },
+                                  '&:disabled': {
+                                    backgroundColor: '#ccc',
+                                    color: '#999',
+                                  },
+                                }}
+                              >
+                                {isSavingInquiryHearing ? '保存中...' : '保存'}
+                              </Button>
+                            </Box>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                               {INQUIRY_HEARING_QUICK_INPUTS.map((item) => {
                                 return (
