@@ -17,6 +17,9 @@ export const INQUIRY_SOURCE_CATEGORIES = [
 export type InquirySourceCategory = typeof INQUIRY_SOURCE_CATEGORIES[number];
 
 export const INQUIRY_SOURCE_OPTIONS: InquirySourceOption[] = [
+  // 空欄
+  { value: '', label: '（空欄）', category: '' },
+  
   // 電話系
   { value: '電話(at home)', label: '電話(at home)', category: '電話系' },
   { value: '電話(スーモ)', label: '電話(スーモ)', category: '電話系' },
