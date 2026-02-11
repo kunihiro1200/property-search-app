@@ -672,7 +672,7 @@ export function calculateBuyerStatusComplete(buyer: BuyerData): StatusResult {
     }
     
     // Priority 34: 要内覧促進客
-    // AND([受付日] >= TODAY() - 14,[受付日] <= TODAY() - 4,ISBLANK([●内覧日(最新）]),ISBLANK([後続担当]),ISBLANK([★最新状況]),[内覧促進メール不要]<>"不要",ISBLANK([内覧促進メール送信者]),ISBLANK([業者問合せ]),[●問合せ元] <> "配信希望アンケート",NOT(CONTAINS([●問合せ元], "ピンリッチ")),AND([●問合時確度] <> "e（買付物件の問合せ）",[●問合時確度] <> "d（資料送付不要、条件不適合など）",[●問合時確度] <> "b（内覧検討）"))
+    // AND([受付日] >= TODAY() - 14,[受付日] <= TODAY() - 4,ISBLANK([●内覧日(最新）]),ISBLANK([後続担当]),ISBLANK([★最新状況]),[内覧促進メール不要]<>"不要",ISBLANK([内覧促進メール送信者]),ISBLANK([業者問合せ]),[●問合せ元] <> "配信希望アンケート",NOT(CONTAINS([●問合せ元], "ピンリッチ")),NOT(CONTAINS([●問合せ元], "2件目以降紹介")),AND([●問合時確度] <> "e（買付物件の問合せ）",[●問合時確度] <> "d（資料送付不要、条件不適合など）",[●問合時確度] <> "b（内覧検討）"))
     if (
       and(
         isWithinDaysAgo(buyer.reception_date, 14, 4),
@@ -684,6 +684,7 @@ export function calculateBuyerStatusComplete(buyer: BuyerData): StatusResult {
         isBlank(buyer.broker_inquiry),
         notEquals(buyer.inquiry_source, '配信希望アンケート'),
         not(contains(buyer.inquiry_source, 'ピンリッチ')),
+        not(contains(buyer.inquiry_source, '2件目以降紹介')),
         and(
           notEquals(buyer.inquiry_confidence, 'e（買付物件の問合せ）'),
           notEquals(buyer.inquiry_confidence, 'd（資料送付不要、条件不適合など）'),

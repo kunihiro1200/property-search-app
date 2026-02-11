@@ -129,6 +129,14 @@ export const STATUS_DEFINITIONS: StatusDefinition[] = [
     color: '#9999ff',
   },
   
+  // Priority 16.5
+  {
+    priority: 16.5,
+    status: '要内覧促進客',
+    description: '内覧促進が必要な顧客',
+    color: '#99ff99', // 薄い緑
+  },
+  
   // Priority 17-23: 担当者別次電日空欄
   {
     priority: 17,
@@ -237,14 +245,6 @@ export const STATUS_DEFINITIONS: StatusDefinition[] = [
     status: '内覧促進メール（Pinrich)',
     description: '内覧促進メール送信対象（Pinrich）',
     color: '#66ff66', // 緑
-  },
-  
-  // Priority 34
-  {
-    priority: 34,
-    status: '要内覧促進客',
-    description: '内覧促進が必要な顧客',
-    color: '#99ff99', // 薄い緑
   },
   
   // Priority 35

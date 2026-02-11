@@ -128,9 +128,11 @@ export function isTodayOrPast(date: Date | string | null | undefined): boolean {
 /**
  * 指定された日付が指定範囲内かどうかを判定
  * @param date 判定する日付
- * @param minDaysAgo 最小日数（過去）
- * @param maxDaysAgo 最大日数（過去）
+ * @param minDaysAgo 最小日数（過去） - 例: 14 = 14日前まで
+ * @param maxDaysAgo 最大日数（過去） - 例: 4 = 4日前から
  * @returns 範囲内の場合true
+ * 
+ * 例: isWithinDaysAgo(date, 14, 4) → 14日前 <= date <= 4日前
  */
 export function isWithinDaysAgo(
   date: Date | string | null | undefined,
@@ -146,13 +148,13 @@ export function isWithinDaysAgo(
   today.setHours(0, 0, 0, 0);
   targetDate.setHours(0, 0, 0, 0);
   
-  const minDate = new Date(today);
-  minDate.setDate(minDate.getDate() - minDaysAgo);
+  // 経過日数を計算
+  const diffTime = today.getTime() - targetDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() - maxDaysAgo);
-  
-  return targetDate >= maxDate && targetDate <= minDate;
+  // maxDaysAgo日前から minDaysAgo日前までの範囲
+  // 例: isWithinDaysAgo(date, 14, 4) → 4日 <= 経過日数 <= 14日
+  return diffDays >= maxDaysAgo && diffDays <= minDaysAgo;
 }
 
 /**

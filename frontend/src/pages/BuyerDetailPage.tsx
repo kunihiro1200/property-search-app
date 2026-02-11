@@ -2424,10 +2424,15 @@ Email: <<会社メールアドレス>>`;
 
                     // 内覧促進メール（条件付き表示・ボタン形式）
                     if (field.key === 'viewing_promotion_email') {
-                      // 表示条件：「問合せ元」に"メール"または"電話"が含まれる場合のみ表示
+                      // 表示条件：
+                      // 1. 「問合せ元」に"メール"または"電話"が含まれる
+                      // 2. または、ステータスが「要内覧促進客」
+                      // 3. ただし、「問合せ元」が"2件目以降紹介"の場合は表示しない
                       const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
                       const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
-                      const shouldDisplay = hasMailInquiry || hasPhoneInquiry;
+                      const isViewingPromotionRequired = buyer.status === '要内覧促進客';
+                      const isSecondInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('2件目以降紹介');
+                      const shouldDisplay = (hasMailInquiry || hasPhoneInquiry || isViewingPromotionRequired) && !isSecondInquiry;
 
                       if (!shouldDisplay) {
                         return null; // 条件を満たさない場合は表示しない
