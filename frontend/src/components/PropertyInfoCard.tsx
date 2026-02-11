@@ -136,6 +136,34 @@ export default function PropertyInfoCard({
     }
   };
 
+  const handleCopyAddress = async () => {
+    if (!property?.address) return;
+    
+    try {
+      await navigator.clipboard.writeText(property.address);
+      setSnackbarMessage('所在地をコピーしました');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+      setSnackbarMessage('コピーに失敗しました');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleCopyDisplayAddress = async () => {
+    if (!property?.display_address) return;
+    
+    try {
+      await navigator.clipboard.writeText(property.display_address);
+      setSnackbarMessage('住居表示をコピーしました');
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error('Failed to copy display address:', err);
+      setSnackbarMessage('コピーに失敗しました');
+      setSnackbarOpen(true);
+    }
+  };
+
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
@@ -287,9 +315,22 @@ export default function PropertyInfoCard({
                 <Typography variant="caption" color="text.secondary">
                   所在地
                 </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {property.address}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ flex: 1 }}>
+                    {property.address}
+                  </Typography>
+                  <IconButton 
+                    size="small" 
+                    onClick={handleCopyAddress}
+                    aria-label="所在地をコピー"
+                    sx={{ 
+                      padding: '4px',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Box>
               </Box>
             )}
 
@@ -299,9 +340,22 @@ export default function PropertyInfoCard({
                 <Typography variant="caption" color="text.secondary">
                   住居表示
                 </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {property.display_address}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ flex: 1 }}>
+                    {property.display_address}
+                  </Typography>
+                  <IconButton 
+                    size="small" 
+                    onClick={handleCopyDisplayAddress}
+                    aria-label="住居表示をコピー"
+                    sx={{ 
+                      padding: '4px',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </Box>
               </Box>
             )}
           </Box>
