@@ -17,7 +17,7 @@ async function checkBuyer() {
   const { data, error } = await supabase
     .from('buyers')
     .select('*')
-    .eq('buyer_number', '6939')
+    .eq('buyer_number', '6940')
     .single();
   
   if (error) {
@@ -25,7 +25,7 @@ async function checkBuyer() {
     return;
   }
   
-  console.log('=== 買主6939のデータ ===');
+  console.log('=== 買主6940のデータ ===');
   console.log('受付日:', data.reception_date);
   console.log('内覧日:', data.latest_viewing_date);
   console.log('後続担当:', data.follow_up_assignee);
@@ -75,6 +75,7 @@ async function checkBuyer() {
   console.log(`業者問合せが空欄: ${!data.broker_inquiry ? '✓' : '✗'}`);
   console.log(`問合せ元 ≠ "配信希望アンケート": ${data.inquiry_source !== '配信希望アンケート' ? '✓' : '✗'}`);
   console.log(`問合せ元に"ピンリッチ"を含まない: ${!data.inquiry_source?.includes('ピンリッチ') ? '✓' : '✗'}`);
+  console.log(`問合せ元に"2件目以降紹介"を含まない: ${!data.inquiry_source?.includes('2件目以降紹介') ? '✓' : '✗'}`);
   console.log(`問合時確度 ≠ "e（買付物件の問合せ）": ${data.inquiry_confidence !== 'e（買付物件の問合せ）' ? '✓' : '✗'}`);
   console.log(`問合時確度 ≠ "d（資料送付不要、条件不適合など）": ${data.inquiry_confidence !== 'd（資料送付不要、条件不適合など）' ? '✓' : '✗'}`);
   console.log(`問合時確度 ≠ "b（内覧検討）": ${data.inquiry_confidence !== 'b（内覧検討）' ? '✓' : '✗'}`);
