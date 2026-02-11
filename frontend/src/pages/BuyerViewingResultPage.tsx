@@ -51,6 +51,7 @@ export default function BuyerViewingResultPage() {
     message: '',
     severity: 'success',
   });
+  const [isOfferFailedFlag, setIsOfferFailedFlag] = useState(false); // 買付外れましたフラグ
 
   useEffect(() => {
     if (buyer_number) {
@@ -289,18 +290,17 @@ export default function BuyerViewingResultPage() {
 
   // 買付情報セクションの表示条件を判定
   const shouldShowOfferSection = (): boolean => {
-    if (!buyer?.latest_status) return false;
+    if (!buyer?.latest_status) return isOfferFailedFlag; // 買付外れフラグがある場合は表示
     
     const status = buyer.latest_status.trim();
     
-    // 「買」を含む場合は表示（「買付外れました」も含む）
-    return status.includes('買');
+    // 「買」を含む場合、または買付外れフラグがある場合は表示
+    return status.includes('買') || isOfferFailedFlag;
   };
 
   // 買付外れましたかどうかを判定
   const isOfferFailed = (): boolean => {
-    if (!buyer?.latest_status) return false;
-    return buyer.latest_status.includes('買付外れました');
+    return isOfferFailedFlag;
   };
 
   // ★最新状況の選択肢を物件のatbb_statusに応じてフィルタリング
@@ -758,30 +758,48 @@ export default function BuyerViewingResultPage() {
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
             {/* ★最新状況ドロップダウン（幅を半分に） */}
             <Box sx={{ flex: '0 0 50%' }}>
-              <InlineEditableField
-                label="★最新状況"
-                value={buyer.latest_status || ''}
-                onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
-                fieldType="dropdown"
-                options={getFilteredLatestStatusOptions()}
-                fieldName="latest_status"
-                buyerId={buyer_number}
-                enableConflictDetection={true}
-                showEditIndicator={true}
-                oneClickDropdown={true}
-              />
+              <Box 
+                sx={{ 
+                  p: (isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '')) ? 1 : 0,
+                  border: (isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '')) ? '2px solid' : 'none',
+                  borderColor: (isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '')) ? 'error.main' : 'transparent',
+                  borderRadius: 2,
+                  bgcolor: (isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '')) ? 'rgba(255, 205, 210, 0.3)' : 'transparent',
+                  boxShadow: (isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '')) ? '0 2px 8px rgba(211, 47, 47, 0.2)' : 'none',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {isOfferFailedFlag && (!buyer.latest_status || buyer.latest_status.trim() === '') && (
+                  <Typography variant="caption" color="error" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+                    ★最新状況を選択してください *必須
+                  </Typography>
+                )}
+                <InlineEditableField
+                  label={isOfferFailedFlag ? "★最新状況 *必須" : "★最新状況"}
+                  value={buyer.latest_status || ''}
+                  onSave={(newValue) => handleInlineFieldSave('latest_status', newValue)}
+                  fieldType="dropdown"
+                  options={getFilteredLatestStatusOptions()}
+                  fieldName="latest_status"
+                  buyerId={buyer_number}
+                  enableConflictDetection={true}
+                  showEditIndicator={true}
+                  oneClickDropdown={true}
+                />
+              </Box>
             </Box>
 
             {/* 買付外れましたボタン（「買」を含む場合のみ表示） */}
-            {buyer.latest_status && buyer.latest_status.includes('買') && buyer.latest_status !== '買付外れました' && (
+            {buyer.latest_status && buyer.latest_status.includes('買') && !isOfferFailedFlag && (
               <Box sx={{ flex: '0 0 auto', pt: 3 }}>
                 <Button
                   variant="outlined"
                   color="error"
                   size="medium"
                   onClick={async () => {
-                    // 空欄に設定し、「買付外れました」フラグを立てる
-                    await handleInlineFieldSave('latest_status', '買付外れました');
+                    // 買付外れフラグを立てて、★最新状況を空欄にする
+                    setIsOfferFailedFlag(true);
+                    await handleInlineFieldSave('latest_status', '');
                   }}
                   sx={{ 
                     fontWeight: 'bold',
