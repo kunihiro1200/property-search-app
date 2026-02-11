@@ -907,6 +907,65 @@ export class BuyerService {
       throw new Error('Buyer not found');
     }
 
+    // 問合せ時ヒアリングが更新される場合、自動パース処理を実行
+    if (updateData.inquiry_hearing !== undefined) {
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期の上書き判定
+        if (parsed.desired_timing !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_timing',
+            existing.desired_timing,
+            existing.desired_timing_updated_at ? new Date(existing.desired_timing_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_timing = parsed.desired_timing;
+            updateData.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced desired_timing: ${parsed.desired_timing}`);
+          }
+        }
+        
+        // 駐車場希望台数の上書き判定
+        if (parsed.desired_parking_spaces !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_parking_spaces',
+            existing.desired_parking_spaces,
+            existing.desired_parking_spaces_updated_at ? new Date(existing.desired_parking_spaces_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_parking_spaces = parsed.desired_parking_spaces;
+            updateData.desired_parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced desired_parking_spaces: ${parsed.desired_parking_spaces}`);
+          }
+        }
+        
+        // 予算の上書き判定
+        if (parsed.desired_price_range !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_price_range',
+            existing.desired_price_range,
+            existing.desired_price_range_updated_at ? new Date(existing.desired_price_range_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_price_range = parsed.desired_price_range;
+            updateData.desired_price_range_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced desired_price_range: ${parsed.desired_price_range}`);
+          }
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        updateData.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        // パースエラーが発生しても、問合せ時ヒアリングの保存は継続
+        console.error('[BuyerService] Failed to parse inquiry hearing:', error);
+      }
+    }
+
     // 更新不可フィールドを除外
     const protectedFields = ['id', 'db_created_at', 'synced_at'];
     const allowedData: any = {};

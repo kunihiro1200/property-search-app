@@ -121,7 +121,7 @@ const INQUIRY_HEARING_QUICK_INPUTS = [
   { label: '初見か', text: '初見か：' },
   { label: '希望時期', text: '希望時期：' },
   { label: '駐車場希望台数', text: '駐車場希望台数：' },
-  { label: 'リフォーム予算', text: 'リフォーム込みの予算（最高額）：' },
+  { label: '予算', text: '予算：' },
   { label: '持ち家か', text: '持ち家か：' },
   { label: '他物件', text: '他に気になる物件はあるか？：' },
 ];
