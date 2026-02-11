@@ -82,6 +82,11 @@ export class InquiryHearingParser {
 
   /**
    * 価格帯をマッピング
+   * 
+   * 選択肢:
+   * - ~1900万円
+   * - 1000万円~2999万円
+   * - 2000万円以上
    */
   private mapPriceRange(budgetText: string): string | undefined {
     if (!budgetText) {
@@ -96,17 +101,17 @@ export class InquiryHearingParser {
 
     const amount = parseInt(numberMatch[1], 10);
 
-    // 「以下」「以上」のパターンをチェック
-    if (budgetText.includes('以下')) {
-      return `${amount}万円以下`;
+    // 価格帯にマッピング
+    if (amount < 1000) {
+      // 1000万円未満 → ~1900万円
+      return '~1900万円';
+    } else if (amount < 3000) {
+      // 1000万円～2999万円 → 1000万円~2999万円
+      return '1000万円~2999万円';
+    } else {
+      // 3000万円以上 → 2000万円以上
+      return '2000万円以上';
     }
-
-    if (budgetText.includes('以上')) {
-      return `${amount}万円以上`;
-    }
-
-    // 通常の価格帯（例: 3000万円 → 3000万円台）
-    return `${amount}万円台`;
   }
 
   /**

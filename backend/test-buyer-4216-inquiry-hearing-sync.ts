@@ -82,11 +82,11 @@ async function testBuyer4216InquiryHearingSync() {
 
   // 検証
   console.log('\n検証結果:');
-  if (after.price_range_land === '3000万円台' && !after.price_range_house && !after.price_range_apartment) {
+  if (after.price_range_land === '2000万円以上' && !after.price_range_house && !after.price_range_apartment) {
     console.log('✅ 価格帯が正しく土地のみに反映されました');
   } else {
     console.log('❌ 価格帯の反映が正しくありません');
-    console.log('  期待値: 価格帯（土地）= 3000万円台、価格帯（戸建）= 未設定、価格帯（マンション）= 未設定');
+    console.log('  期待値: 価格帯（土地）= 2000万円以上、価格帯（戸建）= 未設定、価格帯（マンション）= 未設定');
     console.log('  実際の値: 価格帯（土地）=', after.price_range_land, '、価格帯（戸建）=', after.price_range_house, '、価格帯（マンション）=', after.price_range_apartment);
   }
 }
