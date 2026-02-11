@@ -909,10 +909,13 @@ export class BuyerService {
 
     // 問合せ時ヒアリングが更新される場合、自動パース処理を実行
     if (updateData.inquiry_hearing !== undefined) {
+      console.log('[BuyerService] inquiry_hearing update detected, starting auto-parse');
+      console.log('[BuyerService] inquiry_hearing value:', updateData.inquiry_hearing);
       try {
         const { InquiryHearingParser } = await import('./InquiryHearingParser');
         const parser = new InquiryHearingParser();
         const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, existing.desired_property_type);
+        console.log('[BuyerService] Parsed result:', parsed);
         
         const inquiryHearingUpdatedAt = new Date();
         
