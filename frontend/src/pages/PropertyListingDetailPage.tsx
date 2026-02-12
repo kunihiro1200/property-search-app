@@ -18,6 +18,8 @@ import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   OpenInNew as OpenInNewIcon,
+  ContentCopy as ContentCopyIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import FrequentlyAskedSection from '../components/FrequentlyAskedSection';
@@ -27,7 +29,6 @@ import CompactBuyerListForProperty from '../components/CompactBuyerListForProper
 import EditableSection from '../components/EditableSection';
 import GmailDistributionButton from '../components/GmailDistributionButton';
 import DistributionAreaField from '../components/DistributionAreaField';
-import BuyerCandidateList from '../components/BuyerCandidateList';
 import EditableUrlField from '../components/EditableUrlField';
 import PublicUrlCell from '../components/PublicUrlCell';
 import { SECTION_COLORS } from '../theme/sectionColors';
@@ -402,6 +403,39 @@ export default function PropertyListingDetailPage() {
     setIsSellerBuyerEditMode(false);
   };
 
+  // 物件番号コピー機能
+  const handleCopyPropertyNumber = async () => {
+    if (!data?.property_number) return;
+    
+    try {
+      await navigator.clipboard.writeText(data.property_number);
+      setSnackbar({
+        open: true,
+        message: '物件番号をコピーしました',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Failed to copy property number:', error);
+      setSnackbar({
+        open: true,
+        message: '物件番号のコピーに失敗しました',
+        severity: 'error',
+      });
+    }
+  };
+
+  // 買主候補リストページを開く
+  const handleOpenBuyerCandidates = () => {
+    if (!propertyNumber) return;
+    
+    // 新しいタブで買主候補リストページを開く
+    window.open(
+      `/property-listings/${propertyNumber}/buyer-candidates`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+
   // URL patterns for validation
   const GOOGLE_MAP_URL_PATTERN = /^https:\/\/(maps\.google\.com|www\.google\.com\/maps|goo\.gl\/maps)\/.+/;
   const GOOGLE_DRIVE_FOLDER_PATTERN = /^https:\/\/drive\.google\.com\/drive\/(u\/\d+\/)?folders\/.+/;
@@ -553,9 +587,19 @@ export default function PropertyListingDetailPage() {
             <ArrowBackIcon />
           </IconButton>
           <Box>
-            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-              物件詳細 - {data.property_number}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                物件詳細 - {data.property_number}
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={handleCopyPropertyNumber}
+                sx={{ color: SECTION_COLORS.property.main }}
+                title="物件番号をコピー"
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Box>
             {/* 公開URL表示 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
@@ -578,6 +622,21 @@ export default function PropertyListingDetailPage() {
           )}
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<PersonIcon />}
+            onClick={handleOpenBuyerCandidates}
+            sx={{
+              borderColor: SECTION_COLORS.property.main,
+              color: SECTION_COLORS.property.main,
+              '&:hover': {
+                borderColor: SECTION_COLORS.property.dark,
+                backgroundColor: `${SECTION_COLORS.property.main}08`,
+              },
+            }}
+          >
+            買主候補リスト
+          </Button>
           <GmailDistributionButton
             propertyNumber={data.property_number}
             propertyAddress={data.address || data.display_address}
@@ -1453,9 +1512,6 @@ export default function PropertyListingDetailPage() {
             propertyNumber={data.property_number}
             loading={buyersLoading}
           />
-          
-          {/* 買主候補リスト */}
-          <BuyerCandidateList propertyNumber={data.property_number} />
         </Grid>
       </Grid>
 

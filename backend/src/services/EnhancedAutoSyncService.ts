@@ -3034,8 +3034,12 @@ export class EnhancedAutoSyncService {
     
     for (const row of allRows) {
       const buyerNumber = row['買主番号'];
-      if (buyerNumber && typeof buyerNumber === 'string') {
-        sheetBuyerNumbers.add(buyerNumber);
+      // 🔧 修正: 数値型と文字列型の両方に対応（detectMissingBuyersと同じロジック）
+      if (buyerNumber !== null && buyerNumber !== undefined && buyerNumber !== '') {
+        const buyerNumberStr = String(buyerNumber).trim();
+        if (buyerNumberStr) {
+          sheetBuyerNumbers.add(buyerNumberStr);
+        }
       }
     }
     console.log(`📊 Spreadsheet buyers: ${sheetBuyerNumbers.size}`);
@@ -3142,10 +3146,15 @@ export class EnhancedAutoSyncService {
       // 🚨 削除前の最終確認: スプレッドシートに本当に存在しないかを再確認
       console.log(`🔍 Final check: Verifying buyer ${buyerNumber} is not in spreadsheet...`);
       
-      const allRows = await this.getBuyerSpreadsheetData();
+      const allRows = await this.getBuyerSpreadsheetData(true);  // 🔧 forceRefresh = true でキャッシュを無視
       const existsInSheet = allRows.some(row => {
         const sheetBuyerNumber = row['買主番号'];
-        return sheetBuyerNumber && String(sheetBuyerNumber).trim() === buyerNumber;
+        // 🔧 修正: より厳密なチェック（null/undefined/空文字を除外）
+        if (sheetBuyerNumber !== null && sheetBuyerNumber !== undefined && sheetBuyerNumber !== '') {
+          const sheetBuyerNumberStr = String(sheetBuyerNumber).trim();
+          return sheetBuyerNumberStr === buyerNumber;
+        }
+        return false;
       });
 
       if (existsInSheet) {

@@ -27,6 +27,7 @@ import PublicPropertyListingPage from './pages/PublicPropertyListingPage';
 import PublicPropertiesPage from './pages/PublicPropertiesPage';
 import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
+import BuyerCandidateListPage from './pages/BuyerCandidateListPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
@@ -152,18 +153,26 @@ function App() {
         }
       />
       <Route
-        path="/property-listings/:propertyNumber"
-        element={
-          <ProtectedRoute>
-            <PropertyListingDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/property-listings/sync/dashboard"
         element={
           <ProtectedRoute>
             <PropertyListingSyncDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-listings/:propertyNumber/buyer-candidates"
+        element={
+          <ProtectedRoute>
+            <BuyerCandidateListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-listings/:propertyNumber"
+        element={
+          <ProtectedRoute>
+            <PropertyListingDetailPage />
           </ProtectedRoute>
         }
       />

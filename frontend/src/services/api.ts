@@ -15,6 +15,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 120秒（2分）のタイムアウト
 });
 
 // リクエストインターセプター（JWT認証トークンを追加）
