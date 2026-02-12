@@ -199,7 +199,7 @@ export function calculateBuyerStatus(buyer: BuyerData): StatusResult {
       };
     }
     
-    // Priority 7: ⑯当日TEL
+    // Priority 7: ⑯当日TEL（後続担当あり）
     // AND(ISNOTBLANK([後続担当]),ISNOTBLANK([★次電日]),[★次電日] <= TODAY())
     if (
       and(
@@ -213,6 +213,22 @@ export function calculateBuyerStatus(buyer: BuyerData): StatusResult {
         status: `⑯当日TEL（${assignee}）`,
         priority: 7,
         matchedCondition: '次電日が当日以前で後続担当が設定されている',
+      };
+    }
+    
+    // Priority 7.5: ⑯当日TEL（後続担当なし）
+    // AND(ISBLANK([後続担当]),ISNOTBLANK([★次電日]),[★次電日] <= TODAY())
+    if (
+      and(
+        isBlank(buyer.follow_up_assignee),
+        isNotBlank(buyer.next_call_date),
+        isTodayOrPast(buyer.next_call_date)
+      )
+    ) {
+      return {
+        status: '⑯当日TEL',
+        priority: 7.5,
+        matchedCondition: '次電日が当日以前（後続担当なし）',
       };
     }
     
@@ -428,201 +444,37 @@ export function calculateBuyerStatusComplete(buyer: BuyerData): StatusResult {
     // Priority 1-16は既にcalculateBuyerStatus関数で評価済み
     // ここではPriority 17-37のみを評価
     
-    // Priority 17-23: 担当者別次電日空欄
+    // Priority 17-23: 担当者別次電日空欄（動的生成）
     // 共通条件: OR([★最新状況] = "A:この物件を気に入っている（こちらからの一押しが必要）",[★最新状況] = "B:1年以内に引っ越し希望だが、この物件ではない。駐車場の要件や、日当たり等が合わない。")
     const statusAorB = or(
       equals(buyer.latest_status, 'A:この物件を気に入っている（こちらからの一押しが必要）'),
       equals(buyer.latest_status, 'B:1年以内に引っ越し希望だが、この物件ではない。駐車場の要件や、日当たり等が合わない。')
     );
     
-    // Priority 17: 担当(Y)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),[後続担当] = "Y")
+    // 後続担当が入力されていて、次電日が空欄で、最新状況がAまたはBの場合
     if (
       and(
         statusAorB,
         isBlank(buyer.next_call_date),
-        equals(buyer.follow_up_assignee, 'Y')
+        isNotBlank(buyer.follow_up_assignee)
       )
     ) {
+      const assignee = buyer.follow_up_assignee || '';
       return {
-        status: '担当(Y)次電日空欄',
-        priority: 17,
-        matchedCondition: '担当Y: 次電日が空欄',
+        status: `担当(${assignee})次電日空欄`,
+        priority: 17, // 全ての担当者を同じ優先順位にする
+        matchedCondition: `担当${assignee}: 次電日が空欄`,
       };
     }
     
-    // Priority 18: 担当(久)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([業者問合せ]),ISBLANK([★次電日]),[後続担当] = "久")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.broker_inquiry),
-        isBlank(buyer.next_call_date),
-        equals(buyer.follow_up_assignee, '久')
-      )
-    ) {
+    // Priority 24-31: 担当者別（動的生成）
+    // 後続担当が入力されている場合、その担当者のカテゴリーを生成
+    if (isNotBlank(buyer.follow_up_assignee)) {
+      const assignee = buyer.follow_up_assignee || '';
       return {
-        status: '担当(久)次電日空欄',
-        priority: 18,
-        matchedCondition: '担当久: 次電日が空欄',
-      };
-    }
-    
-    // Priority 19: 担当(U)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),ISBLANK([業者問合せ]),[後続担当] = "U")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.next_call_date),
-        isBlank(buyer.broker_inquiry),
-        equals(buyer.follow_up_assignee, 'U')
-      )
-    ) {
-      return {
-        status: '担当(U)次電日空欄',
-        priority: 19,
-        matchedCondition: '担当U: 次電日が空欄',
-      };
-    }
-    
-    // Priority 20: 担当(R)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),ISBLANK([業者問合せ]),[後続担当] = "R")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.next_call_date),
-        isBlank(buyer.broker_inquiry),
-        equals(buyer.follow_up_assignee, 'R')
-      )
-    ) {
-      return {
-        status: '担当(R)次電日空欄',
-        priority: 20,
-        matchedCondition: '担当R: 次電日が空欄',
-      };
-    }
-    
-    // Priority 21: 担当(K)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),ISBLANK([業者問合せ]),[後続担当] = "K")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.next_call_date),
-        isBlank(buyer.broker_inquiry),
-        equals(buyer.follow_up_assignee, 'K')
-      )
-    ) {
-      return {
-        status: '担当(K)次電日空欄',
-        priority: 21,
-        matchedCondition: '担当K: 次電日が空欄',
-      };
-    }
-    
-    // Priority 22: 担当(I)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),ISBLANK([業者問合せ]),[後続担当] = "I")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.next_call_date),
-        isBlank(buyer.broker_inquiry),
-        equals(buyer.follow_up_assignee, 'I')
-      )
-    ) {
-      return {
-        status: '担当(I)次電日空欄',
-        priority: 22,
-        matchedCondition: '担当I: 次電日が空欄',
-      };
-    }
-    
-    // Priority 23: 担当(生)次電日空欄
-    // AND(OR([★最新状況] = "A:...",[★最新状況] = "B:..."),ISBLANK([★次電日]),ISBLANK([業者問合せ]),[後続担当] = "生")
-    if (
-      and(
-        statusAorB,
-        isBlank(buyer.next_call_date),
-        isBlank(buyer.broker_inquiry),
-        equals(buyer.follow_up_assignee, '生')
-      )
-    ) {
-      return {
-        status: '担当(生)次電日空欄',
-        priority: 23,
-        matchedCondition: '担当生: 次電日が空欄',
-      };
-    }
-    
-    // Priority 24-31: 担当者別
-    // [後続担当] = "Y"
-    if (equals(buyer.follow_up_assignee, 'Y')) {
-      return {
-        status: '担当(Y)',
-        priority: 24,
-        matchedCondition: '担当Y',
-      };
-    }
-    
-    // [後続担当] = "W"
-    if (equals(buyer.follow_up_assignee, 'W')) {
-      return {
-        status: '担当(W)',
-        priority: 25,
-        matchedCondition: '担当W',
-      };
-    }
-    
-    // [後続担当] = "U"
-    if (equals(buyer.follow_up_assignee, 'U')) {
-      return {
-        status: '担当(U)',
-        priority: 26,
-        matchedCondition: '担当U',
-      };
-    }
-    
-    // [後続担当] = "生"
-    if (equals(buyer.follow_up_assignee, '生')) {
-      return {
-        status: '担当(生)',
-        priority: 27,
-        matchedCondition: '担当生',
-      };
-    }
-    
-    // [後続担当] = "K"
-    if (equals(buyer.follow_up_assignee, 'K')) {
-      return {
-        status: '担当(K)',
-        priority: 28,
-        matchedCondition: '担当K',
-      };
-    }
-    
-    // [後続担当] = "久"
-    if (equals(buyer.follow_up_assignee, '久')) {
-      return {
-        status: '担当(久)',
-        priority: 29,
-        matchedCondition: '担当久',
-      };
-    }
-    
-    // [後続担当] = "I"
-    if (equals(buyer.follow_up_assignee, 'I')) {
-      return {
-        status: '担当(I)',
-        priority: 30,
-        matchedCondition: '担当I',
-      };
-    }
-    
-    // [後続担当] = "R"
-    if (equals(buyer.follow_up_assignee, 'R')) {
-      return {
-        status: '担当(R)',
-        priority: 31,
-        matchedCondition: '担当R',
+        status: `担当(${assignee})`,
+        priority: 24, // 全ての担当者を同じ優先順位にする
+        matchedCondition: `担当${assignee}`,
       };
     }
     

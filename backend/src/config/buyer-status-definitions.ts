@@ -61,7 +61,7 @@ export const STATUS_DEFINITIONS: StatusDefinition[] = [
     color: '#ff6666', // ピンク
   },
   
-  // Priority 7 (動的に生成: ⑯当日TEL（担当者名）)
+  // Priority 7 (動的に生成: ⑯当日TEL（担当者名）- 後続担当あり、または後続担当なし)
   {
     priority: 7,
     status: '⑯当日TEL',
