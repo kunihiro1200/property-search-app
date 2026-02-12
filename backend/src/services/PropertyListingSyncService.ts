@@ -587,6 +587,34 @@ export class PropertyListingSyncService {
         // エラーでも続行（業務リスト取得は必須ではない）
       }
 
+      // 1.6. 業務依頼シートを1回だけ読み取り（サイドバーステータス計算用）
+      console.log('📋 Reading gyomu list sheet for sidebar status calculation...');
+      let gyomuListData: any[] = [];
+      try {
+        if (this.sheetsClient) {
+          // 業務依頼シートのスプレッドシートIDとシート名を取得
+          const gyomuListSpreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
+          const gyomuListSheetName = process.env.GYOMU_LIST_SHEET_NAME || '業務依頼';
+          
+          if (gyomuListSpreadsheetId) {
+            const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+            const gyomuListClient = new GoogleSheetsClient({
+              spreadsheetId: gyomuListSpreadsheetId,
+              sheetName: gyomuListSheetName,
+              serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+            });
+            await gyomuListClient.authenticate();
+            gyomuListData = await gyomuListClient.readAll();
+            console.log(`✅ Fetched ${gyomuListData.length} rows from gyomu list`);
+          } else {
+            console.warn('⚠️ GYOMU_LIST_SPREADSHEET_ID not configured, sidebar status may be incomplete');
+          }
+        }
+      } catch (error: any) {
+        console.error('⚠️ Failed to fetch gyomu list data:', error.message);
+        console.log('⚠️ Continuing without gyomu list data (sidebar status may be incomplete)');
+      }
+
       // 2. Process in batches
       const BATCH_SIZE = 10;
       const results: UpdateResult[] = [];
@@ -612,6 +640,12 @@ export class PropertyListingSyncService {
                 if (mappedUpdates.hasOwnProperty(dbField)) {
                   changedFieldsOnly[dbField] = mappedUpdates[dbField];
                 }
+              }
+
+              // サイドバーステータスを計算（新規追加）
+              const sidebarStatus = this.calculateSidebarStatus(update.spreadsheet_data, gyomuListData);
+              if (sidebarStatus !== undefined) {
+                changedFieldsOnly.sidebar_status = sidebarStatus;
               }
 
               // 業務リストから格納先URLを取得（storage_locationが空の場合）
@@ -1005,11 +1039,15 @@ export class PropertyListingSyncService {
    * Phase 4.6: 物件リスト(property_listings)のみの同期
    * 売主(sellers)テーブルの操作は行わない
    * 
+   * 新規追加: 業務依頼シートから配信日を取得してスプレッドシートに書き込み
+   * 
    * @param spreadsheetRow - Spreadsheet row data
+   * @param gyomuListData - 業務依頼シートの全データ（配信日同期用）
    * @returns Success result
    */
   private async addNewProperty(
-    spreadsheetRow: any
+    spreadsheetRow: any,
+    gyomuListData: any[] = []
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // 1. Get property number
@@ -1018,10 +1056,27 @@ export class PropertyListingSyncService {
         throw new Error('Property number is required');
       }
 
-      // 2. Map spreadsheet data to property_listings format
+      // 2. 業務依頼シートから公開予定日を取得してスプレッドシートに書き込み（新規物件のみ）
+      if (gyomuListData.length > 0) {
+        const scheduledDate = this.lookupGyomuList(propertyNumber, gyomuListData, '公開予定日');
+        
+        if (scheduledDate) {
+          try {
+            await this.writeDistributionDateToSpreadsheet(propertyNumber, scheduledDate);
+            console.log(`✅ [${propertyNumber}] Wrote distribution date to spreadsheet: ${scheduledDate}`);
+          } catch (error: any) {
+            // 書き込みエラーは警告のみ（処理は継続）
+            console.warn(`⚠️ [${propertyNumber}] Failed to write distribution date:`, error.message);
+          }
+        } else {
+          console.log(`ℹ️ [${propertyNumber}] No scheduled date found in gyomu list`);
+        }
+      }
+
+      // 3. Map spreadsheet data to property_listings format
       const propertyData = this.columnMapper.mapSpreadsheetToDatabase(spreadsheetRow);
 
-      // 3. 業務リストから格納先URLを取得（storage_locationが空の場合）
+      // 4. 業務リストから格納先URLを取得（storage_locationが空の場合）
       if (!propertyData.storage_location || propertyData.storage_location === null) {
         const storageUrlFromGyomu = await this.getStorageUrlFromGyomuList(propertyNumber);
         if (storageUrlFromGyomu) {
@@ -1030,11 +1085,11 @@ export class PropertyListingSyncService {
         }
       }
 
-      // 4. Add timestamps
+      // 5. Add timestamps
       propertyData.created_at = new Date().toISOString();
       propertyData.updated_at = new Date().toISOString();
 
-      // 5. Insert into database (property_listings table only)
+      // 6. Insert into database (property_listings table only)
       const { error: insertError } = await this.supabase
         .from('property_listings')
         .insert(propertyData);
@@ -1058,6 +1113,8 @@ export class PropertyListingSyncService {
    * 
    * Main entry point for new property addition.
    * Detects new properties and adds them in batches.
+   * 
+   * 新規追加: 業務依頼シートから配信日を取得してスプレッドシートに書き込み
    * 
    * @returns Summary of sync operation
    */
@@ -1088,7 +1145,32 @@ export class PropertyListingSyncService {
 
       console.log(`📊 Detected ${newPropertyNumbers.length} new properties`);
 
-      // 2. Get spreadsheet data for new properties
+      // 2. 業務依頼シートを読み取り（配信日同期用）
+      console.log('📋 Reading gyomu list sheet for distribution date sync...');
+      let gyomuListData: any[] = [];
+      try {
+        const gyomuListSpreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
+        const gyomuListSheetName = process.env.GYOMU_LIST_SHEET_NAME || '業務依頼';
+        
+        if (gyomuListSpreadsheetId) {
+          const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+          const gyomuListClient = new GoogleSheetsClient({
+            spreadsheetId: gyomuListSpreadsheetId,
+            sheetName: gyomuListSheetName,
+            serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+          });
+          await gyomuListClient.authenticate();
+          gyomuListData = await gyomuListClient.readAll();
+          console.log(`✅ Fetched ${gyomuListData.length} rows from gyomu list`);
+        } else {
+          console.warn('⚠️ GYOMU_LIST_SPREADSHEET_ID not configured, distribution date sync will be skipped');
+        }
+      } catch (error: any) {
+        console.warn('⚠️ Failed to fetch gyomu list data:', error.message);
+        console.log('⚠️ Continuing without gyomu list data (distribution date sync will be skipped)');
+      }
+
+      // 3. Get spreadsheet data for new properties
       const spreadsheetData = await this.sheetsClient!.readAll();
       const spreadsheetMap = new Map(
         spreadsheetData.map(row => [
@@ -1097,7 +1179,7 @@ export class PropertyListingSyncService {
         ])
       );
 
-      // 3. Process in batches
+      // 4. Process in batches
       const BATCH_SIZE = 10;
       let added = 0;
       let failed = 0;
@@ -1122,7 +1204,8 @@ export class PropertyListingSyncService {
             continue;
           }
 
-          const result = await this.addNewProperty(spreadsheetRow);
+          // 業務依頼シートデータを渡す
+          const result = await this.addNewProperty(spreadsheetRow, gyomuListData);
 
           if (result.success) {
             added++;
@@ -1143,7 +1226,7 @@ export class PropertyListingSyncService {
         }
       }
 
-      // 4. Log summary
+      // 5. Log summary
       const summary = {
         total: newPropertyNumbers.length,
         added,
@@ -1169,4 +1252,232 @@ export class PropertyListingSyncService {
       throw error;
     }
   }
+      console.error('❌ Sync failed:', error.message);
+      await this.logSyncError('new_property_addition', error);
+      throw error;
+    }
+  }
+
+
+    // ============================================================================
+    // SIDEBAR STATUS CALCULATION (Phase: Property Sidebar Status Logic)
+    // ============================================================================
+
+    /**
+     * サイドバーステータスを計算
+     * @param row 物件リストスプレッドシートの1行
+     * @param gyomuListData 業務依頼シートの全データ
+     * @returns ステータス文字列（例: "未報告 山本", "未完了", ""）
+     */
+    private calculateSidebarStatus(row: any, gyomuListData: any[]): string {
+      const propertyNumber = String(row['物件番号'] || '');
+      const atbbStatus = String(row['atbb成約済み/非公開'] || '');
+
+      // ① 未報告（最優先）
+      const reportDate = row['報告日'];
+      if (reportDate && this.isDateBeforeOrToday(reportDate)) {
+        const assignee = row['報告担当_override'] || row['報告担当'] || '';
+        return assignee ? `未報告 ${assignee}` : '未報告';
+      }
+
+      // ② 未完了
+      if (row['確認'] === '未') {
+        return '未完了';
+      }
+
+      // ③ 非公開予定（確認後）
+      if (row['一般媒介非公開（仮）'] === '非公開予定') {
+        return '非公開予定（確認後）';
+      }
+
+      // ④ 一般媒介の掲載確認未
+      if (row['１社掲載'] === '未確認') {
+        return '一般媒介の掲載確認未';
+      }
+
+      // ⑤ 本日公開予定
+      if (atbbStatus.includes('公開前')) {
+        const scheduledDate = this.lookupGyomuList(propertyNumber, gyomuListData, '公開予定日');
+        if (scheduledDate && this.isDateBeforeOrToday(scheduledDate)) {
+          return '本日公開予定';
+        }
+      }
+
+      // ⑥ SUUMO / レインズ登録必要
+      if (atbbStatus === '一般・公開中' || atbbStatus === '専任・公開中') {
+        const scheduledDate = this.lookupGyomuList(propertyNumber, gyomuListData, '公開予定日');
+        const suumoUrl = row['Suumo URL'];
+        const suumoRegistration = row['Suumo登録'];
+
+        if (scheduledDate &&
+            this.isDateBeforeYesterday(scheduledDate) &&
+            !suumoUrl &&
+            suumoRegistration !== 'S不要') {
+          return atbbStatus === '一般・公開中'
+            ? 'SUUMO URL　要登録'
+            : 'レインズ登録＋SUUMO登録';
+        }
+      }
+
+      // ⑦ 買付申込み（内覧なし）２
+      const kaitsukeStatus = row['買付'];
+      if (
+        (kaitsukeStatus === '専任片手' && atbbStatus === '専任・公開中') ||
+        (kaitsukeStatus === '一般他決' && atbbStatus === '一般・公開中') ||
+        (kaitsukeStatus === '専任両手' && atbbStatus === '専任・公開中') ||
+        (kaitsukeStatus === '一般両手' && atbbStatus === '一般・公開中') ||
+        (kaitsukeStatus === '一般片手' && atbbStatus === '一般・公開中')
+      ) {
+        return '買付申込み（内覧なし）２';
+      }
+
+      // ⑧ 公開前情報
+      if (atbbStatus === '一般・公開前' || atbbStatus === '専任・公開前') {
+        return '公開前情報';
+      }
+
+      // ⑨ 非公開（配信メールのみ）
+      if (atbbStatus === '非公開（配信メールのみ）') {
+        return '非公開（配信メールのみ）';
+      }
+
+      // ⑩ 一般公開中物件
+      if (atbbStatus === '一般・公開中') {
+        return '一般公開中物件';
+      }
+
+      // ⑪ 専任・公開中（担当別）
+      if (atbbStatus === '専任・公開中') {
+        const assignee = row['担当名（営業）'];
+        return this.getAssigneeStatus(assignee);
+      }
+
+      // ⑫ それ以外
+      return '';
+    }
+
+    /**
+     * 業務依頼シートからデータを検索（LOOKUP相当）
+     */
+    private lookupGyomuList(
+      propertyNumber: string,
+      gyomuListData: any[],
+      columnName: string
+    ): any {
+      const row = gyomuListData.find(r => r['物件番号'] === propertyNumber);
+      return row ? row[columnName] : null;
+    }
+
+    /**
+     * 日付が今日以前かチェック
+     */
+    private isDateBeforeOrToday(dateValue: any): boolean {
+      if (!dateValue) return false;
+      const date = this.parseDate(dateValue);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date <= today;
+    }
+
+    /**
+     * 日付が昨日以前かチェック
+     */
+    private isDateBeforeYesterday(dateValue: any): boolean {
+      if (!dateValue) return false;
+      const date = this.parseDate(dateValue);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      return date <= yesterday;
+    }
+
+    /**
+     * 日付をパース（シリアル値対応）
+     */
+    private parseDate(dateValue: any): Date {
+      // シリアル値の場合（数値）
+      if (typeof dateValue === 'number') {
+        const excelEpoch = new Date(1899, 11, 30);
+        return new Date(excelEpoch.getTime() + dateValue * 86400000);
+      }
+
+      // 文字列の場合
+      return new Date(dateValue);
+    }
+
+    /**
+     * 担当者名から専任公開中ステータスを取得
+     */
+    private getAssigneeStatus(assignee: string): string {
+      const mapping = this.loadStaffMapping();
+      return mapping[assignee] || '専任・公開中';
+    }
+
+    /**
+     * 担当者マッピングを読み込み
+     */
+    private loadStaffMapping(): Record<string, string> {
+      // ハードコード（設定ファイルから読み込むことも可能）
+      return {
+        '山本': 'Y専任公開中',
+        '生野': '生・専任公開中',
+        '久': '久・専任公開中',
+        '裏': 'U専任公開中',
+        '林': '林・専任公開中',
+        '国広': 'K専任公開中',
+        '木村': 'R専任公開中',
+        '角井': 'I専任公開中',
+      };
+    }
+
+    // ============================================================================
+    // DISTRIBUTION DATE SYNC FOR NEW PROPERTIES
+    // ============================================================================
+
+    /**
+     * 物件リストスプレッドシートの「配信日【公開）」列に書き込み
+     * 
+     * 新規物件追加時に、業務依頼シートの「公開予定日」を
+     * 物件リストスプレッドシートの「配信日【公開）」に同期
+     * 
+     * @param propertyNumber 物件番号
+     * @param distributionDate 配信日（公開予定日）
+     */
+    private async writeDistributionDateToSpreadsheet(
+      propertyNumber: string,
+      distributionDate: any
+    ): Promise<void> {
+      if (!this.sheetsClient) {
+        throw new Error('GoogleSheetsClient not configured');
+      }
+
+      try {
+        // 1. 物件番号の行を検索
+        const allRows = await this.sheetsClient.readAll();
+        const rowIndex = allRows.findIndex(
+          row => String(row['物件番号'] || '').trim() === propertyNumber
+        );
+
+        if (rowIndex === -1) {
+          throw new Error(`Property ${propertyNumber} not found in spreadsheet`);
+        }
+
+        // 2. 「配信日【公開）」列に書き込み
+        // updateRowメソッドを使用（rowIndexは0-indexed、updateRowは1-indexedなので+2）
+        // +1: 0-indexedから1-indexedへ変換
+        // +1: ヘッダー行をスキップ
+        const updateData: any = {
+          '配信日【公開）': distributionDate
+        };
+
+        await this.sheetsClient.updateRow(rowIndex + 2, updateData);
+
+        console.log(`✅ [${propertyNumber}] Successfully wrote distribution date to spreadsheet`);
+      } catch (error: any) {
+        console.error(`❌ [${propertyNumber}] Failed to write distribution date:`, error.message);
+        throw error;
+      }
+    }
+
 }
+

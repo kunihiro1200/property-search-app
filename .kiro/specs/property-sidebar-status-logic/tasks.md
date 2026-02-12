@@ -25,12 +25,17 @@
   - [x] 2.2.4 `parseDate()` - 日付をパース（シリアル値対応）
   - [x] 2.2.5 `getAssigneeStatus()` - 担当者名から専任公開中ステータスを取得
   - [x] 2.2.6 `loadStaffMapping()` - 担当者マッピングを読み込み
-- [x] 2.3 `runFullSync()`メソッドを修正
+- [x] 2.3 `syncUpdatedPropertyListings()`メソッドを修正
   - [x] 2.3.1 業務依頼シートを1回だけ読み取る処理を追加
   - [x] 2.3.2 各物件の処理時に`calculateSidebarStatus()`を呼び出す
   - [x] 2.3.3 `sidebar_status`をpropertyDataに追加
-- [ ] 2.4 設定ファイルを作成（オプション）
-  - [x] 2.4.1 `backend/api/config/staff-mapping.json`を作成
+- [ ] 2.4 新規物件の配信日同期を実装
+  - [ ] 2.4.1 `addNewProperty()`メソッドを拡張（gyomuListDataを引数に追加）
+  - [ ] 2.4.2 `writeDistributionDateToSpreadsheet()`メソッドを追加
+  - [ ] 2.4.3 `getColumnIndex()`メソッドを追加
+  - [ ] 2.4.4 `syncNewProperties()`メソッドを修正（業務依頼シート読み取りを追加）
+- [ ] 2.5 設定ファイルを作成（オプション）
+  - [x] 2.5.1 `backend/api/config/staff-mapping.json`を作成
 
 ## 3. フロントエンド実装
 - [x] 3.1 `PropertySidebarStatus`コンポーネントを作成

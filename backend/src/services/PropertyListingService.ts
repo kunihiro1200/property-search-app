@@ -71,6 +71,7 @@ export class PropertyListingService {
         image_url,
         google_map_url,
         atbb_status,
+        sidebar_status,
         special_notes,
         storage_location,
         seller_name,
@@ -95,8 +96,15 @@ export class PropertyListingService {
       query = query.eq('property_type', propertyType);
     }
 
-    // ソート
-    query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+    // ソート（配信日の場合、NULLを最後に）
+    if (orderBy === 'distribution_date') {
+      query = query.order(orderBy, { 
+        ascending: orderDirection === 'asc',
+        nullsFirst: false  // NULLを最後に
+      });
+    } else {
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+    }
 
     // ページネーション
     query = query.range(offset, offset + limit - 1);

@@ -834,7 +834,261 @@ private loadStaffMapping(): Record<string, string> {
 }
 ```
 
-## 11. トラブルシューティング
+## 11. 新規物件の配信日同期設計
+
+### 11.1 概要
+
+新規物件追加時に、業務依頼シート「公開予定日」を物件リストスプレッドシート「配信日【公開）」に書き込む機能。
+
+### 11.2 処理フロー
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ syncNewProperties() - 新規物件追加処理                      │
+├─────────────────────────────────────────────────────────────┤
+│ 1. 新規物件を検出（スプレッドシートにあるがDBにない）       │
+│ 2. 業務依頼シートから「公開予定日」を取得                  │
+│ 3. 物件リストスプレッドシート「配信日【公開）」に書き込み  │
+│ 4. 通常の同期処理でdistribution_dateがDBに反映             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 実装
+
+#### 11.3.1 addNewProperty() メソッドの拡張
+
+```typescript
+/**
+ * Add a new property to database
+ * 新規物件追加時に配信日を業務依頼シートから同期
+ */
+private async addNewProperty(
+  spreadsheetRow: any,
+  gyomuListData: any[]  // ← 業務依頼シートデータを追加
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const propertyNumber = String(spreadsheetRow['物件番号'] || '').trim();
+    if (!propertyNumber) {
+      throw new Error('Property number is required');
+    }
+
+    // 1. 業務依頼シートから公開予定日を取得
+    const scheduledDate = this.lookupGyomuList(
+      propertyNumber, 
+      gyomuListData, 
+      '公開予定日'
+    );
+
+    // 2. 公開予定日が存在する場合、スプレッドシートに書き込み
+    if (scheduledDate) {
+      try {
+        await this.writeDistributionDateToSpreadsheet(
+          propertyNumber, 
+          scheduledDate
+        );
+        console.log(`✅ Wrote distribution date for ${propertyNumber}: ${scheduledDate}`);
+      } catch (error: any) {
+        // 書き込みエラーは警告のみ（処理は継続）
+        console.warn(`⚠️ Failed to write distribution date for ${propertyNumber}:`, error.message);
+      }
+    }
+
+    // 3. 通常の物件追加処理（既存）
+    const propertyData = this.columnMapper.mapSpreadsheetToDatabase(spreadsheetRow);
+    propertyData.created_at = new Date().toISOString();
+    propertyData.updated_at = new Date().toISOString();
+
+    const { error: insertError } = await this.supabase
+      .from('property_listings')
+      .insert(propertyData);
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    return { success: true };
+
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Unknown error'
+    };
+  }
+}
+```
+
+#### 11.3.2 writeDistributionDateToSpreadsheet() メソッド（新規）
+
+```typescript
+/**
+ * 物件リストスプレッドシートの「配信日【公開）」列に書き込み
+ * 
+ * @param propertyNumber 物件番号
+ * @param distributionDate 配信日（公開予定日）
+ */
+private async writeDistributionDateToSpreadsheet(
+  propertyNumber: string,
+  distributionDate: any
+): Promise<void> {
+  if (!this.sheetsClient) {
+    throw new Error('GoogleSheetsClient not configured');
+  }
+
+  // 1. 物件番号の行を検索
+  const allRows = await this.sheetsClient.readAll();
+  const rowIndex = allRows.findIndex(
+    row => String(row['物件番号'] || '').trim() === propertyNumber
+  );
+
+  if (rowIndex === -1) {
+    throw new Error(`Property ${propertyNumber} not found in spreadsheet`);
+  }
+
+  // 2. 「配信日【公開）」列のインデックスを取得
+  // 注: カラムマッピングから取得（例: "配信日【公開）" → 列番号）
+  const columnIndex = this.getColumnIndex('配信日【公開）');
+
+  // 3. スプレッドシートに書き込み
+  await this.sheetsClient.updateCell(
+    rowIndex + 2,  // +2: ヘッダー行 + 0-indexed
+    columnIndex,
+    distributionDate
+  );
+}
+
+/**
+ * カラム名から列インデックスを取得
+ */
+private getColumnIndex(columnName: string): number {
+  // カラムマッピングから取得
+  // 実装例: column-mapping.jsonから読み取り
+  const mapping = this.columnMapper.getColumnMapping();
+  return mapping[columnName] || -1;
+}
+```
+
+#### 11.3.3 syncNewProperties() メソッドの変更
+
+```typescript
+async syncNewProperties(): Promise<{
+  total: number;
+  added: number;
+  failed: number;
+  duration_ms: number;
+}> {
+  const startTime = Date.now();
+
+  try {
+    console.log('🆕 Starting new property addition sync...');
+
+    // 1. 新規物件を検出
+    const newPropertyNumbers = await this.detectNewProperties();
+
+    if (newPropertyNumbers.length === 0) {
+      console.log('✅ No new properties detected');
+      return {
+        total: 0,
+        added: 0,
+        failed: 0,
+        duration_ms: Date.now() - startTime
+      };
+    }
+
+    console.log(`📊 Detected ${newPropertyNumbers.length} new properties`);
+
+    // 2. 業務依頼シートを読み取り（配信日同期用）
+    let gyomuListData: any[] = [];
+    try {
+      const gyomuListSpreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
+      const gyomuListSheetName = process.env.GYOMU_LIST_SHEET_NAME || '業務依頼';
+      
+      if (gyomuListSpreadsheetId) {
+        const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+        const gyomuListClient = new GoogleSheetsClient({
+          spreadsheetId: gyomuListSpreadsheetId,
+          sheetName: gyomuListSheetName,
+          serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+        });
+        await gyomuListClient.authenticate();
+        gyomuListData = await gyomuListClient.readAll();
+        console.log(`✅ Fetched ${gyomuListData.length} rows from gyomu list`);
+      }
+    } catch (error: any) {
+      console.warn('⚠️ Failed to fetch gyomu list data:', error.message);
+      // エラーでも続行（配信日同期はスキップ）
+    }
+
+    // 3. スプレッドシートデータを取得
+    const spreadsheetData = await this.sheetsClient!.readAll();
+    const spreadsheetMap = new Map(
+      spreadsheetData.map(row => [
+        String(row['物件番号'] || '').trim(),
+        row
+      ])
+    );
+
+    // 4. 各物件を処理
+    let added = 0;
+    let failed = 0;
+    const errors: Array<{ property_number: string; error: string }> = [];
+
+    for (const propertyNumber of newPropertyNumbers) {
+      const spreadsheetRow = spreadsheetMap.get(propertyNumber);
+      
+      if (!spreadsheetRow) {
+        failed++;
+        errors.push({
+          property_number: propertyNumber,
+          error: 'Spreadsheet data not found'
+        });
+        continue;
+      }
+
+      // 業務依頼シートデータを渡す
+      const result = await this.addNewProperty(spreadsheetRow, gyomuListData);
+
+      if (result.success) {
+        added++;
+        console.log(`  ✅ ${propertyNumber}: Added`);
+      } else {
+        failed++;
+        errors.push({
+          property_number: propertyNumber,
+          error: result.error || 'Unknown error'
+        });
+        console.log(`  ❌ ${propertyNumber}: ${result.error}`);
+      }
+    }
+
+    // 5. サマリーを返す
+    return {
+      total: newPropertyNumbers.length,
+      added,
+      failed,
+      duration_ms: Date.now() - startTime,
+      errors: errors.length > 0 ? errors : undefined
+    };
+
+  } catch (error: any) {
+    console.error('❌ Sync failed:', error.message);
+    throw error;
+  }
+}
+```
+
+### 11.4 エラーハンドリング
+
+1. **業務依頼シート読み取りエラー**: 警告ログのみ、処理は継続（配信日同期はスキップ）
+2. **スプレッドシート書き込みエラー**: 警告ログのみ、処理は継続（物件追加は実行）
+3. **物件追加エラー**: エラーログを記録、次の物件へ
+
+### 11.5 制約事項
+
+- **新規物件のみ**: 既存物件の配信日は変更しない
+- **公開予定日が存在する場合のみ**: 業務依頼シートに公開予定日がない場合は書き込みをスキップ
+- **非同期処理**: スプレッドシート書き込みは非同期で実行（エラーでも処理は継続）
+
+## 12. トラブルシューティング
 
 ### 11.1 sidebar_statusが空文字になる
 

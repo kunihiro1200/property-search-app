@@ -101,7 +101,7 @@ export default function PropertyListingsPage() {
       
       while (hasMore) {
         const listingsRes = await api.get('/api/property-listings', {
-          params: { limit, offset, orderBy: 'contract_date', orderDirection: 'desc' },
+          params: { limit, offset, orderBy: 'distribution_date', orderDirection: 'desc' },
         });
         
         const fetchedData = listingsRes.data.data || [];
