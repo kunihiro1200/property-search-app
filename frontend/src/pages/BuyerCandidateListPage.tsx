@@ -16,10 +16,15 @@ import {
   Link,
   IconButton,
   Button,
+  Checkbox,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Person as PersonIcon,
+  Email as EmailIcon,
+  Sms as SmsIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import { SECTION_COLORS } from '../theme/sectionColors';
@@ -54,6 +59,16 @@ export default function BuyerCandidateListPage() {
   const [data, setData] = useState<BuyerCandidateResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBuyers, setSelectedBuyers] = useState<Set<string>>(new Set());
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info',
+  });
 
   useEffect(() => {
     if (propertyNumber) {
@@ -84,6 +99,244 @@ export default function BuyerCandidateListPage() {
 
   const handleBack = () => {
     navigate(`/property-listings/${propertyNumber}`);
+  };
+
+  // チェックボックスの全選択/全解除
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const allBuyerNumbers = new Set(data?.candidates.map(c => c.buyer_number) || []);
+      setSelectedBuyers(allBuyerNumbers);
+    } else {
+      setSelectedBuyers(new Set());
+    }
+  };
+
+  // 個別のチェックボックス選択
+  const handleSelectBuyer = (buyerNumber: string) => {
+    const newSelected = new Set(selectedBuyers);
+    if (newSelected.has(buyerNumber)) {
+      newSelected.delete(buyerNumber);
+    } else {
+      newSelected.add(buyerNumber);
+    }
+    setSelectedBuyers(newSelected);
+  };
+
+  // メール配信機能（個別送信）
+  const handleSendEmail = async () => {
+    if (selectedBuyers.size === 0) {
+      setSnackbar({
+        open: true,
+        message: '買主を選択してください',
+        severity: 'warning',
+      });
+      return;
+    }
+
+    if (!data) return;
+
+    // 選択された買主の情報を取得
+    const selectedCandidates = data.candidates.filter(c => selectedBuyers.has(c.buyer_number));
+    const candidatesWithEmail = selectedCandidates.filter(c => c.email && c.email.trim() !== '');
+
+    if (candidatesWithEmail.length === 0) {
+      setSnackbar({
+        open: true,
+        message: '選択された買主にメールアドレスが登録されていません',
+        severity: 'error',
+      });
+      return;
+    }
+
+    // 公開物件サイトのURL
+    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
+    
+    // 所在地
+    const address = data.property.address || '物件';
+
+    // メールの件名
+    const subject = `${address}に興味のあるかた！もうすぐ売り出します！事前に内覧可能です！`;
+
+    try {
+      setSnackbar({
+        open: true,
+        message: `メール送信中... (${candidatesWithEmail.length}件)`,
+        severity: 'info',
+      });
+
+      // 各買主に個別にメールを送信
+      const results = await Promise.allSettled(
+        candidatesWithEmail.map(async (candidate) => {
+          // 買主名（氏名）を取得、なければ「お客様」
+          const buyerName = candidate.name || 'お客様';
+          
+          // 本文を作成（{氏名}を実際の氏名に置き換え）
+          const body = `${buyerName}様
+
+お世話になります。不動産会社の株式会社いふうです。
+
+${address}を近々売りに出すことになりました！
+
+もしご興味がございましたら、誰よりも早く内覧することが可能となっておりますので、このメールにご返信頂ければと思います。
+
+物件詳細：${publicUrl}
+
+よろしくお願いいたします。
+
+×××××××××××××××
+大分市舞鶴町1-3-30
+株式会社いふう
+TEL:097-533-2022
+×××××××××××××××`;
+
+          // バックエンドAPIを使用してメール送信
+          // 🚨 重要: メール配信の宛先設定（絶対に変更しないこと）
+          // - TO（宛先）: 買主のメールアドレス（1件のみ）
+          // - CC: tenant@ifoo-oita.com（会社のアドレス）
+          // - BCC: 空
+          return await api.post('/api/emails/send-distribution', {
+            recipients: [candidate.email!], // 宛先: 買主のメールアドレス（1件のみ）
+            subject: subject,
+            body: body,
+            from: 'tenant@ifoo-oita.com', // 送信元
+            cc: 'tenant@ifoo-oita.com', // CC: 会社のアドレス
+          });
+        })
+      );
+
+      // 成功・失敗をカウント
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failedCount === 0) {
+        setSnackbar({
+          open: true,
+          message: `メールを送信しました (${successCount}件)\n各買主に個別に送信されました。`,
+          severity: 'success',
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: `メール送信が完了しました\n成功: ${successCount}件\n失敗: ${failedCount}件`,
+          severity: 'warning',
+        });
+      }
+
+      // 選択をクリア
+      setSelectedBuyers(new Set());
+    } catch (error: any) {
+      console.error('Failed to send emails:', error);
+      setSnackbar({
+        open: true,
+        message: error.message || 'メール送信に失敗しました。もう一度お試しください。',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // SMS配信機能
+  const handleSendSms = async () => {
+    if (selectedBuyers.size === 0) {
+      setSnackbar({
+        open: true,
+        message: '買主を選択してください',
+        severity: 'warning',
+      });
+      return;
+    }
+
+    if (!data) return;
+
+    // 選択された買主の情報を取得
+    const selectedCandidates = data.candidates.filter(c => selectedBuyers.has(c.buyer_number));
+    const candidatesWithPhone = selectedCandidates.filter(c => c.phone_number && c.phone_number.trim() !== '');
+
+    if (candidatesWithPhone.length === 0) {
+      setSnackbar({
+        open: true,
+        message: '選択された買主に電話番号が登録されていません',
+        severity: 'error',
+      });
+      return;
+    }
+
+    // 公開物件サイトのURL
+    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
+    
+    // 所在地
+    const address = data.property.address || '物件';
+
+    // SMSメッセージテンプレート
+    const messageTemplate = `{name}様
+
+株式会社いふうです。
+
+${address}を近々売りに出すことになりました！
+
+誰よりも早く内覧可能です。ご興味がございましたらご返信ください。
+
+物件詳細: ${publicUrl}
+
+株式会社いふう
+TEL:097-533-2022`;
+
+    try {
+      setSnackbar({
+        open: true,
+        message: `SMS送信中... (${candidatesWithPhone.length}件)`,
+        severity: 'info',
+      });
+
+      // 各買主の情報を準備
+      const recipients = candidatesWithPhone.map(candidate => ({
+        phoneNumber: candidate.phone_number!,
+        name: candidate.name || 'お客様',
+      }));
+
+      // バックエンドAPIを使用してSMS一括送信
+      const response = await api.post('/api/sms/send-bulk', {
+        recipients: recipients,
+        message: messageTemplate,
+      });
+
+      const result = response.data;
+
+      if (result.failedCount === 0) {
+        setSnackbar({
+          open: true,
+          message: `SMSを送信しました (${result.successCount}件)\n各買主に個別に送信されました。`,
+          severity: 'success',
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: `SMS送信が完了しました\n成功: ${result.successCount}件\n失敗: ${result.failedCount}件`,
+          severity: 'warning',
+        });
+      }
+
+      // 選択をクリア
+      setSelectedBuyers(new Set());
+    } catch (error: any) {
+      console.error('Failed to send SMS:', error);
+      
+      let errorMessage = 'SMS送信に失敗しました。';
+      if (error.response?.status === 503) {
+        errorMessage = 'SMS送信サービスが設定されていません。管理者に連絡してください。';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error',
+      });
+    }
   };
 
   const formatDate = (dateString: string | null) => {
@@ -161,6 +414,43 @@ export default function BuyerCandidateListPage() {
             </Typography>
           </Box>
         </Box>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {selectedBuyers.size > 0 && (
+            <Typography variant="body1" color="text.secondary">
+              {selectedBuyers.size}件選択中
+            </Typography>
+          )}
+          <Button
+            variant="outlined"
+            startIcon={<SmsIcon />}
+            onClick={handleSendSms}
+            disabled={selectedBuyers.size === 0}
+            sx={{
+              borderColor: SECTION_COLORS.property.main,
+              color: SECTION_COLORS.property.main,
+              '&:hover': {
+                borderColor: SECTION_COLORS.property.dark,
+                backgroundColor: `${SECTION_COLORS.property.main}08`,
+              },
+            }}
+          >
+            SMS送信
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<EmailIcon />}
+            onClick={handleSendEmail}
+            disabled={selectedBuyers.size === 0}
+            sx={{
+              bgcolor: SECTION_COLORS.property.main,
+              '&:hover': {
+                bgcolor: SECTION_COLORS.property.dark,
+              },
+            }}
+          >
+            メール送信
+          </Button>
+        </Box>
       </Box>
 
       {/* Property Info */}
@@ -209,8 +499,16 @@ export default function BuyerCandidateListPage() {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      indeterminate={selectedBuyers.size > 0 && selectedBuyers.size < data.candidates.length}
+                      checked={data.candidates.length > 0 && selectedBuyers.size === data.candidates.length}
+                      onChange={handleSelectAll}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>買主番号</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>氏名</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>メールアドレス</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>最新状況</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>問い合わせ物件住所</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>希望エリア</TableCell>
@@ -219,66 +517,95 @@ export default function BuyerCandidateListPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.candidates.map((candidate) => (
-                  <TableRow
-                    key={candidate.buyer_number}
-                    hover
-                    sx={{ 
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: `${SECTION_COLORS.property.main}08`,
-                      },
-                    }}
-                    onClick={() => handleBuyerClick(candidate.buyer_number)}
-                  >
-                    <TableCell>
-                      <Link
-                        component="button"
-                        variant="body1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBuyerClick(candidate.buyer_number);
-                        }}
-                        sx={{ 
-                          fontWeight: 'bold',
-                          color: SECTION_COLORS.property.main,
-                          fontSize: '1rem',
-                        }}
-                      >
-                        {candidate.buyer_number}
-                      </Link>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{candidate.name || '-'}</TableCell>
-                    <TableCell>
-                      {candidate.latest_status ? (
-                        <Chip
-                          label={candidate.latest_status}
-                          size="small"
-                          color={getStatusColor(candidate.latest_status)}
+                {data.candidates.map((candidate) => {
+                  const isSelected = selectedBuyers.has(candidate.buyer_number);
+                  return (
+                    <TableRow
+                      key={candidate.buyer_number}
+                      hover
+                      selected={isSelected}
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: `${SECTION_COLORS.property.main}08`,
+                        },
+                      }}
+                    >
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() => handleSelectBuyer(candidate.buyer_number)}
                         />
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>
-                      <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {candidate.inquiry_property_address || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>
-                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {candidate.desired_area || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{candidate.desired_property_type || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{formatDate(candidate.reception_date)}</TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)}>
+                        <Link
+                          component="button"
+                          variant="body1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuyerClick(candidate.buyer_number);
+                          }}
+                          sx={{ 
+                            fontWeight: 'bold',
+                            color: SECTION_COLORS.property.main,
+                            fontSize: '1rem',
+                          }}
+                        >
+                          {candidate.buyer_number}
+                        </Link>
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        {candidate.name || '-'}
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        {candidate.email || '-'}
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)}>
+                        {candidate.latest_status ? (
+                          <Chip
+                            label={candidate.latest_status}
+                            size="small"
+                            color={getStatusColor(candidate.latest_status)}
+                          />
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {candidate.inquiry_property_address || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {candidate.desired_area || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        {candidate.desired_property_type || '-'}
+                      </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        {formatDate(candidate.reception_date)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         )}
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

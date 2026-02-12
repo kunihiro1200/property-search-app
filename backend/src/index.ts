@@ -68,6 +68,7 @@ import publicInquiriesRoutes from './routes/publicInquiries';
 import propertyListingSyncRoutes from './routes/propertyListingSync';
 import geocodeRoutes from './routes/geocode';
 import urlRedirectRoutes from './routes/urlRedirect';
+import smsRoutes from './routes/sms';
 import { activityLogger } from './middleware/activityLogger';
 import { authenticate } from './middleware/auth';
 
@@ -290,6 +291,7 @@ app.use('/properties', propertyRoutes);
 app.use('/api/sellers', valuationRoutes);
 app.use('/api/sellers', emailRoutes);
 app.use('/api/emails', emailRoutes);  // 画像添付機能用の追加ルート
+app.use('/api/sms', smsRoutes);  // SMS送信機能
 app.use('/api/sellers', followUpRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/api/buyer-appointments', buyerAppointmentRoutes);
