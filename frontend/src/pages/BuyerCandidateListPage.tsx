@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import api from '../services/api';
 import { SECTION_COLORS } from '../theme/sectionColors';
+import EmailConfirmationModal from '../components/EmailConfirmationModal';
 
 interface BuyerCandidate {
   buyer_number: string;
@@ -69,6 +70,9 @@ export default function BuyerCandidateListPage() {
     message: '',
     severity: 'info',
   });
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
 
   useEffect(() => {
     if (propertyNumber) {
@@ -122,7 +126,7 @@ export default function BuyerCandidateListPage() {
     setSelectedBuyers(newSelected);
   };
 
-  // メール配信機能（個別送信）
+  // メール配信機能（確認モーダルを開く）
   const handleSendEmail = async () => {
     if (selectedBuyers.size === 0) {
       setSnackbar({
@@ -157,21 +161,8 @@ export default function BuyerCandidateListPage() {
     // メールの件名
     const subject = `${address}に興味のあるかた！もうすぐ売り出します！事前に内覧可能です！`;
 
-    try {
-      setSnackbar({
-        open: true,
-        message: `メール送信中... (${candidatesWithEmail.length}件)`,
-        severity: 'info',
-      });
-
-      // 各買主に個別にメールを送信
-      const results = await Promise.allSettled(
-        candidatesWithEmail.map(async (candidate) => {
-          // 買主名（氏名）を取得、なければ「お客様」
-          const buyerName = candidate.name || 'お客様';
-          
-          // 本文を作成（{氏名}を実際の氏名に置き換え）
-          const body = `${buyerName}様
+    // 本文テンプレート（{氏名}はプレースホルダー）
+    const bodyTemplate = `{氏名}様
 
 お世話になります。不動産会社の株式会社いふうです。
 
@@ -189,6 +180,36 @@ ${address}を近々売りに出すことになりました！
 TEL:097-533-2022
 ×××××××××××××××`;
 
+    // モーダルを開く
+    setEmailSubject(subject);
+    setEmailBody(bodyTemplate);
+    setEmailModalOpen(true);
+  };
+
+  // メール送信確認後の実際の送信処理
+  const handleConfirmSendEmail = async (subject: string, body: string) => {
+    if (!data) return;
+
+    // 選択された買主の情報を取得
+    const selectedCandidates = data.candidates.filter(c => selectedBuyers.has(c.buyer_number));
+    const candidatesWithEmail = selectedCandidates.filter(c => c.email && c.email.trim() !== '');
+
+    try {
+      setSnackbar({
+        open: true,
+        message: `メール送信中... (${candidatesWithEmail.length}件)`,
+        severity: 'info',
+      });
+
+      // 各買主に個別にメールを送信
+      const results = await Promise.allSettled(
+        candidatesWithEmail.map(async (candidate) => {
+          // 買主名（氏名）を取得、なければ「お客様」
+          const buyerName = candidate.name || 'お客様';
+          
+          // 本文を作成（{氏名}を実際の氏名に置き換え）
+          const personalizedBody = body.replace(/{氏名}/g, buyerName);
+
           // バックエンドAPIを使用してメール送信
           // 🚨 重要: メール配信の宛先設定（絶対に変更しないこと）
           // - TO（宛先）: 買主のメールアドレス（1件のみ）
@@ -197,7 +218,7 @@ TEL:097-533-2022
           return await api.post('/api/emails/send-distribution', {
             recipients: [candidate.email!], // 宛先: 買主のメールアドレス（1件のみ）
             subject: subject,
-            body: body,
+            body: personalizedBody,
             from: 'tenant@ifoo-oita.com', // 送信元
             cc: 'tenant@ifoo-oita.com', // CC: 会社のアドレス
           });
@@ -231,6 +252,7 @@ TEL:097-533-2022
         message: error.message || 'メール送信に失敗しました。もう一度お試しください。',
         severity: 'error',
       });
+      throw error; // モーダルにエラーを伝える
     }
   };
 
@@ -606,6 +628,16 @@ TEL:097-533-2022`;
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* メール送信確認モーダル */}
+      <EmailConfirmationModal
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        onConfirm={handleConfirmSendEmail}
+        recipientCount={data?.candidates.filter(c => selectedBuyers.has(c.buyer_number) && c.email && c.email.trim() !== '').length || 0}
+        defaultSubject={emailSubject}
+        defaultBody={emailBody}
+      />
     </Container>
   );
 }
