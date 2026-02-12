@@ -87,6 +87,11 @@ export default function EmailConfirmationModal({
           <Typography variant="body2" color="warning.main" fontWeight="bold">
             ⚠️ 各買主に個別にメールが送信されます。送信前に内容を確認してください。
           </Typography>
+          {recipientCount > 1 && (
+            <Typography variant="body2" color="info.main" sx={{ mt: 1 }}>
+              💡 本文中の「{'{氏名}'}」は、送信時に各買主の氏名に自動置換されます。
+            </Typography>
+          )}
         </Box>
 
         <Divider sx={{ mb: 3 }} />

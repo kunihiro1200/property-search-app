@@ -161,8 +161,14 @@ export default function BuyerCandidateListPage() {
     // メールの件名
     const subject = `${address}に興味のあるかた！もうすぐ売り出します！事前に内覧可能です！`;
 
-    // 本文テンプレート（{氏名}はプレースホルダー）
-    const bodyTemplate = `{氏名}様
+    // 本文テンプレート
+    // 1件選択時: 実際の買主名を表示
+    // 複数件選択時: {氏名}プレースホルダーを表示
+    let bodyTemplate: string;
+    if (candidatesWithEmail.length === 1) {
+      // 1件選択時: 実際の名前を表示
+      const buyerName = candidatesWithEmail[0].name || 'お客様';
+      bodyTemplate = `${buyerName}様
 
 お世話になります。不動産会社の株式会社いふうです。
 
@@ -179,6 +185,26 @@ ${address}を近々売りに出すことになりました！
 株式会社いふう
 TEL:097-533-2022
 ×××××××××××××××`;
+    } else {
+      // 複数件選択時: {氏名}プレースホルダーを表示
+      bodyTemplate = `{氏名}様
+
+お世話になります。不動産会社の株式会社いふうです。
+
+${address}を近々売りに出すことになりました！
+
+もしご興味がございましたら、誰よりも早く内覧することが可能となっておりますので、このメールにご返信頂ければと思います。
+
+物件詳細：${publicUrl}
+
+よろしくお願いいたします。
+
+×××××××××××××××
+大分市舞鶴町1-3-30
+株式会社いふう
+TEL:097-533-2022
+×××××××××××××××`;
+    }
 
     // モーダルを開く
     setEmailSubject(subject);
