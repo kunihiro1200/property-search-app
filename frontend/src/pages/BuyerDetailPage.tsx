@@ -238,11 +238,12 @@ export default function BuyerDetailPage() {
     }
   }, [heightError]);
 
-  // Validate buyer_number parameter - support UUID, numeric, and BY_ prefix formats
+  // Validate buyer_number parameter - support UUID, numeric, BY_ prefix, and AA prefix formats
   const isUuid = buyer_number ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(buyer_number) : false;
   const isNumericBuyerNumber = buyer_number ? /^\d+$/.test(buyer_number) : false;
   const isByPrefixBuyerNumber = buyer_number ? /^BY_[A-Za-z0-9_]+$/.test(buyer_number) : false;
-  const isValidBuyerNumber = isUuid || isNumericBuyerNumber || isByPrefixBuyerNumber;
+  const isAaPrefixBuyerNumber = buyer_number ? /^AA\d+$/.test(buyer_number) : false;
+  const isValidBuyerNumber = isUuid || isNumericBuyerNumber || isByPrefixBuyerNumber || isAaPrefixBuyerNumber;
 
   useEffect(() => {
     if (buyer_number && isValidBuyerNumber) {
@@ -1202,7 +1203,7 @@ Email: <<会社メールアドレス>>`;
             無効な買主番号です
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            買主番号は有効な数値、UUID、またはBY_形式である必要があります
+            買主番号は有効な数値、UUID、BY_形式、またはAA形式である必要があります
           </Typography>
           <Button 
             variant="contained" 

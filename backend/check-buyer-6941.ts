@@ -8,13 +8,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
-async function checkBuyer6941() {
-  console.log('=== 買主6941のデータ確認 ===\n');
+async function checkBuyer(buyerNumber: string) {
+  console.log(`=== 買主${buyerNumber}のデータ確認 ===\n`);
 
   const { data: buyer, error } = await supabase
     .from('buyers')
     .select('*')
-    .eq('buyer_number', '6941')
+    .eq('buyer_number', buyerNumber)
     .single();
 
   if (error) {
@@ -97,14 +97,16 @@ async function checkBuyer6941() {
   if (inquirySource.includes('業者問合せ') || distributionType.includes('業者問合せ')) reasons.push('業者問合せ');
 
   if (reasons.length > 0) {
-    console.log('買主6941が買主候補に含まれない理由:');
+    console.log(`買主${buyerNumber}が買主候補に含まれない理由:`);
     reasons.forEach((reason, index) => {
       console.log(`  ${index + 1}. ${reason}`);
     });
   } else {
-    console.log('買主6941は基本条件を満たしています。');
+    console.log(`買主${buyerNumber}は基本条件を満たしています。`);
     console.log('エリア・種別・価格帯のマッチングで除外されている可能性があります。');
   }
 }
 
-checkBuyer6941().catch(console.error);
+// コマンドライン引数から買主番号を取得（デフォルトは6941）
+const buyerNumber = process.argv[2] || '6941';
+checkBuyer(buyerNumber).catch(console.error);

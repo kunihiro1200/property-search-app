@@ -19,6 +19,7 @@ interface DistributionAreaFieldProps {
   googleMapUrl?: string;
   value?: string;
   onChange: (value: string) => void;
+  onCalculatingChange?: (isCalculating: boolean) => void; // 計算中状態を親に通知
   disabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ export default function DistributionAreaField({
   googleMapUrl,
   value = '',
   onChange,
+  onCalculatingChange,
   disabled = false,
 }: DistributionAreaFieldProps) {
   const [calculating, setCalculating] = useState(false);
@@ -34,6 +36,13 @@ export default function DistributionAreaField({
   const [manuallyEdited, setManuallyEdited] = useState(false);
   const [recalcDialogOpen, setRecalcDialogOpen] = useState(false);
   const [pendingCalculation, setPendingCalculation] = useState(false);
+
+  // 計算中状態が変わったら親に通知
+  useEffect(() => {
+    if (onCalculatingChange) {
+      onCalculatingChange(calculating);
+    }
+  }, [calculating, onCalculatingChange]);
 
   // Auto-calculate on mount if Google Map URL exists and no value
   useEffect(() => {

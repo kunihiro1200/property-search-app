@@ -2,6 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { EnhancedGeolocationService, GeographicMatchResult } from './EnhancedGeolocationService';
 import { Coordinates } from './GeolocationService';
+import { BeppuAreaMappingService } from './BeppuAreaMappingService';
+import { OitaCityAreaMappingService } from './OitaCityAreaMappingService';
 
 export interface EnhancedFilterCriteria {
   propertyNumber: string;
@@ -23,6 +25,7 @@ export interface FilteredBuyer {
   filterResults: {
     geography: boolean;
     distribution: boolean;
+    brokerInquiry: boolean;
     status: boolean;
     priceRange: boolean;
   };
@@ -37,6 +40,7 @@ export interface EnhancedBuyerFilterResult {
   appliedFilters: {
     geographyFilter: boolean;
     distributionFilter: boolean;
+    brokerInquiryFilter: boolean;
     statusFilter: boolean;
     priceRangeFilter: boolean;
   };
@@ -51,7 +55,7 @@ interface InquiryProperty {
 interface ConsolidatedBuyer {
   email: string;
   buyerNumbers: string[];
-  id: string; // Use first buyer's ID for database queries
+  firstBuyerNumber: string; // Use first buyer's number for database queries
   allDesiredAreas: string;
   mostPermissiveStatus: string;
   propertyTypes: string[];
@@ -67,6 +71,8 @@ interface ConsolidatedBuyer {
 export class EnhancedBuyerDistributionService {
   private supabase;
   private geolocationService: EnhancedGeolocationService;
+  private beppuAreaMappingService: BeppuAreaMappingService;
+  private oitaCityAreaMappingService: OitaCityAreaMappingService;
 
   constructor() {
     this.supabase = createClient(
@@ -74,10 +80,22 @@ export class EnhancedBuyerDistributionService {
       process.env.SUPABASE_SERVICE_KEY!
     );
     this.geolocationService = new EnhancedGeolocationService();
+    this.beppuAreaMappingService = new BeppuAreaMappingService();
+    this.oitaCityAreaMappingService = new OitaCityAreaMappingService();
   }
 
   /**
    * すべての条件に合致する買主を取得
+   * 
+   * 🚨 重要: 買主の選択方法（絶対に変更しないこと）
+   * 
+   * 以下の条件で買主を選択します：
+   * 1. 地理的フィルター: 物件の配信エリア番号と買主の希望エリアが一致
+   * 2. 配信フラグフィルター: 配信種別が「要」「mail」「配信希望」「LINE→mail」
+   * 3. 業者問合せフィルター: 業者問合せカラムが「業者問合せ」の場合は除外
+   * 4. ステータスフィルター: 「買付」「D」を含むステータスは除外
+   * 5. 価格帯フィルター: 物件価格が買主の希望価格帯に一致
+   * 
    * @param criteria フィルタリング条件
    * @returns フィルタリング結果
    */
@@ -95,25 +113,17 @@ export class EnhancedBuyerDistributionService {
         city: property.city,
         price: property.price,
         propertyType: property.property_type,
-        distributionAreas: property.distribution_areas
+        address: property.address
       });
 
-      // Check if distribution_areas is set
-      if (!property.distribution_areas || property.distribution_areas.trim() === '') {
-        console.warn(`[EnhancedBuyerDistributionService] Property ${criteria.propertyNumber} has no distribution areas set`);
-        return {
-          emails: [],
-          count: 0,
-          totalBuyers: 0,
-          filteredBuyers: [],
-          appliedFilters: {
-            geographyFilter: true,
-            distributionFilter: true,
-            statusFilter: true,
-            priceRangeFilter: true
-          }
-        };
-      }
+      // 物件の配信エリア番号を取得（住所ベースのマッピングを含む）
+      const propertyAreaNumbers = await this.getAreaNumbersForProperty(property);
+      const distributionAreasString = propertyAreaNumbers.join('');
+
+      console.log(`[EnhancedBuyerDistributionService] Distribution areas:`, {
+        areaNumbers: propertyAreaNumbers,
+        distributionAreasString
+      });
 
       // 2. 物件の座標を取得
       const propertyCoords = await this.geolocationService.getCoordinates(
@@ -134,7 +144,7 @@ export class EnhancedBuyerDistributionService {
       const consolidatedBuyers = Array.from(consolidatedBuyersMap.values());
       console.log(`[EnhancedBuyerDistributionService] Consolidated into ${consolidatedBuyers.length} unique emails`);
 
-      // 5. 全買主の問い合わせ履歴を一括取得
+      // 5. 全買主の問い合わせ履歴を一括取得（buyer_inquiriesテーブルが存在しない場合はスキップ）
       const inquiryMap = await this.fetchAllBuyerInquiries();
       console.log(`[EnhancedBuyerDistributionService] Inquiry history for ${inquiryMap.size} buyers`);
 
@@ -143,16 +153,13 @@ export class EnhancedBuyerDistributionService {
 
       for (const consolidatedBuyer of consolidatedBuyers) {
         // Get inquiries for all buyer records with this email
+        // Note: buyer_inquiriesテーブルが存在しないため、問い合わせ履歴は空配列
         const allInquiries: InquiryProperty[] = [];
-        for (const originalRecord of consolidatedBuyer.originalRecords) {
-          const buyerInquiries = inquiryMap.get(originalRecord.id) || [];
-          allInquiries.push(...buyerInquiries);
-        }
         
         // 地理的フィルター（問い合わせ + エリア）- 統合されたエリアを使用
         const geoMatch = await this.filterByGeographyConsolidated(
           propertyCoords,
-          property.distribution_areas,
+          distributionAreasString,
           consolidatedBuyer,
           allInquiries
         );
@@ -162,6 +169,9 @@ export class EnhancedBuyerDistributionService {
 
         // 配信フラグフィルター - 統合された配信タイプを使用
         const distMatch = this.filterByDistributionFlagConsolidated(consolidatedBuyer);
+
+        // 業者問合せフィルター - 業者問合せは除外
+        const brokerMatch = this.filterByBrokerInquiryConsolidated(consolidatedBuyer);
 
         // ステータスフィルター - 統合されたステータスを使用
         const statusMatch = this.filterByLatestStatusConsolidated(consolidatedBuyer);
@@ -187,6 +197,7 @@ export class EnhancedBuyerDistributionService {
           filterResults: {
             geography: geoMatch.matched,
             distribution: distMatch,
+            brokerInquiry: brokerMatch,
             status: statusMatch,
             priceRange: priceMatch
           },
@@ -198,6 +209,7 @@ export class EnhancedBuyerDistributionService {
       const qualifiedBuyers = filteredBuyers.filter(b => 
         b.filterResults.geography &&
         b.filterResults.distribution &&
+        b.filterResults.brokerInquiry &&
         b.filterResults.status &&
         b.filterResults.priceRange
       );
@@ -222,6 +234,7 @@ export class EnhancedBuyerDistributionService {
         appliedFilters: {
           geographyFilter: true,
           distributionFilter: true,
+          brokerInquiryFilter: true,
           statusFilter: true,
           priceRangeFilter: true
         }
@@ -243,7 +256,7 @@ export class EnhancedBuyerDistributionService {
     // Query property_listings table (primary source for property details)
     const { data: propertyData, error: propertyError } = await this.supabase
       .from('property_listings')
-      .select('property_number, google_map_url, address, price, property_type, distribution_areas')
+      .select('property_number, google_map_url, address, price, property_type')
       .eq('property_number', propertyNumber)
       .single();
 
@@ -263,8 +276,7 @@ export class EnhancedBuyerDistributionService {
         address: propertyData.address,
         city: city,
         price: propertyData.price,
-        property_type: propertyData.property_type,
-        distribution_areas: propertyData.distribution_areas
+        property_type: propertyData.property_type
       };
     }
 
@@ -275,6 +287,71 @@ export class EnhancedBuyerDistributionService {
     diagnosticError.propertyNumber = propertyNumber;
     diagnosticError.statusCode = 404;
     throw diagnosticError;
+  }
+
+  /**
+   * 物件の住所からエリア番号を取得
+   * BuyerCandidateServiceと同じロジックを使用
+   * 1. 住所から詳細エリアマッピング（BeppuAreaMappingService、OitaCityAreaMappingService）
+   * 2. 市全体マッピング（大分市→㊵、別府市→㊶）
+   */
+  private async getAreaNumbersForProperty(property: any): Promise<string[]> {
+    const areaNumbers = new Set<string>();
+
+    // 住所から詳細エリアマッピング
+    const address = (property.address || '').trim();
+    if (address) {
+      // 大分市の場合
+      if (address.includes('大分市')) {
+        // 市全体エリアを追加
+        areaNumbers.add('㊵');
+        console.log(`[getAreaNumbersForProperty] Oita city detected, added ㊵`);
+        
+        // 詳細エリアを取得（例: 萩原 → ②、勢家町 → ①）
+        try {
+          const oitaAreas = await this.oitaCityAreaMappingService.getDistributionAreasForAddress(address);
+          if (oitaAreas) {
+            const detailedAreas = this.extractAreaNumbers(oitaAreas);
+            detailedAreas.forEach(num => areaNumbers.add(num));
+            console.log(`[getAreaNumbersForProperty] Oita detailed areas for ${address}:`, detailedAreas);
+          }
+        } catch (error) {
+          console.error(`[getAreaNumbersForProperty] Error getting Oita areas:`, error);
+        }
+      }
+      
+      // 別府市の場合
+      if (address.includes('別府市')) {
+        try {
+          const beppuAreas = await this.beppuAreaMappingService.getDistributionAreasForAddress(address);
+          if (beppuAreas) {
+            const detailedAreas = this.extractAreaNumbers(beppuAreas);
+            detailedAreas.forEach(num => areaNumbers.add(num));
+            console.log(`[getAreaNumbersForProperty] Beppu detailed areas for ${address}:`, detailedAreas);
+          } else {
+            // マッピングが見つからない場合は別府市全体にフォールバック
+            areaNumbers.add('㊶');
+            console.log(`[getAreaNumbersForProperty] No detailed mapping for ${address}, using ㊶`);
+          }
+        } catch (error) {
+          console.error(`[getAreaNumbersForProperty] Error getting Beppu areas:`, error);
+          areaNumbers.add('㊶');
+        }
+      }
+    }
+
+    const result = Array.from(areaNumbers);
+    console.log(`[getAreaNumbersForProperty] Final area numbers for property ${property.property_number}:`, result);
+    return result;
+  }
+
+  /**
+   * エリア番号を抽出（①②③...の形式）
+   */
+  private extractAreaNumbers(areaString: string): string[] {
+    // 丸数字を抽出
+    const circledNumbers = areaString.match(/[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯㊵㊶]/g) || [];
+    return circledNumbers;
   }
 
   /**
@@ -307,7 +384,6 @@ export class EnhancedBuyerDistributionService {
       const { data, error } = await this.supabase
         .from('buyers')
         .select(`
-          id,
           buyer_number,
           email,
           desired_area,
@@ -316,7 +392,9 @@ export class EnhancedBuyerDistributionService {
           desired_property_type,
           price_range_apartment,
           price_range_house,
-          price_range_land
+          price_range_land,
+          inquiry_source,
+          broker_inquiry
         `)
         .not('email', 'is', null)
         .neq('email', '')
@@ -358,7 +436,7 @@ export class EnhancedBuyerDistributionService {
         emailMap.set(normalizedEmail, {
           email: buyer.email, // Use original casing
           buyerNumbers: [buyer.buyer_number],
-          id: buyer.id, // Use first buyer's ID
+          firstBuyerNumber: buyer.buyer_number, // Use first buyer's number
           allDesiredAreas: buyer.desired_area || '',
           mostPermissiveStatus: buyer.latest_status || '',
           propertyTypes: buyer.desired_property_type ? [buyer.desired_property_type] : [],
@@ -472,41 +550,47 @@ export class EnhancedBuyerDistributionService {
 
   /**
    * 全買主の問い合わせ履歴を一括取得
+   * Note: buyer_inquiriesテーブルが存在しない場合は空のMapを返す
    */
   private async fetchAllBuyerInquiries(): Promise<Map<string, InquiryProperty[]>> {
-    const { data, error } = await this.supabase
-      .from('buyer_inquiries')
-      .select(`
-        buyer_id,
-        property_number,
-        property_listings!inner(
+    try {
+      const { data, error } = await this.supabase
+        .from('buyer_inquiries')
+        .select(`
+          buyer_number,
           property_number,
-          address,
-          google_map_url
-        )
-      `)
-      .order('inquiry_date', { ascending: false });
+          property_listings!inner(
+            property_number,
+            address,
+            google_map_url
+          )
+        `)
+        .order('inquiry_date', { ascending: false });
 
-    if (error) {
-      console.error('[fetchAllBuyerInquiries] Error:', error);
+      if (error) {
+        console.warn('[fetchAllBuyerInquiries] buyer_inquiries table does not exist or error occurred:', error.message);
+        return new Map();
+      }
+
+      const inquiryMap = new Map<string, InquiryProperty[]>();
+      
+      data?.forEach((row: any) => {
+        if (!inquiryMap.has(row.buyer_number)) {
+          inquiryMap.set(row.buyer_number, []);
+        }
+        inquiryMap.get(row.buyer_number)!.push({
+          propertyNumber: row.property_number,
+          address: row.property_listings?.address || null,
+          googleMapUrl: row.property_listings?.google_map_url || null
+        });
+      });
+
+      console.log(`[fetchAllBuyerInquiries] Retrieved inquiries for ${inquiryMap.size} buyers`);
+      return inquiryMap;
+    } catch (error) {
+      console.warn('[fetchAllBuyerInquiries] Error fetching buyer inquiries:', error);
       return new Map();
     }
-
-    const inquiryMap = new Map<string, InquiryProperty[]>();
-    
-    data?.forEach((row: any) => {
-      if (!inquiryMap.has(row.buyer_id)) {
-        inquiryMap.set(row.buyer_id, []);
-      }
-      inquiryMap.get(row.buyer_id)!.push({
-        propertyNumber: row.property_number,
-        address: row.property_listings?.address || null,
-        googleMapUrl: row.property_listings?.google_map_url || null
-      });
-    });
-
-    console.log(`[fetchAllBuyerInquiries] Retrieved inquiries for ${inquiryMap.size} buyers`);
-    return inquiryMap;
   }
 
   /**
@@ -705,6 +789,49 @@ export class EnhancedBuyerDistributionService {
            distributionType === 'mail' || 
            distributionType === '配信希望' ||
            distributionType.includes('LINE→mail');
+  }
+
+  /**
+   * 業者問合せフィルター（統合買主用）
+   * 業者問合せの買主は除外する
+   */
+  private filterByBrokerInquiryConsolidated(consolidatedBuyer: ConsolidatedBuyer): boolean {
+    // 統合された買主の全レコードをチェック
+    for (const buyer of consolidatedBuyer.originalRecords) {
+      if (this.isBrokerInquiry(buyer)) {
+        return false; // 1つでも業者問合せがあれば除外
+      }
+    }
+    return true; // 全て業者問合せでなければOK
+  }
+
+  /**
+   * 業者問合せかどうかを判定
+   * - inquiry_source（問合せ元）が「業者問合せ」の場合: true
+   * - distribution_type（配信種別）が「業者問合せ」の場合: true
+   * - broker_inquiry（業者問合せフラグ）が「業者問合せ」の場合: true
+   */
+  private isBrokerInquiry(buyer: any): boolean {
+    const inquirySource = (buyer.inquiry_source || '').trim();
+    const distributionType = (buyer.distribution_type || '').trim();
+    const brokerInquiry = (buyer.broker_inquiry || '').trim();
+
+    // 問合せ元が「業者問合せ」
+    if (inquirySource === '業者問合せ' || inquirySource.includes('業者')) {
+      return true;
+    }
+
+    // 配信種別が「業者問合せ」
+    if (distributionType === '業者問合せ' || distributionType.includes('業者')) {
+      return true;
+    }
+
+    // 業者問合せカラムが「業者問合せ」の場合のみ除外
+    if (brokerInquiry === '業者問合せ') {
+      return true;
+    }
+
+    return false;
   }
 
   /**

@@ -146,6 +146,7 @@ export default function PropertyListingDetailPage() {
   const [buyersLoading, setBuyersLoading] = useState(false);
   const [workTaskData, setWorkTaskData] = useState<WorkTaskData | null>(null);
   const [retrievingStorageUrl, setRetrievingStorageUrl] = useState(false);
+  const [isCalculatingAreas, setIsCalculatingAreas] = useState(false);
   
   // Edit mode states for each section
   const [isPriceEditMode, setIsPriceEditMode] = useState(false);
@@ -641,6 +642,7 @@ export default function PropertyListingDetailPage() {
             propertyNumber={data.property_number}
             propertyAddress={data.address || data.display_address}
             distributionAreas={editedData.distribution_areas !== undefined ? editedData.distribution_areas : data.distribution_areas}
+            isCalculatingAreas={isCalculatingAreas}
             size="medium"
             variant="contained"
           />
@@ -1213,6 +1215,7 @@ export default function PropertyListingDetailPage() {
               googleMapUrl={data.google_map_url}
               value={editedData.distribution_areas !== undefined ? editedData.distribution_areas : (data.distribution_areas || '')}
               onChange={(value) => handleFieldChange('distribution_areas', value)}
+              onCalculatingChange={setIsCalculatingAreas}
             />
           </Paper>
 

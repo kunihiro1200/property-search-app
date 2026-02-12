@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, CircularProgress, Snackbar, Alert } from '@mui/material';
+import { Button, CircularProgress, Snackbar, Alert, Box, Typography } from '@mui/material';
 import { Email as EmailIcon } from '@mui/icons-material';
 import EmailTemplateSelector from './EmailTemplateSelector';
 import BuyerFilterSummaryModal from './BuyerFilterSummaryModal';
@@ -19,6 +19,7 @@ interface GmailDistributionButtonProps {
   propertyNumber: string;
   propertyAddress?: string;
   distributionAreas?: string;
+  isCalculatingAreas?: boolean; // 配信エリア計算中かどうか
   size?: 'small' | 'medium' | 'large';
   variant?: 'text' | 'outlined' | 'contained';
 }
@@ -29,6 +30,7 @@ export default function GmailDistributionButton({
   propertyNumber,
   propertyAddress,
   distributionAreas,
+  isCalculatingAreas = false,
   size = 'small',
   variant = 'outlined'
 }: GmailDistributionButtonProps) {
@@ -247,8 +249,14 @@ export default function GmailDistributionButton({
         .replace(/\{propertyNumber\}/g, propertyData.propertyNumber);
 
       // Gmail Compose URLを生成
+      // 🚨 重要: メール配信の宛先設定（絶対に変更しないこと）
+      // - TO（宛先）: tenant@ifoo-oita.com（固定）
+      // - CC: 担当者のアドレス（senderAddress）
+      // - BCC: 選択された買主のアドレス（買主のプライバシー保護のため、絶対にCCに変更しないこと）
       const gmailUrl = generateGmailComposeUrl({
-        bcc: emailsToSend.join(','),
+        to: 'tenant@ifoo-oita.com', // 宛先（固定）
+        cc: senderAddress, // CC: 担当者のアドレス
+        bcc: emailsToSend.join(','), // BCC: 買主のアドレス（絶対に変更しない）
         subject: subject,
         body: body
       });
@@ -291,15 +299,22 @@ export default function GmailDistributionButton({
 
   return (
     <>
-      <Button
-        size={size}
-        variant={variant}
-        startIcon={loading ? <CircularProgress size={16} /> : <EmailIcon />}
-        onClick={handleButtonClick}
-        disabled={loading}
-      >
-        Gmailで配信
-      </Button>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {isCalculatingAreas && (
+          <Alert severity="info" sx={{ mb: 1 }}>
+            配信エリアを計算中です。計算が完了するまでお待ちください...
+          </Alert>
+        )}
+        <Button
+          size={size}
+          variant={variant}
+          startIcon={loading ? <CircularProgress size={16} /> : <EmailIcon />}
+          onClick={handleButtonClick}
+          disabled={loading || isCalculatingAreas}
+        >
+          一括配信
+        </Button>
+      </Box>
 
       <EmailTemplateSelector
         open={templateSelectorOpen}

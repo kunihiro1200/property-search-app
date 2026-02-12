@@ -49,35 +49,32 @@ export class BuyerCandidateService {
    */
   async getCandidatesForProperty(propertyNumber: string): Promise<BuyerCandidateResponse> {
     // 物件情報を取得
-    console.log(`[BuyerCandidateService] Searching for property: ${propertyNumber}`);
-    
     const { data: property, error: propertyError } = await this.supabase
       .from('property_listings')
       .select('*')
       .eq('property_number', propertyNumber)
       .single();
 
-    console.log(`[BuyerCandidateService] Property query result:`, { property, error: propertyError });
-
     if (propertyError || !property) {
-      console.error(`[BuyerCandidateService] Property not found:`, propertyError);
       throw new Error('Property not found');
     }
 
     // 物件の住所からエリア番号をマッピング
     const propertyAreaNumbers = await this.getAreaNumbersForProperty(property);
-    console.log(`[BuyerCandidateService] Property area numbers:`, propertyAreaNumbers);
 
     // 物件の座標を取得
     const propertyCoords = await this.getPropertyCoordinates(property);
-    console.log(`[BuyerCandidateService] Property coordinates:`, propertyCoords);
 
-    // 買主を取得（削除済みを除外、最新状況/問合せ時確度でフィルタリング）
+    // 買主を取得（削除済みを除外、配信種別でフィルタリング）
+    // パフォーマンス最適化: シンプルなクエリで高速化
     const { data: buyers, error: buyersError } = await this.supabase
       .from('buyers')
-      .select('*')
+      .select('buyer_number, name, latest_status, desired_area, desired_property_type, reception_date, email, phone_number, property_number, inquiry_source, distribution_type, broker_inquiry, price_range_house, price_range_apartment, price_range_land')
       .is('deleted_at', null)  // 削除済みを除外
-      .order('reception_date', { ascending: false, nullsFirst: false });
+      .eq('distribution_type', '要')  // 配信種別が「要」のみ
+      .not('latest_status', 'is', null)  // 最新状況が空欄を除外
+      .order('reception_date', { ascending: false, nullsFirst: false })
+      .limit(1000);  // 最大1000件
 
     if (buyersError) {
       throw new Error(`Failed to fetch buyers: ${buyersError.message}`);
@@ -223,30 +220,13 @@ export class BuyerCandidateService {
     const filteredBuyers: any[] = [];
 
     for (const buyer of buyers) {
-      // 買主6941の詳細ログ
-      if (buyer.buyer_number === '6941') {
-        console.log('[BuyerCandidateService] Checking buyer 6941:');
-        console.log('  - latest_status:', buyer.latest_status);
-        console.log('  - desired_area:', buyer.desired_area);
-        console.log('  - desired_property_type:', buyer.desired_property_type);
-        console.log('  - distribution_type:', buyer.distribution_type);
-        console.log('  - inquiry_source:', buyer.inquiry_source);
-        console.log('  - deleted_at:', buyer.deleted_at);
-      }
-
       // 1. 除外条件の評価（早期リターン）
       if (this.shouldExcludeBuyer(buyer)) {
-        if (buyer.buyer_number === '6941') {
-          console.log('[BuyerCandidateService] Buyer 6941 excluded by shouldExcludeBuyer');
-        }
         continue;
       }
 
       // 2. 最新状況/問合せ時確度フィルタ
       if (!this.matchesStatus(buyer)) {
-        if (buyer.buyer_number === '6941') {
-          console.log('[BuyerCandidateService] Buyer 6941 excluded by matchesStatus');
-        }
         continue;
       }
 
@@ -257,30 +237,17 @@ export class BuyerCandidateService {
         propertyCoords
       );
       if (!matchesArea) {
-        if (buyer.buyer_number === '6941') {
-          console.log('[BuyerCandidateService] Buyer 6941 excluded by matchesAreaCriteriaWithDistance');
-        }
         continue;
       }
 
       // 4. 種別フィルタ
       if (!this.matchesPropertyTypeCriteria(buyer, propertyType)) {
-        if (buyer.buyer_number === '6941') {
-          console.log('[BuyerCandidateService] Buyer 6941 excluded by matchesPropertyTypeCriteria');
-        }
         continue;
       }
 
       // 5. 価格帯フィルタ
       if (!this.matchesPriceCriteria(buyer, salesPrice, propertyType)) {
-        if (buyer.buyer_number === '6941') {
-          console.log('[BuyerCandidateService] Buyer 6941 excluded by matchesPriceCriteria');
-        }
         continue;
-      }
-
-      if (buyer.buyer_number === '6941') {
-        console.log('[BuyerCandidateService] Buyer 6941 PASSED all filters!');
       }
 
       filteredBuyers.push(buyer);
@@ -340,8 +307,8 @@ export class BuyerCandidateService {
    * 配信種別が「要」かどうかを判定
    */
   private hasDistributionRequired(buyer: any): boolean {
-    const distributionType = (buyer.distribution_type || '').trim();
-    return distributionType === '要';
+    // データベース側で既にフィルタリング済み
+    return true;
   }
 
   /**
@@ -352,7 +319,7 @@ export class BuyerCandidateService {
   private matchesStatus(buyer: any): boolean {
     const latestStatus = (buyer.latest_status || '').trim();
 
-    // 空欄の場合は除外
+    // 空欄の場合は除外（データベース側で既に除外済み）
     if (!latestStatus) {
       return false;
     }
@@ -421,7 +388,6 @@ export class BuyerCandidateService {
       const buyerAreaNumbers = this.extractAreaNumbers(desiredArea);
       const areaMatch = propertyAreaNumbers.some(area => buyerAreaNumbers.includes(area));
       if (areaMatch) {
-        console.log(`[BuyerCandidateService] Area match for buyer ${buyer.buyer_number}`);
         return true;
       }
     }
@@ -693,8 +659,8 @@ export class BuyerCandidateService {
       .replace(/億/g, '00000000')
       .trim();
 
-    // 範囲パターン（〜、-、～）
-    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-]\s*(\d+)?/);
+    // 範囲パターン（〜、～、-、~）
+    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-~]\s*(\d+)?/);
     if (rangeMatch) {
       if (rangeMatch[1]) {
         min = parseInt(rangeMatch[1], 10);

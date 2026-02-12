@@ -290,6 +290,24 @@ export default function PropertyListingsPage() {
     return `${(price / 10000).toLocaleString()}万円`;
   };
 
+  // 物件種別の色を取得
+  const getPropertyTypeColor = (propertyType: string | undefined) => {
+    if (!propertyType) return 'default';
+    
+    const type = propertyType.trim();
+    if (type === 'マンション' || type === 'アパート') {
+      return '#1976d2'; // 青
+    } else if (type === '戸建' || type === '戸建て') {
+      return '#2e7d32'; // 緑
+    } else if (type === '土地') {
+      return '#ed6c02'; // オレンジ
+    } else if (type === '店舗' || type === '事務所') {
+      return '#9c27b0'; // 紫
+    } else {
+      return '#757575'; // グレー
+    }
+  };
+
   // サイドバー用の担当者リスト
   const assigneeList = useMemo(() => {
     const list = [{ key: 'all', label: 'All', count: assigneeCounts.all }];
@@ -331,6 +349,17 @@ export default function PropertyListingsPage() {
               onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <Button
+                      size="small"
+                      onClick={() => { setSearchQuery(''); setPage(0); }}
+                      sx={{ minWidth: 'auto', p: 0.5 }}
+                    >
+                      ✕
+                    </Button>
+                  </InputAdornment>
+                ),
               }}
             />
           </Paper>
@@ -438,7 +467,15 @@ export default function PropertyListingsPage() {
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>{listing.sales_assignee || '-'}</TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
                           {listing.property_type && (
-                            <Chip label={listing.property_type} size="small" />
+                            <Chip 
+                              label={listing.property_type} 
+                              size="small"
+                              sx={{
+                                bgcolor: getPropertyTypeColor(listing.property_type),
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                            />
                           )}
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)} sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
