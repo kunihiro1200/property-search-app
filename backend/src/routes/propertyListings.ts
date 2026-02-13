@@ -8,6 +8,7 @@ import { EnhancedBuyerDistributionService } from '../services/EnhancedBuyerDistr
 import { DataIntegrityDiagnosticService } from '../services/DataIntegrityDiagnosticService';
 import { BuyerCandidateService } from '../services/BuyerCandidateService';
 import { UrlValidator } from '../utils/urlValidator';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 const propertyListingService = new PropertyListingService();
@@ -140,7 +141,7 @@ router.get('/:propertyNumber', async (req: Request, res: Response): Promise<void
 });
 
 // 更新
-router.put('/:propertyNumber', async (req: Request, res: Response) => {
+router.put('/:propertyNumber', authenticate, async (req: Request, res: Response) => {
   try {
     const { propertyNumber } = req.params;
     const updates = req.body;
@@ -163,13 +164,15 @@ router.put('/:propertyNumber', async (req: Request, res: Response) => {
       const currentProperty = await propertyListingService.getByPropertyNumber(propertyNumber);
       
       if (currentProperty) {
+        // 新しい価格を取得（priceまたはsales_priceのどちらか）
         const newPrice = updates.price !== undefined ? updates.price : updates.sales_price;
+        // 現在の価格を取得（priceまたはsales_priceのどちらか）
         const oldPrice = currentProperty.price || currentProperty.sales_price;
         
         // 価格が変更された場合のみ履歴を追加
-        if (newPrice !== oldPrice && oldPrice !== null && oldPrice !== undefined) {
+        if (newPrice !== oldPrice && oldPrice !== null && oldPrice !== undefined && newPrice !== null) {
           // ログインユーザーのイニシャルを取得
-          const userInitials = (req as any).employee?.initials || 'U';
+          const userInitials = req.employee?.initials || 'U';
           
           // 現在の日付（月/日形式）
           const now = new Date();
@@ -195,8 +198,14 @@ router.put('/:propertyNumber', async (req: Request, res: Response) => {
             oldPrice,
             newPrice,
             userInitials,
+            userEmail: req.employee?.email,
             newHistoryEntry
           });
+        }
+        
+        // sales_priceが送信された場合、priceフィールドも更新
+        if (updates.sales_price !== undefined && updates.price === undefined) {
+          updates.price = updates.sales_price;
         }
       }
     }
