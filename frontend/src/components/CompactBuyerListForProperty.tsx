@@ -6,7 +6,12 @@ import {
   Paper,
   Button,
   CircularProgress,
-  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 
 interface BuyerWithDetails {
@@ -15,6 +20,8 @@ interface BuyerWithDetails {
   buyer_number: string;
   reception_date?: string;
   viewing_date?: string;
+  viewing_time?: string;
+  latest_status?: string;
   has_offer: boolean;
   inquiry_confidence?: string;
   phone_number?: string;
@@ -32,10 +39,8 @@ export default function CompactBuyerListForProperty({
   buyers,
   propertyNumber,
   loading = false,
-  maxInitialDisplay = 5,
 }: CompactBuyerListForPropertyProps) {
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(false);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
@@ -51,12 +56,16 @@ export default function CompactBuyerListForProperty({
     }
   };
 
-  const displayedBuyers = expanded ? buyers : buyers.slice(0, maxInitialDisplay);
-  const hasMore = buyers.length > maxInitialDisplay;
+  // 受付日順にソート（新しい順）
+  const sortedBuyers = [...buyers].sort((a, b) => {
+    if (!a.reception_date) return 1;
+    if (!b.reception_date) return -1;
+    return new Date(b.reception_date).getTime() - new Date(a.reception_date).getTime();
+  });
 
   if (loading) {
     return (
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3, height: '100%' }}>
         <Typography variant="h6" gutterBottom>
           買主リスト
         </Typography>
@@ -68,9 +77,9 @@ export default function CompactBuyerListForProperty({
   }
 
   return (
-    <Paper sx={{ p: 2, maxWidth: '400px', width: '100%' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-        <Typography variant="h6">買主リスト</Typography>
+    <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">買主リスト ({buyers.length}件)</Typography>
         <Button
           variant="contained"
           size="small"
@@ -85,72 +94,47 @@ export default function CompactBuyerListForProperty({
           買主がまだ登録されていません
         </Typography>
       ) : (
-        <>
-          <Box>
-            {displayedBuyers.map((buyer) => (
-              <Box
-                key={buyer.id}
-                sx={{
-                  mb: 1.5,
-                  p: 1.5,
-                  border: '1px solid #eee',
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  '&:hover': {
-                    bgcolor: '#f5f5f5',
-                  },
-                }}
-                onClick={() => {
-                  navigate(`/buyers/${buyer.buyer_number}`, {
-                    state: {
-                      propertyNumber: propertyNumber,
-                      source: 'property-detail',
+        <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>氏名</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>受付日</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>内覧日</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>時間</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>最新状況</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedBuyers.map((buyer) => (
+                <TableRow
+                  key={buyer.id}
+                  hover
+                  sx={{
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: '#f5f5f5',
                     },
-                  });
-                }}
-              >
-                <Typography variant="body2" fontWeight="bold" gutterBottom>
-                  {buyer.name}
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-                  <Typography variant="caption" color="text.secondary">
-                    受付: {formatDate(buyer.reception_date)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    内覧: {formatDate(buyer.viewing_date)}
-                  </Typography>
-                  {buyer.has_offer && (
-                    <Chip label="買付有" size="small" color="success" />
-                  )}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-
-          {hasMore && !expanded && (
-            <Button
-              fullWidth
-              variant="outlined"
-              size="small"
-              onClick={() => setExpanded(true)}
-              sx={{ mt: 1 }}
-            >
-              すべて表示 ({buyers.length}件)
-            </Button>
-          )}
-
-          {expanded && hasMore && (
-            <Button
-              fullWidth
-              variant="outlined"
-              size="small"
-              onClick={() => setExpanded(false)}
-              sx={{ mt: 1 }}
-            >
-              閉じる
-            </Button>
-          )}
-        </>
+                  }}
+                  onClick={() => {
+                    navigate(`/buyers/${buyer.buyer_number}`, {
+                      state: {
+                        propertyNumber: propertyNumber,
+                        source: 'property-detail',
+                      },
+                    });
+                  }}
+                >
+                  <TableCell>{buyer.name}</TableCell>
+                  <TableCell>{formatDate(buyer.reception_date)}</TableCell>
+                  <TableCell>{formatDate(buyer.viewing_date)}</TableCell>
+                  <TableCell>{buyer.viewing_time || '-'}</TableCell>
+                  <TableCell>{buyer.latest_status || '-'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Paper>
   );

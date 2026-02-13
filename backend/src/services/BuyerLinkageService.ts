@@ -12,6 +12,7 @@ export interface BuyerSummary {
   inquiry_confidence: string;
   reception_date: string;
   latest_viewing_date: string | null;
+  viewing_time: string | null;
   next_call_date: string | null;
 }
 
@@ -91,6 +92,7 @@ export class BuyerLinkageService {
           inquiry_confidence,
           reception_date,
           latest_viewing_date,
+          viewing_time,
           next_call_date
         `)
         .ilike('property_number', `%${propertyNumber}%`)
