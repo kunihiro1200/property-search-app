@@ -24,7 +24,6 @@ import {
   ArrowBack as ArrowBackIcon,
   Person as PersonIcon,
   Email as EmailIcon,
-  Sms as SmsIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import { SECTION_COLORS } from '../theme/sectionColors';
@@ -286,107 +285,6 @@ TEL:097-533-2022
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // SMS配信機能
-  const handleSendSms = async () => {
-    if (selectedBuyers.size === 0) {
-      setSnackbar({
-        open: true,
-        message: '買主を選択してください',
-        severity: 'warning',
-      });
-      return;
-    }
-
-    if (!data) return;
-
-    // 選択された買主の情報を取得
-    const selectedCandidates = data.candidates.filter(c => selectedBuyers.has(c.buyer_number));
-    const candidatesWithPhone = selectedCandidates.filter(c => c.phone_number && c.phone_number.trim() !== '');
-
-    if (candidatesWithPhone.length === 0) {
-      setSnackbar({
-        open: true,
-        message: '選択された買主に電話番号が登録されていません',
-        severity: 'error',
-      });
-      return;
-    }
-
-    // 公開物件サイトのURL
-    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
-    
-    // 所在地
-    const address = data.property.address || '物件';
-
-    // SMSメッセージテンプレート
-    const messageTemplate = `{name}様
-
-株式会社いふうです。
-
-${address}を近々売りに出すことになりました！
-
-誰よりも早く内覧可能です。ご興味がございましたらご返信ください。
-
-物件詳細: ${publicUrl}
-
-株式会社いふう
-TEL:097-533-2022`;
-
-    try {
-      setSnackbar({
-        open: true,
-        message: `SMS送信中... (${candidatesWithPhone.length}件)`,
-        severity: 'info',
-      });
-
-      // 各買主の情報を準備
-      const recipients = candidatesWithPhone.map(candidate => ({
-        phoneNumber: candidate.phone_number!,
-        name: candidate.name || 'お客様',
-      }));
-
-      // バックエンドAPIを使用してSMS一括送信
-      const response = await api.post('/api/sms/send-bulk', {
-        recipients: recipients,
-        message: messageTemplate,
-      });
-
-      const result = response.data;
-
-      if (result.failedCount === 0) {
-        setSnackbar({
-          open: true,
-          message: `SMSを送信しました (${result.successCount}件)\n各買主に個別に送信されました。`,
-          severity: 'success',
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: `SMS送信が完了しました\n成功: ${result.successCount}件\n失敗: ${result.failedCount}件`,
-          severity: 'warning',
-        });
-      }
-
-      // 選択をクリア
-      setSelectedBuyers(new Set());
-    } catch (error: any) {
-      console.error('Failed to send SMS:', error);
-      
-      let errorMessage = 'SMS送信に失敗しました。';
-      if (error.response?.status === 503) {
-        errorMessage = 'SMS送信サービスが設定されていません。管理者に連絡してください。';
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
-      setSnackbar({
-        open: true,
-        message: errorMessage,
-        severity: 'error',
-      });
-    }
-  };
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     try {
@@ -468,22 +366,6 @@ TEL:097-533-2022`;
               {selectedBuyers.size}件選択中
             </Typography>
           )}
-          <Button
-            variant="outlined"
-            startIcon={<SmsIcon />}
-            onClick={handleSendSms}
-            disabled={selectedBuyers.size === 0}
-            sx={{
-              borderColor: SECTION_COLORS.property.main,
-              color: SECTION_COLORS.property.main,
-              '&:hover': {
-                borderColor: SECTION_COLORS.property.dark,
-                backgroundColor: `${SECTION_COLORS.property.main}08`,
-              },
-            }}
-          >
-            SMS送信
-          </Button>
           <Button
             variant="contained"
             startIcon={<EmailIcon />}
