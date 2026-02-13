@@ -875,15 +875,20 @@ export class BuyerService {
         // データベースのフィールド名をスプレッドシートのカラム名にマッピング
         const mappedData: Record<string, any> = {};
         for (const [dbField, value] of Object.entries(data)) {
-          const sheetColumn = this.columnMapper.getSheetColumnName(dbField);
+          const sheetColumn = this.columnMapper.getSpreadsheetColumnName(dbField);
           if (sheetColumn) {
             mappedData[sheetColumn] = value;
           }
         }
         
-        // スプレッドシートに書き込み
-        await this.writeService.writeBuyerRow(buyerNumber, mappedData);
-        console.log(`[BuyerService] Successfully synced new buyer ${buyerNumber} to spreadsheet`);
+        // スプレッドシートに新規行を追加
+        const result = await this.writeService.appendBuyerRow(mappedData);
+        
+        if (result.success) {
+          console.log(`[BuyerService] Successfully synced new buyer ${buyerNumber} to spreadsheet`);
+        } else {
+          console.error(`[BuyerService] Failed to sync new buyer to spreadsheet:`, result.error);
+        }
       }
     } catch (syncError: any) {
       console.error(`[BuyerService] Failed to sync new buyer to spreadsheet:`, syncError);
