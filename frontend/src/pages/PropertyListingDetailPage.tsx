@@ -680,7 +680,7 @@ export default function PropertyListingDetailPage() {
                     },
                   }}
                 >
-                  売主TEL
+                  売主
                 </Button>
               )}
               {data.seller_email && (
@@ -698,7 +698,7 @@ export default function PropertyListingDetailPage() {
                     },
                   }}
                 >
-                  売主へメール
+                  売主
                 </Button>
               )}
               {/* 売主へSMS送信ボタン */}
@@ -731,7 +731,7 @@ export default function PropertyListingDetailPage() {
                     },
                   }}
                 >
-                  売主へSMS
+                  売主
                 </Button>
               )}
               {/* 担当へChat送信ボタン */}
@@ -826,7 +826,7 @@ ${propertyDetailUrl}
                     },
                   }}
                 >
-                  担当へChat送信
+                  担当へChat
                 </Button>
               )}
             </Box>
@@ -846,7 +846,7 @@ ${propertyDetailUrl}
               },
             }}
           >
-            買主候補リスト
+            買主候補
           </Button>
           <GmailDistributionButton
             propertyNumber={data.property_number}
