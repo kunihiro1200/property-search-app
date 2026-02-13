@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export interface BuyerSummary {
   id: string;
+  buyer_id: string;
   buyer_number: string;
   name: string;
   phone_number: string;
@@ -81,7 +82,7 @@ export class BuyerLinkageService {
       let query = this.supabase
         .from('buyers')
         .select(`
-          id,
+          buyer_id,
           buyer_number,
           name,
           phone_number,
@@ -105,7 +106,13 @@ export class BuyerLinkageService {
         throw new Error(`Failed to fetch buyers for property: ${error.message}`);
       }
 
-      return data || [];
+      // buyer_idをidとしても返す（後方互換性のため）
+      const buyersWithId = (data || []).map(buyer => ({
+        ...buyer,
+        id: buyer.buyer_id
+      }));
+
+      return buyersWithId;
     } catch (error) {
       console.error(`Failed to get buyers for property ${propertyNumber}:`, error);
       return [];
