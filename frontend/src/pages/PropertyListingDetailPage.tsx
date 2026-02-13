@@ -1793,6 +1793,20 @@ ${propertyDetailUrl}
           onClose={() => setMessageTemplateDialogOpen(false)}
           recipientEmail={data.seller_email}
           propertyNumber={data.property_number}
+          propertyData={{
+            property_number: data.property_number,
+            address: data.address,
+            display_address: data.display_address,
+            price: data.price,
+            seller_name: data.seller_name,
+            seller_contact: data.seller_contact,
+            property_type: data.property_type,
+            land_area: data.land_area,
+            building_area: data.building_area,
+            structure: data.structure,
+            construction_year_month: data.construction_year_month,
+            floor_plan: data.floor_plan,
+          }}
         />
       )}
 

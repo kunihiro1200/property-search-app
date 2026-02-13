@@ -28,6 +28,20 @@ interface MessageTemplateDialogProps {
   onClose: () => void;
   recipientEmail: string;
   propertyNumber?: string;
+  propertyData?: {
+    property_number?: string;
+    address?: string;
+    display_address?: string;
+    price?: number;
+    seller_name?: string;
+    seller_contact?: string;
+    property_type?: string;
+    land_area?: number;
+    building_area?: number;
+    structure?: string;
+    construction_year_month?: string;
+    floor_plan?: string;
+  };
 }
 
 export default function MessageTemplateDialog({
@@ -35,6 +49,7 @@ export default function MessageTemplateDialog({
   onClose,
   recipientEmail,
   propertyNumber,
+  propertyData,
 }: MessageTemplateDialogProps) {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -66,8 +81,64 @@ export default function MessageTemplateDialog({
     setSelectedType(type);
     const template = templates.find((t) => t.type === type);
     if (template) {
-      setSubject(template.subject);
-      setBody(template.body);
+      // テンプレート変数を物件データで置換
+      let replacedSubject = template.subject;
+      let replacedBody = template.body;
+      
+      if (propertyData) {
+        // 物件番号
+        if (propertyData.property_number) {
+          replacedSubject = replacedSubject.replace(/<<物件番号>>/g, propertyData.property_number);
+          replacedBody = replacedBody.replace(/<<物件番号>>/g, propertyData.property_number);
+        }
+        
+        // 所在地
+        const address = propertyData.address || propertyData.display_address || '';
+        replacedSubject = replacedSubject.replace(/<<所在地>>/g, address);
+        replacedBody = replacedBody.replace(/<<所在地>>/g, address);
+        
+        // 価格
+        const priceText = propertyData.price ? `${propertyData.price.toLocaleString()}円` : '';
+        replacedSubject = replacedSubject.replace(/<<価格>>/g, priceText);
+        replacedBody = replacedBody.replace(/<<価格>>/g, priceText);
+        
+        // 売主名
+        replacedSubject = replacedSubject.replace(/<<売主名>>/g, propertyData.seller_name || '');
+        replacedBody = replacedBody.replace(/<<売主名>>/g, propertyData.seller_name || '');
+        
+        // 売主連絡先
+        replacedSubject = replacedSubject.replace(/<<売主連絡先>>/g, propertyData.seller_contact || '');
+        replacedBody = replacedBody.replace(/<<売主連絡先>>/g, propertyData.seller_contact || '');
+        
+        // 物件種別
+        replacedSubject = replacedSubject.replace(/<<物件種別>>/g, propertyData.property_type || '');
+        replacedBody = replacedBody.replace(/<<物件種別>>/g, propertyData.property_type || '');
+        
+        // 土地面積
+        const landAreaText = propertyData.land_area ? `${propertyData.land_area}㎡` : '';
+        replacedSubject = replacedSubject.replace(/<<土地面積>>/g, landAreaText);
+        replacedBody = replacedBody.replace(/<<土地面積>>/g, landAreaText);
+        
+        // 建物面積
+        const buildingAreaText = propertyData.building_area ? `${propertyData.building_area}㎡` : '';
+        replacedSubject = replacedSubject.replace(/<<建物面積>>/g, buildingAreaText);
+        replacedBody = replacedBody.replace(/<<建物面積>>/g, buildingAreaText);
+        
+        // 構造
+        replacedSubject = replacedSubject.replace(/<<構造>>/g, propertyData.structure || '');
+        replacedBody = replacedBody.replace(/<<構造>>/g, propertyData.structure || '');
+        
+        // 築年月
+        replacedSubject = replacedSubject.replace(/<<築年月>>/g, propertyData.construction_year_month || '');
+        replacedBody = replacedBody.replace(/<<築年月>>/g, propertyData.construction_year_month || '');
+        
+        // 間取り
+        replacedSubject = replacedSubject.replace(/<<間取り>>/g, propertyData.floor_plan || '');
+        replacedBody = replacedBody.replace(/<<間取り>>/g, propertyData.floor_plan || '');
+      }
+      
+      setSubject(replacedSubject);
+      setBody(replacedBody);
     }
   };
 
