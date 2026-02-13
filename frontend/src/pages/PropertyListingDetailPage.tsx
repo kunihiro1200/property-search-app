@@ -783,12 +783,21 @@ export default function PropertyListingDetailPage() {
 
       {/* Main Content */}
       <Grid container spacing={3}>
-        {/* Left Column - Property Details */}
-        <Grid item xs={12} lg={8}>
-          {/* 価格情報と特記・備忘録を横並び（33% : 67%） */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            {/* 価格情報 - 33% */}
-            <Box sx={{ flex: '0 0 33%', maxWidth: '400px' }}>
+        {/* Full Width Content */}
+        <Grid item xs={12}>
+          {/* 1. 価格情報 + 買主リスト */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            gap: 2, 
+            mb: 2,
+            p: 2,
+            bgcolor: '#f8f9fa',
+            borderRadius: 2,
+            border: '1px solid #e0e0e0'
+          }}>
+            {/* 価格情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 33%' } }}>
               <EditableSection
                 title="価格情報"
                 isEditMode={isPriceEditMode}
@@ -811,9 +820,48 @@ export default function PropertyListingDetailPage() {
               </EditableSection>
             </Box>
             
-            {/* 特記・備忘録 - 67% */}
-            <Box sx={{ flex: '0 0 67%', maxWidth: '800px' }}>
-              <Paper sx={{ p: 2, mb: 0, bgcolor: '#fff9e6', height: '100%' }}>
+            {/* 買主リスト */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 67%' } }}>
+              <CompactBuyerListForProperty
+                buyers={buyers as any[]}
+                propertyNumber={data.property_number}
+                loading={buyersLoading}
+              />
+            </Box>
+          </Box>
+
+          {/* 2. よく聞かれる項目 + 特記・備忘録 */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            gap: 2, 
+            mb: 2,
+            p: 2,
+            bgcolor: '#fff8e1',
+            borderRadius: 2,
+            border: '1px solid #ffe082'
+          }}>
+            {/* よく聞かれる項目 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <EditableSection
+                title="よく聞かれる項目"
+                isEditMode={isFrequentlyAskedEditMode}
+                onEditToggle={() => setIsFrequentlyAskedEditMode(!isFrequentlyAskedEditMode)}
+                onSave={handleSaveFrequentlyAsked}
+                onCancel={handleCancelFrequentlyAsked}
+              >
+                <FrequentlyAskedSection 
+                  data={data} 
+                  editedData={editedData}
+                  onFieldChange={handleFieldChange}
+                  isEditMode={isFrequentlyAskedEditMode}
+                />
+              </EditableSection>
+            </Box>
+            
+            {/* 特記・備忘録 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <Paper sx={{ p: 2, bgcolor: '#fff9e6', height: '100%' }}>
                 <Box sx={{ 
                   mb: 2, 
                   pb: 1, 
@@ -851,136 +899,134 @@ export default function PropertyListingDetailPage() {
             </Box>
           </Box>
 
-          {/* よく聞かれる項目セクション */}
-          <EditableSection
-            title="よく聞かれる項目"
-            isEditMode={isFrequentlyAskedEditMode}
-            onEditToggle={() => setIsFrequentlyAskedEditMode(!isFrequentlyAskedEditMode)}
-            onSave={handleSaveFrequentlyAsked}
-            onCancel={handleCancelFrequentlyAsked}
-          >
-            <FrequentlyAskedSection 
-              data={data} 
-              editedData={editedData}
-              onFieldChange={handleFieldChange}
-              isEditMode={isFrequentlyAskedEditMode}
-            />
-          </EditableSection>
+          {/* 3. 内覧情報 + 基本情報 */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            gap: 2, 
+            mb: 2,
+            p: 2,
+            bgcolor: '#e3f2fd',
+            borderRadius: 2,
+            border: '1px solid #90caf9'
+          }}>
+            {/* 内覧情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <EditableSection
+                title="内覧情報"
+                isEditMode={isViewingInfoEditMode}
+                onEditToggle={() => setIsViewingInfoEditMode(!isViewingInfoEditMode)}
+                onSave={handleSaveViewingInfo}
+                onCancel={handleCancelViewingInfo}
+              >
+                <Grid container spacing={2}>
+                  {(isViewingInfoEditMode || data.viewing_key) && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧時（鍵等）</Typography>
+                      {isViewingInfoEditMode ? (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={editedData.viewing_key !== undefined ? editedData.viewing_key : (data.viewing_key || '')}
+                          onChange={(e) => handleFieldChange('viewing_key', e.target.value)}
+                        />
+                      ) : (
+                        <Typography variant="body1">{data.viewing_key}</Typography>
+                      )}
+                    </Grid>
+                  )}
+                  {(isViewingInfoEditMode || data.viewing_parking) && (
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧時駐車場</Typography>
+                      {isViewingInfoEditMode ? (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={editedData.viewing_parking !== undefined ? editedData.viewing_parking : (data.viewing_parking || '')}
+                          onChange={(e) => handleFieldChange('viewing_parking', e.target.value)}
+                        />
+                      ) : (
+                        <Typography variant="body1">{data.viewing_parking}</Typography>
+                      )}
+                    </Grid>
+                  )}
+                  {(isViewingInfoEditMode || data.viewing_notes) && (
+                    <Grid item xs={12}>
+                      <Box sx={{ bgcolor: '#e3f2fd', p: 2, borderRadius: 1, border: '2px solid #2196f3' }}>
+                        <Typography variant="h6" color="primary.dark" fontWeight="bold" gutterBottom sx={{ fontSize: '1.25rem' }}>
+                          📝 内覧の時の伝達事項
+                        </Typography>
+                        {isViewingInfoEditMode ? (
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={4}
+                            value={editedData.viewing_notes !== undefined ? editedData.viewing_notes : (data.viewing_notes || '')}
+                            onChange={(e) => handleFieldChange('viewing_notes', e.target.value)}
+                            sx={{ 
+                              bgcolor: 'white',
+                              '& .MuiInputBase-input': { fontSize: '1.1rem', lineHeight: 1.8 }
+                            }}
+                          />
+                        ) : (
+                          <Typography 
+                            variant="body1"
+                            sx={{ 
+                              fontSize: '1.1rem', 
+                              lineHeight: 1.8,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word'
+                            }}
+                          >
+                            {data.viewing_notes}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Grid>
+                  )}
+                  {(isViewingInfoEditMode || data.viewing_available_date) && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧可能日</Typography>
+                      {isViewingInfoEditMode ? (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={editedData.viewing_available_date !== undefined ? editedData.viewing_available_date : (data.viewing_available_date || '')}
+                          onChange={(e) => handleFieldChange('viewing_available_date', e.target.value)}
+                        />
+                      ) : (
+                        <Typography variant="body1">{data.viewing_available_date}</Typography>
+                      )}
+                    </Grid>
+                  )}
+                  {(isViewingInfoEditMode || data.building_viewing) && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>建物内覧</Typography>
+                      {isViewingInfoEditMode ? (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          value={editedData.building_viewing !== undefined ? editedData.building_viewing : (data.building_viewing || '')}
+                          onChange={(e) => handleFieldChange('building_viewing', e.target.value)}
+                        />
+                      ) : (
+                        <Typography variant="body1">{data.building_viewing}</Typography>
+                      )}
+                    </Grid>
+                  )}
+                </Grid>
+              </EditableSection>
+            </Box>
 
-          {/* 内覧情報 */}
-          <EditableSection
-            title="内覧情報"
-            isEditMode={isViewingInfoEditMode}
-            onEditToggle={() => setIsViewingInfoEditMode(!isViewingInfoEditMode)}
-            onSave={handleSaveViewingInfo}
-            onCancel={handleCancelViewingInfo}
-          >
-            <Grid container spacing={2}>
-              {(isViewingInfoEditMode || data.viewing_key) && (
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧時（鍵等）</Typography>
-                  {isViewingInfoEditMode ? (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={editedData.viewing_key !== undefined ? editedData.viewing_key : (data.viewing_key || '')}
-                      onChange={(e) => handleFieldChange('viewing_key', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant="body1">{data.viewing_key}</Typography>
-                  )}
-                </Grid>
-              )}
-              {(isViewingInfoEditMode || data.viewing_parking) && (
-                <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧時駐車場</Typography>
-                  {isViewingInfoEditMode ? (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={editedData.viewing_parking !== undefined ? editedData.viewing_parking : (data.viewing_parking || '')}
-                      onChange={(e) => handleFieldChange('viewing_parking', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant="body1">{data.viewing_parking}</Typography>
-                  )}
-                </Grid>
-              )}
-              {(isViewingInfoEditMode || data.viewing_notes) && (
-                <Grid item xs={12}>
-                  <Box sx={{ bgcolor: '#e3f2fd', p: 2, borderRadius: 1, border: '2px solid #2196f3' }}>
-                    <Typography variant="h6" color="primary.dark" fontWeight="bold" gutterBottom sx={{ fontSize: '1.25rem' }}>
-                      📝 内覧の時の伝達事項
-                    </Typography>
-                    {isViewingInfoEditMode ? (
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        value={editedData.viewing_notes !== undefined ? editedData.viewing_notes : (data.viewing_notes || '')}
-                        onChange={(e) => handleFieldChange('viewing_notes', e.target.value)}
-                        sx={{ 
-                          bgcolor: 'white',
-                          '& .MuiInputBase-input': { fontSize: '1.1rem', lineHeight: 1.8 }
-                        }}
-                      />
-                    ) : (
-                      <Typography 
-                        variant="body1"
-                        sx={{ 
-                          fontSize: '1.1rem', 
-                          lineHeight: 1.8,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word'
-                        }}
-                      >
-                        {data.viewing_notes}
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              )}
-              {(isViewingInfoEditMode || data.viewing_available_date) && (
-                <Grid item xs={6}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>内覧可能日</Typography>
-                  {isViewingInfoEditMode ? (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={editedData.viewing_available_date !== undefined ? editedData.viewing_available_date : (data.viewing_available_date || '')}
-                      onChange={(e) => handleFieldChange('viewing_available_date', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant="body1">{data.viewing_available_date}</Typography>
-                  )}
-                </Grid>
-              )}
-              {(isViewingInfoEditMode || data.building_viewing) && (
-                <Grid item xs={6}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>建物内覧</Typography>
-                  {isViewingInfoEditMode ? (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={editedData.building_viewing !== undefined ? editedData.building_viewing : (data.building_viewing || '')}
-                      onChange={(e) => handleFieldChange('building_viewing', e.target.value)}
-                    />
-                  ) : (
-                    <Typography variant="body1">{data.building_viewing}</Typography>
-                  )}
-                </Grid>
-              )}
-            </Grid>
-          </EditableSection>
-
-          {/* 基本情報 - 再構成 */}
-          <EditableSection
-            title="基本情報"
-            isEditMode={isBasicInfoEditMode}
-            onEditToggle={() => setIsBasicInfoEditMode(!isBasicInfoEditMode)}
-            onSave={handleSaveBasicInfo}
-            onCancel={handleCancelBasicInfo}
-          >
+            {/* 基本情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <EditableSection
+                title="基本情報"
+                isEditMode={isBasicInfoEditMode}
+                onEditToggle={() => setIsBasicInfoEditMode(!isBasicInfoEditMode)}
+                onSave={handleSaveBasicInfo}
+                onCancel={handleCancelBasicInfo}
+              >
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1rem', fontWeight: 'bold' }}>物件番号</Typography>
@@ -1222,410 +1268,459 @@ export default function PropertyListingDetailPage() {
                   )}
                 </Grid>
               )}
-            </Grid>
-          </EditableSection>
-
-          {/* 地図・サイトURL */}
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ 
-              mb: 2, 
-              pb: 1, 
-              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
-            }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                地図・サイトURL
-              </Typography>
+                </Grid>
+              </EditableSection>
             </Box>
-            
-            <EditableUrlField
-              label="地図URL"
-              value={data.google_map_url || null}
-              placeholder="https://maps.google.com/..."
-              urlPattern={GOOGLE_MAP_URL_PATTERN}
-              errorMessage="有効なGoogle Map URLを入力してください"
-              onSave={handleUpdateGoogleMapUrl}
-              helperText="物件の位置を示すGoogle Map URLを入力してください"
-            />
-            
-            <Box sx={{ mt: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  格納先URL
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleAutoRetrieveStorageUrl}
-                  disabled={retrievingStorageUrl}
-                  startIcon={retrievingStorageUrl ? <CircularProgress size={16} /> : null}
-                  sx={{
-                    borderColor: SECTION_COLORS.property.main,
-                    color: SECTION_COLORS.property.main,
-                    '&:hover': {
-                      borderColor: SECTION_COLORS.property.dark,
-                      backgroundColor: `${SECTION_COLORS.property.main}08`,
-                    },
-                  }}
-                >
-                  {retrievingStorageUrl ? '取得中...' : '自動取得'}
-                </Button>
-              </Box>
-              
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  現在のURL:
-                </Typography>
-                {data.storage_location ? (
-                  <Link
-                    href={data.storage_location}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 0.5,
-                      wordBreak: 'break-all',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {data.storage_location}
-                    <OpenInNewIcon fontSize="small" />
-                  </Link>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    未設定
+          </Box>
+
+          {/* 4. 地図・サイトURL + 物件詳細情報 */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            gap: 2, 
+            mb: 2,
+            p: 2,
+            bgcolor: '#f3e5f5',
+            borderRadius: 2,
+            border: '1px solid #ce93d8'
+          }}>
+            {/* 地図・サイトURL */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <Paper sx={{ p: 2, height: '100%' }}>
+                <Box sx={{ 
+                  mb: 2, 
+                  pb: 1, 
+                  borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+                }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                    地図・サイトURL
                   </Typography>
-                )}
-              </Box>
-              
-              <EditableUrlField
-                label=""
-                value={data.storage_location || null}
-                placeholder="https://drive.google.com/drive/folders/..."
-                urlPattern={GOOGLE_DRIVE_FOLDER_PATTERN}
-                errorMessage="有効なGoogle DriveフォルダURLを入力してください"
-                onSave={handleUpdateStorageLocation}
-                helperText="物件関連ドキュメントが保存されているGoogle DriveフォルダのURLを入力してください"
-              />
+                </Box>
+                
+                <EditableUrlField
+                  label="地図URL"
+                  value={data.google_map_url || null}
+                  placeholder="https://maps.google.com/..."
+                  urlPattern={GOOGLE_MAP_URL_PATTERN}
+                  errorMessage="有効なGoogle Map URLを入力してください"
+                  onSave={handleUpdateGoogleMapUrl}
+                  helperText="物件の位置を示すGoogle Map URLを入力してください"
+                />
+                
+                <Box sx={{ mt: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      格納先URL
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleAutoRetrieveStorageUrl}
+                      disabled={retrievingStorageUrl}
+                      startIcon={retrievingStorageUrl ? <CircularProgress size={16} /> : null}
+                      sx={{
+                        borderColor: SECTION_COLORS.property.main,
+                        color: SECTION_COLORS.property.main,
+                        '&:hover': {
+                          borderColor: SECTION_COLORS.property.dark,
+                          backgroundColor: `${SECTION_COLORS.property.main}08`,
+                        },
+                      }}
+                    >
+                      {retrievingStorageUrl ? '取得中...' : '自動取得'}
+                    </Button>
+                  </Box>
+                  
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      現在のURL:
+                    </Typography>
+                    {data.storage_location ? (
+                      <Link
+                        href={data.storage_location}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 0.5,
+                          wordBreak: 'break-all',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {data.storage_location}
+                        <OpenInNewIcon fontSize="small" />
+                      </Link>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        未設定
+                      </Typography>
+                    )}
+                  </Box>
+                  
+                  <EditableUrlField
+                    label=""
+                    value={data.storage_location || null}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    urlPattern={GOOGLE_DRIVE_FOLDER_PATTERN}
+                    errorMessage="有効なGoogle DriveフォルダURLを入力してください"
+                    onSave={handleUpdateStorageLocation}
+                    helperText="物件関連ドキュメントが保存されているGoogle DriveフォルダのURLを入力してください"
+                  />
+                </Box>
+              </Paper>
             </Box>
-          </Paper>
 
-          {/* 配信エリア番号 */}
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ 
-              mb: 2, 
-              pb: 1, 
-              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
-            }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                配信エリア番号
-              </Typography>
+            {/* 物件詳細情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <EditableSection
+                title="物件詳細情報"
+                isEditMode={isPropertyDetailsEditMode}
+                onEditToggle={() => setIsPropertyDetailsEditMode(!isPropertyDetailsEditMode)}
+                onSave={handleSavePropertyDetails}
+                onCancel={handleCancelPropertyDetails}
+              >
+                <PropertyDetailsSection
+                  data={data}
+                  editedData={editedData}
+                  onFieldChange={handleFieldChange}
+                  isEditMode={isPropertyDetailsEditMode}
+                />
+              </EditableSection>
             </Box>
-            <DistributionAreaField
-              propertyNumber={propertyNumber || ''}
-              googleMapUrl={data.google_map_url}
-              value={editedData.distribution_areas !== undefined ? editedData.distribution_areas : (data.distribution_areas || '')}
-              onChange={(value) => handleFieldChange('distribution_areas', value)}
-              onCalculatingChange={setIsCalculatingAreas}
-            />
-          </Paper>
+          </Box>
 
-          {/* 物件詳細情報 */}
-          <EditableSection
-            title="物件詳細情報"
-            isEditMode={isPropertyDetailsEditMode}
-            onEditToggle={() => setIsPropertyDetailsEditMode(!isPropertyDetailsEditMode)}
-            onSave={handleSavePropertyDetails}
-            onCancel={handleCancelPropertyDetails}
-          >
-            <PropertyDetailsSection
-              data={data}
-              editedData={editedData}
-              onFieldChange={handleFieldChange}
-              isEditMode={isPropertyDetailsEditMode}
-            />
-          </EditableSection>
-
-          {/* 売主・買主情報 */}
-          <EditableSection
-            title="売主・買主情報"
-            isEditMode={isSellerBuyerEditMode}
-            onEditToggle={() => setIsSellerBuyerEditMode(!isSellerBuyerEditMode)}
-            onSave={handleSaveSellerBuyer}
-            onCancel={handleCancelSellerBuyer}
-          >
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>売主</Typography>
-              <Grid container spacing={2}>
-                {(isSellerBuyerEditMode || data.seller_name) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>名前</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.seller_name !== undefined ? editedData.seller_name : (data.seller_name || '')}
-                        onChange={(e) => handleFieldChange('seller_name', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.seller_name}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.seller_address) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>住所</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.seller_address !== undefined ? editedData.seller_address : (data.seller_address || '')}
-                        onChange={(e) => handleFieldChange('seller_address', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.seller_address}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.seller_contact) && (
-                  <Grid item xs={6}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>連絡先</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.seller_contact !== undefined ? editedData.seller_contact : (data.seller_contact || '')}
-                        onChange={(e) => handleFieldChange('seller_contact', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.seller_contact}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.seller_email) && (
-                  <Grid item xs={6}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>メールアドレス</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.seller_email !== undefined ? editedData.seller_email : (data.seller_email || '')}
-                        onChange={(e) => handleFieldChange('seller_email', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.seller_email}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.sale_reason) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>売却理由</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.sale_reason !== undefined ? editedData.sale_reason : (data.sale_reason || '')}
-                        onChange={(e) => handleFieldChange('sale_reason', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.sale_reason}</Typography>
-                    )}
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-            <Box>
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>買主</Typography>
-              <Grid container spacing={2}>
-                {(isSellerBuyerEditMode || data.buyer_name) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary" fontWeight="bold">名前</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.buyer_name !== undefined ? editedData.buyer_name : (data.buyer_name || '')}
-                        onChange={(e) => handleFieldChange('buyer_name', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.buyer_name}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.buyer_address) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary" fontWeight="bold">住所</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.buyer_address !== undefined ? editedData.buyer_address : (data.buyer_address || '')}
-                        onChange={(e) => handleFieldChange('buyer_address', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.buyer_address}</Typography>
-                    )}
-                  </Grid>
-                )}
-                {(isSellerBuyerEditMode || data.buyer_contact) && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary" fontWeight="bold">連絡先</Typography>
-                    {isSellerBuyerEditMode ? (
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={editedData.buyer_contact !== undefined ? editedData.buyer_contact : (data.buyer_contact || '')}
-                        onChange={(e) => handleFieldChange('buyer_contact', e.target.value)}
-                      />
-                    ) : (
-                      <Typography variant="body1">{data.buyer_contact}</Typography>
-                    )}
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          </EditableSection>
-
-          {/* 手数料情報 */}
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ 
-              mb: 2, 
-              pb: 1, 
-              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
-            }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                手数料情報
-              </Typography>
-            </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary" fontWeight="bold">手数料（計）</Typography>
-                <Typography variant="body1">
-                  {data.total_commission ? `¥${data.total_commission.toLocaleString()}` : '-'}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary" fontWeight="bold">転売差額</Typography>
-                <Typography variant="body1">
-                  {data.resale_margin ? `¥${data.resale_margin.toLocaleString()}` : '-'}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary" fontWeight="bold">売主から</Typography>
-                <Typography variant="body1">
-                  {data.commission_from_seller ? `¥${data.commission_from_seller.toLocaleString()}` : '-'}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary" fontWeight="bold">買主から</Typography>
-                <Typography variant="body1">
-                  {data.commission_from_buyer ? `¥${data.commission_from_buyer.toLocaleString()}` : '-'}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-
-          {/* 買付情報 */}
-          {(data.offer_date || data.offer_status || data.offer_amount) && (
-            <Paper sx={{ p: 2, mb: 2 }}>
+          {/* 5. 配信エリア番号（全幅） */}
+          <Box sx={{ 
+            mb: 2,
+            p: 2,
+            bgcolor: '#e8f5e9',
+            borderRadius: 2,
+            border: '1px solid #a5d6a7'
+          }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ 
                 mb: 2, 
                 pb: 1, 
                 borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
               }}>
                 <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                  買付情報
+                  配信エリア番号
+                </Typography>
+              </Box>
+              <DistributionAreaField
+                propertyNumber={propertyNumber || ''}
+                googleMapUrl={data.google_map_url}
+                value={editedData.distribution_areas !== undefined ? editedData.distribution_areas : (data.distribution_areas || '')}
+                onChange={(value) => handleFieldChange('distribution_areas', value)}
+                onCalculatingChange={setIsCalculatingAreas}
+              />
+            </Paper>
+          </Box>
+
+          {/* 6. 売主・買主情報 + 手数料情報 */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' }, 
+            gap: 2, 
+            mb: 2,
+            p: 2,
+            bgcolor: '#fce4ec',
+            borderRadius: 2,
+            border: '1px solid #f48fb1'
+          }}>
+            {/* 売主・買主情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <EditableSection
+                title="売主・買主情報"
+                isEditMode={isSellerBuyerEditMode}
+                onEditToggle={() => setIsSellerBuyerEditMode(!isSellerBuyerEditMode)}
+                onSave={handleSaveSellerBuyer}
+                onCancel={handleCancelSellerBuyer}
+              >
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>売主</Typography>
+                  <Grid container spacing={2}>
+                    {(isSellerBuyerEditMode || data.seller_name) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>名前</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.seller_name !== undefined ? editedData.seller_name : (data.seller_name || '')}
+                            onChange={(e) => handleFieldChange('seller_name', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.seller_name}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.seller_address) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>住所</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.seller_address !== undefined ? editedData.seller_address : (data.seller_address || '')}
+                            onChange={(e) => handleFieldChange('seller_address', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.seller_address}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.seller_contact) && (
+                      <Grid item xs={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>連絡先</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.seller_contact !== undefined ? editedData.seller_contact : (data.seller_contact || '')}
+                            onChange={(e) => handleFieldChange('seller_contact', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.seller_contact}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.seller_email) && (
+                      <Grid item xs={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>メールアドレス</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.seller_email !== undefined ? editedData.seller_email : (data.seller_email || '')}
+                            onChange={(e) => handleFieldChange('seller_email', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.seller_email}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.sale_reason) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>売却理由</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.sale_reason !== undefined ? editedData.sale_reason : (data.sale_reason || '')}
+                            onChange={(e) => handleFieldChange('sale_reason', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.sale_reason}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>買主</Typography>
+                  <Grid container spacing={2}>
+                    {(isSellerBuyerEditMode || data.buyer_name) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" fontWeight="bold">名前</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.buyer_name !== undefined ? editedData.buyer_name : (data.buyer_name || '')}
+                            onChange={(e) => handleFieldChange('buyer_name', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.buyer_name}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.buyer_address) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" fontWeight="bold">住所</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.buyer_address !== undefined ? editedData.buyer_address : (data.buyer_address || '')}
+                            onChange={(e) => handleFieldChange('buyer_address', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.buyer_address}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                    {(isSellerBuyerEditMode || data.buyer_contact) && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" fontWeight="bold">連絡先</Typography>
+                        {isSellerBuyerEditMode ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={editedData.buyer_contact !== undefined ? editedData.buyer_contact : (data.buyer_contact || '')}
+                            onChange={(e) => handleFieldChange('buyer_contact', e.target.value)}
+                          />
+                        ) : (
+                          <Typography variant="body1">{data.buyer_contact}</Typography>
+                        )}
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              </EditableSection>
+            </Box>
+
+            {/* 手数料情報 */}
+            <Box sx={{ flex: { xs: '1 1 100%', md: '0 0 50%' } }}>
+              <Paper sx={{ p: 2, height: '100%' }}>
+                <Box sx={{ 
+                  mb: 2, 
+                  pb: 1, 
+                  borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+                }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                    手数料情報
+                  </Typography>
+                </Box>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">手数料（計）</Typography>
+                    <Typography variant="body1">
+                      {data.total_commission ? `¥${data.total_commission.toLocaleString()}` : '-'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">転売差額</Typography>
+                    <Typography variant="body1">
+                      {data.resale_margin ? `¥${data.resale_margin.toLocaleString()}` : '-'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">売主から</Typography>
+                    <Typography variant="body1">
+                      {data.commission_from_seller ? `¥${data.commission_from_seller.toLocaleString()}` : '-'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">買主から</Typography>
+                    <Typography variant="body1">
+                      {data.commission_from_buyer ? `¥${data.commission_from_buyer.toLocaleString()}` : '-'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
+          </Box>
+
+          {/* 7. 買付情報（全幅・条件付き表示） */}
+          {(data.offer_date || data.offer_status || data.offer_amount) && (
+            <Box sx={{ 
+              mb: 2,
+              p: 2,
+              bgcolor: '#fff3e0',
+              borderRadius: 2,
+              border: '1px solid #ffb74d'
+            }}>
+              <Paper sx={{ p: 2 }}>
+                <Box sx={{ 
+                  mb: 2, 
+                  pb: 1, 
+                  borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+                }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                    買付情報
+                  </Typography>
+                </Box>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">買付日</Typography>
+                    <Typography variant="body1">{data.offer_date || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">買付</Typography>
+                    <Typography variant="body1">{data.offer_status || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">金額</Typography>
+                    <Typography variant="body1">{data.offer_amount || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">会社名</Typography>
+                    <Typography variant="body1">{data.company_name || '-'}</Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">買付コメント</Typography>
+                    <Typography variant="body1">{data.offer_comment || '-'}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
+          )}
+
+          {/* 8. 添付画像・資料（全幅） */}
+          <Box sx={{ 
+            mb: 2,
+            p: 2,
+            bgcolor: '#f1f8e9',
+            borderRadius: 2,
+            border: '1px solid #aed581'
+          }}>
+            <Paper sx={{ p: 2 }}>
+              <Box sx={{ 
+                mb: 2, 
+                pb: 1, 
+                borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+              }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                  添付画像・資料
                 </Typography>
               </Box>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="bold">買付日</Typography>
-                  <Typography variant="body1">{data.offer_date || '-'}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="bold">買付</Typography>
-                  <Typography variant="body1">{data.offer_status || '-'}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="bold">金額</Typography>
-                  <Typography variant="body1">{data.offer_amount || '-'}</Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="bold">会社名</Typography>
-                  <Typography variant="body1">{data.company_name || '-'}</Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary" fontWeight="bold">買付コメント</Typography>
-                  <Typography variant="body1">{data.offer_comment || '-'}</Typography>
-                </Grid>
+                {data.image_url && (
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ border: '1px solid #ddd', borderRadius: 1, p: 2, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        画像
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        href={data.image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        画像を開く
+                      </Button>
+                    </Box>
+                  </Grid>
+                )}
+                {data.pdf_url && (
+                  <Grid item xs={12} sm={4}>
+                    <Box sx={{ border: '1px solid #ddd', borderRadius: 1, p: 2, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        PDF
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        href={data.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        PDFを開く
+                      </Button>
+                    </Box>
+                  </Grid>
+                )}
               </Grid>
+              {!data.image_url && !data.pdf_url && (
+                <Typography variant="body2" color="text.secondary">
+                  添付資料がありません
+                </Typography>
+              )}
             </Paper>
-          )}
-
-          {/* 添付画像・資料 */}
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ 
-              mb: 2, 
-              pb: 1, 
-              borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
-            }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                添付画像・資料
-              </Typography>
-            </Box>
-            <Grid container spacing={2}>
-              {data.image_url && (
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ border: '1px solid #ddd', borderRadius: 1, p: 2, textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      画像
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      href={data.image_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      画像を開く
-                    </Button>
-                  </Box>
-                </Grid>
-              )}
-              {data.pdf_url && (
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ border: '1px solid #ddd', borderRadius: 1, p: 2, textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      PDF
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      href={data.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      PDFを開く
-                    </Button>
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-            {!data.image_url && !data.pdf_url && (
-              <Typography variant="body2" color="text.secondary">
-                添付資料がありません
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Right Column - Buyer Management */}
-        <Grid item xs={12} lg={4}>
-          <CompactBuyerListForProperty
-            buyers={buyers as any[]}
-            propertyNumber={data.property_number}
-            loading={buyersLoading}
-          />
+          </Box>
         </Grid>
       </Grid>
 
