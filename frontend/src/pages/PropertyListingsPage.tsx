@@ -132,6 +132,12 @@ export default function PropertyListingsPage() {
       
       setAllListings(allListingsData);
       
+      // デバッグ: AA13407とAA13389が含まれているか確認
+      const aa13407 = allListingsData.find(l => l.property_number === 'AA13407');
+      const aa13389 = allListingsData.find(l => l.property_number === 'AA13389');
+      console.log('🔍 AA13407:', aa13407 ? '存在する' : '存在しない', aa13407);
+      console.log('🔍 AA13389:', aa13389 ? '存在する' : '存在しない', aa13389);
+      
       console.log('✅ データ取得成功:', {
         物件数: allListingsData.length,
       });
@@ -165,22 +171,33 @@ export default function PropertyListingsPage() {
       return listing;
     });
     
+    // デバッグ: フィルタリング前のAA13407とAA13389
+    const aa13407Before = listings.find(l => l.property_number === 'AA13407');
+    const aa13389Before = listings.find(l => l.property_number === 'AA13389');
+    console.log('🔍 フィルタリング前 AA13407:', aa13407Before ? '存在する' : '存在しない');
+    console.log('🔍 フィルタリング前 AA13389:', aa13389Before ? '存在する' : '存在しない');
+    
     // 担当者フィルター
     if (selectedAssignee && selectedAssignee !== 'all') {
+      const beforeCount = listings.length;
       listings = listings.filter(l => 
         selectedAssignee === '未設定' 
           ? !l.sales_assignee 
           : l.sales_assignee === selectedAssignee
       );
+      console.log(`🔍 担当者フィルター適用: ${beforeCount}件 → ${listings.length}件 (selectedAssignee: ${selectedAssignee})`);
     }
     
     // サイドバーステータスフィルター
     if (sidebarStatus && sidebarStatus !== 'all') {
+      const beforeCount = listings.length;
       listings = listings.filter(l => l.sidebar_status === sidebarStatus);
+      console.log(`🔍 サイドバーステータスフィルター適用: ${beforeCount}件 → ${listings.length}件 (sidebarStatus: ${sidebarStatus})`);
     }
     
     // 検索フィルター
     if (searchQuery.trim()) {
+      const beforeCount = listings.length;
       const query = searchQuery.toLowerCase();
       listings = listings.filter(l =>
         l.property_number?.toLowerCase().includes(query) ||
@@ -188,7 +205,14 @@ export default function PropertyListingsPage() {
         l.seller_name?.toLowerCase().includes(query) ||
         l.buyer_name?.toLowerCase().includes(query)
       );
+      console.log(`🔍 検索フィルター適用: ${beforeCount}件 → ${listings.length}件 (searchQuery: ${searchQuery})`);
     }
+    
+    // デバッグ: フィルタリング後のAA13407とAA13389
+    const aa13407After = listings.find(l => l.property_number === 'AA13407');
+    const aa13389After = listings.find(l => l.property_number === 'AA13389');
+    console.log('🔍 フィルタリング後 AA13407:', aa13407After ? '存在する' : '存在しない');
+    console.log('🔍 フィルタリング後 AA13389:', aa13389After ? '存在する' : '存在しない');
     
     return listings;
   }, [allListings, selectedAssignee, sidebarStatus, searchQuery, pendingPriceReductionProperties]);
