@@ -960,4 +960,105 @@ export class EmailService extends BaseRepository {
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  /**
+   * 個別メール送信（買主候補リストと同じ仕組み）
+   * 各買主に1通ずつ、名前入りでメールを送信
+   */
+  async sendIndividualEmail(params: {
+    from: string;
+    to: string;
+    cc?: string;
+    subject: string;
+    body: string;
+  }): Promise<{ success: boolean; message: string }> {
+    // Gmail APIを初期化
+    await this.ensureGmailInitialized();
+    
+    const { from, to, cc, subject, body } = params;
+    
+    // Send As アドレスを事前検証
+    try {
+      this.validateSendAsAddress(from);
+    } catch (error) {
+      console.error('❌ Send As validation failed before sending:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Invalid sender address',
+      };
+    }
+    
+    console.log(`📧 Sending individual email:`);
+    console.log(`  From: ${from}`);
+    console.log(`  To: ${to}`);
+    console.log(`  CC: ${cc || 'none'}`);
+    console.log(`  Subject: ${subject}`);
+    
+    // RFC 2822形式のメッセージを作成
+    const messageParts = [
+      `From: ${from}`,
+      `Reply-To: ${from}`,
+      `To: ${to}`,
+    ];
+    
+    if (cc) {
+      messageParts.push(`Cc: ${cc}`);
+    }
+    
+    messageParts.push(
+      `Subject: ${this.encodeSubject(subject)}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      '',
+      body
+    );
+    
+    const message = messageParts.join('\r\n');
+    
+    // Base64url形式でエンコード
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    
+    try {
+      // Gmail APIで送信
+      const response = await this.gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage,
+        },
+      });
+      
+      console.log(`✅ Individual email sent successfully (Message ID: ${response.data.id})`);
+      
+      return {
+        success: true,
+        message: 'メールを送信しました',
+      };
+    } catch (error: any) {
+      console.error(`❌ Failed to send individual email:`, {
+        from,
+        to,
+        error: error.message,
+        errorDetails: error.response?.data
+      });
+      
+      // Send As設定に関するエラーの場合、より詳細なメッセージを提供
+      if (error.message?.includes('sendAs') || error.message?.includes('delegation')) {
+        return {
+          success: false,
+          message: `Send As configuration error for ${from}. ` +
+            `Please ensure this address is configured in Gmail Settings > Accounts > Send mail as. ` +
+            `Original error: ${error.message}`,
+        };
+      }
+      
+      return {
+        success: false,
+        message: error.message || 'メール送信に失敗しました',
+      };
+    }
+  }
 }

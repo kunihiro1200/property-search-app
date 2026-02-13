@@ -385,6 +385,7 @@ export class EnhancedBuyerDistributionService {
         .from('buyers')
         .select(`
           buyer_number,
+          name,
           email,
           desired_area,
           distribution_type,

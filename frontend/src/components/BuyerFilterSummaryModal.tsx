@@ -25,6 +25,7 @@ import SenderAddressSelector from './SenderAddressSelector';
 
 interface FilteredBuyer {
   buyer_number: string;
+  name: string;
   email: string;
   desired_area: string | null;
   distribution_type: string | null;
@@ -184,8 +185,11 @@ export default function BuyerFilterSummaryModal({
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2">
-                            {buyer.buyer_number}
+                          <Typography variant="body2" fontWeight="bold">
+                            {buyer.name || buyer.buyer_number}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            ({buyer.buyer_number})
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {buyer.email}

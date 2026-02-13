@@ -539,4 +539,68 @@ router.post(
   }
 );
 
+/**
+ * 個別メール送信エンドポイント（買主候補リストと同じ仕組み）
+ * POST /api/emails/send-individual
+ * 
+ * 各買主に1通ずつ、名前入りでメールを送信
+ */
+router.post(
+  '/send-individual',
+  [
+    body('to').isEmail().withMessage('Valid recipient email address is required'),
+    body('cc').optional().isEmail().withMessage('CC must be a valid email address'),
+    body('subject').notEmpty().withMessage('Subject is required'),
+    body('body').notEmpty().withMessage('Email body is required'),
+    body('from').isEmail().withMessage('Valid sender email address is required'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+      }
+
+      const { to, cc, subject, body, from } = req.body;
+
+      // 送信元アドレスのホワイトリスト検証
+      const validSenders = [
+        'tenant@ifoo-oita.com',
+        'gyosha@ifoo-oita.com',
+        'info@ifoo-oita.com',
+      ];
+
+      if (!validSenders.includes(from)) {
+        return res.status(400).json({
+          success: false,
+          message: '無効な送信元アドレスです',
+        });
+      }
+
+      // EmailServiceを使用して個別メールを送信
+      // @ts-ignore - TypeScript compilation issue, method exists at runtime
+      const result = await emailService.sendIndividualEmail({
+        from,
+        to,
+        cc,
+        subject,
+        body,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Send individual email error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'メール送信中にエラーが発生しました',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

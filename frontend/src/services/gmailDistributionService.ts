@@ -32,6 +32,7 @@ export interface EnhancedBuyerEmailsResponse {
   };
   filteredBuyers?: Array<{
     buyer_number: string;
+    name: string;
     email: string;
     desired_area: string | null;
     distribution_type: string | null;

@@ -132,11 +132,14 @@ export default function GmailDistributionButton({
   };
 
   const handleFilterSummaryConfirm = (emails: string[]) => {
-    if (!selectedTemplate || emails.length === 0) {
+    if (!selectedTemplate || emails.length === 0 || !buyerData) {
       return;
     }
     
-    // 選択されたメールアドレスを保存
+    // 選択されたメールアドレスに対応する買主情報を取得
+    const selectedBuyers = buyerData.filteredBuyers?.filter(b => emails.includes(b.email)) || [];
+    
+    // 選択されたメールアドレスと買主情報を保存
     setSelectedEmails(emails);
     
     // フィルタサマリーモーダルを閉じて確認モーダルを開く
@@ -145,35 +148,55 @@ export default function GmailDistributionButton({
   };
 
   const handleConfirmationConfirm = async () => {
-    if (!selectedTemplate || selectedEmails.length === 0) {
+    if (!selectedTemplate || selectedEmails.length === 0 || !buyerData) {
       return;
     }
 
     try {
-      // 物件データを準備してテンプレートを置換
+      // 選択されたメールアドレスに対応する買主情報を取得
+      const selectedBuyers = buyerData.filteredBuyers?.filter(b => selectedEmails.includes(b.email)) || [];
+
+      // 物件データを準備
       const propertyData = {
         address: propertyAddress || '',
         propertyNumber: propertyNumber
       };
 
-      // テンプレートのプレースホルダーを置換
-      const subject = selectedTemplate.subject
-        .replace(/\{address\}/g, propertyData.address)
-        .replace(/\{propertyNumber\}/g, propertyData.propertyNumber);
-      
-      const body = selectedTemplate.body
-        .replace(/\{address\}/g, propertyData.address)
-        .replace(/\{propertyNumber\}/g, propertyData.propertyNumber);
+      // 各買主に個別にメールを送信（買主候補リストと同じ仕組み）
+      let successCount = 0;
+      let failedCount = 0;
 
-      // バックエンドAPIを使用してメール送信
-      const response = await api.post('/api/emails/send-distribution', {
-        recipients: selectedEmails,
-        subject: subject,
-        body: body,
-        from: senderAddress
-      });
+      for (const buyer of selectedBuyers) {
+        try {
+          // 買主名を取得（名前がない場合は「お客様」）
+          const buyerName = buyer.name || 'お客様';
 
-      const result = response.data;
+          // テンプレートのプレースホルダーを置換（買主名を含む）
+          const subject = selectedTemplate.subject
+            .replace(/\{address\}/g, propertyData.address)
+            .replace(/\{propertyNumber\}/g, propertyData.propertyNumber)
+            .replace(/\{name\}/g, buyerName);
+          
+          const body = selectedTemplate.body
+            .replace(/\{address\}/g, propertyData.address)
+            .replace(/\{propertyNumber\}/g, propertyData.propertyNumber)
+            .replace(/\{name\}/g, buyerName);
+
+          // 個別メール送信
+          await api.post('/api/emails/send-individual', {
+            to: buyer.email,
+            cc: 'tenant@ifoo-oita.com',
+            subject: subject,
+            body: body,
+            from: senderAddress
+          });
+
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to send email to ${buyer.email}:`, error);
+          failedCount++;
+        }
+      }
 
       // 確認モーダルを閉じる
       setConfirmationOpen(false);
@@ -182,27 +205,26 @@ export default function GmailDistributionButton({
       setSenderAddress(DEFAULT_SENDER);
 
       // 成功メッセージ
-      if (result.failedBatches === 0) {
+      if (failedCount === 0) {
         setSnackbar({
           open: true,
-          message: `メールを送信しました (${result.successCount}件)\n送信元: ${senderAddress}`,
-          severity: 'success'
+          message: `メールを送信しました (${successCount}件)\n送信元: ${senderAddress}`,
+          severity: 'success',
         });
       } else {
         setSnackbar({
           open: true,
-          message: `メール送信が完了しました\n成功: ${result.successCount}件\n失敗: ${result.failedCount}件`,
-          severity: 'warning'
+          message: `メール送信が完了しました\n成功: ${successCount}件\n失敗: ${failedCount}件`,
+          severity: 'warning',
         });
       }
     } catch (error: any) {
-      console.error('Failed to send emails via API:', error);
+      console.error('Failed to send emails:', error);
       
-      // API失敗時はGmail Web UIへフォールバック
       setSnackbar({
         open: true,
-        message: 'API経由での送信に失敗しました。Gmail Web UIで送信します。',
-        severity: 'warning'
+        message: 'メール送信に失敗しました',
+        severity: 'error',
       });
 
       // 確認モーダルを閉じる
@@ -210,9 +232,6 @@ export default function GmailDistributionButton({
 
       // 送信元アドレスをデフォルトにリセット
       setSenderAddress(DEFAULT_SENDER);
-
-      // Gmail Web UIへフォールバック
-      fallbackToGmailWebUI();
     }
   };
 
