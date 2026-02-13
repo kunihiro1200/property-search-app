@@ -512,16 +512,22 @@ router.get('/pending-price-reductions', async (_req: Request, res: Response) => 
     // 現在時刻（東京時間）
     const now = new Date();
     
-    // 予約日の0:00から表示するため、scheduled_atから日付部分のみを抽出して比較
-    // scheduled_atは "YYYY-MM-DD 09:00:00" 形式なので、日付部分を取得
-    const todayDate = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    // 予約日の0:00（深夜）から表示するため、scheduled_atから日付部分のみを抽出して比較
+    // scheduled_atは "YYYY-MM-DD 09:00:00+09:00" 形式
+    // 今日の日付を取得（YYYY-MM-DD形式）
+    const todayDate = now.toLocaleDateString('ja-JP', { 
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).split('/').join('-'); // "YYYY-MM-DD"
     
-    // 予約日が今日以前で、ステータスがpendingの通知を取得
+    // 予約日が今日以前（0:00から）で、ステータスがpendingの通知を取得
+    // scheduled_atの日付部分を抽出して比較
     const { data: notifications, error } = await supabase
       .from('scheduled_notifications')
       .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_at', `${todayDate}T23:59:59.999Z`)
       .order('scheduled_at', { ascending: true });
     
     if (error) {
@@ -535,15 +541,34 @@ router.get('/pending-price-reductions', async (_req: Request, res: Response) => 
       });
     }
     
+    // 予約日が今日以前（0:00から）の通知のみをフィルタ
+    const filteredNotifications = (notifications || []).filter(n => {
+      const scheduledDate = new Date(n.scheduled_at).toLocaleDateString('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).split('/').join('-'); // "YYYY-MM-DD"
+      
+      return scheduledDate <= todayDate;
+    });
+    
     // 物件番号でグループ化
     const propertyNumbers = Array.from(new Set(
-      (notifications || []).map(n => n.property_number)
+      filteredNotifications.map(n => n.property_number)
     ));
+    
+    console.log('[pending-price-reductions] Filtered notifications:', {
+      todayDate,
+      totalNotifications: notifications?.length || 0,
+      filteredCount: filteredNotifications.length,
+      propertyNumbers,
+    });
     
     res.json({ 
       success: true,
       propertyNumbers,
-      notifications: notifications || [],
+      notifications: filteredNotifications,
     });
   } catch (error: any) {
     console.error('Get pending price reductions error:', error);
