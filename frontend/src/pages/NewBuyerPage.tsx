@@ -199,7 +199,8 @@ export default function NewBuyerPage() {
     setBuyer((prev: any) => ({ ...prev, inquiry_hearing: newValue }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<string | null> => {
+    console.log('[handleSubmit] 開始');
     // 必須フィールドのバリデーション
     const errors = [];
     
@@ -237,14 +238,16 @@ export default function NewBuyerPage() {
     }
     
     if (errors.length > 0) {
+      console.error('[handleSubmit] バリデーションエラー:', errors);
       setSnackbar({
         open: true,
         message: errors.join('\n'),
         severity: 'error'
       });
-      return;
+      return null;
     }
 
+    console.log('[handleSubmit] バリデーションOK、登録を開始します');
     setLoading(true);
 
     try {
@@ -254,7 +257,15 @@ export default function NewBuyerPage() {
         property_number: propertyNumberField,
       };
 
-      await api.post('/api/buyers', buyerData);
+      console.log('[handleSubmit] APIリクエストを送信します:', buyerData);
+      const response = await api.post('/api/buyers', buyerData);
+      const createdBuyer = response.data;
+      
+      console.log('[handleSubmit] 登録成功:', createdBuyer);
+      console.log('[handleSubmit] 買主番号:', createdBuyer.buyer_number);
+      
+      // 買主番号を更新
+      setBuyer((prev: any) => ({ ...prev, buyer_number: createdBuyer.buyer_number }));
       
       setSnackbar({
         open: true,
@@ -262,22 +273,19 @@ export default function NewBuyerPage() {
         severity: 'success',
       });
 
-      // 物件番号がある場合は物件詳細ページに戻る
-      setTimeout(() => {
-        if (propertyNumberField) {
-          navigate(`/property-listings/${propertyNumberField}`);
-        } else {
-          navigate('/buyers');
-        }
-      }, 1000);
+      return createdBuyer.buyer_number;
     } catch (err: any) {
+      console.error('[handleSubmit] 登録エラー:', err);
+      console.error('[handleSubmit] エラーレスポンス:', err.response?.data);
       setSnackbar({
         open: true,
         message: err.response?.data?.error || '買主の作成に失敗しました',
         severity: 'error',
       });
+      return null;
     } finally {
       setLoading(false);
+      console.log('[handleSubmit] 終了');
     }
   };
 
@@ -469,12 +477,19 @@ export default function NewBuyerPage() {
             <Button
               variant="outlined"
               size="medium"
-              onClick={() => {
-                // 希望条件画面に遷移（買主番号をパラメータとして渡す）
-                if (buyer.buyer_number) {
-                  navigate(`/buyers/${buyer.buyer_number}/desired-conditions`);
+              onClick={async () => {
+                // 新規登録画面では常に登録してから遷移
+                console.log('[希望条件] 自動登録を開始します');
+                const buyerNumber = await handleSubmit();
+                console.log('[希望条件] handleSubmitの結果:', buyerNumber);
+                if (buyerNumber) {
+                  console.log('[希望条件] 希望条件画面に遷移します:', `/buyers/${buyerNumber}/desired-conditions`);
+                  navigate(`/buyers/${buyerNumber}/desired-conditions`);
+                } else {
+                  console.error('[希望条件] 登録に失敗しました。遷移をキャンセルします。');
                 }
               }}
+              disabled={loading}
               sx={{
                 whiteSpace: 'nowrap',
                 borderColor: SECTION_COLORS.buyer.main,
@@ -492,12 +507,19 @@ export default function NewBuyerPage() {
             <Button
               variant="contained"
               size="medium"
-              onClick={() => {
-                // 内覧画面に遷移（買主番号をパラメータとして渡す）
-                if (buyer.buyer_number) {
-                  navigate(`/buyers/${buyer.buyer_number}/viewing`);
+              onClick={async () => {
+                // 新規登録画面では常に登録してから遷移
+                console.log('[内覧] 自動登録を開始します');
+                const buyerNumber = await handleSubmit();
+                console.log('[内覧] handleSubmitの結果:', buyerNumber);
+                if (buyerNumber) {
+                  console.log('[内覧] 内覧画面に遷移します:', `/buyers/${buyerNumber}/viewing`);
+                  navigate(`/buyers/${buyerNumber}/viewing`);
+                } else {
+                  console.error('[内覧] 登録に失敗しました。遷移をキャンセルします。');
                 }
               }}
+              disabled={loading}
               sx={{
                 whiteSpace: 'nowrap',
                 backgroundColor: SECTION_COLORS.buyer.main,
@@ -508,8 +530,6 @@ export default function NewBuyerPage() {
             >
               内覧
             </Button>
-              </span>
-            </Tooltip>
           </Box>
         </Box>
       </Box>
