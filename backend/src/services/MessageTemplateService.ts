@@ -16,6 +16,9 @@ export class MessageTemplateService {
     this.sheetsClient = new GoogleSheetsClient({
       spreadsheetId: this.SPREADSHEET_ID,
       sheetName: this.SHEET_NAME,
+      serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      privateKey: process.env.GOOGLE_PRIVATE_KEY,
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
     });
   }
 

@@ -22,6 +22,7 @@ import {
   Person as PersonIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import FrequentlyAskedSection from '../components/FrequentlyAskedSection';
@@ -699,6 +700,48 @@ export default function PropertyListingDetailPage() {
                   売主へメール
                 </Button>
               )}
+              {/* 担当へChat送信ボタン */}
+              {data.sales_assignee && (
+                <Button
+                  variant="outlined"
+                  size="medium"
+                  onClick={() => {
+                    // Chat送信ダイアログを開く処理（後で実装）
+                    const message = prompt('担当者へのメッセージを入力してください:');
+                    if (message) {
+                      api.post(`/api/chat-notifications/property-assignee/${data.property_number}`, {
+                        message: message.trim(),
+                      })
+                      .then(() => {
+                        setSnackbar({
+                          open: true,
+                          message: `担当者（${data.sales_assignee}）にChat送信しました`,
+                          severity: 'success',
+                        });
+                      })
+                      .catch((error) => {
+                        setSnackbar({
+                          open: true,
+                          message: error.response?.data?.error?.message || '担当者へのChat送信に失敗しました',
+                          severity: 'error',
+                        });
+                      });
+                    }
+                  }}
+                  startIcon={<SendIcon />}
+                  sx={{
+                    ml: 2,
+                    borderColor: '#9c27b0',
+                    color: '#9c27b0',
+                    '&:hover': {
+                      borderColor: '#7b1fa2',
+                      backgroundColor: '#9c27b008',
+                    },
+                  }}
+                >
+                  担当へChat送信
+                </Button>
+              )}
             </Box>
           </Box>
         </Box>
@@ -849,16 +892,6 @@ export default function PropertyListingDetailPage() {
                   isEditMode={isFrequentlyAskedEditMode}
                 />
               </EditableSection>
-              
-              {/* 担当へChat送信 */}
-              <Box sx={{ mt: 2 }}>
-                <AssigneeChatSender
-                  propertyNumber={data.property_number}
-                  salesAssignee={data.sales_assignee}
-                  onSuccess={(message) => setSnackbar({ open: true, message, severity: 'success' })}
-                  onError={(message) => setSnackbar({ open: true, message, severity: 'error' })}
-                />
-              </Box>
             </Box>
             
             {/* 特記・備忘録 */}
