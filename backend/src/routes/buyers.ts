@@ -35,8 +35,8 @@ router.get('/templates', async (req: Request, res: Response) => {
 // 次の買主番号を取得（/:idの前に配置）
 router.get('/next-buyer-number', async (req: Request, res: Response) => {
   try {
-    // BuyerServiceのgenerateBuyerNumberメソッドを使用
-    const buyerNumber = await (buyerService as any).generateBuyerNumber();
+    // BuyerServiceの公開メソッドを使用
+    const buyerNumber = await buyerService.getNextBuyerNumber();
     res.json({ buyerNumber });
   } catch (error: any) {
     console.error('Failed to generate buyer number:', error);

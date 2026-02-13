@@ -894,6 +894,13 @@ export class BuyerService {
   }
 
   /**
+   * 次の買主番号を取得（公開メソッド）
+   */
+  async getNextBuyerNumber(): Promise<string> {
+    return this.generateBuyerNumber();
+  }
+
+  /**
    * 買主番号を自動生成（スプレッドシートの5行目から最終行までの最大値+1）
    */
   private async generateBuyerNumber(): Promise<string> {
