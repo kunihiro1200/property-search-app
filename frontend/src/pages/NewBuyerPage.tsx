@@ -285,7 +285,7 @@ export default function NewBuyerPage() {
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">固定資産税</Typography>
                         <Typography variant="body2" fontWeight="bold">
-                          {propertyInfo.property_tax.toLocaleString()}円
+                          {propertyInfo.property_tax.toLocaleString()}万円
                         </Typography>
                       </Grid>
                     )}

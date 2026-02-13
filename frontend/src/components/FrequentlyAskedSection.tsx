@@ -94,7 +94,7 @@ export default function FrequentlyAskedSection({ data, editedData, onFieldChange
                 />
               ) : (
                 <Typography variant="body1">
-                  {data.property_tax ? `¥${data.property_tax.toLocaleString()}` : '-'}
+                  {data.property_tax ? `${data.property_tax.toLocaleString()}万円` : '-'}
                 </Typography>
               )}
             </Box>

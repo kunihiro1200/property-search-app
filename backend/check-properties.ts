@@ -8,14 +8,14 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkProperties() {
-  const propertyNumbers = ['AA13407', 'AA13389'];
+  const propertyNumbers = ['AA13407'];
   
-  console.log('Checking properties in database...\n');
+  console.log('Checking AA13407 property data...\n');
   
   for (const propertyNumber of propertyNumbers) {
     const { data, error } = await supabase
       .from('property_listings')
-      .select('property_number, address, sales_assignee, atbb_status, sidebar_status, created_at')
+      .select('property_number, broker_response, property_tax')
       .eq('property_number', propertyNumber)
       .single();
     
@@ -24,20 +24,11 @@ async function checkProperties() {
       console.log(`   Error: ${error.message}\n`);
     } else {
       console.log(`✓ ${propertyNumber}: FOUND`);
-      console.log(`   Address: ${data.address || 'N/A'}`);
-      console.log(`   Assignee: ${data.sales_assignee || 'N/A'}`);
-      console.log(`   ATBB Status: ${data.atbb_status || 'N/A'}`);
-      console.log(`   Sidebar Status: ${data.sidebar_status || 'N/A'}`);
-      console.log(`   Created: ${data.created_at}\n`);
+      console.log(`   broker_response: ${data.broker_response || 'NULL'}`);
+      console.log(`   property_tax: ${data.property_tax || 'NULL'}`);
+      console.log(`   Full data:`, JSON.stringify(data, null, 2));
     }
   }
-  
-  // Count total properties
-  const { count } = await supabase
-    .from('property_listings')
-    .select('*', { count: 'exact', head: true });
-  
-  console.log(`Total properties in database: ${count}`);
 }
 
 checkProperties().catch(console.error);

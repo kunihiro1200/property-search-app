@@ -88,6 +88,8 @@ export default function PropertyInfoCard({
       setLoading(true);
       setError(null);
       const response = await api.get(`/api/property-listings/${propertyId}`);
+      console.log('[PropertyInfoCard] Fetched property data:', response.data);
+      console.log('[PropertyInfoCard] broker_response:', response.data.broker_response);
       setProperty(response.data);
     } catch (err: any) {
       console.error('Failed to fetch property details:', err);
@@ -240,6 +242,7 @@ export default function PropertyInfoCard({
 
       {/* 業者への対応日付表示（今日より後の場合のみ） */}
       {property.broker_response && (() => {
+        console.log('[PropertyInfoCard] broker_response exists:', property.broker_response);
         try {
           // broker_responseの値を確認
           let brokerDateValue = property.broker_response;
@@ -251,16 +254,20 @@ export default function PropertyInfoCard({
             const excelEpoch = new Date(1900, 0, 1);
             const daysOffset = serialNumber - 2; // Excelの1900年うるう年バグ対応
             brokerDateValue = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            console.log('[PropertyInfoCard] Converted serial to date:', brokerDateValue);
           }
           
           // 東京時間で今日の日付を取得
           const now = new Date();
           const tokyoNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
           const tokyoToday = new Date(tokyoNow.getFullYear(), tokyoNow.getMonth(), tokyoNow.getDate());
+          console.log('[PropertyInfoCard] Tokyo today:', tokyoToday);
           
           // broker_responseの日付をパース
           const brokerDate = new Date(brokerDateValue);
           const tokyoBrokerDate = new Date(brokerDate.getFullYear(), brokerDate.getMonth(), brokerDate.getDate());
+          console.log('[PropertyInfoCard] Broker date:', tokyoBrokerDate);
+          console.log('[PropertyInfoCard] Is after today?', tokyoBrokerDate > tokyoToday);
           
           // 今日より後の日付の場合のみ表示
           if (tokyoBrokerDate > tokyoToday) {
