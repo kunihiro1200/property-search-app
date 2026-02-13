@@ -76,6 +76,16 @@ export default function GmailDistributionButton({
   };
 
   const handleButtonClick = () => {
+    // 配信エリア計算中の場合
+    if (isCalculatingAreas) {
+      setSnackbar({
+        open: true,
+        message: '配信エリアを計算中です。計算が完了するまでお待ちください...',
+        severity: 'info'
+      });
+      return;
+    }
+    
     // Check if distribution_areas is set
     if (!distributionAreas || distributionAreas.trim() === '') {
       setSnackbar({
@@ -318,22 +328,15 @@ export default function GmailDistributionButton({
 
   return (
     <>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {isCalculatingAreas && (
-          <Alert severity="info" sx={{ mb: 1 }}>
-            配信エリアを計算中です。計算が完了するまでお待ちください...
-          </Alert>
-        )}
-        <Button
-          size={size}
-          variant={variant}
-          startIcon={loading ? <CircularProgress size={16} /> : <EmailIcon />}
-          onClick={handleButtonClick}
-          disabled={loading || isCalculatingAreas}
-        >
-          一括配信
-        </Button>
-      </Box>
+      <Button
+        size={size}
+        variant={variant}
+        startIcon={loading ? <CircularProgress size={16} /> : <EmailIcon />}
+        onClick={handleButtonClick}
+        disabled={loading || isCalculatingAreas}
+      >
+        一括配信
+      </Button>
 
       <EmailTemplateSelector
         open={templateSelectorOpen}
