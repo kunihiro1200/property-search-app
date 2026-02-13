@@ -1,5 +1,5 @@
 import { Box, Typography, TextField, Grid, Button, CircularProgress } from '@mui/material';
-import { Send as SendIcon } from '@mui/icons-material';
+import { Schedule as ScheduleIcon } from '@mui/icons-material';
 import { useState } from 'react';
 
 interface PriceSectionProps {
@@ -30,36 +30,44 @@ export default function PriceSection({
   const displaySalesPrice = editedData.sales_price !== undefined ? editedData.sales_price : salesPrice;
   const displayPriceReductionHistory = editedData.price_reduction_history !== undefined ? editedData.price_reduction_history : priceReductionHistory;
 
-  const [chatMessage, setChatMessage] = useState('');
-  const [sendingChat, setSendingChat] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledMessage, setScheduledMessage] = useState('');
+  const [scheduling, setScheduling] = useState(false);
 
   const formatPrice = (price?: number | null) => {
     if (price === null || price === undefined) return '-';
     return `¥${price.toLocaleString()}`;
   };
 
-  const handleSendChat = async () => {
-    if (!chatMessage.trim()) {
+  const handleSchedulePriceReduction = async () => {
+    if (!scheduledDate) {
+      onChatSendError('日付を入力してください');
+      return;
+    }
+
+    if (!scheduledMessage.trim()) {
       onChatSendError('メッセージを入力してください');
       return;
     }
 
-    setSendingChat(true);
+    setScheduling(true);
     try {
       const api = (await import('../services/api')).default;
-      await api.post(`/api/chat-notifications/property-assignee/${propertyNumber}`, {
-        message: chatMessage,
+      await api.post(`/api/chat-notifications/schedule-price-reduction/${propertyNumber}`, {
+        scheduledDate,
+        message: scheduledMessage,
       });
       
-      onChatSendSuccess('チャットを送信しました');
-      setChatMessage('');
+      onChatSendSuccess(`予約値下げを設定しました（${scheduledDate} 9:00に送信予定）`);
+      setScheduledDate('');
+      setScheduledMessage('');
     } catch (error: any) {
-      console.error('Failed to send chat:', error);
+      console.error('Failed to schedule price reduction:', error);
       onChatSendError(
-        error.response?.data?.error?.message || 'チャットの送信に失敗しました'
+        error.response?.data?.error?.message || '予約値下げの設定に失敗しました'
       );
     } finally {
-      setSendingChat(false);
+      setScheduling(false);
     }
   };
 
@@ -122,18 +130,27 @@ export default function PriceSection({
             </Typography>
           </Box>
           
-          {/* その他チャット送信 */}
+          {/* 予約値下げ */}
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
             <Typography variant="body1" color="text.secondary" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
-              その他チャット送信
+              予約値下げ
             </Typography>
+            <TextField
+              fullWidth
+              type="date"
+              label="送信日"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 1 }}
+            />
             <TextField
               fullWidth
               multiline
               rows={3}
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              placeholder="担当者へのメッセージを入力してください"
+              value={scheduledMessage}
+              onChange={(e) => setScheduledMessage(e.target.value)}
+              placeholder="値下げ通知メッセージを入力してください"
               sx={{ 
                 mb: 1,
                 '& .MuiInputBase-input': { fontSize: '1rem' }
@@ -141,18 +158,18 @@ export default function PriceSection({
             />
             <Button
               variant="contained"
-              startIcon={sendingChat ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
-              onClick={handleSendChat}
-              disabled={!chatMessage.trim() || sendingChat || !salesAssignee}
+              startIcon={scheduling ? <CircularProgress size={16} color="inherit" /> : <ScheduleIcon />}
+              onClick={handleSchedulePriceReduction}
+              disabled={!scheduledDate || !scheduledMessage.trim() || scheduling || !salesAssignee}
               fullWidth
               sx={{
-                backgroundColor: '#1976d2',
+                backgroundColor: '#ed6c02',
                 '&:hover': {
-                  backgroundColor: '#115293',
+                  backgroundColor: '#e65100',
                 },
               }}
             >
-              {sendingChat ? '送信中...' : `${salesAssignee || '担当者'}へチャット送信`}
+              {scheduling ? '設定中...' : `予約値下げを設定（${scheduledDate || '日付未選択'} 9:00送信）`}
             </Button>
             {!salesAssignee && (
               <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
