@@ -916,8 +916,8 @@ export class BuyerService {
       const sheetsClient = (this.writeService as any).sheetsClient;
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
-      // 5行目から最終行までのデータを取得（A列：買主番号）
-      const range = `${sheetName}!A5:A`;
+      // 5行目から最終行までのデータを取得（E列：買主番号）
+      const range = `${sheetName}!E5:E`;
       
       console.log('[generateBuyerNumber] Fetching buyer numbers from spreadsheet:', {
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
@@ -934,24 +934,44 @@ export class BuyerService {
       console.log('[generateBuyerNumber] Fetched rows:', {
         totalRows: rows.length,
         firstFewRows: rows.slice(0, 10),
+        lastFewRows: rows.slice(-10),
       });
       
       // 空欄ではない行から数値の買主番号のみを抽出
       const buyerNumbers: number[] = [];
-      for (const row of rows) {
-        const value = row[0];
-        if (value && value.trim() !== '') {
-          const num = parseInt(value.trim(), 10);
-          if (!isNaN(num)) {
-            buyerNumbers.push(num);
-          }
+      let emptyRowCount = 0;
+      let invalidValueCount = 0;
+      
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        
+        // 行が空、またはA列が空の場合
+        if (!row || !row[0] || row[0].trim() === '') {
+          emptyRowCount++;
+          continue;
         }
+        
+        const value = row[0].trim();
+        const num = parseInt(value, 10);
+        
+        if (isNaN(num)) {
+          invalidValueCount++;
+          console.log(`[generateBuyerNumber] Invalid value at row ${i + 5}: "${value}"`);
+          continue;
+        }
+        
+        buyerNumbers.push(num);
       }
       
       console.log('[generateBuyerNumber] Extracted buyer numbers:', {
-        count: buyerNumbers.length,
+        totalRows: rows.length,
+        emptyRowCount,
+        invalidValueCount,
+        validBuyerNumberCount: buyerNumbers.length,
         max: buyerNumbers.length > 0 ? Math.max(...buyerNumbers) : 'N/A',
-        sample: buyerNumbers.slice(0, 10),
+        min: buyerNumbers.length > 0 ? Math.min(...buyerNumbers) : 'N/A',
+        sampleFirst10: buyerNumbers.slice(0, 10),
+        sampleLast10: buyerNumbers.slice(-10),
       });
       
       if (buyerNumbers.length === 0) {
@@ -973,6 +993,8 @@ export class BuyerService {
     } catch (error: any) {
       console.error('[generateBuyerNumber] Error:', error);
       // フォールバック: データベースから取得
+      console.log('[generateBuyerNumber] Falling back to database');
+      
       const { data, error: dbError } = await this.supabase
         .from('buyers')
         .select('buyer_number')
@@ -980,19 +1002,28 @@ export class BuyerService {
         .limit(1);
 
       if (dbError) {
+        console.error('[generateBuyerNumber] Database error:', dbError);
         throw new Error(`Failed to generate buyer number: ${dbError.message}`);
       }
 
       if (!data || data.length === 0) {
+        console.log('[generateBuyerNumber] No buyers in database, returning 1');
         return '1';
       }
 
       const latestNumber = parseInt(data[0].buyer_number, 10);
       if (isNaN(latestNumber)) {
+        console.error('[generateBuyerNumber] Invalid buyer number format in database:', data[0].buyer_number);
         throw new Error('Invalid buyer number format');
       }
 
-      return String(latestNumber + 1);
+      const nextNumber = String(latestNumber + 1);
+      console.log('[generateBuyerNumber] Database fallback result:', {
+        latestNumber,
+        nextNumber,
+      });
+
+      return nextNumber;
     }
   }
 
