@@ -299,7 +299,7 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/summarize', summarizeRoutes);
 app.use('/api/auth/google/calendar', googleCalendarRoutes);
 app.use('/api/employees', employeeRoutes);
-app.use('/chat-notifications', chatNotificationRoutes);
+app.use('/api/chat-notifications', chatNotificationRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/sync', syncRoutes);
