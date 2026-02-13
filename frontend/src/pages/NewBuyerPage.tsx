@@ -17,30 +17,17 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  IconButton,
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon,
   Phone,
   Home as HomeIcon,
 } from '@mui/icons-material';
-import api, { buyerApi } from '../services/api';
+import api from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
 import { InlineEditableField } from '../components/InlineEditableField';
 import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
 import { LATEST_STATUS_OPTIONS } from '../utils/buyerLatestStatusOptions';
-import { 
-  INQUIRY_EMAIL_PHONE_OPTIONS, 
-  THREE_CALLS_CONFIRMED_OPTIONS, 
-  EMAIL_TYPE_OPTIONS, 
-  DISTRIBUTION_TYPE_OPTIONS 
-} from '../utils/buyerFieldOptions';
-import {
-  OTHER_PROPERTY_HEARING_OPTIONS,
-  EMAIL_CONFIRMATION_OPTIONS,
-  PINRICH_OPTIONS,
-  VIEWING_PROMOTION_EMAIL_OPTIONS,
-} from '../utils/buyerDetailFieldOptions';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyInfo {
@@ -123,7 +110,6 @@ export default function NewBuyerPage() {
   const [propertyInfo, setPropertyInfo] = useState<PropertyInfo | null>(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [propertyNumberField, setPropertyNumberField] = useState(propertyNumber || '');
-  const [loadingBuyerNumber, setLoadingBuyerNumber] = useState(true);
   
   // 買主データ（新規登録用の空オブジェクト）
   const [buyer, setBuyer] = useState<any>({
@@ -142,7 +128,6 @@ export default function NewBuyerPage() {
   useEffect(() => {
     const fetchNextBuyerNumber = async () => {
       try {
-        setLoadingBuyerNumber(true);
         const response = await api.get('/api/buyers/next-buyer-number');
         const nextBuyerNumber = response.data.buyerNumber;
         setBuyer((prev: any) => ({ ...prev, buyer_number: nextBuyerNumber }));
@@ -153,8 +138,6 @@ export default function NewBuyerPage() {
           message: '買主番号の取得に失敗しました',
           severity: 'error',
         });
-      } finally {
-        setLoadingBuyerNumber(false);
       }
     };
 
@@ -184,11 +167,10 @@ export default function NewBuyerPage() {
   const handleInlineFieldSave = async (fieldName: string, newValue: any) => {
     // ローカル状態を更新
     setBuyer((prev: any) => ({ ...prev, [fieldName]: newValue }));
-    return { success: true };
   };
 
   // 問合時ヒアリング用クイック入力ボタンのクリックハンドラー
-  const handleInquiryHearingQuickInput = (text: string, buttonLabel: string) => {
+  const handleInquiryHearingQuickInput = (text: string) => {
     const currentValue = buyer.inquiry_hearing || '';
     const newValue = currentValue ? `${text}\n${currentValue}` : text;
     setBuyer((prev: any) => ({ ...prev, inquiry_hearing: newValue }));
@@ -261,18 +243,164 @@ export default function NewBuyerPage() {
         >
           {propertyNumberField ? '物件詳細に戻る' : '買主リストに戻る'}
         </Button>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h5" fontWeight="bold">新規買主登録</Typography>
-          {buyer.name && (
-            <Chip 
-              label={buyer.name} 
-              sx={{ 
-                bgcolor: SECTION_COLORS.buyer.main, 
-                color: '#fff',
-                fontWeight: 'bold',
-              }} 
-            />
-          )}
+        
+        {/* タイトル行 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.buyer.main }}>
+              新規買主登録
+            </Typography>
+            {buyer.name && (
+              <Chip 
+                label={buyer.name} 
+                sx={{ 
+                  bgcolor: SECTION_COLORS.buyer.main, 
+                  color: '#fff',
+                  fontWeight: 'bold',
+                }} 
+              />
+            )}
+            {buyer.buyer_number && (
+              <Chip 
+                label={buyer.buyer_number} 
+                size="small"
+                sx={{ 
+                  backgroundColor: SECTION_COLORS.buyer.main,
+                  color: SECTION_COLORS.buyer.contrastText,
+                }}
+              />
+            )}
+          </Box>
+
+          {/* ヘッダー右側のボタン */}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {/* 近隣物件ボタン（物件がある場合のみ有効） */}
+            <Tooltip title={!propertyInfo ? '物件番号を入力してください' : ''}>
+              <span>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<HomeIcon />}
+                  disabled={!propertyInfo}
+                  sx={{
+                    borderColor: SECTION_COLORS.buyer.main,
+                    color: SECTION_COLORS.buyer.main,
+                    '&:hover': {
+                      borderColor: SECTION_COLORS.buyer.dark,
+                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                    },
+                    '&.Mui-disabled': {
+                      borderColor: 'grey.300',
+                      color: 'grey.400',
+                    },
+                  }}
+                >
+                  近隣物件
+                </Button>
+              </span>
+            </Tooltip>
+            
+            {/* Email送信ドロップダウン */}
+            <FormControl size="small" sx={{ 
+              minWidth: 150,
+              '& .MuiOutlinedInput-root': {
+                '&.Mui-focused fieldset': {
+                  borderColor: SECTION_COLORS.buyer.main,
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: SECTION_COLORS.buyer.main,
+              },
+            }}>
+              <InputLabel>Email送信</InputLabel>
+              <Select
+                value=""
+                label="Email送信"
+                disabled={!buyer.email}
+              >
+                <MenuItem value="">選択してください</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* SMS送信ドロップダウン */}
+            <FormControl size="small" sx={{ 
+              minWidth: 150,
+              '& .MuiOutlinedInput-root': {
+                '&.Mui-focused fieldset': {
+                  borderColor: SECTION_COLORS.buyer.main,
+                },
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: SECTION_COLORS.buyer.main,
+              },
+            }}>
+              <InputLabel>SMS送信</InputLabel>
+              <Select
+                value=""
+                label="SMS送信"
+                disabled={!buyer.phone_number}
+              >
+                <MenuItem value="">選択してください</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* 電話番号ボタン（電話番号がある場合のみ表示） */}
+            {buyer.phone_number && (
+              <Button
+                variant="contained"
+                startIcon={<Phone />}
+                href={`tel:${buyer.phone_number}`}
+                sx={{ 
+                  fontWeight: 'bold', 
+                  whiteSpace: 'nowrap',
+                  backgroundColor: SECTION_COLORS.buyer.main,
+                  '&:hover': {
+                    backgroundColor: SECTION_COLORS.buyer.dark,
+                  },
+                }}
+              >
+                {buyer.phone_number}
+              </Button>
+            )}
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+
+            {/* 希望条件ボタン（新規登録時は無効） */}
+            <Tooltip title="登録後に利用可能になります">
+              <span>
+                <Button
+                  variant="outlined"
+                  size="medium"
+                  disabled
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    borderColor: 'grey.300',
+                    color: 'grey.400',
+                  }}
+                >
+                  希望条件
+                </Button>
+              </span>
+            </Tooltip>
+
+            {/* 内覧ボタン（新規登録時は無効） */}
+            <Tooltip title="登録後に利用可能になります">
+              <span>
+                <Button
+                  variant="contained"
+                  size="medium"
+                  disabled
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    backgroundColor: 'grey.300',
+                    color: 'grey.500',
+                  }}
+                >
+                  内覧
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 
@@ -571,7 +699,7 @@ export default function NewBuyerPage() {
                                   >
                                     <Chip
                                       label={item.label}
-                                      onClick={() => handleInquiryHearingQuickInput(item.text, item.label)}
+                                      onClick={() => handleInquiryHearingQuickInput(item.text)}
                                       size="small"
                                       clickable
                                       variant="outlined"
