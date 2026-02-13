@@ -33,6 +33,7 @@ import GmailDistributionButton from '../components/GmailDistributionButton';
 import DistributionAreaField from '../components/DistributionAreaField';
 import EditableUrlField from '../components/EditableUrlField';
 import MessageTemplateDialog from '../components/MessageTemplateDialog';
+import AssigneeChatSender from '../components/AssigneeChatSender';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyListing {
@@ -848,6 +849,16 @@ export default function PropertyListingDetailPage() {
                   isEditMode={isFrequentlyAskedEditMode}
                 />
               </EditableSection>
+              
+              {/* 担当へChat送信 */}
+              <Box sx={{ mt: 2 }}>
+                <AssigneeChatSender
+                  propertyNumber={data.property_number}
+                  salesAssignee={data.sales_assignee}
+                  onSuccess={(message) => setSnackbar({ open: true, message, severity: 'success' })}
+                  onError={(message) => setSnackbar({ open: true, message, severity: 'error' })}
+                />
+              </Box>
             </Box>
             
             {/* 特記・備忘録 */}

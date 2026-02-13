@@ -26,37 +26,22 @@ export class MessageTemplateService {
    */
   async getTemplates(category: string = '物件'): Promise<MessageTemplate[]> {
     try {
-      const rows = await this.sheetsClient.getSheetData(
-        this.SPREADSHEET_ID,
-        this.SHEET_NAME
-      );
+      await this.sheetsClient.authenticate();
+      const rows = await this.sheetsClient.readAll();
 
       if (!rows || rows.length === 0) {
         return [];
       }
 
-      // ヘッダー行を取得
-      const headers = rows[0];
-      const categoryIndex = headers.indexOf('区分');
-      const typeIndex = headers.indexOf('種別');
-      const subjectIndex = headers.indexOf('件名');
-      const bodyIndex = headers.indexOf('本文');
-
-      if (categoryIndex === -1 || typeIndex === -1 || subjectIndex === -1 || bodyIndex === -1) {
-        console.error('Required columns not found in template sheet');
-        return [];
-      }
-
       // データ行をフィルタリング
       const templates: MessageTemplate[] = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (row[categoryIndex] === category) {
+      for (const row of rows) {
+        if (row['区分'] === category) {
           templates.push({
-            category: row[categoryIndex] || '',
-            type: row[typeIndex] || '',
-            subject: row[subjectIndex] || '',
-            body: row[bodyIndex] || '',
+            category: (row['区分'] as string) || '',
+            type: (row['種別'] as string) || '',
+            subject: (row['件名'] as string) || '',
+            body: (row['本文'] as string) || '',
           });
         }
       }
