@@ -13,6 +13,7 @@ import {
   Grid,
   TextField,
   Link,
+  Chip,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -939,6 +940,44 @@ ${propertyDetailUrl}
                   担当へChat
                 </Button>
               )}
+              {/* 業者への対応日付表示（今日より後の場合のみ） */}
+              {data.broker_response && (() => {
+                try {
+                  // 東京時間で今日の日付を取得
+                  const today = new Date();
+                  const tokyoToday = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                  tokyoToday.setHours(0, 0, 0, 0);
+                  
+                  // broker_responseの日付をパース
+                  const brokerDate = new Date(data.broker_response);
+                  const tokyoBrokerDate = new Date(brokerDate.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                  tokyoBrokerDate.setHours(0, 0, 0, 0);
+                  
+                  // 今日より後の日付の場合のみ表示
+                  if (tokyoBrokerDate > tokyoToday) {
+                    return (
+                      <Chip
+                        label={`業者対応: ${new Date(data.broker_response).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}`}
+                        color="error"
+                        size="medium"
+                        sx={{
+                          ml: 2,
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem',
+                          animation: 'pulse 2s infinite',
+                          '@keyframes pulse': {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.7 },
+                          },
+                        }}
+                      />
+                    );
+                  }
+                } catch (error) {
+                  console.error('Failed to parse broker_response date:', error);
+                }
+                return null;
+              })()}
             </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
