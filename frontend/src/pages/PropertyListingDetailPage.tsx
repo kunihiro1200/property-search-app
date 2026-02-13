@@ -161,6 +161,8 @@ export default function PropertyListingDetailPage() {
   const [isFrequentlyAskedEditMode, setIsFrequentlyAskedEditMode] = useState(false);
   const [isViewingInfoEditMode, setIsViewingInfoEditMode] = useState(false);
   const [isSellerBuyerEditMode, setIsSellerBuyerEditMode] = useState(false);
+  const [communicationHistory, setCommunicationHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -180,8 +182,22 @@ export default function PropertyListingDetailPage() {
       fetchPropertyData();
       fetchBuyers();
       fetchWorkTaskData();
+      fetchCommunicationHistory();
     }
   }, [propertyNumber]);
+
+  const fetchCommunicationHistory = async () => {
+    if (!propertyNumber) return;
+    setHistoryLoading(true);
+    try {
+      const response = await api.get(`/api/activity-logs?target_type=property_seller&target_id=${propertyNumber}`);
+      setCommunicationHistory(response.data);
+    } catch (error) {
+      console.error('Failed to fetch communication history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const fetchPropertyData = async () => {
     if (!propertyNumber) return;
@@ -627,7 +643,7 @@ export default function PropertyListingDetailPage() {
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                所在地：{data.address || data.display_address || '未設定'}
+                物件番号：{data.property_number}
               </Typography>
               <IconButton
                 size="small"
@@ -637,6 +653,11 @@ export default function PropertyListingDetailPage() {
               >
                 <ContentCopyIcon fontSize="small" />
               </IconButton>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              所在地：{data.address || data.display_address || '未設定'}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
               {/* 公開URLボタン */}
               <Button
                 variant="outlined"
@@ -689,6 +710,8 @@ export default function PropertyListingDetailPage() {
                             property_address: data.address || data.display_address,
                           },
                         });
+                        // 履歴を再取得
+                        fetchCommunicationHistory();
                       }
                     } catch (error) {
                       console.error('Failed to log phone call:', error);
@@ -733,6 +756,8 @@ export default function PropertyListingDetailPage() {
                             property_address: data.address || data.display_address,
                           },
                         });
+                        // 履歴を再取得
+                        fetchCommunicationHistory();
                       }
                     } catch (error) {
                       console.error('Failed to log email:', error);
@@ -789,6 +814,8 @@ export default function PropertyListingDetailPage() {
                             property_address: data.address || data.display_address,
                           },
                         });
+                        // 履歴を再取得
+                        fetchCommunicationHistory();
                       }
                     } catch (error) {
                       console.error('Failed to log SMS:', error);
@@ -1815,7 +1842,96 @@ ${propertyDetailUrl}
             </Box>
           </Box>
 
-          {/* 7. 買付情報（全幅・条件付き表示） */}
+          {/* 7. コミュニケーション履歴（全幅） */}
+          <Box sx={{ 
+            mb: 2,
+            p: 2,
+            bgcolor: '#e8eaf6',
+            borderRadius: 2,
+            border: '1px solid #9fa8da'
+          }}>
+            <Paper sx={{ p: 2 }}>
+              <Box sx={{ 
+                mb: 2, 
+                pb: 1, 
+                borderBottom: `2px solid ${SECTION_COLORS.property.main}`,
+              }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+                  コミュニケーション履歴
+                </Typography>
+              </Box>
+              {historyLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : communicationHistory.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                  履歴がありません
+                </Typography>
+              ) : (
+                <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {communicationHistory.map((log, index) => (
+                    <Box 
+                      key={log.id || index} 
+                      sx={{ 
+                        mb: 2, 
+                        p: 2, 
+                        bgcolor: '#f5f5f5', 
+                        borderRadius: 1,
+                        borderLeft: `4px solid ${
+                          log.action === 'phone_call' ? '#2e7d32' : 
+                          log.action === 'email' ? '#1976d2' : 
+                          log.action === 'sms' ? '#ff9800' : '#757575'
+                        }`
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {log.action === 'phone_call' && <PhoneIcon sx={{ color: '#2e7d32' }} />}
+                          {log.action === 'email' && <EmailIcon sx={{ color: '#1976d2' }} />}
+                          {log.action === 'sms' && <SmsIcon sx={{ color: '#ff9800' }} />}
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {log.action === 'phone_call' ? '電話' : 
+                             log.action === 'email' ? 'メール' : 
+                             log.action === 'sms' ? 'SMS' : log.action}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(log.created_at).toLocaleString('ja-JP')}
+                        </Typography>
+                      </Box>
+                      {log.metadata && (
+                        <Box sx={{ mt: 1 }}>
+                          {log.metadata.seller_name && (
+                            <Typography variant="body2" color="text.secondary">
+                              売主: {log.metadata.seller_name}
+                            </Typography>
+                          )}
+                          {log.metadata.seller_contact && (
+                            <Typography variant="body2" color="text.secondary">
+                              連絡先: {log.metadata.seller_contact}
+                            </Typography>
+                          )}
+                          {log.metadata.seller_email && (
+                            <Typography variant="body2" color="text.secondary">
+                              メール: {log.metadata.seller_email}
+                            </Typography>
+                          )}
+                          {log.metadata.property_address && (
+                            <Typography variant="body2" color="text.secondary">
+                              物件: {log.metadata.property_address}
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Paper>
+          </Box>
+
+          {/* 8. 買付情報（全幅・条件付き表示） */}
           {(data.offer_date || data.offer_status || data.offer_amount) && (
             <Box sx={{ 
               mb: 2,
