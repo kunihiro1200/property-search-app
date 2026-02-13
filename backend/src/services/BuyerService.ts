@@ -918,12 +918,23 @@ export class BuyerService {
       
       // 5行目から最終行までのデータを取得（A列：買主番号）
       const range = `${sheetName}!A5:A`;
+      
+      console.log('[generateBuyerNumber] Fetching buyer numbers from spreadsheet:', {
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+        range,
+      });
+      
       const response = await sheetsClient.sheets.spreadsheets.values.get({
         spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
         range: range,
       });
       
       const rows = response.data.values || [];
+      
+      console.log('[generateBuyerNumber] Fetched rows:', {
+        totalRows: rows.length,
+        firstFewRows: rows.slice(0, 10),
+      });
       
       // 空欄ではない行から数値の買主番号のみを抽出
       const buyerNumbers: number[] = [];
@@ -937,16 +948,30 @@ export class BuyerService {
         }
       }
       
+      console.log('[generateBuyerNumber] Extracted buyer numbers:', {
+        count: buyerNumbers.length,
+        max: buyerNumbers.length > 0 ? Math.max(...buyerNumbers) : 'N/A',
+        sample: buyerNumbers.slice(0, 10),
+      });
+      
       if (buyerNumbers.length === 0) {
         // 買主番号が1つもない場合は1から開始
+        console.log('[generateBuyerNumber] No buyer numbers found, returning 1');
         return '1';
       }
       
       // 最大値を取得して+1
       const maxNumber = Math.max(...buyerNumbers);
-      return String(maxNumber + 1);
+      const nextNumber = String(maxNumber + 1);
+      
+      console.log('[generateBuyerNumber] Generated next buyer number:', {
+        maxNumber,
+        nextNumber,
+      });
+      
+      return nextNumber;
     } catch (error: any) {
-      console.error('Failed to generate buyer number from spreadsheet:', error);
+      console.error('[generateBuyerNumber] Error:', error);
       // フォールバック: データベースから取得
       const { data, error: dbError } = await this.supabase
         .from('buyers')
