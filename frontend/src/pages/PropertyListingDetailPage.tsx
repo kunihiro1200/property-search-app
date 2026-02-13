@@ -20,6 +20,8 @@ import {
   OpenInNew as OpenInNewIcon,
   ContentCopy as ContentCopyIcon,
   Person as PersonIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import FrequentlyAskedSection from '../components/FrequentlyAskedSection';
@@ -30,7 +32,6 @@ import EditableSection from '../components/EditableSection';
 import GmailDistributionButton from '../components/GmailDistributionButton';
 import DistributionAreaField from '../components/DistributionAreaField';
 import EditableUrlField from '../components/EditableUrlField';
-import PublicUrlCell from '../components/PublicUrlCell';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyListing {
@@ -425,6 +426,37 @@ export default function PropertyListingDetailPage() {
     }
   };
 
+  // 公開URLコピー機能
+  const handleCopyPublicUrl = async () => {
+    if (!data?.property_number) return;
+    
+    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${data.property_number}`;
+    
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setSnackbar({
+        open: true,
+        message: '公開URLをコピーしました',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Failed to copy public URL:', error);
+      setSnackbar({
+        open: true,
+        message: '公開URLのコピーに失敗しました',
+        severity: 'error',
+      });
+    }
+  };
+
+  // 公開URLを新しいタブで開く
+  const handleOpenPublicUrl = () => {
+    if (!data?.property_number) return;
+    
+    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${data.property_number}`;
+    window.open(publicUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // 買主候補リストページを開く
   const handleOpenBuyerCandidates = () => {
     if (!propertyNumber) return;
@@ -600,15 +632,71 @@ export default function PropertyListingDetailPage() {
               >
                 <ContentCopyIcon fontSize="small" />
               </IconButton>
+              {/* 公開URLボタン */}
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleOpenPublicUrl}
+                endIcon={<OpenInNewIcon fontSize="small" />}
+                sx={{
+                  ml: 1,
+                  borderColor: SECTION_COLORS.property.main,
+                  color: SECTION_COLORS.property.main,
+                  '&:hover': {
+                    borderColor: SECTION_COLORS.property.dark,
+                    backgroundColor: `${SECTION_COLORS.property.main}08`,
+                  },
+                }}
+              >
+                公開URL
+              </Button>
+              <IconButton
+                size="small"
+                onClick={handleCopyPublicUrl}
+                sx={{ color: SECTION_COLORS.property.main }}
+                title="公開URLをコピー"
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
             </Box>
-            {/* 公開URL表示 */}
+            {/* 売主連絡先ボタン */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                公開URL:
-              </Typography>
-              <PublicUrlCell
-                propertyNumber={data.property_number}
-              />
+              {data.seller_contact && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href={`tel:${data.seller_contact}`}
+                  startIcon={<PhoneIcon fontSize="small" />}
+                  sx={{
+                    borderColor: '#2e7d32',
+                    color: '#2e7d32',
+                    '&:hover': {
+                      borderColor: '#1b5e20',
+                      backgroundColor: '#2e7d3208',
+                    },
+                  }}
+                >
+                  売主TEL
+                </Button>
+              )}
+              {data.seller_email && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  href={`mailto:${data.seller_email}`}
+                  startIcon={<EmailIcon fontSize="small" />}
+                  sx={{
+                    borderColor: '#1976d2',
+                    color: '#1976d2',
+                    '&:hover': {
+                      borderColor: '#115293',
+                      backgroundColor: '#1976d208',
+                    },
+                  }}
+                >
+                  売主へメール
+                </Button>
+              )}
             </Box>
           </Box>
           {buyerContext?.buyerId && buyerContext?.source === 'buyer-detail' && (
