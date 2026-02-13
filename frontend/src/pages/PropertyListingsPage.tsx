@@ -199,6 +199,18 @@ export default function PropertyListingsPage() {
     if (searchQuery.trim()) {
       const beforeCount = listings.length;
       const query = searchQuery.toLowerCase();
+      
+      // デバッグ: AA13407のproperty_numberを確認
+      const aa13407 = listings.find(l => l.property_number === 'AA13407');
+      if (aa13407) {
+        console.log('🔍 検索前のAA13407:', {
+          property_number: aa13407.property_number,
+          property_number_lower: aa13407.property_number?.toLowerCase(),
+          query: query,
+          includes: aa13407.property_number?.toLowerCase().includes(query)
+        });
+      }
+      
       listings = listings.filter(l =>
         l.property_number?.toLowerCase().includes(query) ||
         l.address?.toLowerCase().includes(query) ||
