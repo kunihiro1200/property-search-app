@@ -465,39 +465,49 @@ export default function NewBuyerPage() {
 
             <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-            {/* 希望条件ボタン（新規登録時は無効） */}
-            <Tooltip title="登録後に利用可能になります">
-              <span>
-                <Button
-                  variant="outlined"
-                  size="medium"
-                  disabled
-                  sx={{
-                    whiteSpace: 'nowrap',
-                    borderColor: 'grey.300',
-                    color: 'grey.400',
-                  }}
-                >
-                  希望条件
-                </Button>
-              </span>
-            </Tooltip>
+            {/* 希望条件ボタン */}
+            <Button
+              variant="outlined"
+              size="medium"
+              onClick={() => {
+                // 希望条件画面に遷移（買主番号をパラメータとして渡す）
+                if (buyer.buyer_number) {
+                  navigate(`/buyers/${buyer.buyer_number}/desired-conditions`);
+                }
+              }}
+              sx={{
+                whiteSpace: 'nowrap',
+                borderColor: SECTION_COLORS.buyer.main,
+                color: SECTION_COLORS.buyer.main,
+                '&:hover': {
+                  borderColor: SECTION_COLORS.buyer.dark,
+                  backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                },
+              }}
+            >
+              希望条件
+            </Button>
 
-            {/* 内覧ボタン（新規登録時は無効） */}
-            <Tooltip title="登録後に利用可能になります">
-              <span>
-                <Button
-                  variant="contained"
-                  size="medium"
-                  disabled
-                  sx={{
-                    whiteSpace: 'nowrap',
-                    backgroundColor: 'grey.300',
-                    color: 'grey.500',
-                  }}
-                >
-                  内覧
-                </Button>
+            {/* 内覧ボタン */}
+            <Button
+              variant="contained"
+              size="medium"
+              onClick={() => {
+                // 内覧画面に遷移（買主番号をパラメータとして渡す）
+                if (buyer.buyer_number) {
+                  navigate(`/buyers/${buyer.buyer_number}/viewing`);
+                }
+              }}
+              sx={{
+                whiteSpace: 'nowrap',
+                backgroundColor: SECTION_COLORS.buyer.main,
+                '&:hover': {
+                  backgroundColor: SECTION_COLORS.buyer.dark,
+                },
+              }}
+            >
+              内覧
+            </Button>
               </span>
             </Tooltip>
           </Box>
