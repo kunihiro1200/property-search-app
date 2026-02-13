@@ -968,21 +968,21 @@ ${propertyDetailUrl}
                   if (tokyoBrokerDate > tokyoToday) {
                     const formattedDate = `${tokyoBrokerDate.getFullYear()}/${String(tokyoBrokerDate.getMonth() + 1).padStart(2, '0')}/${String(tokyoBrokerDate.getDate()).padStart(2, '0')}`;
                     return (
-                      <Chip
-                        label={`業者対応: ${formattedDate}`}
-                        color="error"
-                        size="medium"
+                      <Typography
                         sx={{
-                          ml: 2,
+                          ml: 3,
+                          color: '#d32f2f',
                           fontWeight: 'bold',
-                          fontSize: '0.9rem',
+                          fontSize: '1.2rem',
                           animation: 'pulse 2s infinite',
                           '@keyframes pulse': {
                             '0%, 100%': { opacity: 1 },
                             '50%': { opacity: 0.7 },
                           },
                         }}
-                      />
+                      >
+                        業者対応: {formattedDate}
+                      </Typography>
                     );
                   }
                 } catch (error) {
