@@ -68,8 +68,20 @@ const INQUIRY_HEARING_QUICK_INPUTS = [
   { label: '他物件', text: '他に気になる物件はあるか？：' },
 ];
 
-// 買主詳細ページと同じフィールド定義
+// 新規買主登録画面用のフィールド定義（基本情報が上、問い合わせ内容が下）
 const BUYER_FIELD_SECTIONS = [
+  {
+    title: '基本情報',
+    fields: [
+      { key: 'buyer_number', label: '買主番号', inlineEditable: true, readOnly: true },
+      { key: 'name', label: '氏名・会社名', inlineEditable: true },
+      { key: 'phone_number', label: '電話番号', inlineEditable: true },
+      { key: 'email', label: 'メールアドレス', inlineEditable: true },
+      { key: 'email_confirmation', label: 'メアド確認', inlineEditable: true, fieldType: 'dropdown', conditionalDisplay: true },
+      { key: 'company_name', label: '法人名', inlineEditable: true },
+      { key: 'broker_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
+    ],
+  },
   {
     title: '問合せ内容',
     fields: [
@@ -89,18 +101,6 @@ const BUYER_FIELD_SECTIONS = [
       { key: 'inquiry_source', label: '問合せ元', inlineEditable: true, column: 'right' },
       { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true, column: 'right' },
       { key: 'latest_status', label: '最新状況', inlineEditable: true, fieldType: 'dropdown', column: 'right' },
-    ],
-  },
-  {
-    title: '基本情報',
-    fields: [
-      { key: 'buyer_number', label: '買主番号', inlineEditable: true, readOnly: true },
-      { key: 'name', label: '氏名・会社名', inlineEditable: true },
-      { key: 'phone_number', label: '電話番号', inlineEditable: true },
-      { key: 'email', label: 'メールアドレス', inlineEditable: true },
-      { key: 'email_confirmation', label: 'メアド確認', inlineEditable: true, fieldType: 'dropdown', conditionalDisplay: true },
-      { key: 'company_name', label: '法人名', inlineEditable: true },
-      { key: 'broker_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
     ],
   },
 ];
