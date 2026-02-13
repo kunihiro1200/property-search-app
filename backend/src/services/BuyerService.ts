@@ -862,11 +862,11 @@ export class BuyerService {
         
         const { data: property, error: propertyError } = await this.supabase
           .from('property_listings')
-          .select('property_type')
+          .select('property_type, price, distribution_areas')
           .eq('property_number', firstPropertyNumber)
           .single();
         
-        if (!propertyError && property && property.property_type) {
+        if (!propertyError && property) {
           // データベースの英語値を日本語に変換
           const propertyTypeMap: Record<string, string> = {
             'land': '土地',
@@ -877,6 +877,45 @@ export class BuyerService {
           const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
           newBuyer.desired_property_type = japanesePropertyType;
           console.log(`[BuyerService.create] Auto-set desired_property_type: ${japanesePropertyType}`);
+          
+          // 物件情報から価格帯とエリアを自動設定
+          const { InquiryHearingParser } = await import('./InquiryHearingParser');
+          const parser = new InquiryHearingParser();
+          const parsedFromProperty = parser.parseFromPropertyInfo(
+            {
+              price: property.price,
+              distribution_areas: property.distribution_areas,
+              property_type: property.property_type
+            },
+            japanesePropertyType
+          );
+          
+          const propertyInfoUpdatedAt = new Date();
+          
+          // 価格帯を設定（既存の値がない場合のみ）
+          if (parsedFromProperty.price_range_house !== undefined && !newBuyer.price_range_house) {
+            newBuyer.price_range_house = parsedFromProperty.price_range_house;
+            newBuyer.price_range_house_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_house from property: ${parsedFromProperty.price_range_house}`);
+          }
+          
+          if (parsedFromProperty.price_range_apartment !== undefined && !newBuyer.price_range_apartment) {
+            newBuyer.price_range_apartment = parsedFromProperty.price_range_apartment;
+            newBuyer.price_range_apartment_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_apartment from property: ${parsedFromProperty.price_range_apartment}`);
+          }
+          
+          if (parsedFromProperty.price_range_land !== undefined && !newBuyer.price_range_land) {
+            newBuyer.price_range_land = parsedFromProperty.price_range_land;
+            newBuyer.price_range_land_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_land from property: ${parsedFromProperty.price_range_land}`);
+          }
+          
+          // 希望エリアを設定（既存の値がない場合のみ）
+          if (parsedFromProperty.desired_area !== undefined && !newBuyer.desired_area) {
+            newBuyer.desired_area = parsedFromProperty.desired_area;
+            console.log(`[BuyerService.create] Auto-set desired_area from property: ${parsedFromProperty.desired_area}`);
+          }
         }
       } catch (error) {
         console.error('[BuyerService.create] Failed to fetch property type:', error);
@@ -895,21 +934,21 @@ export class BuyerService {
         
         const inquiryHearingUpdatedAt = new Date();
         
-        // 希望時期を設定
+        // 希望時期を設定（既存の値がない場合のみ）
         if (parsed.desired_timing !== undefined && !newBuyer.desired_timing) {
           newBuyer.desired_timing = parsed.desired_timing;
           newBuyer.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
           console.log(`[BuyerService.create] Auto-set desired_timing: ${parsed.desired_timing}`);
         }
         
-        // 駐車場希望台数を設定
+        // 駐車場希望台数を設定（既存の値がない場合のみ）
         if (parsed.parking_spaces !== undefined && !newBuyer.parking_spaces) {
           newBuyer.parking_spaces = parsed.parking_spaces;
           newBuyer.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
           console.log(`[BuyerService.create] Auto-set parking_spaces: ${parsed.parking_spaces}`);
         }
         
-        // 価格帯を設定
+        // 価格帯を設定（既存の値がない場合のみ - クイックボタンで入力された値を優先）
         if (parsed.price_range_house !== undefined && !newBuyer.price_range_house) {
           newBuyer.price_range_house = parsed.price_range_house;
           newBuyer.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
@@ -926,6 +965,12 @@ export class BuyerService {
           newBuyer.price_range_land = parsed.price_range_land;
           newBuyer.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
           console.log(`[BuyerService.create] Auto-set price_range_land: ${parsed.price_range_land}`);
+        }
+        
+        // 希望エリアを設定（既存の値がない場合のみ - クイックボタンで入力された値を優先）
+        if (parsed.desired_area !== undefined && !newBuyer.desired_area) {
+          newBuyer.desired_area = parsed.desired_area;
+          console.log(`[BuyerService.create] Auto-set desired_area: ${parsed.desired_area}`);
         }
         
         // 問合せ時ヒアリングの最終更新日時を設定

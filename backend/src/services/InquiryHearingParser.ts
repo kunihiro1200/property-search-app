@@ -10,6 +10,7 @@ export interface ParsedInquiryHearing {
   price_range_house?: string;
   price_range_apartment?: string;
   price_range_land?: string;
+  desired_area?: string;
 }
 
 export class InquiryHearingParser {
@@ -142,3 +143,62 @@ export class InquiryHearingParser {
     return inquiryHearingUpdatedAt > currentUpdatedAt;
   }
 }
+
+  /**
+   * 物件情報から希望条件を自動設定
+   * @param propertyInfo 物件情報（price, distribution_areas, property_type）
+   * @param desiredPropertyType 希望種別
+   */
+  parseFromPropertyInfo(
+    propertyInfo: { price?: number; distribution_areas?: string; property_type?: string },
+    desiredPropertyType?: string
+  ): ParsedInquiryHearing {
+    const result: ParsedInquiryHearing = {};
+
+    try {
+      // 価格帯を設定
+      if (propertyInfo.price) {
+        const priceRange = this.mapPriceRangeFromAmount(propertyInfo.price);
+        if (priceRange) {
+          // 希望種別に応じて適切なフィールドに設定
+          if (desiredPropertyType?.includes('戸建')) {
+            result.price_range_house = priceRange;
+            console.log('[InquiryHearingParser] 価格帯を戸建に設定（物件から）:', priceRange);
+          } else if (desiredPropertyType?.includes('マンション')) {
+            result.price_range_apartment = priceRange;
+            console.log('[InquiryHearingParser] 価格帯をマンションに設定（物件から）:', priceRange);
+          } else if (desiredPropertyType?.includes('土地')) {
+            result.price_range_land = priceRange;
+            console.log('[InquiryHearingParser] 価格帯を土地に設定（物件から）:', priceRange);
+          }
+        }
+      }
+
+      // 希望エリアを設定
+      if (propertyInfo.distribution_areas) {
+        result.desired_area = propertyInfo.distribution_areas;
+        console.log('[InquiryHearingParser] 希望エリアを設定（物件から）:', propertyInfo.distribution_areas);
+      }
+    } catch (error) {
+      console.error('[InquiryHearingParser] Error parsing from property info:', error);
+    }
+
+    return result;
+  }
+
+  /**
+   * 金額から価格帯をマッピング
+   * @param amount 金額（円）
+   */
+  private mapPriceRangeFromAmount(amount: number): string | undefined {
+    if (amount < 10000000) {
+      // 1000万円未満 → ~1900万円
+      return '~1900万円';
+    } else if (amount < 30000000) {
+      // 1000万円～2999万円 → 1000万円~2999万円
+      return '1000万円~2999万円';
+    } else {
+      // 3000万円以上 → 2000万円以上
+      return '2000万円以上';
+    }
+  }
