@@ -13,7 +13,16 @@ import {
   CircularProgress,
   Box,
   Typography,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
 } from '@mui/material';
+import {
+  AttachFile as AttachFileIcon,
+  Delete as DeleteIcon,
+} from '@mui/icons-material';
 import api from '../services/api';
 
 interface MessageTemplate {
@@ -41,7 +50,15 @@ interface MessageTemplateDialogProps {
     structure?: string;
     construction_year_month?: string;
     floor_plan?: string;
+    owner_info?: string;
   };
+}
+
+interface AttachedFile {
+  name: string;
+  size: number;
+  type: string;
+  base64: string;
 }
 
 export default function MessageTemplateDialog({
@@ -56,6 +73,8 @@ export default function MessageTemplateDialog({
   const [subject, setSubject] = useState<string>('');
   const [body, setBody] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [sending, setSending] = useState<boolean>(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -93,9 +112,14 @@ export default function MessageTemplateDialog({
         }
         
         // 所在地
-        const address = propertyData.address || propertyData.display_address || '';
+        const address = propertyData.address || '';
         replacedSubject = replacedSubject.replace(/<<所在地>>/g, address);
         replacedBody = replacedBody.replace(/<<所在地>>/g, address);
+        
+        // 住居表示（ATBB登録住所）
+        const displayAddress = propertyData.display_address || '';
+        replacedSubject = replacedSubject.replace(/<<住居表示（ATBB登録住所）>>/g, displayAddress);
+        replacedBody = replacedBody.replace(/<<住居表示（ATBB登録住所）>>/g, displayAddress);
         
         // 価格
         const priceText = propertyData.price ? `${propertyData.price.toLocaleString()}円` : '';
@@ -109,6 +133,10 @@ export default function MessageTemplateDialog({
         // 売主連絡先
         replacedSubject = replacedSubject.replace(/<<売主連絡先>>/g, propertyData.seller_contact || '');
         replacedBody = replacedBody.replace(/<<売主連絡先>>/g, propertyData.seller_contact || '');
+        
+        // ●所有者情報
+        replacedSubject = replacedSubject.replace(/<<●所有者情報>>/g, propertyData.owner_info || '');
+        replacedBody = replacedBody.replace(/<<●所有者情報>>/g, propertyData.owner_info || '');
         
         // 物件種別
         replacedSubject = replacedSubject.replace(/<<物件種別>>/g, propertyData.property_type || '');
@@ -142,13 +170,91 @@ export default function MessageTemplateDialog({
     }
   };
 
-  const handleSend = () => {
-    // Gmailの作成画面を開く
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
-      recipientEmail
-    )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
-    onClose();
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: AttachedFile[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // ファイルサイズチェック（10MB制限）
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`${file.name} は10MBを超えているため添付できません`);
+        continue;
+      }
+
+      // Base64に変換
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // data:image/png;base64, の部分を削除
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      newFiles.push({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        base64,
+      });
+    }
+
+    setAttachedFiles([...attachedFiles, ...newFiles]);
+    
+    // inputをリセット
+    event.target.value = '';
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles(attachedFiles.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleSend = async () => {
+    if (!subject || !body) {
+      alert('件名と本文を入力してください');
+      return;
+    }
+
+    setSending(true);
+    try {
+      await api.post('/api/emails/send', {
+        to: recipientEmail,
+        subject,
+        body,
+        attachments: attachedFiles.map(file => ({
+          filename: file.name,
+          content: file.base64,
+          encoding: 'base64',
+        })),
+      });
+
+      alert('メールを送信しました');
+      onClose();
+      
+      // リセット
+      setSelectedType('');
+      setSubject('');
+      setBody('');
+      setAttachedFiles([]);
+    } catch (error: any) {
+      console.error('Failed to send email:', error);
+      alert(error.response?.data?.error || 'メール送信に失敗しました');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -171,6 +277,9 @@ export default function MessageTemplateDialog({
                 onChange={(e) => handleTypeChange(e.target.value)}
                 label="テンプレート種別"
               >
+                <MenuItem value="">
+                  <em>選択してください</em>
+                </MenuItem>
                 {templates.map((template) => (
                   <MenuItem key={template.type} value={template.type}>
                     {template.type}
@@ -192,18 +301,69 @@ export default function MessageTemplateDialog({
               onChange={(e) => setBody(e.target.value)}
               multiline
               rows={10}
+              sx={{ mb: 2 }}
             />
+            
+            {/* 添付ファイル */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="subtitle2">添付ファイル</Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AttachFileIcon />}
+                  component="label"
+                >
+                  ファイルを選択
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                </Button>
+              </Box>
+              
+              {attachedFiles.length > 0 && (
+                <List dense>
+                  {attachedFiles.map((file, index) => (
+                    <ListItem key={index}>
+                      <ListItemText
+                        primary={file.name}
+                        secondary={formatFileSize(file.size)}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => handleRemoveFile(index)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+              
+              <Typography variant="caption" color="text.secondary">
+                ※ 1ファイルあたり最大10MBまで
+              </Typography>
+            </Box>
           </>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>キャンセル</Button>
+        <Button onClick={onClose} disabled={sending}>
+          キャンセル
+        </Button>
         <Button
           onClick={handleSend}
           variant="contained"
-          disabled={!subject || !body}
+          disabled={!subject || !body || sending}
+          startIcon={sending ? <CircularProgress size={16} /> : null}
         >
-          Gmailで開く
+          {sending ? '送信中...' : '送信'}
         </Button>
       </DialogActions>
     </Dialog>

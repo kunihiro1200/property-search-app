@@ -23,6 +23,7 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon,
   Send as SendIcon,
+  Sms as SmsIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import FrequentlyAskedSection from '../components/FrequentlyAskedSection';
@@ -626,7 +627,7 @@ export default function PropertyListingDetailPage() {
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                物件詳細 - {data.property_number}
+                所在地：{data.address || data.display_address || '未設定'}
               </Typography>
               <IconButton
                 size="small"
@@ -700,22 +701,82 @@ export default function PropertyListingDetailPage() {
                   売主へメール
                 </Button>
               )}
+              {/* 売主へSMS送信ボタン */}
+              {data.seller_contact && (
+                <Button
+                  variant="outlined"
+                  size="medium"
+                  onClick={() => {
+                    // SMS本文を作成
+                    const sellerName = data.seller_name || '売主';
+                    const smsBody = `${sellerName}様
+
+お世話になっております。
+
+
+
+㈱いふう`;
+                    
+                    // SMSアプリを開く（sms:スキーム）
+                    const smsUrl = `sms:${data.seller_contact}?body=${encodeURIComponent(smsBody)}`;
+                    window.location.href = smsUrl;
+                  }}
+                  startIcon={<SmsIcon />}
+                  sx={{
+                    borderColor: '#ff9800',
+                    color: '#ff9800',
+                    '&:hover': {
+                      borderColor: '#f57c00',
+                      backgroundColor: '#ff980808',
+                    },
+                  }}
+                >
+                  売主へSMS
+                </Button>
+              )}
               {/* 担当へChat送信ボタン */}
               {data.sales_assignee && (
                 <Button
                   variant="outlined"
                   size="medium"
-                  onClick={() => {
+                  onClick={async () => {
                     const userMessage = prompt('担当者へのメッセージを入力してください:');
                     if (userMessage) {
-                      // 物件詳細画面のURL
-                      const propertyDetailUrl = `${window.location.origin}/property-listings/${data.property_number}`;
-                      
-                      // 送信者情報（ログインユーザー名を取得、なければ「システム」）
-                      const senderName = localStorage.getItem('userName') || 'システム';
-                      
-                      // 詳細情報を含めたメッセージを作成
-                      const detailedMessage = `
+                      try {
+                        // 物件詳細画面のURL
+                        const propertyDetailUrl = `${window.location.origin}/property-listings/${data.property_number}`;
+                        
+                        // ログインユーザーのメールアドレスを取得
+                        const { supabase } = await import('../config/supabase');
+                        const { data: { user } } = await supabase.auth.getUser();
+                        const userEmail = user?.email;
+                        
+                        // スタッフ名を取得
+                        let senderName = userEmail || 'システム';
+                        if (userEmail) {
+                          try {
+                            console.log('Fetching staff name for email:', userEmail);
+                            const staffResponse = await api.get(`/api/staff/by-email/${encodeURIComponent(userEmail)}`);
+                            console.log('Staff API response:', staffResponse.data);
+                            if (staffResponse.data && staffResponse.data.name) {
+                              // フルネームから名字を抽出（例: "国広智子" → "国広"）
+                              const fullName = staffResponse.data.name;
+                              const lastName = fullName.split(/\s+/)[0]; // スペースで区切って最初の部分を取得
+                              senderName = lastName;
+                              console.log('Staff name found:', senderName);
+                            } else {
+                              console.warn('Staff name not found in response, using email:', userEmail);
+                            }
+                          } catch (error: any) {
+                            console.error('Failed to fetch staff name:', error);
+                            console.error('Error details:', error.response?.data);
+                            // エラーの場合はメールアドレスを使用
+                            console.warn('Using email as sender name:', userEmail);
+                          }
+                        }
+                        
+                        // 詳細情報を含めたメッセージを作成
+                        const detailedMessage = `
 【送信者】${senderName}
 
 【メッセージ】
@@ -734,25 +795,24 @@ ${userMessage.trim()}
 【物件詳細画面】
 ${propertyDetailUrl}
 ━━━━━━━━━━━━━━━━━━━━
-                      `.trim();
-                      
-                      api.post(`/api/chat-notifications/property-assignee/${data.property_number}`, {
-                        message: detailedMessage,
-                      })
-                      .then(() => {
+                        `.trim();
+                        
+                        await api.post(`/api/chat-notifications/property-assignee/${data.property_number}`, {
+                          message: detailedMessage,
+                        });
+                        
                         setSnackbar({
                           open: true,
                           message: `担当者（${data.sales_assignee}）にChat送信しました`,
                           severity: 'success',
                         });
-                      })
-                      .catch((error) => {
+                      } catch (error: any) {
                         setSnackbar({
                           open: true,
                           message: error.response?.data?.error?.message || '担当者へのChat送信に失敗しました',
                           severity: 'error',
                         });
-                      });
+                      }
                     }
                   }}
                   startIcon={<SendIcon />}
@@ -816,25 +876,31 @@ ${propertyDetailUrl}
       {/* Property Header - Key Information */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">所在地</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.address || data.display_address || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">種別</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.property_type || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Typography variant="body2" color="text.secondary" fontWeight="bold">ステータス</Typography>
+            <Typography variant="body1" fontWeight="medium" sx={{ color: '#d32f2f' }}>
+              {data.atbb_status || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">現況</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.current_status || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={2.4}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">担当</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.sales_assignee || '-'}
@@ -1806,6 +1872,7 @@ ${propertyDetailUrl}
             structure: data.structure,
             construction_year_month: data.construction_year_month,
             floor_plan: data.floor_plan,
+            owner_info: data.owner_info,
           }}
         />
       )}

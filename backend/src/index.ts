@@ -70,6 +70,7 @@ import geocodeRoutes from './routes/geocode';
 import urlRedirectRoutes from './routes/urlRedirect';
 import smsRoutes from './routes/sms';
 import messageTemplateRoutes from './routes/message-templates';
+import staffRoutes from './routes/staff';
 import { activityLogger } from './middleware/activityLogger';
 import { authenticate } from './middleware/auth';
 
@@ -317,6 +318,7 @@ app.use('/api/sellers', sellerRecoveryRoutes);
 app.use('/api/inquiry-response', inquiryResponseRoutes);
 app.use('/api/email-templates', emailTemplateRoutes);
 app.use('/api/message-templates', messageTemplateRoutes);
+app.use('/api/staff', staffRoutes);
 app.use('/api/gmail', gmailRoutes);
 app.use('/api/public/inquiries', publicInquiriesRoutes); // 公開物件問い合わせAPI（認証不要）
 app.use('/api/public', publicPropertiesRoutes); // 公開物件サイト用API（認証不要なので先に登録）

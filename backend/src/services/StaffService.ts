@@ -7,7 +7,7 @@ export interface StaffMember {
 
 export class StaffService {
   private sheetsClient: GoogleSheetsClient;
-  private readonly SPREADSHEET_ID = '1sIBMhrarUSMcVWlTVVyaNNKaDxmfrxyHJLWv6U-MZxE';
+  private readonly SPREADSHEET_ID = '19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xxs';
   private readonly SHEET_NAME = 'スタッフ';
 
   constructor() {
@@ -36,14 +36,63 @@ export class StaffService {
 
       // スタッフ名で検索
       for (const row of rows) {
-        if (row['氏名'] === staffName || row['名前'] === staffName) {
-          return (row['Chat'] as string) || (row['Chatアドレス'] as string) || null;
+        const name = (row['姓名'] as string) || (row['氏名'] as string) || (row['名前'] as string);
+        if (name === staffName) {
+          return (row['Chat webhook'] as string) || (row['Chat'] as string) || (row['Chatアドレス'] as string) || null;
         }
       }
 
       return null;
     } catch (error) {
       console.error('Failed to fetch staff chat address:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * メールアドレスからスタッフ情報を取得
+   * @param email メールアドレス
+   * @returns スタッフ情報
+   */
+  async getStaffByEmail(email: string): Promise<StaffMember | null> {
+    try {
+      console.log('[StaffService] getStaffByEmail called with email:', email);
+      await this.sheetsClient.authenticate();
+      const rows = await this.sheetsClient.readAll();
+
+      console.log('[StaffService] Total rows fetched:', rows?.length || 0);
+      
+      // 最初の行のカラム名をログ出力
+      if (rows && rows.length > 0) {
+        console.log('[StaffService] Available columns:', Object.keys(rows[0]));
+      }
+
+      if (!rows || rows.length === 0) {
+        console.warn('[StaffService] No rows found in staff sheet');
+        return null;
+      }
+
+      // メールアドレスで検索
+      for (const row of rows) {
+        const rowEmail = (row['メールアドレス'] as string) || (row['メアド'] as string) || (row['email'] as string);
+        if (rowEmail && rowEmail.toLowerCase() === email.toLowerCase()) {
+          const name = (row['姓名'] as string) || (row['氏名'] as string) || (row['名前'] as string) || (row['name'] as string);
+          const chatAddress = (row['Chat webhook'] as string) || (row['Chat'] as string) || (row['Chatアドレス'] as string) || (row['chat'] as string);
+          
+          console.log('[StaffService] Row data:', row);
+          console.log('[StaffService] Staff found:', { name, chatAddress, email: rowEmail });
+          
+          return {
+            name: name || '',
+            chatAddress: chatAddress || undefined,
+          };
+        }
+      }
+
+      console.warn('[StaffService] No staff found for email:', email);
+      return null;
+    } catch (error) {
+      console.error('[StaffService] Failed to fetch staff by email:', error);
       throw error;
     }
   }
@@ -63,8 +112,8 @@ export class StaffService {
 
       const staff: StaffMember[] = [];
       for (const row of rows) {
-        const name = (row['氏名'] as string) || (row['名前'] as string);
-        const chatAddress = (row['Chat'] as string) || (row['Chatアドレス'] as string);
+        const name = (row['姓名'] as string) || (row['氏名'] as string) || (row['名前'] as string);
+        const chatAddress = (row['Chat webhook'] as string) || (row['Chat'] as string) || (row['Chatアドレス'] as string);
         
         if (name) {
           staff.push({

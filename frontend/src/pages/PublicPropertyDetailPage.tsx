@@ -577,6 +577,30 @@ const PublicPropertyDetailPage: React.FC = () => {
                 </Paper>
               )}
 
+              {/* 物件情報バー（所在地・種別・ステータス） */}
+              <Paper elevation={2} sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5', order: 3.5 }}>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">所在地</Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {property.display_address || property.address}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">種別</Typography>
+                    <Typography variant="body1" fontWeight="medium">
+                      {getPropertyTypeLabel(property.property_type)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="body2" color="text.secondary" fontWeight="bold">ステータス</Typography>
+                    <Typography variant="body1" fontWeight="bold" sx={{ color: '#d32f2f', fontSize: '1.1rem' }}>
+                      {property.atbb_status || '-'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
               {/* 物件基本情報 */}
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 4 }}> {/* 4番目 */}
               {/* 物件タイプ */}
