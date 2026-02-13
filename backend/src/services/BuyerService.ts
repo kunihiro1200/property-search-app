@@ -854,6 +854,7 @@ export class BuyerService {
       updated_at: new Date().toISOString(),
     };
 
+    // データベースに保存
     const { data, error } = await this.supabase
       .from('buyers')
       .insert(newBuyer)
@@ -864,36 +865,103 @@ export class BuyerService {
       throw new Error(`Failed to create buyer: ${error.message}`);
     }
 
+    // スプレッドシートに同期
+    try {
+      await this.initSyncServices();
+      
+      if (this.writeService && this.columnMapper) {
+        console.log(`[BuyerService] Syncing new buyer ${buyerNumber} to spreadsheet`);
+        
+        // データベースのフィールド名をスプレッドシートのカラム名にマッピング
+        const mappedData: Record<string, any> = {};
+        for (const [dbField, value] of Object.entries(data)) {
+          const sheetColumn = this.columnMapper.getSheetColumnName(dbField);
+          if (sheetColumn) {
+            mappedData[sheetColumn] = value;
+          }
+        }
+        
+        // スプレッドシートに書き込み
+        await this.writeService.writeBuyerRow(buyerNumber, mappedData);
+        console.log(`[BuyerService] Successfully synced new buyer ${buyerNumber} to spreadsheet`);
+      }
+    } catch (syncError: any) {
+      console.error(`[BuyerService] Failed to sync new buyer to spreadsheet:`, syncError);
+      // 同期エラーでもデータベースには保存されているので続行
+    }
+
     return data;
   }
 
   /**
-   * 買主番号を自動生成（最新の番号+1）
+   * 買主番号を自動生成（スプレッドシートの5行目から最終行までの最大値+1）
    */
   private async generateBuyerNumber(): Promise<string> {
-    // 最新の買主番号を取得
-    const { data, error } = await this.supabase
-      .from('buyers')
-      .select('buyer_number')
-      .order('buyer_number', { ascending: false })
-      .limit(1);
+    try {
+      // 同期サービスを初期化
+      await this.initSyncServices();
+      
+      if (!this.writeService) {
+        throw new Error('Write service not initialized');
+      }
+      
+      // スプレッドシートから全データを取得
+      const sheetsClient = (this.writeService as any).sheetsClient;
+      const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
+      
+      // 5行目から最終行までのデータを取得（A列：買主番号）
+      const range = `${sheetName}!A5:A`;
+      const response = await sheetsClient.sheets.spreadsheets.values.get({
+        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+        range: range,
+      });
+      
+      const rows = response.data.values || [];
+      
+      // 空欄ではない行から数値の買主番号のみを抽出
+      const buyerNumbers: number[] = [];
+      for (const row of rows) {
+        const value = row[0];
+        if (value && value.trim() !== '') {
+          const num = parseInt(value.trim(), 10);
+          if (!isNaN(num)) {
+            buyerNumbers.push(num);
+          }
+        }
+      }
+      
+      if (buyerNumbers.length === 0) {
+        // 買主番号が1つもない場合は1から開始
+        return '1';
+      }
+      
+      // 最大値を取得して+1
+      const maxNumber = Math.max(...buyerNumbers);
+      return String(maxNumber + 1);
+    } catch (error: any) {
+      console.error('Failed to generate buyer number from spreadsheet:', error);
+      // フォールバック: データベースから取得
+      const { data, error: dbError } = await this.supabase
+        .from('buyers')
+        .select('buyer_number')
+        .order('buyer_number', { ascending: false })
+        .limit(1);
 
-    if (error) {
-      throw new Error(`Failed to generate buyer number: ${error.message}`);
+      if (dbError) {
+        throw new Error(`Failed to generate buyer number: ${dbError.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return '1';
+      }
+
+      const latestNumber = parseInt(data[0].buyer_number, 10);
+      if (isNaN(latestNumber)) {
+        throw new Error('Invalid buyer number format');
+      }
+
+      return String(latestNumber + 1);
     }
-
-    if (!data || data.length === 0) {
-      // 最初の買主番号
-      return '1';
-    }
-
-    // 最新の番号を取得して+1
-    const latestNumber = parseInt(data[0].buyer_number, 10);
-    if (isNaN(latestNumber)) {
-      throw new Error('Invalid buyer number format');
-    }
-
-    return String(latestNumber + 1);
   }
 
   /**

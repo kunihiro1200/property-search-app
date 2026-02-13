@@ -32,6 +32,18 @@ router.get('/templates', async (req: Request, res: Response) => {
   }
 });
 
+// 次の買主番号を取得（/:idの前に配置）
+router.get('/next-buyer-number', async (req: Request, res: Response) => {
+  try {
+    // BuyerServiceのgenerateBuyerNumberメソッドを使用
+    const buyerNumber = await (buyerService as any).generateBuyerNumber();
+    res.json({ buyerNumber });
+  } catch (error: any) {
+    console.error('Failed to generate buyer number:', error);
+    res.status(500).json({ error: error.message || '買主番号の生成に失敗しました' });
+  }
+});
+
 // 一覧取得
 router.get('/', async (req: Request, res: Response) => {
   try {

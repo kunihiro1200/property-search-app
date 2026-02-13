@@ -13,8 +13,17 @@ import {
   Snackbar,
   Chip,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { 
+  ArrowBack as ArrowBackIcon,
+  Phone,
+  Home as HomeIcon,
+} from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
 import { InlineEditableField } from '../components/InlineEditableField';
@@ -94,6 +103,7 @@ const BUYER_FIELD_SECTIONS = [
   {
     title: '基本情報',
     fields: [
+      { key: 'buyer_number', label: '買主番号', inlineEditable: true, readOnly: true },
       { key: 'name', label: '氏名・会社名', inlineEditable: true },
       { key: 'phone_number', label: '電話番号', inlineEditable: true },
       { key: 'email', label: 'メールアドレス', inlineEditable: true },
@@ -113,11 +123,13 @@ export default function NewBuyerPage() {
   const [propertyInfo, setPropertyInfo] = useState<PropertyInfo | null>(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [propertyNumberField, setPropertyNumberField] = useState(propertyNumber || '');
+  const [loadingBuyerNumber, setLoadingBuyerNumber] = useState(true);
   
   // 買主データ（新規登録用の空オブジェクト）
   const [buyer, setBuyer] = useState<any>({
     property_number: propertyNumber || '',
     reception_date: new Date().toISOString().split('T')[0], // 今日の日付をデフォルト
+    buyer_number: '', // 初期値は空
   });
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
@@ -125,6 +137,29 @@ export default function NewBuyerPage() {
     message: '',
     severity: 'success',
   });
+
+  // 買主番号を自動取得
+  useEffect(() => {
+    const fetchNextBuyerNumber = async () => {
+      try {
+        setLoadingBuyerNumber(true);
+        const response = await api.get('/api/buyers/next-buyer-number');
+        const nextBuyerNumber = response.data.buyerNumber;
+        setBuyer((prev: any) => ({ ...prev, buyer_number: nextBuyerNumber }));
+      } catch (error) {
+        console.error('Failed to fetch next buyer number:', error);
+        setSnackbar({
+          open: true,
+          message: '買主番号の取得に失敗しました',
+          severity: 'error',
+        });
+      } finally {
+        setLoadingBuyerNumber(false);
+      }
+    };
+
+    fetchNextBuyerNumber();
+  }, []);
 
   useEffect(() => {
     if (propertyNumber) {
