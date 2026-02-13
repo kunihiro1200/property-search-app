@@ -24,6 +24,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Person as PersonIcon,
   Email as EmailIcon,
+  Sms as SmsIcon,
 } from '@mui/icons-material';
 import api from '../services/api';
 import { SECTION_COLORS } from '../theme/sectionColors';
@@ -298,6 +299,90 @@ TEL:097-533-2022
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // 個別SMS送信機能
+  const handleSendIndividualSms = async (candidate: BuyerCandidate) => {
+    if (!candidate.phone_number || candidate.phone_number.trim() === '') {
+      setSnackbar({
+        open: true,
+        message: 'この買主には電話番号が登録されていません',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (!data) return;
+
+    // 公開物件サイトのURL
+    const publicUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
+    
+    // 所在地
+    const address = data.property.address || '物件';
+    
+    // 物件情報
+    const propertyType = data.property.property_type || '不明';
+    const salesPrice = data.property.sales_price 
+      ? `¥${data.property.sales_price.toLocaleString()}` 
+      : '価格未定';
+
+    // 買主名
+    const buyerName = candidate.name || 'お客様';
+
+    // SMSメッセージ
+    const message = `${buyerName}様
+
+株式会社いふうです。
+
+${address}を近々売りに出すことになりました！
+
+種別：${propertyType}
+価格：${salesPrice}
+
+誰よりも早く内覧可能です。ご興味がございましたらご返信ください。
+
+物件詳細: ${publicUrl}
+
+株式会社いふう
+TEL:097-533-2022`;
+
+    try {
+      setSnackbar({
+        open: true,
+        message: 'SMS送信中...',
+        severity: 'info',
+      });
+
+      // バックエンドAPIを使用してSMS送信
+      await api.post('/api/sms/send-bulk', {
+        recipients: [{
+          phoneNumber: candidate.phone_number,
+          name: buyerName,
+        }],
+        message: message,
+      });
+
+      setSnackbar({
+        open: true,
+        message: `${buyerName}様にSMSを送信しました`,
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('Failed to send SMS:', error);
+      
+      let errorMessage = 'SMS送信に失敗しました。';
+      if (error.response?.status === 503) {
+        errorMessage = 'SMS送信サービスが設定されていません。管理者に連絡してください。';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error',
+      });
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     try {
@@ -452,11 +537,13 @@ TEL:097-533-2022
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>買主番号</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>氏名</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>メールアドレス</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>電話番号</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>最新状況</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>問い合わせ物件住所</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>希望エリア</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>希望種別</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>受付日</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '1rem' }}>操作</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -503,6 +590,9 @@ TEL:097-533-2022
                       <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
                         {candidate.email || '-'}
                       </TableCell>
+                      <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
+                        {candidate.phone_number || '-'}
+                      </TableCell>
                       <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)}>
                         {candidate.latest_status ? (
                           <Chip
@@ -529,6 +619,25 @@ TEL:097-533-2022
                       </TableCell>
                       <TableCell onClick={() => handleBuyerClick(candidate.buyer_number)} sx={{ fontSize: '1rem' }}>
                         {formatDate(candidate.reception_date)}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<SmsIcon />}
+                          onClick={() => handleSendIndividualSms(candidate)}
+                          disabled={!candidate.phone_number || candidate.phone_number.trim() === ''}
+                          sx={{
+                            borderColor: SECTION_COLORS.property.main,
+                            color: SECTION_COLORS.property.main,
+                            '&:hover': {
+                              borderColor: SECTION_COLORS.property.dark,
+                              backgroundColor: `${SECTION_COLORS.property.main}08`,
+                            },
+                          }}
+                        >
+                          SMS
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
