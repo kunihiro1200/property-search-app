@@ -164,6 +164,13 @@ export default function BuyerCandidateListPage() {
     // 1件選択時: 実際の買主名を表示
     // 複数件選択時: {氏名}プレースホルダーを表示
     let bodyTemplate: string;
+    
+    // 物件情報を取得
+    const propertyType = data.property.property_type || '不明';
+    const salesPrice = data.property.sales_price 
+      ? `¥${data.property.sales_price.toLocaleString()}` 
+      : '価格未定';
+    
     if (candidatesWithEmail.length === 1) {
       // 1件選択時: 実際の名前を表示
       const buyerName = candidatesWithEmail[0].name || 'お客様';
@@ -172,6 +179,9 @@ export default function BuyerCandidateListPage() {
 お世話になります。不動産会社の株式会社いふうです。
 
 ${address}を近々売りに出すことになりました！
+
+種別：${propertyType}
+価格：${salesPrice}
 
 もしご興味がございましたら、誰よりも早く内覧することが可能となっておりますので、このメールにご返信頂ければと思います。
 
@@ -191,6 +201,9 @@ TEL:097-533-2022
 お世話になります。不動産会社の株式会社いふうです。
 
 ${address}を近々売りに出すことになりました！
+
+種別：${propertyType}
+価格：${salesPrice}
 
 もしご興味がございましたら、誰よりも早く内覧することが可能となっておりますので、このメールにご返信頂ければと思います。
 
