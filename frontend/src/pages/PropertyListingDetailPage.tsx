@@ -968,21 +968,39 @@ ${propertyDetailUrl}
                   if (tokyoBrokerDate > tokyoToday) {
                     const formattedDate = `${tokyoBrokerDate.getFullYear()}/${String(tokyoBrokerDate.getMonth() + 1).padStart(2, '0')}/${String(tokyoBrokerDate.getDate()).padStart(2, '0')}`;
                     return (
-                      <Typography
+                      <Box
                         sx={{
                           ml: 3,
-                          color: '#d32f2f',
-                          fontWeight: 'bold',
-                          fontSize: '1.2rem',
-                          animation: 'pulse 2s infinite',
-                          '@keyframes pulse': {
+                          px: 3,
+                          py: 1.5,
+                          background: 'repeating-linear-gradient(45deg, #ffeb3b, #ffeb3b 10px, #f44336 10px, #f44336 20px)',
+                          borderRadius: 1,
+                          border: '3px solid #d32f2f',
+                          boxShadow: '0 0 20px rgba(244, 67, 54, 0.6)',
+                          animation: 'blink 1.5s infinite, shake 0.5s infinite',
+                          '@keyframes blink': {
                             '0%, 100%': { opacity: 1 },
-                            '50%': { opacity: 0.7 },
+                            '50%': { opacity: 0.8 },
+                          },
+                          '@keyframes shake': {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '25%': { transform: 'translateX(-2px)' },
+                            '75%': { transform: 'translateX(2px)' },
                           },
                         }}
                       >
-                        業者対応: {formattedDate}
-                      </Typography>
+                        <Typography
+                          sx={{
+                            color: '#000',
+                            fontWeight: 'bold',
+                            fontSize: '1.3rem',
+                            textShadow: '2px 2px 4px rgba(255,255,255,0.8)',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          ⚠️ 業者対応: {formattedDate} ⚠️
+                        </Typography>
+                      </Box>
                     );
                   }
                 } catch (error) {
