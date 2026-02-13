@@ -854,10 +854,10 @@ export class BuyerService {
       updated_at: new Date().toISOString(),
     };
 
-    // 問合せ物件番号が指定されている場合、物件種別を取得して希望種別に自動設定
-    if (newBuyer.property_number && !newBuyer.desired_property_type) {
+    // 問合せ物件番号が指定されている場合、物件情報を取得して自動設定
+    if (newBuyer.property_number) {
       try {
-        console.log('[BuyerService.create] property_number detected, fetching property type');
+        console.log('[BuyerService.create] property_number detected, fetching property info');
         const firstPropertyNumber = newBuyer.property_number.split(',')[0].trim();
         
         const { data: property, error: propertyError } = await this.supabase
@@ -875,8 +875,12 @@ export class BuyerService {
           };
           
           const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
-          newBuyer.desired_property_type = japanesePropertyType;
-          console.log(`[BuyerService.create] Auto-set desired_property_type: ${japanesePropertyType}`);
+          
+          // 希望種別を設定（既存の値がない場合のみ）
+          if (!newBuyer.desired_property_type) {
+            newBuyer.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService.create] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
           
           // 物件情報から価格帯とエリアを自動設定
           const { InquiryHearingParser } = await import('./InquiryHearingParser');
@@ -887,7 +891,7 @@ export class BuyerService {
               distribution_areas: property.distribution_areas,
               property_type: property.property_type
             },
-            japanesePropertyType
+            newBuyer.desired_property_type || japanesePropertyType
           );
           
           const propertyInfoUpdatedAt = new Date();
@@ -918,7 +922,7 @@ export class BuyerService {
           }
         }
       } catch (error) {
-        console.error('[BuyerService.create] Failed to fetch property type:', error);
+        console.error('[BuyerService.create] Failed to fetch property info:', error);
         // エラーが発生しても買主作成は継続
       }
     }
