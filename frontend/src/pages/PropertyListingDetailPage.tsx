@@ -681,24 +681,18 @@ export default function PropertyListingDetailPage() {
           <IconButton onClick={handleBack} size="large">
             <ArrowBackIcon />
           </IconButton>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                {data.property_number}
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={handleCopyPropertyNumber}
-                sx={{ color: SECTION_COLORS.property.main }}
-                title="物件番号をコピー"
-              >
-                <ContentCopyIcon fontSize="small" />
-              </IconButton>
-            </Box>
-            <Typography variant="body2" color="text.secondary">
-              所在地：{data.address || data.display_address || '未設定'}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
+              {data.property_number}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <IconButton
+              size="small"
+              onClick={handleCopyPropertyNumber}
+              sx={{ color: SECTION_COLORS.property.main }}
+              title="物件番号をコピー"
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
               {/* 公開URLボタン */}
               <Button
                 variant="outlined"
@@ -946,7 +940,6 @@ ${propertyDetailUrl}
                 </Button>
               )}
             </Box>
-          </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
