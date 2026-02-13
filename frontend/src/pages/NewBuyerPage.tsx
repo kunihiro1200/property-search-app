@@ -5,17 +5,32 @@ import {
   Box,
   Typography,
   Paper,
-  TextField,
-  Button,
   Grid,
-  Alert,
+  Button,
+  Divider,
   CircularProgress,
-  Autocomplete,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import api from '../services/api';
-import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
+import api, { buyerApi } from '../services/api';
 import PropertyInfoCard from '../components/PropertyInfoCard';
+import { InlineEditableField } from '../components/InlineEditableField';
+import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
+import { LATEST_STATUS_OPTIONS } from '../utils/buyerLatestStatusOptions';
+import { 
+  INQUIRY_EMAIL_PHONE_OPTIONS, 
+  THREE_CALLS_CONFIRMED_OPTIONS, 
+  EMAIL_TYPE_OPTIONS, 
+  DISTRIBUTION_TYPE_OPTIONS 
+} from '../utils/buyerFieldOptions';
+import {
+  OTHER_PROPERTY_HEARING_OPTIONS,
+  EMAIL_CONFIRMATION_OPTIONS,
+  PINRICH_OPTIONS,
+  VIEWING_PROMOTION_EMAIL_OPTIONS,
+} from '../utils/buyerDetailFieldOptions';
+import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyInfo {
   property_number: string;
@@ -38,7 +53,54 @@ interface PropertyInfo {
   viewing_notes?: string;
   special_notes?: string;
   memo?: string;
+  broker_response?: string;
 }
+
+// 問合時ヒアリング用クイック入力ボタンの定義
+const INQUIRY_HEARING_QUICK_INPUTS = [
+  { label: '初見か', text: '初見か：' },
+  { label: '希望時期', text: '希望時期：' },
+  { label: '駐車場希望台数', text: '駐車場希望台数：' },
+  { label: '予算', text: '予算：' },
+  { label: '持ち家か', text: '持ち家か：' },
+  { label: '他物件', text: '他に気になる物件はあるか？：' },
+];
+
+// 買主詳細ページと同じフィールド定義
+const BUYER_FIELD_SECTIONS = [
+  {
+    title: '問合せ内容',
+    fields: [
+      // 一番上：問合時ヒアリング（全幅）
+      { key: 'inquiry_hearing', label: '問合時ヒアリング', multiline: true, inlineEditable: true, fullWidth: true },
+      // 業者向けアンケート（問合時ヒアリングの直下、条件付き表示）
+      { key: 'broker_survey', label: '業者向けアンケート', inlineEditable: true, fieldType: 'button', conditionalDisplay: true },
+      // 左の列
+      { key: 'inquiry_email_phone', label: '【問合メール】電話対応', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
+      { key: 'three_calls_confirmed', label: '3回架電確認済み', inlineEditable: true, fieldType: 'dropdown', column: 'left', conditionalDisplay: true, required: true },
+      { key: 'viewing_promotion_email', label: '内覧促進メール', inlineEditable: true, fieldType: 'button', column: 'left', conditionalDisplay: true, required: true },
+      { key: 'distribution_type', label: '配信の有無', inlineEditable: true, fieldType: 'button', column: 'left' },
+      { key: 'pinrich', label: 'Pinrich', inlineEditable: true, fieldType: 'dropdown', column: 'left' },
+      // 右の列
+      { key: 'reception_date', label: '受付日', type: 'date', inlineEditable: true, column: 'right' },
+      { key: 'initial_assignee', label: '初動担当', inlineEditable: true, fieldType: 'button', column: 'right' },
+      { key: 'inquiry_source', label: '問合せ元', inlineEditable: true, column: 'right' },
+      { key: 'next_call_date', label: '次電日', type: 'date', inlineEditable: true, column: 'right' },
+      { key: 'latest_status', label: '最新状況', inlineEditable: true, fieldType: 'dropdown', column: 'right' },
+    ],
+  },
+  {
+    title: '基本情報',
+    fields: [
+      { key: 'name', label: '氏名・会社名', inlineEditable: true },
+      { key: 'phone_number', label: '電話番号', inlineEditable: true },
+      { key: 'email', label: 'メールアドレス', inlineEditable: true },
+      { key: 'email_confirmation', label: 'メアド確認', inlineEditable: true, fieldType: 'dropdown', conditionalDisplay: true },
+      { key: 'company_name', label: '法人名', inlineEditable: true },
+      { key: 'broker_inquiry', label: '業者問合せ', inlineEditable: true, fieldType: 'button', conditionalDisplay: true, required: true },
+    ],
+  },
+];
 
 export default function NewBuyerPage() {
   const navigate = useNavigate();
@@ -46,37 +108,21 @@ export default function NewBuyerPage() {
   const propertyNumber = searchParams.get('propertyNumber');
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [propertyInfo, setPropertyInfo] = useState<PropertyInfo | null>(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
-
-  // 基本情報
-  const [name, setName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
   const [propertyNumberField, setPropertyNumberField] = useState(propertyNumber || '');
   
-  // 問合せ情報
-  const [receptionDate, setReceptionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [inquirySource, setInquirySource] = useState('');
-  const [inquiryHearing, setInquiryHearing] = useState('');
-  const [inquiryConfidence, setInquiryConfidence] = useState('');
-  
-  // 希望条件
-  const [desiredArea, setDesiredArea] = useState('');
-  const [desiredPropertyType, setDesiredPropertyType] = useState('');
-  const [budget, setBudget] = useState('');
-  
-  // 内覧情報
-  const [latestViewingDate, setLatestViewingDate] = useState('');
-  const [viewingTime, setViewingTime] = useState('');
-  const [followUpAssignee, setFollowUpAssignee] = useState('');
-  const [viewingResultFollowUp, setViewingResultFollowUp] = useState('');
-  
-  // その他
-  const [latestStatus, setLatestStatus] = useState('');
-  const [preViewingNotes, setPreViewingNotes] = useState('');
-  const [viewingNotes, setViewingNotes] = useState('');
+  // 買主データ（新規登録用の空オブジェクト）
+  const [buyer, setBuyer] = useState<any>({
+    property_number: propertyNumber || '',
+    reception_date: new Date().toISOString().split('T')[0], // 今日の日付をデフォルト
+  });
+
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   useEffect(() => {
     if (propertyNumber) {
@@ -97,56 +143,73 @@ export default function NewBuyerPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name) {
-      setError('氏名は必須です');
+  // フィールド更新ハンドラー（新規登録用）
+  const handleFieldUpdate = async (fieldName: string, newValue: any) => {
+    // ローカル状態を更新
+    setBuyer((prev: any) => ({ ...prev, [fieldName]: newValue }));
+    return { success: true };
+  };
+
+  // 問合時ヒアリング用クイック入力ボタンのクリックハンドラー
+  const handleInquiryHearingQuickInput = (text: string) => {
+    const currentValue = buyer.inquiry_hearing || '';
+    const newValue = currentValue ? `${text}\n${currentValue}` : text;
+    setBuyer((prev: any) => ({ ...prev, inquiry_hearing: newValue }));
+  };
+
+  const handleSubmit = async () => {
+    if (!buyer.name) {
+      setSnackbar({
+        open: true,
+        message: '氏名は必須です',
+        severity: 'error',
+      });
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
+      // 物件番号を追加
       const buyerData = {
-        name,
-        phone_number: phoneNumber,
-        email,
+        ...buyer,
         property_number: propertyNumberField,
-        reception_date: receptionDate,
-        inquiry_source: inquirySource,
-        inquiry_hearing: inquiryHearing,
-        inquiry_confidence: inquiryConfidence,
-        desired_area: desiredArea,
-        desired_property_type: desiredPropertyType,
-        budget,
-        latest_viewing_date: latestViewingDate,
-        viewing_time: viewingTime,
-        follow_up_assignee: followUpAssignee,
-        viewing_result_follow_up: viewingResultFollowUp,
-        latest_status: latestStatus,
-        pre_viewing_notes: preViewingNotes,
-        viewing_notes: viewingNotes,
       };
 
       await api.post('/api/buyers', buyerData);
       
+      setSnackbar({
+        open: true,
+        message: '買主を登録しました',
+        severity: 'success',
+      });
+
       // 物件番号がある場合は物件詳細ページに戻る
-      if (propertyNumberField) {
-        navigate(`/property-listings/${propertyNumberField}`);
-      } else {
-        navigate('/buyers');
-      }
+      setTimeout(() => {
+        if (propertyNumberField) {
+          navigate(`/property-listings/${propertyNumberField}`);
+        } else {
+          navigate('/buyers');
+        }
+      }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.error || '買主の作成に失敗しました');
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || '買主の作成に失敗しました',
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
+      {/* ヘッダー */}
       <Box sx={{ mb: 3 }}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -164,29 +227,30 @@ export default function NewBuyerPage() {
         <Typography variant="h5" fontWeight="bold">新規買主登録</Typography>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
-
       <Grid container spacing={3}>
         {/* 左側: 物件情報 */}
         <Grid item xs={12} md={5}>
-          <TextField
-            fullWidth
-            label="物件番号"
-            value={propertyNumberField}
-            onChange={(e) => {
-              setPropertyNumberField(e.target.value);
-              if (e.target.value) {
-                fetchPropertyInfo(e.target.value);
-              } else {
-                setPropertyInfo(null);
-              }
-            }}
-            sx={{ mb: 2 }}
-          />
+          {/* 物件番号入力フィールド */}
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>物件番号</Typography>
+            <InlineEditableField
+              value={propertyNumberField}
+              fieldName="property_number"
+              fieldType="text"
+              onSave={async (newValue) => {
+                setPropertyNumberField(newValue);
+                setBuyer((prev: any) => ({ ...prev, property_number: newValue }));
+                if (newValue) {
+                  fetchPropertyInfo(newValue);
+                } else {
+                  setPropertyInfo(null);
+                }
+              }}
+              placeholder="物件番号を入力"
+              alwaysShowBorder={true}
+              showEditIndicator={true}
+            />
+          </Paper>
 
           {loadingProperty && (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -215,248 +279,338 @@ export default function NewBuyerPage() {
           )}
         </Grid>
 
-        {/* 右側: 買主入力フォーム */}
+        {/* 右側: 買主入力フォーム（買主詳細ページと同じ構造） */}
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 3 }}>
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                {/* 基本情報 */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>基本情報</Typography>
-                </Grid>
+          {/* 問合時ヒアリング用クイック入力ボタン */}
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>問合時ヒアリング - クイック入力</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {INQUIRY_HEARING_QUICK_INPUTS.map((input) => (
+                <Button
+                  key={input.label}
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleInquiryHearingQuickInput(input.text)}
+                  sx={{
+                    borderColor: SECTION_COLORS.buyer.main,
+                    color: SECTION_COLORS.buyer.main,
+                    '&:hover': {
+                      borderColor: SECTION_COLORS.buyer.dark,
+                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                    },
+                  }}
+                >
+                  {input.label}
+                </Button>
+              ))}
+            </Box>
+          </Paper>
 
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    required
-                    label="氏名・会社名"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="電話番号"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="メールアドレス"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </Grid>
-
-                {/* 問合せ情報 */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>問合せ情報</Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="受付日"
-                    type="date"
-                    value={receptionDate}
-                    onChange={(e) => setReceptionDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    helperText="自動で今日の日付が入力されます"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Autocomplete
-                    fullWidth
-                    options={INQUIRY_SOURCE_OPTIONS}
-                    groupBy={(option) => option.category}
-                    getOptionLabel={(option) => option.label}
-                    value={INQUIRY_SOURCE_OPTIONS.find(opt => opt.value === inquirySource) || null}
-                    onChange={(_, newValue) => setInquirySource(newValue?.value || '')}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="問合せ元"
-                      />
+          {/* フィールドセクション */}
+          {BUYER_FIELD_SECTIONS.map((section) => (
+            <Paper key={section.title} sx={{ p: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                <Typography variant="h6">{section.title}</Typography>
+                {/* 問合せ内容セクションの場合、初動担当・問合せ元・受付日を表示 */}
+                {section.title === '問合せ内容' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                    {buyer.initial_assignee && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        px: 1.5,
+                        py: 0.5,
+                        bgcolor: 'grey.300',
+                        color: 'text.primary',
+                        borderRadius: 1,
+                        fontSize: '0.875rem',
+                        fontWeight: 'bold',
+                      }}>
+                        初動：{buyer.initial_assignee}
+                      </Box>
                     )}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="問合時ヒアリング"
-                    multiline
-                    rows={4}
-                    value={inquiryHearing}
-                    onChange={(e) => setInquiryHearing(e.target.value)}
-                    placeholder="ヒアリング内容を入力してください"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="問合時確度"
-                    value={inquiryConfidence}
-                    onChange={(e) => setInquiryConfidence(e.target.value)}
-                    placeholder="例: A, B, C, S"
-                  />
-                </Grid>
-
-                {/* 希望条件 */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>希望条件</Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="希望エリア"
-                    value={desiredArea}
-                    onChange={(e) => setDesiredArea(e.target.value)}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="希望種別"
-                    value={desiredPropertyType}
-                    onChange={(e) => setDesiredPropertyType(e.target.value)}
-                    placeholder="例: 戸建て、マンション"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="予算"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="例: 3000万円"
-                  />
-                </Grid>
-
-                {/* 内覧情報 */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>内覧情報</Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="内覧日（最新）"
-                    type="date"
-                    value={latestViewingDate}
-                    onChange={(e) => setLatestViewingDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="時間"
-                    value={viewingTime}
-                    onChange={(e) => setViewingTime(e.target.value)}
-                    placeholder="例: 14:00"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="後続担当"
-                    value={followUpAssignee}
-                    onChange={(e) => setFollowUpAssignee(e.target.value)}
-                    placeholder="例: Y, K"
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="内覧結果・後続対応"
-                    multiline
-                    rows={3}
-                    value={viewingResultFollowUp}
-                    onChange={(e) => setViewingResultFollowUp(e.target.value)}
-                  />
-                </Grid>
-
-                {/* その他 */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>その他</Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="最新状況"
-                    value={latestStatus}
-                    onChange={(e) => setLatestStatus(e.target.value)}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="内覧前伝達事項"
-                    multiline
-                    rows={3}
-                    value={preViewingNotes}
-                    onChange={(e) => setPreViewingNotes(e.target.value)}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="内覧メモ"
-                    multiline
-                    rows={3}
-                    value={viewingNotes}
-                    onChange={(e) => setViewingNotes(e.target.value)}
-                  />
-                </Grid>
-
-                {/* ボタン */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        if (propertyNumberField) {
-                          navigate(`/property-listings/${propertyNumberField}`);
-                        } else {
-                          navigate('/buyers');
-                        }
-                      }}
-                      disabled={loading}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={loading}
-                    >
-                      {loading ? '登録中...' : '登録'}
-                    </Button>
+                    {buyer.inquiry_source && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        px: 1.5,
+                        py: 0.5,
+                        bgcolor: 'grey.200',
+                        color: 'text.primary',
+                        borderRadius: 1,
+                        fontSize: '0.875rem',
+                      }}>
+                        {buyer.inquiry_source}
+                      </Box>
+                    )}
+                    {buyer.reception_date && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        px: 1.5,
+                        py: 0.5,
+                        bgcolor: 'grey.200',
+                        color: 'text.primary',
+                        borderRadius: 1,
+                        fontSize: '0.875rem',
+                      }}>
+                        {new Date(buyer.reception_date).toLocaleDateString('ja-JP')}
+                      </Box>
+                    )}
                   </Box>
-                </Grid>
+                )}
+              </Box>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2}>
+                {section.fields.map((field: any) => {
+                  const value = buyer[field.key];
+                  
+                  // グリッドサイズの決定
+                  const gridSize = field.fullWidth 
+                    ? { xs: 12 } 
+                    : field.column 
+                      ? { xs: 12, sm: 6 } 
+                      : field.multiline 
+                        ? { xs: 12 } 
+                        : { xs: 12, sm: 6 };
+                  
+                  // broker_surveyフィールドは値がある場合のみ表示
+                  if (field.key === 'broker_survey' && (!value || value.trim() === '')) {
+                    return null;
+                  }
+
+                  // 問合せ内容セクションで、値がある場合は非表示にするフィールド
+                  if (section.title === '問合せ内容') {
+                    if (field.key === 'initial_assignee' && buyer.initial_assignee) {
+                      return null;
+                    }
+                    if (field.key === 'inquiry_source' && buyer.inquiry_source) {
+                      return null;
+                    }
+                    if (field.key === 'reception_date' && buyer.reception_date) {
+                      return null;
+                    }
+                  }
+
+                  // インライン編集可能なフィールド
+                  if (field.inlineEditable) {
+                    // inquiry_sourceフィールドは特別処理（ドロップダウン）
+                    if (field.key === 'inquiry_source') {
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <InlineEditableField
+                            label={field.label}
+                            value={value || ''}
+                            fieldName={field.key}
+                            fieldType="dropdown"
+                            options={INQUIRY_SOURCE_OPTIONS}
+                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            showEditIndicator={true}
+                            oneClickDropdown={true}
+                          />
+                        </Grid>
+                      );
+                    }
+
+                    // latest_statusフィールドは特別処理（ドロップダウン）
+                    if (field.key === 'latest_status') {
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <InlineEditableField
+                            label={field.label}
+                            value={value || ''}
+                            fieldName={field.key}
+                            fieldType="dropdown"
+                            options={LATEST_STATUS_OPTIONS}
+                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            showEditIndicator={true}
+                            oneClickDropdown={true}
+                          />
+                        </Grid>
+                      );
+                    }
+
+                    // inquiry_email_phoneフィールドは特別処理（条件付き表示・ボタン形式）
+                    if (field.key === 'inquiry_email_phone') {
+                      const shouldDisplay = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      if (!shouldDisplay) {
+                        return null;
+                      }
+
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      const standardOptions = ['済', '未', '不通', '不要'];
+                      const isStandardValue = standardOptions.includes(value);
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            {isStandardValue || !value ? (
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {standardOptions.map((option) => (
+                                  <Button
+                                    key={option}
+                                    variant={value === option ? 'contained' : 'outlined'}
+                                    sx={{ 
+                                      flex: '1 1 auto', 
+                                      minWidth: '60px',
+                                      ...(value === option ? {
+                                        backgroundColor: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          backgroundColor: SECTION_COLORS.buyer.dark,
+                                        },
+                                      } : {
+                                        borderColor: SECTION_COLORS.buyer.main,
+                                        color: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          borderColor: SECTION_COLORS.buyer.dark,
+                                          backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                        },
+                                      }),
+                                    }}
+                                    size="small"
+                                    onClick={() => handleButtonClick(option)}
+                                  >
+                                    {option}
+                                  </Button>
+                                ))}
+                              </Box>
+                            ) : (
+                              <Box sx={{ 
+                                p: 1, 
+                                border: '1px solid', 
+                                borderColor: 'warning.main',
+                                borderRadius: 1,
+                                bgcolor: 'warning.light',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {value}
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => setBuyer((prev: any) => ({ ...prev, [field.key]: '' }))}
+                                  sx={{ ml: 1 }}
+                                >
+                                  クリア
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // 日付フィールド
+                    if (field.type === 'date') {
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <InlineEditableField
+                            label={field.label}
+                            value={value || ''}
+                            fieldName={field.key}
+                            fieldType="date"
+                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            showEditIndicator={true}
+                          />
+                        </Grid>
+                      );
+                    }
+
+                    // テキストエリア
+                    if (field.multiline) {
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <InlineEditableField
+                            label={field.label}
+                            value={value || ''}
+                            fieldName={field.key}
+                            fieldType="textarea"
+                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            alwaysShowBorder={true}
+                            borderPlaceholder="クリックして入力"
+                            showEditIndicator={true}
+                          />
+                        </Grid>
+                      );
+                    }
+
+                    // 通常のテキストフィールド
+                    return (
+                      <Grid item {...gridSize} key={field.key}>
+                        <InlineEditableField
+                          label={field.label}
+                          value={value || ''}
+                          fieldName={field.key}
+                          fieldType="text"
+                          onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                          readOnly={field.readOnly}
+                          showEditIndicator={true}
+                        />
+                      </Grid>
+                    );
+                  }
+
+                  return null;
+                })}
               </Grid>
-            </form>
+            </Paper>
+          ))}
+
+          {/* 登録ボタン */}
+          <Paper sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  if (propertyNumberField) {
+                    navigate(`/property-listings/${propertyNumberField}`);
+                  } else {
+                    navigate('/buyers');
+                  }
+                }}
+                disabled={loading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading}
+                sx={{
+                  backgroundColor: SECTION_COLORS.buyer.main,
+                  '&:hover': {
+                    backgroundColor: SECTION_COLORS.buyer.dark,
+                  },
+                }}
+              >
+                {loading ? '登録中...' : '登録'}
+              </Button>
+            </Box>
           </Paper>
         </Grid>
       </Grid>
+
+      {/* スナックバー */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
