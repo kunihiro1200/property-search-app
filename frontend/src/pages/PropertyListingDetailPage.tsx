@@ -1050,6 +1050,25 @@ export default function PropertyListingDetailPage() {
                   <Typography variant="body1">{data.distribution_date || '-'}</Typography>
                 )}
               </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>売出価格</Typography>
+                {isBasicInfoEditMode ? (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    type="number"
+                    value={editedData.listing_price !== undefined ? editedData.listing_price : (data.listing_price || '')}
+                    onChange={(e) => handleFieldChange('listing_price', e.target.value ? Number(e.target.value) : null)}
+                    InputProps={{
+                      startAdornment: <Typography sx={{ mr: 0.5 }}>¥</Typography>,
+                    }}
+                  />
+                ) : (
+                  <Typography variant="body1">
+                    {data.listing_price ? `¥${data.listing_price.toLocaleString()}` : '-'}
+                  </Typography>
+                )}
+              </Grid>
               <Grid item xs={12}>
                 <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', color: 'text.primary', mb: 0.5 }}>所在地</Typography>
                 {isBasicInfoEditMode ? (

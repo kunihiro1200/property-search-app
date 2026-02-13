@@ -157,6 +157,50 @@ router.put('/:propertyNumber', async (req: Request, res: Response) => {
       }
     }
 
+    // 価格変更時に値下げ履歴を自動追加
+    if (updates.price !== undefined || updates.sales_price !== undefined) {
+      // 現在の物件データを取得
+      const currentProperty = await propertyListingService.getByPropertyNumber(propertyNumber);
+      
+      if (currentProperty) {
+        const newPrice = updates.price !== undefined ? updates.price : updates.sales_price;
+        const oldPrice = currentProperty.price || currentProperty.sales_price;
+        
+        // 価格が変更された場合のみ履歴を追加
+        if (newPrice !== oldPrice && oldPrice !== null && oldPrice !== undefined) {
+          // ログインユーザーのイニシャルを取得
+          const userInitials = (req as any).employee?.initials || 'U';
+          
+          // 現在の日付（月/日形式）
+          const now = new Date();
+          const month = now.getMonth() + 1;
+          const day = now.getDate();
+          const dateStr = `${month}/${day}`;
+          
+          // 価格を万円単位に変換
+          const oldPriceMan = Math.round(oldPrice / 10000);
+          const newPriceMan = Math.round(newPrice / 10000);
+          
+          // 新しい履歴エントリ: "K2/13 890万→790万"
+          const newHistoryEntry = `${userInitials}${dateStr} ${oldPriceMan}万→${newPriceMan}万`;
+          
+          // 既存の履歴の前に追加
+          const existingHistory = currentProperty.price_reduction_history || '';
+          updates.price_reduction_history = existingHistory 
+            ? `${newHistoryEntry}\n${existingHistory}`
+            : newHistoryEntry;
+          
+          console.log('[price-change] Auto-added price reduction history:', {
+            propertyNumber,
+            oldPrice,
+            newPrice,
+            userInitials,
+            newHistoryEntry
+          });
+        }
+      }
+    }
+
     const data = await propertyListingService.update(propertyNumber, updates);
     res.json(data);
   } catch (error: any) {
