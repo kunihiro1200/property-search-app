@@ -706,11 +706,38 @@ export default function PropertyListingDetailPage() {
                   variant="outlined"
                   size="medium"
                   onClick={() => {
-                    // Chat送信ダイアログを開く処理（後で実装）
-                    const message = prompt('担当者へのメッセージを入力してください:');
-                    if (message) {
+                    const userMessage = prompt('担当者へのメッセージを入力してください:');
+                    if (userMessage) {
+                      // 物件詳細画面のURL
+                      const propertyDetailUrl = `${window.location.origin}/property-listings/${data.property_number}`;
+                      
+                      // 送信者情報（ログインユーザー名を取得、なければ「システム」）
+                      const senderName = localStorage.getItem('userName') || 'システム';
+                      
+                      // 詳細情報を含めたメッセージを作成
+                      const detailedMessage = `
+【送信者】${senderName}
+
+【メッセージ】
+${userMessage.trim()}
+
+━━━━━━━━━━━━━━━━━━━━
+【物件情報】
+物件番号: ${data.property_number}
+所在地: ${data.address || data.display_address || '未設定'}
+価格: ${data.price ? `¥${data.price.toLocaleString()}` : '未設定'}
+
+【売主情報】
+売主名: ${data.seller_name || '未設定'}
+売主連絡先: ${data.seller_contact || '未設定'}
+
+【物件詳細画面】
+${propertyDetailUrl}
+━━━━━━━━━━━━━━━━━━━━
+                      `.trim();
+                      
                       api.post(`/api/chat-notifications/property-assignee/${data.property_number}`, {
-                        message: message.trim(),
+                        message: detailedMessage,
                       })
                       .then(() => {
                         setSnackbar({
