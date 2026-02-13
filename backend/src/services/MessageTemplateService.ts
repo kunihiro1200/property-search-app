@@ -13,7 +13,10 @@ export class MessageTemplateService {
   private readonly SHEET_NAME = 'テンプレート';
 
   constructor() {
-    this.sheetsClient = new GoogleSheetsClient();
+    this.sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: this.SPREADSHEET_ID,
+      sheetName: this.SHEET_NAME,
+    });
   }
 
   /**
