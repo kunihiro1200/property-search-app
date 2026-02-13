@@ -497,4 +497,130 @@ router.post(
   }
 );
 
+/**
+ * Get pending price reduction notifications
+ * GET /chat-notifications/pending-price-reductions
+ */
+router.get('/pending-price-reductions', async (_req: Request, res: Response) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    // 現在時刻（東京時間）
+    const now = new Date();
+    
+    // 予約日が今日の9時以降で、ステータスがpendingの通知を取得
+    const { data: notifications, error } = await supabase
+      .from('scheduled_notifications')
+      .select('*')
+      .eq('status', 'pending')
+      .lte('scheduled_at', now.toISOString())
+      .order('scheduled_at', { ascending: true });
+    
+    if (error) {
+      console.error('[pending-price-reductions] Failed to fetch notifications:', error);
+      return res.status(500).json({
+        error: {
+          code: 'DATABASE_ERROR',
+          message: 'Failed to fetch pending price reductions',
+          retryable: true,
+        },
+      });
+    }
+    
+    // 物件番号でグループ化
+    const propertyNumbers = Array.from(new Set(
+      (notifications || []).map(n => n.property_number)
+    ));
+    
+    res.json({ 
+      success: true,
+      propertyNumbers,
+      notifications: notifications || [],
+    });
+  } catch (error: any) {
+    console.error('Get pending price reductions error:', error);
+    res.status(500).json({
+      error: {
+        code: 'NOTIFICATION_ERROR',
+        message: error.message || 'Failed to get pending price reductions',
+        retryable: true,
+      },
+    });
+  }
+});
+
+/**
+ * Complete price reduction notification
+ * POST /chat-notifications/complete-price-reduction/:notificationId
+ */
+router.post(
+  '/complete-price-reduction/:notificationId',
+  [
+    param('notificationId').isUUID().withMessage('Invalid notification ID'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Validation failed',
+            details: errors.array(),
+            retryable: false,
+          },
+        });
+      }
+
+      const { notificationId } = req.params;
+      
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
+      // ステータスを'completed'に更新
+      const { error } = await supabase
+        .from('scheduled_notifications')
+        .update({
+          status: 'completed',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', notificationId)
+        .eq('status', 'pending'); // pending状態のみ完了可能
+      
+      if (error) {
+        console.error('[complete-price-reduction] Failed to complete notification:', error);
+        return res.status(500).json({
+          error: {
+            code: 'DATABASE_ERROR',
+            message: 'Failed to complete price reduction',
+            retryable: true,
+          },
+        });
+      }
+      
+      console.log(`[complete-price-reduction] Completed notification: ${notificationId}`);
+      
+      res.json({ 
+        success: true,
+      });
+    } catch (error: any) {
+      console.error('Complete price reduction error:', error);
+      res.status(500).json({
+        error: {
+          code: 'NOTIFICATION_ERROR',
+          message: error.message || 'Failed to complete price reduction',
+          retryable: true,
+        },
+      });
+    }
+  }
+);
+
 export default router;

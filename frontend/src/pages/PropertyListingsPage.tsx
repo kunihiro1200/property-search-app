@@ -70,6 +70,7 @@ export default function PropertyListingsPage() {
   const [buyerCounts, setBuyerCounts] = useState<Record<string, number>>({});
   const [highConfidenceProperties, setHighConfidenceProperties] = useState<Set<string>>(new Set());
   const [selectedPropertyNumbers, setSelectedPropertyNumbers] = useState<Set<string>>(new Set());
+  const [pendingPriceReductionProperties, setPendingPriceReductionProperties] = useState<Set<string>>(new Set());
 
   // 状態を復元
   useEffect(() => {
@@ -85,7 +86,19 @@ export default function PropertyListingsPage() {
 
   useEffect(() => {
     fetchAllData();
+    fetchPendingPriceReductions();
   }, []);
+
+  const fetchPendingPriceReductions = async () => {
+    try {
+      const response = await api.get('/api/chat-notifications/pending-price-reductions');
+      if (response.data.success) {
+        setPendingPriceReductionProperties(new Set(response.data.propertyNumbers));
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending price reductions:', error);
+    }
+  };
 
   const fetchAllData = async () => {
     try {
@@ -141,7 +154,16 @@ export default function PropertyListingsPage() {
 
   // フィルタリング
   const filteredListings = useMemo(() => {
-    let listings = allListings;
+    let listings = allListings.map(listing => {
+      // 値下げ未完了の物件に仮想的なsidebar_statusを付与
+      if (pendingPriceReductionProperties.has(listing.property_number || '')) {
+        return {
+          ...listing,
+          sidebar_status: '値下げ未完了',
+        };
+      }
+      return listing;
+    });
     
     // 担当者フィルター
     if (selectedAssignee && selectedAssignee !== 'all') {
@@ -169,7 +191,7 @@ export default function PropertyListingsPage() {
     }
     
     return listings;
-  }, [allListings, selectedAssignee, sidebarStatus, searchQuery]);
+  }, [allListings, selectedAssignee, sidebarStatus, searchQuery, pendingPriceReductionProperties]);
 
   const paginatedListings = useMemo(() => {
     const start = page * rowsPerPage;
@@ -336,6 +358,25 @@ export default function PropertyListingsPage() {
           listings={allListings}
           selectedStatus={sidebarStatus}
           onStatusChange={(status) => { setSidebarStatus(status); setPage(0); }}
+          pendingPriceReductionProperties={pendingPriceReductionProperties}
+          onCompletePriceReduction={async (propertyNumber) => {
+            // 完了処理を実装
+            try {
+              // 通知IDを取得
+              const response = await api.get('/api/chat-notifications/pending-price-reductions');
+              const notification = response.data.notifications.find(
+                (n: any) => n.property_number === propertyNumber && n.status === 'pending'
+              );
+              
+              if (notification) {
+                await api.post(`/api/chat-notifications/complete-price-reduction/${notification.id}`);
+                // 再取得
+                await fetchPendingPriceReductions();
+              }
+            } catch (error) {
+              console.error('Failed to complete price reduction:', error);
+            }
+          }}
         />
 
         {/* メインコンテンツ */}
