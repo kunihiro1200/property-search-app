@@ -117,12 +117,12 @@ export default function CompactBuyerListForProperty({
                     },
                   }}
                   onClick={() => {
-                    navigate(`/buyers/${buyer.buyer_number}`, {
-                      state: {
-                        propertyNumber: propertyNumber,
-                        source: 'property-detail',
-                      },
-                    });
+                    // 別タブで買主詳細ページを開く
+                    window.open(
+                      `/buyers/${buyer.buyer_number}`,
+                      '_blank',
+                      'noopener,noreferrer'
+                    );
                   }}
                 >
                   <TableCell>{buyer.name}</TableCell>
