@@ -32,6 +32,7 @@ import EditableSection from '../components/EditableSection';
 import GmailDistributionButton from '../components/GmailDistributionButton';
 import DistributionAreaField from '../components/DistributionAreaField';
 import EditableUrlField from '../components/EditableUrlField';
+import MessageTemplateDialog from '../components/MessageTemplateDialog';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyListing {
@@ -148,6 +149,7 @@ export default function PropertyListingDetailPage() {
   const [workTaskData, setWorkTaskData] = useState<WorkTaskData | null>(null);
   const [retrievingStorageUrl, setRetrievingStorageUrl] = useState(false);
   const [isCalculatingAreas, setIsCalculatingAreas] = useState(false);
+  const [messageTemplateDialogOpen, setMessageTemplateDialogOpen] = useState(false);
   
   // Edit mode states for each section
   const [isPriceEditMode, setIsPriceEditMode] = useState(false);
@@ -635,9 +637,9 @@ export default function PropertyListingDetailPage() {
               {/* 公開URLボタン */}
               <Button
                 variant="outlined"
-                size="small"
+                size="medium"
                 onClick={handleOpenPublicUrl}
-                endIcon={<OpenInNewIcon fontSize="small" />}
+                endIcon={<OpenInNewIcon />}
                 sx={{
                   ml: 1,
                   borderColor: SECTION_COLORS.property.main,
@@ -651,23 +653,22 @@ export default function PropertyListingDetailPage() {
                 公開URL
               </Button>
               <IconButton
-                size="small"
+                size="medium"
                 onClick={handleCopyPublicUrl}
                 sx={{ color: SECTION_COLORS.property.main }}
                 title="公開URLをコピー"
               >
-                <ContentCopyIcon fontSize="small" />
+                <ContentCopyIcon />
               </IconButton>
-            </Box>
-            {/* 売主連絡先ボタン */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+              {/* 売主連絡先ボタン */}
               {data.seller_contact && (
                 <Button
                   variant="outlined"
-                  size="small"
+                  size="medium"
                   href={`tel:${data.seller_contact}`}
-                  startIcon={<PhoneIcon fontSize="small" />}
+                  startIcon={<PhoneIcon />}
                   sx={{
+                    ml: 1,
                     borderColor: '#2e7d32',
                     color: '#2e7d32',
                     '&:hover': {
@@ -682,9 +683,9 @@ export default function PropertyListingDetailPage() {
               {data.seller_email && (
                 <Button
                   variant="outlined"
-                  size="small"
-                  href={`mailto:${data.seller_email}`}
-                  startIcon={<EmailIcon fontSize="small" />}
+                  size="medium"
+                  onClick={() => setMessageTemplateDialogOpen(true)}
+                  startIcon={<EmailIcon />}
                   sx={{
                     borderColor: '#1976d2',
                     color: '#1976d2',
@@ -699,16 +700,6 @@ export default function PropertyListingDetailPage() {
               )}
             </Box>
           </Box>
-          {buyerContext?.buyerId && buyerContext?.source === 'buyer-detail' && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                買主から遷移:
-              </Typography>
-              <Typography variant="body2" fontWeight="medium" sx={{ color: SECTION_COLORS.property.main }}>
-                {buyerContext.buyerName || `買主ID: ${buyerContext.buyerId}`}
-              </Typography>
-            </Box>
-          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
@@ -1723,6 +1714,16 @@ export default function PropertyListingDetailPage() {
           </Box>
         </Grid>
       </Grid>
+
+      {/* メッセージテンプレートダイアログ */}
+      {data?.seller_email && (
+        <MessageTemplateDialog
+          open={messageTemplateDialogOpen}
+          onClose={() => setMessageTemplateDialogOpen(false)}
+          recipientEmail={data.seller_email}
+          propertyNumber={data.property_number}
+        />
+      )}
 
       <Snackbar
         open={snackbar.open}
