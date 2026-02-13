@@ -1,6 +1,6 @@
-import { Box, Typography, TextField, Grid, Button, CircularProgress } from '@mui/material';
-import { Schedule as ScheduleIcon } from '@mui/icons-material';
-import { useState } from 'react';
+import { Box, Typography, TextField, Grid, Button, CircularProgress, List, ListItem, ListItemText, Chip } from '@mui/material';
+import { Schedule as ScheduleIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { useState, useEffect } from 'react';
 
 interface PriceSectionProps {
   salesPrice?: number;
@@ -33,6 +33,28 @@ export default function PriceSection({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledMessage, setScheduledMessage] = useState('');
   const [scheduling, setScheduling] = useState(false);
+  const [scheduledNotifications, setScheduledNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // 予約通知を取得
+  useEffect(() => {
+    if (!isEditMode && propertyNumber) {
+      fetchScheduledNotifications();
+    }
+  }, [isEditMode, propertyNumber]);
+
+  const fetchScheduledNotifications = async () => {
+    setLoadingNotifications(true);
+    try {
+      const api = (await import('../services/api')).default;
+      const response = await api.get(`/api/chat-notifications/scheduled/${propertyNumber}`);
+      setScheduledNotifications(response.data.notifications || []);
+    } catch (error) {
+      console.error('Failed to fetch scheduled notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
   const formatPrice = (price?: number | null) => {
     if (price === null || price === undefined) return '-';
@@ -61,6 +83,8 @@ export default function PriceSection({
       onChatSendSuccess(`予約値下げを設定しました（${scheduledDate} 9:00に送信予定）`);
       setScheduledDate('');
       setScheduledMessage('');
+      // 予約通知リストを再取得
+      await fetchScheduledNotifications();
     } catch (error: any) {
       console.error('Failed to schedule price reduction:', error);
       onChatSendError(
@@ -135,6 +159,40 @@ export default function PriceSection({
             <Typography variant="body1" color="text.secondary" gutterBottom sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
               予約値下げ
             </Typography>
+            
+            {/* 予約済み通知リスト */}
+            {loadingNotifications ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : scheduledNotifications.length > 0 && (
+              <Box sx={{ mb: 2, p: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                <Typography variant="body2" fontWeight="bold" gutterBottom>
+                  予約済み
+                </Typography>
+                <List dense>
+                  {scheduledNotifications.map((notification) => (
+                    <ListItem key={notification.id} sx={{ px: 0 }}>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip 
+                              label={new Date(notification.scheduled_at).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' }) + ' 9:00'} 
+                              size="small" 
+                              color="warning"
+                            />
+                            <Typography variant="body2">
+                              {notification.message.split('\n').slice(2).join('\n')}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
+            
             <TextField
               fullWidth
               type="date"

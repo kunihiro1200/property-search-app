@@ -554,6 +554,55 @@ router.get('/pending-price-reductions', async (_req: Request, res: Response) => 
 });
 
 /**
+ * Get scheduled notifications for a property
+ * GET /chat-notifications/scheduled/:propertyNumber
+ */
+router.get('/scheduled/:propertyNumber', async (req: Request, res: Response) => {
+  try {
+    const { propertyNumber } = req.params;
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    // 物件の予約通知を取得（pending状態のみ）
+    const { data: notifications, error } = await supabase
+      .from('scheduled_notifications')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .eq('status', 'pending')
+      .order('scheduled_at', { ascending: true });
+    
+    if (error) {
+      console.error('[scheduled-notifications] Failed to fetch notifications:', error);
+      return res.status(500).json({
+        error: {
+          code: 'DATABASE_ERROR',
+          message: 'Failed to fetch scheduled notifications',
+          retryable: true,
+        },
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      notifications: notifications || [],
+    });
+  } catch (error: any) {
+    console.error('Get scheduled notifications error:', error);
+    res.status(500).json({
+      error: {
+        code: 'NOTIFICATION_ERROR',
+        message: error.message || 'Failed to get scheduled notifications',
+        retryable: true,
+      },
+    });
+  }
+});
+
+/**
  * Complete price reduction notification
  * POST /chat-notifications/complete-price-reduction/:notificationId
  */

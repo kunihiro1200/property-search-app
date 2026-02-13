@@ -8,6 +8,16 @@
     {
       "src": "api/redirect.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron/process-scheduled-notifications.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/process-scheduled-notifications",
+      "schedule": "* * * * *"
     }
   ],
   "rewrites": [
