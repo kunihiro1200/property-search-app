@@ -345,39 +345,21 @@ ${address}を近々売りに出すことになりました！
 TEL:097-533-2022`;
 
     try {
-      setSnackbar({
-        open: true,
-        message: 'SMS送信中...',
-        severity: 'info',
-      });
-
-      // バックエンドAPIを使用してSMS送信
-      await api.post('/api/sms/send-bulk', {
-        recipients: [{
-          phoneNumber: candidate.phone_number,
-          name: buyerName,
-        }],
-        message: message,
-      });
+      // SMS送信用のリンクを開く（売主リストの通話モードと同じ仕組み）
+      // 実際のSMS送信はスマートフォンのSMSアプリで行う
+      window.open(`sms:${candidate.phone_number}?body=${encodeURIComponent(message)}`, '_blank');
 
       setSnackbar({
         open: true,
-        message: `${buyerName}様にSMSを送信しました`,
+        message: `${buyerName}様へのSMSアプリを開きました`,
         severity: 'success',
       });
     } catch (error: any) {
-      console.error('Failed to send SMS:', error);
-      
-      let errorMessage = 'SMS送信に失敗しました。';
-      if (error.response?.status === 503) {
-        errorMessage = 'SMS送信サービスが設定されていません。管理者に連絡してください。';
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
+      console.error('Failed to open SMS app:', error);
       
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: 'SMSアプリを開けませんでした',
         severity: 'error',
       });
     }
