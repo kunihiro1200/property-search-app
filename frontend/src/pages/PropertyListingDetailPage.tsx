@@ -943,21 +943,33 @@ ${propertyDetailUrl}
               {/* 業者への対応日付表示（今日より後の場合のみ） */}
               {data.broker_response && (() => {
                 try {
+                  // broker_responseの値を確認
+                  let brokerDateValue = data.broker_response;
+                  
+                  // Excelシリアル値の場合は変換
+                  if (typeof brokerDateValue === 'number' || !isNaN(Number(brokerDateValue))) {
+                    const serialNumber = Number(brokerDateValue);
+                    // Excelシリアル値を日付に変換（1900年1月1日からの日数）
+                    const excelEpoch = new Date(1900, 0, 1);
+                    const daysOffset = serialNumber - 2; // Excelの1900年うるう年バグ対応
+                    brokerDateValue = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                  }
+                  
                   // 東京時間で今日の日付を取得
-                  const today = new Date();
-                  const tokyoToday = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-                  tokyoToday.setHours(0, 0, 0, 0);
+                  const now = new Date();
+                  const tokyoNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                  const tokyoToday = new Date(tokyoNow.getFullYear(), tokyoNow.getMonth(), tokyoNow.getDate());
                   
                   // broker_responseの日付をパース
-                  const brokerDate = new Date(data.broker_response);
-                  const tokyoBrokerDate = new Date(brokerDate.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-                  tokyoBrokerDate.setHours(0, 0, 0, 0);
+                  const brokerDate = new Date(brokerDateValue);
+                  const tokyoBrokerDate = new Date(brokerDate.getFullYear(), brokerDate.getMonth(), brokerDate.getDate());
                   
                   // 今日より後の日付の場合のみ表示
                   if (tokyoBrokerDate > tokyoToday) {
+                    const formattedDate = `${tokyoBrokerDate.getFullYear()}/${String(tokyoBrokerDate.getMonth() + 1).padStart(2, '0')}/${String(tokyoBrokerDate.getDate()).padStart(2, '0')}`;
                     return (
                       <Chip
-                        label={`業者対応: ${new Date(data.broker_response).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })}`}
+                        label={`業者対応: ${formattedDate}`}
                         color="error"
                         size="medium"
                         sx={{
