@@ -138,7 +138,7 @@ export default function PriceSection({
             <TextField
               fullWidth
               type="date"
-              label="送信日"
+              label="予約日"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
