@@ -10,6 +10,58 @@ const activityLogService = new ActivityLogService();
 router.use(authenticate);
 
 /**
+ * 活動ログを記録
+ */
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { action, targetType, targetId, metadata } = req.body;
+
+    if (!action || !targetType || !targetId) {
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'action, targetType, and targetId are required',
+          retryable: false,
+        },
+      });
+    }
+
+    // ログインユーザーのemployee_idを取得
+    const employeeId = (req as any).employee?.id;
+    if (!employeeId) {
+      return res.status(401).json({
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Employee ID not found',
+          retryable: false,
+        },
+      });
+    }
+
+    await activityLogService.logActivity({
+      employeeId,
+      action,
+      targetType,
+      targetId,
+      metadata: metadata || {},
+      ipAddress: req.ip || '',
+      userAgent: req.get('user-agent') || '',
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Log activity error:', error);
+    res.status(500).json({
+      error: {
+        code: 'LOG_ACTIVITY_ERROR',
+        message: 'Failed to log activity',
+        retryable: true,
+      },
+    });
+  }
+});
+
+/**
  * 活動ログを取得
  */
 router.get(

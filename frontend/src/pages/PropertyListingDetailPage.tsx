@@ -668,7 +668,33 @@ export default function PropertyListingDetailPage() {
                 <Button
                   variant="outlined"
                   size="medium"
-                  href={`tel:${data.seller_contact}`}
+                  onClick={async () => {
+                    // 電話をかける
+                    window.location.href = `tel:${data.seller_contact}`;
+                    
+                    // コミュニケーション履歴を記録
+                    try {
+                      const { supabase } = await import('../config/supabase');
+                      const { data: { user } } = await supabase.auth.getUser();
+                      
+                      if (user?.email) {
+                        await api.post('/api/activity-logs', {
+                          action: 'phone_call',
+                          targetType: 'property_seller',
+                          targetId: data.property_number,
+                          metadata: {
+                            seller_name: data.seller_name,
+                            seller_contact: data.seller_contact,
+                            property_number: data.property_number,
+                            property_address: data.address || data.display_address,
+                          },
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Failed to log phone call:', error);
+                      // エラーでも電話は続行
+                    }
+                  }}
                   startIcon={<PhoneIcon />}
                   sx={{
                     ml: 1,
@@ -687,7 +713,32 @@ export default function PropertyListingDetailPage() {
                 <Button
                   variant="outlined"
                   size="medium"
-                  onClick={() => setMessageTemplateDialogOpen(true)}
+                  onClick={async () => {
+                    setMessageTemplateDialogOpen(true);
+                    
+                    // コミュニケーション履歴を記録
+                    try {
+                      const { supabase } = await import('../config/supabase');
+                      const { data: { user } } = await supabase.auth.getUser();
+                      
+                      if (user?.email) {
+                        await api.post('/api/activity-logs', {
+                          action: 'email',
+                          targetType: 'property_seller',
+                          targetId: data.property_number,
+                          metadata: {
+                            seller_name: data.seller_name,
+                            seller_email: data.seller_email,
+                            property_number: data.property_number,
+                            property_address: data.address || data.display_address,
+                          },
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Failed to log email:', error);
+                      // エラーでもメール作成は続行
+                    }
+                  }}
                   startIcon={<EmailIcon />}
                   sx={{
                     borderColor: '#1976d2',
@@ -706,7 +757,7 @@ export default function PropertyListingDetailPage() {
                 <Button
                   variant="outlined"
                   size="medium"
-                  onClick={() => {
+                  onClick={async () => {
                     // SMS本文を作成
                     const sellerName = data.seller_name || '売主';
                     const smsBody = `${sellerName}様
@@ -720,6 +771,29 @@ export default function PropertyListingDetailPage() {
                     // SMSアプリを開く（sms:スキーム）
                     const smsUrl = `sms:${data.seller_contact}?body=${encodeURIComponent(smsBody)}`;
                     window.location.href = smsUrl;
+                    
+                    // コミュニケーション履歴を記録
+                    try {
+                      const { supabase } = await import('../config/supabase');
+                      const { data: { user } } = await supabase.auth.getUser();
+                      
+                      if (user?.email) {
+                        await api.post('/api/activity-logs', {
+                          action: 'sms',
+                          targetType: 'property_seller',
+                          targetId: data.property_number,
+                          metadata: {
+                            seller_name: data.seller_name,
+                            seller_contact: data.seller_contact,
+                            property_number: data.property_number,
+                            property_address: data.address || data.display_address,
+                          },
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Failed to log SMS:', error);
+                      // エラーでもSMS送信は続行
+                    }
                   }}
                   startIcon={<SmsIcon />}
                   sx={{
