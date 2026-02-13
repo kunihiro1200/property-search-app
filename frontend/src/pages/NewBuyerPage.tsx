@@ -11,6 +11,8 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  Chip,
+  Tooltip,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import api, { buyerApi } from '../services/api';
@@ -144,14 +146,14 @@ export default function NewBuyerPage() {
   };
 
   // フィールド更新ハンドラー（新規登録用）
-  const handleFieldUpdate = async (fieldName: string, newValue: any) => {
+  const handleInlineFieldSave = async (fieldName: string, newValue: any) => {
     // ローカル状態を更新
     setBuyer((prev: any) => ({ ...prev, [fieldName]: newValue }));
     return { success: true };
   };
 
   // 問合時ヒアリング用クイック入力ボタンのクリックハンドラー
-  const handleInquiryHearingQuickInput = (text: string) => {
+  const handleInquiryHearingQuickInput = (text: string, buttonLabel: string) => {
     const currentValue = buyer.inquiry_hearing || '';
     const newValue = currentValue ? `${text}\n${currentValue}` : text;
     setBuyer((prev: any) => ({ ...prev, inquiry_hearing: newValue }));
@@ -224,7 +226,19 @@ export default function NewBuyerPage() {
         >
           {propertyNumberField ? '物件詳細に戻る' : '買主リストに戻る'}
         </Button>
-        <Typography variant="h5" fontWeight="bold">新規買主登録</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5" fontWeight="bold">新規買主登録</Typography>
+          {buyer.name && (
+            <Chip 
+              label={buyer.name} 
+              sx={{ 
+                bgcolor: SECTION_COLORS.buyer.main, 
+                color: '#fff',
+                fontWeight: 'bold',
+              }} 
+            />
+          )}
+        </Box>
       </Box>
 
       <Grid container spacing={3}>
@@ -281,31 +295,6 @@ export default function NewBuyerPage() {
 
         {/* 右側: 買主入力フォーム（買主詳細ページと同じ構造） */}
         <Grid item xs={12} md={7}>
-          {/* 問合時ヒアリング用クイック入力ボタン */}
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>問合時ヒアリング - クイック入力</Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {INQUIRY_HEARING_QUICK_INPUTS.map((input) => (
-                <Button
-                  key={input.label}
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleInquiryHearingQuickInput(input.text)}
-                  sx={{
-                    borderColor: SECTION_COLORS.buyer.main,
-                    color: SECTION_COLORS.buyer.main,
-                    '&:hover': {
-                      borderColor: SECTION_COLORS.buyer.dark,
-                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
-                    },
-                  }}
-                >
-                  {input.label}
-                </Button>
-              ))}
-            </Box>
-          </Paper>
-
           {/* フィールドセクション */}
           {BUYER_FIELD_SECTIONS.map((section) => (
             <Paper key={section.title} sx={{ p: 2, mb: 2 }}>
@@ -404,7 +393,7 @@ export default function NewBuyerPage() {
                             fieldName={field.key}
                             fieldType="dropdown"
                             options={INQUIRY_SOURCE_OPTIONS}
-                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
                             showEditIndicator={true}
                             oneClickDropdown={true}
                           />
@@ -422,7 +411,7 @@ export default function NewBuyerPage() {
                             fieldName={field.key}
                             fieldType="dropdown"
                             options={LATEST_STATUS_OPTIONS}
-                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
                             showEditIndicator={true}
                             oneClickDropdown={true}
                           />
@@ -519,7 +508,61 @@ export default function NewBuyerPage() {
                             value={value || ''}
                             fieldName={field.key}
                             fieldType="date"
-                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
+                            showEditIndicator={true}
+                          />
+                        </Grid>
+                      );
+                    }
+
+                    // 問合時ヒアリングフィールド（クイックボタン付き）
+                    if (field.key === 'inquiry_hearing') {
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          {/* 問合時ヒアリング用クイック入力ボタン */}
+                          <Box sx={{ mb: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="subtitle2">
+                                ヒアリング項目
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                              {INQUIRY_HEARING_QUICK_INPUTS.map((item) => {
+                                return (
+                                  <Tooltip 
+                                    key={item.label} 
+                                    title={item.text} 
+                                    arrow
+                                  >
+                                    <Chip
+                                      label={item.label}
+                                      onClick={() => handleInquiryHearingQuickInput(item.text, item.label)}
+                                      size="small"
+                                      clickable
+                                      variant="outlined"
+                                      sx={{
+                                        cursor: 'pointer',
+                                        borderColor: SECTION_COLORS.buyer.main,
+                                        color: SECTION_COLORS.buyer.main,
+                                        '&:hover': {
+                                          borderColor: SECTION_COLORS.buyer.dark,
+                                          backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                        },
+                                      }}
+                                    />
+                                  </Tooltip>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                          <InlineEditableField
+                            label={field.label}
+                            value={value || ''}
+                            fieldName={field.key}
+                            fieldType="textarea"
+                            onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
+                            alwaysShowBorder={true}
+                            borderPlaceholder="ヒアリング内容を入力..."
                             showEditIndicator={true}
                           />
                         </Grid>
@@ -535,7 +578,7 @@ export default function NewBuyerPage() {
                             value={value || ''}
                             fieldName={field.key}
                             fieldType="textarea"
-                            onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                            onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
                             alwaysShowBorder={true}
                             borderPlaceholder="クリックして入力"
                             showEditIndicator={true}
@@ -552,7 +595,7 @@ export default function NewBuyerPage() {
                           value={value || ''}
                           fieldName={field.key}
                           fieldType="text"
-                          onSave={async (newValue) => handleFieldUpdate(field.key, newValue)}
+                          onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
                           readOnly={field.readOnly}
                           showEditIndicator={true}
                         />
