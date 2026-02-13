@@ -917,4 +917,137 @@ ${bodyHtml}
 
     return encodedMessage;
   }
+
+  /**
+   * 個別メール送信（買主候補リストと同じ仕組み）
+   * 各買主に1通ずつ、名前入りでメールを送信
+   */
+  async sendIndividualEmail(params: {
+    from: string;
+    to: string;
+    cc?: string;
+    subject: string;
+    body: string;
+    attachments?: Array<{ filename: string; content: string; encoding: string }>;
+  }): Promise<{ success: boolean; message: string; messageId?: string }> {
+    const { from, to, cc, subject, body, attachments } = params;
+    
+    console.log(`📧 Sending individual email:`);
+    console.log(`  From: ${from}`);
+    console.log(`  To: ${to}`);
+    console.log(`  CC: ${cc || 'none'}`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Attachments: ${attachments?.length || 0}`);
+    
+    try {
+      // Gmail APIでメール送信
+      const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+      
+      // 改行を<br>タグに変換（HTMLメール用）
+      const htmlBody = body.replace(/\n/g, '<br>');
+      
+      // 添付ファイルがある場合はマルチパートメッセージを作成
+      let message: string;
+      
+      if (attachments && attachments.length > 0) {
+        const boundary = '----=_Part_' + Date.now();
+        
+        const messageParts = [
+          `From: ${from}`,
+          `Reply-To: ${from}`,
+          `To: ${to}`,
+        ];
+        
+        if (cc) {
+          messageParts.push(`Cc: ${cc}`);
+        }
+        
+        messageParts.push(
+          `Subject: ${this.encodeSubject(subject)}`,
+          'MIME-Version: 1.0',
+          `Content-Type: multipart/mixed; boundary="${boundary}"`,
+          '',
+          `--${boundary}`,
+          'Content-Type: text/html; charset=UTF-8',
+          '',
+          htmlBody,
+          ''
+        );
+        
+        // 添付ファイルを追加
+        for (const attachment of attachments) {
+          messageParts.push(
+            `--${boundary}`,
+            `Content-Type: application/octet-stream; name="${attachment.filename}"`,
+            'Content-Transfer-Encoding: base64',
+            `Content-Disposition: attachment; filename="${attachment.filename}"`,
+            '',
+            attachment.content,
+            ''
+          );
+        }
+        
+        messageParts.push(`--${boundary}--`);
+        message = messageParts.join('\r\n');
+      } else {
+        // 添付ファイルがない場合は通常のメッセージ
+        const messageParts = [
+          `From: ${from}`,
+          `Reply-To: ${from}`,
+          `To: ${to}`,
+        ];
+        
+        if (cc) {
+          messageParts.push(`Cc: ${cc}`);
+        }
+        
+        messageParts.push(
+          `Subject: ${this.encodeSubject(subject)}`,
+          'MIME-Version: 1.0',
+          'Content-Type: text/html; charset=UTF-8',
+          '',
+          htmlBody
+        );
+        
+        message = messageParts.join('\r\n');
+      }
+      
+      // Base64url形式でエンコード
+      const encodedMessage = Buffer.from(message)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+      
+      // Gmail APIで送信
+      const response = await retryGmailApi(async () => {
+        return await gmail.users.messages.send({
+          userId: 'me',
+          requestBody: {
+            raw: encodedMessage,
+          },
+        });
+      });
+      
+      console.log(`✅ Individual email sent successfully (Message ID: ${response.data.id})`);
+      
+      return {
+        success: true,
+        message: 'メールを送信しました',
+        messageId: response.data.id,
+      };
+    } catch (error: any) {
+      console.error(`❌ Failed to send individual email:`, {
+        from,
+        to,
+        error: error.message,
+        errorDetails: error.response?.data
+      });
+      
+      return {
+        success: false,
+        message: error.message || 'メール送信に失敗しました',
+      };
+    }
+  }
 }

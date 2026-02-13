@@ -971,11 +971,12 @@ export class EmailService extends BaseRepository {
     cc?: string;
     subject: string;
     body: string;
-  }): Promise<{ success: boolean; message: string }> {
+    attachments?: Array<{ filename: string; content: string; encoding: string }>;
+  }): Promise<{ success: boolean; message: string; messageId?: string }> {
     // Gmail APIを初期化
     await this.ensureGmailInitialized();
     
-    const { from, to, cc, subject, body } = params;
+    const { from, to, cc, subject, body, attachments } = params;
     
     // Send As アドレスを事前検証
     try {
@@ -993,27 +994,73 @@ export class EmailService extends BaseRepository {
     console.log(`  To: ${to}`);
     console.log(`  CC: ${cc || 'none'}`);
     console.log(`  Subject: ${subject}`);
+    console.log(`  Attachments: ${attachments?.length || 0}`);
     
-    // RFC 2822形式のメッセージを作成
-    const messageParts = [
-      `From: ${from}`,
-      `Reply-To: ${from}`,
-      `To: ${to}`,
-    ];
+    // 添付ファイルがある場合はマルチパートメッセージを作成
+    let message: string;
     
-    if (cc) {
-      messageParts.push(`Cc: ${cc}`);
+    if (attachments && attachments.length > 0) {
+      const boundary = '----=_Part_' + Date.now();
+      
+      const messageParts = [
+        `From: ${from}`,
+        `Reply-To: ${from}`,
+        `To: ${to}`,
+      ];
+      
+      if (cc) {
+        messageParts.push(`Cc: ${cc}`);
+      }
+      
+      messageParts.push(
+        `Subject: ${this.encodeSubject(subject)}`,
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset=UTF-8',
+        '',
+        body,
+        ''
+      );
+      
+      // 添付ファイルを追加
+      for (const attachment of attachments) {
+        messageParts.push(
+          `--${boundary}`,
+          `Content-Type: application/octet-stream; name="${attachment.filename}"`,
+          'Content-Transfer-Encoding: base64',
+          `Content-Disposition: attachment; filename="${attachment.filename}"`,
+          '',
+          attachment.content,
+          ''
+        );
+      }
+      
+      messageParts.push(`--${boundary}--`);
+      message = messageParts.join('\r\n');
+    } else {
+      // 添付ファイルがない場合は通常のメッセージ
+      const messageParts = [
+        `From: ${from}`,
+        `Reply-To: ${from}`,
+        `To: ${to}`,
+      ];
+      
+      if (cc) {
+        messageParts.push(`Cc: ${cc}`);
+      }
+      
+      messageParts.push(
+        `Subject: ${this.encodeSubject(subject)}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        '',
+        body
+      );
+      
+      message = messageParts.join('\r\n');
     }
-    
-    messageParts.push(
-      `Subject: ${this.encodeSubject(subject)}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      '',
-      body
-    );
-    
-    const message = messageParts.join('\r\n');
     
     // Base64url形式でエンコード
     const encodedMessage = Buffer.from(message)
@@ -1036,6 +1083,7 @@ export class EmailService extends BaseRepository {
       return {
         success: true,
         message: 'メールを送信しました',
+        messageId: response.data.id,
       };
     } catch (error: any) {
       console.error(`❌ Failed to send individual email:`, {

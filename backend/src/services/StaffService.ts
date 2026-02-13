@@ -99,9 +99,9 @@ export class StaffService {
 
   /**
    * 全スタッフ情報を取得
-   * @returns スタッフ一覧
+   * @returns スタッフ一覧（全カラムを含む）
    */
-  async getAllStaff(): Promise<StaffMember[]> {
+  async getAllStaff(): Promise<Record<string, any>[]> {
     try {
       await this.sheetsClient.authenticate();
       const rows = await this.sheetsClient.readAll();
@@ -110,20 +110,8 @@ export class StaffService {
         return [];
       }
 
-      const staff: StaffMember[] = [];
-      for (const row of rows) {
-        const name = (row['姓名'] as string) || (row['氏名'] as string) || (row['名前'] as string);
-        const chatAddress = (row['Chat webhook'] as string) || (row['Chat'] as string) || (row['Chatアドレス'] as string);
-        
-        if (name) {
-          staff.push({
-            name,
-            chatAddress: chatAddress || undefined,
-          });
-        }
-      }
-
-      return staff;
+      // 全カラムをそのまま返す
+      return rows;
     } catch (error) {
       console.error('Failed to fetch staff list:', error);
       throw error;

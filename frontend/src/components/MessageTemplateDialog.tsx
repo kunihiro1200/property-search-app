@@ -51,7 +51,15 @@ interface MessageTemplateDialogProps {
     construction_year_month?: string;
     floor_plan?: string;
     owner_info?: string;
+    sales_assignee?: string;
   };
+  staffData?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    fixed_holiday?: string;
+  };
+  onSendSuccess?: (templateType: string, subject: string, body: string) => void;
 }
 
 interface AttachedFile {
@@ -67,6 +75,8 @@ export default function MessageTemplateDialog({
   recipientEmail,
   propertyNumber,
   propertyData,
+  staffData,
+  onSendSuccess,
 }: MessageTemplateDialogProps) {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -165,6 +175,37 @@ export default function MessageTemplateDialog({
         replacedBody = replacedBody.replace(/<<間取り>>/g, propertyData.floor_plan || '');
       }
       
+      // 担当者情報の置換
+      console.log('[MessageTemplateDialog] staffData:', staffData);
+      console.log('[MessageTemplateDialog] propertyData?.sales_assignee:', propertyData?.sales_assignee);
+      
+      if (staffData) {
+        console.log('[MessageTemplateDialog] Replacing staff variables with:', {
+          name: staffData.name,
+          phone: staffData.phone,
+          email: staffData.email,
+          fixed_holiday: staffData.fixed_holiday,
+        });
+        
+        // 担当名（営業）名前
+        replacedSubject = replacedSubject.replace(/<<担当名（営業）名前>>/g, staffData.name || propertyData?.sales_assignee || '');
+        replacedBody = replacedBody.replace(/<<担当名（営業）名前>>/g, staffData.name || propertyData?.sales_assignee || '');
+        
+        // 担当名（営業）電話番号
+        replacedSubject = replacedSubject.replace(/<<担当名（営業）電話番号>>/g, staffData.phone || '');
+        replacedBody = replacedBody.replace(/<<担当名（営業）電話番号>>/g, staffData.phone || '');
+        
+        // 担当名（営業）メールアドレス
+        replacedSubject = replacedSubject.replace(/<<担当名（営業）メールアドレス>>/g, staffData.email || '');
+        replacedBody = replacedBody.replace(/<<担当名（営業）メールアドレス>>/g, staffData.email || '');
+        
+        // 担当名（営業）固定休
+        replacedSubject = replacedSubject.replace(/<<担当名（営業）固定休>>/g, staffData.fixed_holiday || '');
+        replacedBody = replacedBody.replace(/<<担当名（営業）固定休>>/g, staffData.fixed_holiday || '');
+      } else {
+        console.warn('[MessageTemplateDialog] staffData is null, cannot replace staff variables');
+      }
+      
       setSubject(replacedSubject);
       setBody(replacedBody);
     }
@@ -242,6 +283,12 @@ export default function MessageTemplateDialog({
       });
 
       alert('メールを送信しました');
+      
+      // 送信成功時のコールバックを実行
+      if (onSendSuccess) {
+        onSendSuccess(selectedType, subject, body);
+      }
+      
       onClose();
       
       // リセット

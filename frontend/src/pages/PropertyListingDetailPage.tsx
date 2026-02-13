@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  Save as SaveIcon,
   OpenInNew as OpenInNewIcon,
   ContentCopy as ContentCopyIcon,
   Person as PersonIcon,
@@ -145,7 +144,6 @@ export default function PropertyListingDetailPage() {
   
   const [data, setData] = useState<PropertyListing | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [editedData, setEditedData] = useState<Record<string, any>>({});
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   const [buyersLoading, setBuyersLoading] = useState(false);
@@ -153,6 +151,13 @@ export default function PropertyListingDetailPage() {
   const [retrievingStorageUrl, setRetrievingStorageUrl] = useState(false);
   const [isCalculatingAreas, setIsCalculatingAreas] = useState(false);
   const [messageTemplateDialogOpen, setMessageTemplateDialogOpen] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [staffData, setStaffData] = useState<{
+    name?: string;
+    phone?: string;
+    email?: string;
+    fixed_holiday?: string;
+  } | null>(null);
   
   // Edit mode states for each section
   const [isPriceEditMode, setIsPriceEditMode] = useState(false);
@@ -186,6 +191,43 @@ export default function PropertyListingDetailPage() {
     }
   }, [propertyNumber]);
 
+  const fetchStaffData = async (assigneeName: string) => {
+    try {
+      console.log('[fetchStaffData] Fetching staff data for:', assigneeName);
+      const response = await api.get('/api/staff');
+      const staffList = response.data;
+      
+      console.log('[fetchStaffData] Staff list sample:', staffList[0]); // 最初のスタッフのデータ構造を確認
+      console.log('[fetchStaffData] Available columns:', staffList[0] ? Object.keys(staffList[0]) : 'No data');
+      
+      // 担当名で検索（C列で検索 - カラム名を確認）
+      // 可能性のあるカラム名: '名字', '苗字', '名前', 'lastname', etc.
+      const staff = staffList.find((s: any) => {
+        // 複数のカラム名を試す
+        const lastName = s['名字'] || s['苗字'] || s['名前'] || s['姓'];
+        console.log('[fetchStaffData] Checking staff:', { lastName, assigneeName, match: lastName === assigneeName });
+        return lastName === assigneeName;
+      });
+      
+      if (staff) {
+        console.log('[fetchStaffData] Staff found:', staff);
+        setStaffData({
+          name: staff['姓名'],
+          phone: staff['電話番号'],
+          email: staff['メアド'],
+          fixed_holiday: staff['固定休'],
+        });
+      } else {
+        console.log('[fetchStaffData] Staff not found for:', assigneeName);
+        console.log('[fetchStaffData] All staff names:', staffList.map((s: any) => s['名字'] || s['苗字'] || s['名前'] || s['姓']));
+        setStaffData(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch staff data:', error);
+      setStaffData(null);
+    }
+  };
+
   const fetchCommunicationHistory = async () => {
     if (!propertyNumber) return;
     setHistoryLoading(true);
@@ -205,6 +247,11 @@ export default function PropertyListingDetailPage() {
     try {
       const response = await api.get(`/api/property-listings/${propertyNumber}`);
       setData(response.data);
+      
+      // 担当者情報を取得
+      if (response.data.sales_assignee) {
+        await fetchStaffData(response.data.sales_assignee);
+      }
     } catch (error) {
       console.error('Failed to fetch property data:', error);
       setSnackbar({
@@ -241,31 +288,27 @@ export default function PropertyListingDetailPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!propertyNumber || Object.keys(editedData).length === 0) return;
-    setSaving(true);
+  const handleFieldChange = async (field: string, value: any) => {
+    // 即座にローカル状態を更新
+    setEditedData((prev) => ({ ...prev, [field]: value }));
+    
+    // 自動保存（デバウンス処理なし - 即座に保存）
+    if (!propertyNumber) return;
+    
     try {
-      await api.put(`/api/property-listings/${propertyNumber}`, editedData);
-      setSnackbar({
-        open: true,
-        message: '保存しました',
-        severity: 'success',
-      });
+      await api.put(`/api/property-listings/${propertyNumber}`, { [field]: value });
+      // 保存成功後、データを再取得
       await fetchPropertyData();
+      // editedDataをクリア
       setEditedData({});
     } catch (error) {
+      console.error('Auto-save failed:', error);
       setSnackbar({
         open: true,
-        message: '保存に失敗しました',
+        message: '自動保存に失敗しました',
         severity: 'error',
       });
-    } finally {
-      setSaving(false);
     }
-  };
-
-  const handleFieldChange = (field: string, value: any) => {
-    setEditedData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Save handlers for each section
@@ -605,8 +648,6 @@ export default function PropertyListingDetailPage() {
     }
   };
 
-  const hasChanges = Object.keys(editedData).length > 0;
-
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -643,7 +684,7 @@ export default function PropertyListingDetailPage() {
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.property.main }}>
-                物件番号：{data.property_number}
+                {data.property_number}
               </Typography>
               <IconButton
                 size="small"
@@ -736,34 +777,7 @@ export default function PropertyListingDetailPage() {
                 <Button
                   variant="outlined"
                   size="medium"
-                  onClick={async () => {
-                    setMessageTemplateDialogOpen(true);
-                    
-                    // コミュニケーション履歴を記録
-                    try {
-                      const { supabase } = await import('../config/supabase');
-                      const { data: { user } } = await supabase.auth.getUser();
-                      
-                      if (user?.email) {
-                        await api.post('/api/activity-logs', {
-                          action: 'email',
-                          targetType: 'property_seller',
-                          targetId: data.property_number,
-                          metadata: {
-                            seller_name: data.seller_name,
-                            seller_email: data.seller_email,
-                            property_number: data.property_number,
-                            property_address: data.address || data.display_address,
-                          },
-                        });
-                        // 履歴を再取得
-                        fetchCommunicationHistory();
-                      }
-                    } catch (error) {
-                      console.error('Failed to log email:', error);
-                      // エラーでもメール作成は続行
-                    }
-                  }}
+                  onClick={() => setMessageTemplateDialogOpen(true)}
                   startIcon={<EmailIcon />}
                   sx={{
                     borderColor: '#1976d2',
@@ -812,6 +826,7 @@ export default function PropertyListingDetailPage() {
                             seller_contact: data.seller_contact,
                             property_number: data.property_number,
                             property_address: data.address || data.display_address,
+                            body: smsBody,
                           },
                         });
                         // 履歴を再取得
@@ -957,51 +972,43 @@ ${propertyDetailUrl}
             size="medium"
             variant="contained"
           />
-          <Button
-            variant="contained"
-            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
-            onClick={handleSave}
-            disabled={!hasChanges || saving}
-            sx={{
-              backgroundColor: SECTION_COLORS.property.main,
-              '&:hover': {
-                backgroundColor: SECTION_COLORS.property.dark,
-              },
-            }}
-          >
-            {saving ? '保存中...' : '保存'}
-          </Button>
         </Box>
       </Box>
 
       {/* Property Header - Key Information */}
       <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">所在地</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.address || data.display_address || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">種別</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.property_type || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
+            <Typography variant="body2" color="text.secondary" fontWeight="bold">売主名</Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {data.seller_name || '-'}
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">ステータス</Typography>
             <Typography variant="body1" fontWeight="medium" sx={{ color: '#d32f2f' }}>
               {data.atbb_status || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">現況</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.current_status || '-'}
             </Typography>
           </Grid>
-          <Grid item xs={12} sm={6} md={2.4}>
+          <Grid item xs={12} sm={6} md={2}>
             <Typography variant="body2" color="text.secondary" fontWeight="bold">担当</Typography>
             <Typography variant="body1" fontWeight="medium">
               {data.sales_assignee || '-'}
@@ -1882,7 +1889,16 @@ ${propertyDetailUrl}
                           log.action === 'phone_call' ? '#2e7d32' : 
                           log.action === 'email' ? '#1976d2' : 
                           log.action === 'sms' ? '#ff9800' : '#757575'
-                        }`
+                        }`,
+                        cursor: (log.action === 'email' || log.action === 'sms') ? 'pointer' : 'default',
+                        '&:hover': (log.action === 'email' || log.action === 'sms') ? {
+                          bgcolor: '#eeeeee',
+                        } : {},
+                      }}
+                      onClick={() => {
+                        if (log.action === 'email' || log.action === 'sms') {
+                          setExpandedHistoryId(expandedHistoryId === log.id ? null : log.id);
+                        }
                       }}
                     >
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -1895,6 +1911,18 @@ ${propertyDetailUrl}
                              log.action === 'email' ? 'メール' : 
                              log.action === 'sms' ? 'SMS' : log.action}
                           </Typography>
+                          {log.action === 'email' && log.metadata?.template_type && (
+                            <Typography variant="caption" sx={{ 
+                              bgcolor: '#1976d2', 
+                              color: 'white', 
+                              px: 1, 
+                              py: 0.5, 
+                              borderRadius: 1,
+                              fontWeight: 'bold'
+                            }}>
+                              {log.metadata.template_type}
+                            </Typography>
+                          )}
                         </Box>
                         <Typography variant="caption" color="text.secondary">
                           {new Date(log.created_at).toLocaleString('ja-JP')}
@@ -1922,7 +1950,53 @@ ${propertyDetailUrl}
                               物件: {log.metadata.property_address}
                             </Typography>
                           )}
+                          {/* メールの件名を表示 */}
+                          {log.action === 'email' && log.metadata.subject && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                              件名: {log.metadata.subject}
+                            </Typography>
+                          )}
+                          {/* 本文を展開表示 */}
+                          {expandedHistoryId === log.id && (log.action === 'email' || log.action === 'sms') && log.metadata.body && (
+                            <Box sx={{ 
+                              mt: 2, 
+                              p: 2, 
+                              bgcolor: 'white', 
+                              borderRadius: 1,
+                              border: '1px solid #ddd'
+                            }}>
+                              <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                {log.action === 'email' ? 'メール本文:' : 'SMS本文:'}
+                              </Typography>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  whiteSpace: 'pre-wrap',
+                                  wordBreak: 'break-word',
+                                  fontSize: '0.9rem',
+                                  lineHeight: 1.6
+                                }}
+                              >
+                                {log.metadata.body}
+                              </Typography>
+                            </Box>
+                          )}
                         </Box>
+                      )}
+                      {/* クリック可能な場合はヒントを表示 */}
+                      {(log.action === 'email' || log.action === 'sms') && log.metadata?.body && (
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary" 
+                          sx={{ 
+                            display: 'block', 
+                            mt: 1, 
+                            fontStyle: 'italic',
+                            textAlign: 'right'
+                          }}
+                        >
+                          {expandedHistoryId === log.id ? '▲ クリックで閉じる' : '▼ クリックで本文を表示'}
+                        </Typography>
                       )}
                     </Box>
                   ))}
@@ -2063,6 +2137,37 @@ ${propertyDetailUrl}
             construction_year_month: data.construction_year_month,
             floor_plan: data.floor_plan,
             owner_info: data.owner_info,
+            sales_assignee: data.sales_assignee,
+          }}
+          staffData={staffData || undefined}
+          onSendSuccess={async (templateType: string, subject: string, body: string) => {
+            // メール送信成功時にコミュニケーション履歴を記録
+            try {
+              const { supabase } = await import('../config/supabase');
+              const { data: { user } } = await supabase.auth.getUser();
+              
+              if (user?.email) {
+                await api.post('/api/activity-logs', {
+                  action: 'email',
+                  targetType: 'property_seller',
+                  targetId: data.property_number,
+                  metadata: {
+                    seller_name: data.seller_name,
+                    seller_email: data.seller_email,
+                    property_number: data.property_number,
+                    property_address: data.address || data.display_address,
+                    template_type: templateType,
+                    subject: subject,
+                    body: body,
+                  },
+                });
+                // 履歴を再取得
+                fetchCommunicationHistory();
+              }
+            } catch (error) {
+              console.error('Failed to log email:', error);
+              // エラーでもメール送信は成功しているので、エラーメッセージは表示しない
+            }
           }}
         />
       )}

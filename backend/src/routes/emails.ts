@@ -540,6 +540,72 @@ router.post(
 );
 
 /**
+ * 汎用メール送信エンドポイント（物件詳細ページから使用）
+ * POST /api/emails/send
+ */
+router.post(
+  '/send',
+  [
+    body('to').isEmail().withMessage('Valid recipient email address is required'),
+    body('subject').notEmpty().withMessage('Subject is required'),
+    body('body').notEmpty().withMessage('Email body is required'),
+    body('attachments').optional().isArray().withMessage('Attachments must be an array'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: errors.array(),
+        });
+      }
+
+      const { to, subject, body, attachments } = req.body;
+
+      // デフォルトの送信元アドレス
+      const from = 'info@ifoo-oita.com';
+
+      console.log('[POST /api/emails/send] Sending email:', {
+        from,
+        to,
+        subject,
+        bodyLength: body?.length || 0,
+        attachmentsCount: attachments?.length || 0,
+      });
+
+      // EmailServiceを使用してメールを送信
+      const result = await emailService.sendIndividualEmail({
+        from,
+        to,
+        subject,
+        body,
+        attachments,
+      });
+
+      if (!result.success) {
+        console.error('[POST /api/emails/send] Failed:', result.message);
+        return res.status(500).json({
+          success: false,
+          error: result.message || 'メール送信に失敗しました',
+        });
+      }
+
+      console.log('[POST /api/emails/send] Success:', result.messageId);
+      res.json(result);
+    } catch (error) {
+      console.error('[POST /api/emails/send] Error:', error);
+      console.error('[POST /api/emails/send] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({
+        success: false,
+        error: 'メール送信中にエラーが発生しました',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
+/**
  * 個別メール送信エンドポイント（買主候補リストと同じ仕組み）
  * POST /api/emails/send-individual
  * 
