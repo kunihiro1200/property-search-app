@@ -15,6 +15,7 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import api from '../services/api';
 import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
+import PropertyInfoCard from '../components/PropertyInfoCard';
 
 interface PropertyInfo {
   property_number: string;
@@ -65,6 +66,17 @@ export default function NewBuyerPage() {
   const [desiredArea, setDesiredArea] = useState('');
   const [desiredPropertyType, setDesiredPropertyType] = useState('');
   const [budget, setBudget] = useState('');
+  
+  // 内覧情報
+  const [latestViewingDate, setLatestViewingDate] = useState('');
+  const [viewingTime, setViewingTime] = useState('');
+  const [followUpAssignee, setFollowUpAssignee] = useState('');
+  const [viewingResultFollowUp, setViewingResultFollowUp] = useState('');
+  
+  // その他
+  const [latestStatus, setLatestStatus] = useState('');
+  const [preViewingNotes, setPreViewingNotes] = useState('');
+  const [viewingNotes, setViewingNotes] = useState('');
 
   useEffect(() => {
     if (propertyNumber) {
@@ -109,6 +121,13 @@ export default function NewBuyerPage() {
         desired_area: desiredArea,
         desired_property_type: desiredPropertyType,
         budget,
+        latest_viewing_date: latestViewingDate,
+        viewing_time: viewingTime,
+        follow_up_assignee: followUpAssignee,
+        viewing_result_follow_up: viewingResultFollowUp,
+        latest_status: latestStatus,
+        pre_viewing_notes: preViewingNotes,
+        viewing_notes: viewingNotes,
       };
 
       await api.post('/api/buyers', buyerData);
@@ -154,260 +173,46 @@ export default function NewBuyerPage() {
       <Grid container spacing={3}>
         {/* 左側: 物件情報 */}
         <Grid item xs={12} md={5}>
-          <Paper sx={{ p: 3, position: 'sticky', top: 16 }}>
-            <Typography variant="h6" gutterBottom>物件情報</Typography>
-            
-            <TextField
-              fullWidth
-              label="物件番号"
-              value={propertyNumberField}
-              onChange={(e) => {
-                setPropertyNumberField(e.target.value);
-                if (e.target.value) {
-                  fetchPropertyInfo(e.target.value);
-                } else {
-                  setPropertyInfo(null);
-                }
-              }}
-              sx={{ mb: 2 }}
+          <TextField
+            fullWidth
+            label="物件番号"
+            value={propertyNumberField}
+            onChange={(e) => {
+              setPropertyNumberField(e.target.value);
+              if (e.target.value) {
+                fetchPropertyInfo(e.target.value);
+              } else {
+                setPropertyInfo(null);
+              }
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          {loadingProperty && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          )}
+
+          {propertyInfo && !loadingProperty && (
+            <PropertyInfoCard
+              propertyId={propertyNumberField}
+              showCloseButton={false}
+              themeColor="buyer"
             />
+          )}
 
-            {loadingProperty && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress size={32} />
-              </Box>
-            )}
+          {!propertyInfo && !loadingProperty && propertyNumberField && (
+            <Paper sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+              <Typography variant="body2">物件情報が見つかりませんでした</Typography>
+            </Paper>
+          )}
 
-            {propertyInfo && !loadingProperty && (
-              <Box>
-                {/* 業者への対応日付表示（今日より後の場合のみ） */}
-                {propertyInfo.broker_response && (() => {
-                  try {
-                    // broker_responseの値を確認
-                    let brokerDateValue = propertyInfo.broker_response;
-                    
-                    // Excelシリアル値の場合は変換
-                    if (typeof brokerDateValue === 'number' || !isNaN(Number(brokerDateValue))) {
-                      const serialNumber = Number(brokerDateValue);
-                      // Excelシリアル値を日付に変換（1900年1月1日からの日数）
-                      const excelEpoch = new Date(1900, 0, 1);
-                      const daysOffset = serialNumber - 2; // Excelの1900年うるう年バグ対応
-                      brokerDateValue = new Date(excelEpoch.getTime() + daysOffset * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                    }
-                    
-                    // 東京時間で今日の日付を取得
-                    const now = new Date();
-                    const tokyoNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-                    const tokyoToday = new Date(tokyoNow.getFullYear(), tokyoNow.getMonth(), tokyoNow.getDate());
-                    
-                    // broker_responseの日付をパース
-                    const brokerDate = new Date(brokerDateValue);
-                    const tokyoBrokerDate = new Date(brokerDate.getFullYear(), brokerDate.getMonth(), brokerDate.getDate());
-                    
-                    // 今日より後の日付の場合のみ表示
-                    if (tokyoBrokerDate > tokyoToday) {
-                      const formattedDate = `${tokyoBrokerDate.getFullYear()}/${String(tokyoBrokerDate.getMonth() + 1).padStart(2, '0')}/${String(tokyoBrokerDate.getDate()).padStart(2, '0')}`;
-                      return (
-                        <Box
-                          sx={{
-                            mb: 3,
-                            px: 3,
-                            py: 1.5,
-                            background: '#ffeb3b',
-                            borderRadius: 1,
-                            border: '3px solid #d32f2f',
-                            boxShadow: '0 0 20px rgba(244, 67, 54, 0.6)',
-                            animation: 'blink 1.5s infinite, shake 0.5s infinite',
-                            '@keyframes blink': {
-                              '0%, 100%': { opacity: 1 },
-                              '50%': { opacity: 0.8 },
-                            },
-                            '@keyframes shake': {
-                              '0%, 100%': { transform: 'translateX(0)' },
-                              '25%': { transform: 'translateX(-2px)' },
-                              '75%': { transform: 'translateX(2px)' },
-                            },
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              color: '#d32f2f',
-                              fontWeight: 'bold',
-                              fontSize: '1.3rem',
-                              letterSpacing: '0.05em',
-                              textAlign: 'center',
-                            }}
-                          >
-                            ⚠️ 業者対応: {formattedDate} ⚠️
-                          </Typography>
-                        </Box>
-                      );
-                    }
-                  } catch (error) {
-                    console.error('Failed to parse broker_response date:', error);
-                  }
-                  return null;
-                })()}
-
-                {/* 特記・備忘録 - 最上部に配置 */}
-                {(propertyInfo.special_notes || propertyInfo.memo) && (
-                  <Box sx={{ mb: 3, p: 2, bgcolor: '#fff9e6', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" fontWeight="bold" color="warning.dark" gutterBottom>
-                      ⚠️ 特記・備忘録
-                    </Typography>
-                    {propertyInfo.special_notes && (
-                      <Box sx={{ mb: 1 }}>
-                        <Typography variant="caption" color="text.secondary">特記</Typography>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                          {propertyInfo.special_notes}
-                        </Typography>
-                      </Box>
-                    )}
-                    {propertyInfo.memo && (
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">備忘録</Typography>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                          {propertyInfo.memo}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-
-                {/* 内覧前伝達事項 - 2番目に重要 */}
-                {propertyInfo.pre_viewing_notes && (
-                  <Box sx={{ mb: 3, p: 2, bgcolor: '#e3f2fd', borderRadius: 1, border: '2px solid #2196f3' }}>
-                    <Typography variant="subtitle2" fontWeight="bold" color="primary.main" gutterBottom>
-                      📋 内覧前伝達事項
-                    </Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {propertyInfo.pre_viewing_notes}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 内覧情報 - 3番目に重要 */}
-                {(propertyInfo.viewing_key || propertyInfo.viewing_parking || propertyInfo.viewing_notes) && (
-                  <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                      🔑 内覧情報
-                    </Typography>
-                    <Grid container spacing={1}>
-                      {propertyInfo.viewing_key && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">内覧時（鍵等）</Typography>
-                          <Typography variant="body2">{propertyInfo.viewing_key}</Typography>
-                        </Grid>
-                      )}
-                      {propertyInfo.viewing_parking && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">内覧時駐車場</Typography>
-                          <Typography variant="body2">{propertyInfo.viewing_parking}</Typography>
-                        </Grid>
-                      )}
-                      {propertyInfo.viewing_notes && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">内覧の時の伝達事項</Typography>
-                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                            {propertyInfo.viewing_notes}
-                          </Typography>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </Box>
-                )}
-
-                {/* 基本情報 */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>基本情報</Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <Typography variant="caption" color="text.secondary">住所</Typography>
-                      <Typography variant="body2" fontWeight="bold">{propertyInfo.address || '-'}</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">物件種別</Typography>
-                      <Typography variant="body2">{propertyInfo.property_type || '-'}</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">間取り</Typography>
-                      <Typography variant="body2">{propertyInfo.floor_plan || '-'}</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">価格</Typography>
-                      <Typography variant="body2" fontWeight="bold" color="primary.main">
-                        {propertyInfo.sales_price ? `${propertyInfo.sales_price.toLocaleString()}万円` : '-'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">現況</Typography>
-                      <Typography variant="body2">{propertyInfo.current_status || '-'}</Typography>
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                {/* よく聞かれる項目 */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" fontWeight="bold" gutterBottom>よく聞かれる項目</Typography>
-                  <Grid container spacing={2}>
-                    {propertyInfo.property_tax && (
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">固定資産税</Typography>
-                        <Typography variant="body2" fontWeight="bold">
-                          {propertyInfo.property_tax.toLocaleString()}万円
-                        </Typography>
-                      </Grid>
-                    )}
-                    {propertyInfo.management_fee && (
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">管理費</Typography>
-                        <Typography variant="body2" fontWeight="bold">
-                          {propertyInfo.management_fee.toLocaleString()}円
-                        </Typography>
-                      </Grid>
-                    )}
-                    {propertyInfo.reserve_fund && (
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">積立金</Typography>
-                        <Typography variant="body2" fontWeight="bold">
-                          {propertyInfo.reserve_fund.toLocaleString()}円
-                        </Typography>
-                      </Grid>
-                    )}
-                    {propertyInfo.parking && (
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">駐車場</Typography>
-                        <Typography variant="body2">{propertyInfo.parking}</Typography>
-                        {propertyInfo.parking_fee && (
-                          <Typography variant="caption" color="text.secondary">
-                            ({propertyInfo.parking_fee.toLocaleString()}円)
-                          </Typography>
-                        )}
-                      </Grid>
-                    )}
-                    {propertyInfo.delivery && (
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">引渡し</Typography>
-                        <Typography variant="body2">{propertyInfo.delivery}</Typography>
-                      </Grid>
-                    )}
-                  </Grid>
-                </Box>
-              </Box>
-            )}
-
-            {!propertyInfo && !loadingProperty && propertyNumberField && (
-              <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                <Typography variant="body2">物件情報が見つかりませんでした</Typography>
-              </Box>
-            )}
-
-            {!propertyNumberField && (
-              <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                <Typography variant="body2">物件番号を入力すると物件情報が表示されます</Typography>
-              </Box>
-            )}
-          </Paper>
+          {!propertyNumberField && (
+            <Paper sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
+              <Typography variant="body2">物件番号を入力すると物件情報が表示されます</Typography>
+            </Paper>
+          )}
         </Grid>
 
         {/* 右側: 買主入力フォーム */}
@@ -536,6 +341,89 @@ export default function NewBuyerPage() {
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
                     placeholder="例: 3000万円"
+                  />
+                </Grid>
+
+                {/* 内覧情報 */}
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>内覧情報</Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="内覧日（最新）"
+                    type="date"
+                    value={latestViewingDate}
+                    onChange={(e) => setLatestViewingDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="時間"
+                    value={viewingTime}
+                    onChange={(e) => setViewingTime(e.target.value)}
+                    placeholder="例: 14:00"
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="後続担当"
+                    value={followUpAssignee}
+                    onChange={(e) => setFollowUpAssignee(e.target.value)}
+                    placeholder="例: Y, K"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="内覧結果・後続対応"
+                    multiline
+                    rows={3}
+                    value={viewingResultFollowUp}
+                    onChange={(e) => setViewingResultFollowUp(e.target.value)}
+                  />
+                </Grid>
+
+                {/* その他 */}
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>その他</Typography>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="最新状況"
+                    value={latestStatus}
+                    onChange={(e) => setLatestStatus(e.target.value)}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="内覧前伝達事項"
+                    multiline
+                    rows={3}
+                    value={preViewingNotes}
+                    onChange={(e) => setPreViewingNotes(e.target.value)}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="内覧メモ"
+                    multiline
+                    rows={3}
+                    value={viewingNotes}
+                    onChange={(e) => setViewingNotes(e.target.value)}
                   />
                 </Grid>
 
