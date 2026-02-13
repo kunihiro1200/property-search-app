@@ -854,6 +854,88 @@ export class BuyerService {
       updated_at: new Date().toISOString(),
     };
 
+    // 問合せ物件番号が指定されている場合、物件種別を取得して希望種別に自動設定
+    if (newBuyer.property_number && !newBuyer.desired_property_type) {
+      try {
+        console.log('[BuyerService.create] property_number detected, fetching property type');
+        const firstPropertyNumber = newBuyer.property_number.split(',')[0].trim();
+        
+        const { data: property, error: propertyError } = await this.supabase
+          .from('property_listings')
+          .select('property_type')
+          .eq('property_number', firstPropertyNumber)
+          .single();
+        
+        if (!propertyError && property && property.property_type) {
+          // データベースの英語値を日本語に変換
+          const propertyTypeMap: Record<string, string> = {
+            'land': '土地',
+            'detached_house': '戸建',
+            'apartment': 'マンション',
+          };
+          
+          const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+          newBuyer.desired_property_type = japanesePropertyType;
+          console.log(`[BuyerService.create] Auto-set desired_property_type: ${japanesePropertyType}`);
+        }
+      } catch (error) {
+        console.error('[BuyerService.create] Failed to fetch property type:', error);
+        // エラーが発生しても買主作成は継続
+      }
+    }
+
+    // 問合せ時ヒアリングが入力されている場合、自動パース処理を実行
+    if (newBuyer.inquiry_hearing) {
+      console.log('[BuyerService.create] inquiry_hearing detected, starting auto-parse');
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(newBuyer.inquiry_hearing, newBuyer.desired_property_type);
+        console.log('[BuyerService.create] Parsed result:', parsed);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期を設定
+        if (parsed.desired_timing !== undefined && !newBuyer.desired_timing) {
+          newBuyer.desired_timing = parsed.desired_timing;
+          newBuyer.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set desired_timing: ${parsed.desired_timing}`);
+        }
+        
+        // 駐車場希望台数を設定
+        if (parsed.parking_spaces !== undefined && !newBuyer.parking_spaces) {
+          newBuyer.parking_spaces = parsed.parking_spaces;
+          newBuyer.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set parking_spaces: ${parsed.parking_spaces}`);
+        }
+        
+        // 価格帯を設定
+        if (parsed.price_range_house !== undefined && !newBuyer.price_range_house) {
+          newBuyer.price_range_house = parsed.price_range_house;
+          newBuyer.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_house: ${parsed.price_range_house}`);
+        }
+        
+        if (parsed.price_range_apartment !== undefined && !newBuyer.price_range_apartment) {
+          newBuyer.price_range_apartment = parsed.price_range_apartment;
+          newBuyer.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_apartment: ${parsed.price_range_apartment}`);
+        }
+        
+        if (parsed.price_range_land !== undefined && !newBuyer.price_range_land) {
+          newBuyer.price_range_land = parsed.price_range_land;
+          newBuyer.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_land: ${parsed.price_range_land}`);
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        newBuyer.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        console.error('[BuyerService.create] Failed to parse inquiry hearing:', error);
+        // エラーが発生しても買主作成は継続
+      }
+    }
+
     // データベースに保存
     const { data, error } = await this.supabase
       .from('buyers')
@@ -1047,10 +1129,43 @@ export class BuyerService {
     if (updateData.inquiry_hearing !== undefined) {
       console.log('[BuyerService] inquiry_hearing update detected, starting auto-parse');
       console.log('[BuyerService] inquiry_hearing value:', updateData.inquiry_hearing);
+      
+      // 希望種別が未設定の場合、問合せ物件番号から物件種別を取得して自動設定
+      let desiredPropertyType = existing.desired_property_type;
+      if (!desiredPropertyType && existing.property_number) {
+        try {
+          console.log('[BuyerService] desired_property_type is empty, fetching from property_number');
+          const firstPropertyNumber = existing.property_number.split(',')[0].trim();
+          
+          const { data: property, error: propertyError } = await this.supabase
+            .from('property_listings')
+            .select('property_type')
+            .eq('property_number', firstPropertyNumber)
+            .single();
+          
+          if (!propertyError && property && property.property_type) {
+            // データベースの英語値を日本語に変換
+            const propertyTypeMap: Record<string, string> = {
+              'land': '土地',
+              'detached_house': '戸建',
+              'apartment': 'マンション',
+            };
+            
+            const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+            desiredPropertyType = japanesePropertyType;
+            updateData.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
+        } catch (error) {
+          console.error('[BuyerService] Failed to fetch property type:', error);
+          // エラーが発生してもパース処理は継続
+        }
+      }
+      
       try {
         const { InquiryHearingParser } = await import('./InquiryHearingParser');
         const parser = new InquiryHearingParser();
-        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, existing.desired_property_type);
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, desiredPropertyType);
         console.log('[BuyerService] Parsed result:', parsed);
         
         const inquiryHearingUpdatedAt = new Date();
@@ -1238,10 +1353,43 @@ export class BuyerService {
     if (updateData.inquiry_hearing !== undefined) {
       console.log('[BuyerService.updateWithSync] inquiry_hearing update detected, starting auto-parse');
       console.log('[BuyerService.updateWithSync] inquiry_hearing value:', updateData.inquiry_hearing);
+      
+      // 希望種別が未設定の場合、問合せ物件番号から物件種別を取得して自動設定
+      let desiredPropertyType = existing.desired_property_type;
+      if (!desiredPropertyType && existing.property_number) {
+        try {
+          console.log('[BuyerService.updateWithSync] desired_property_type is empty, fetching from property_number');
+          const firstPropertyNumber = existing.property_number.split(',')[0].trim();
+          
+          const { data: property, error: propertyError } = await this.supabase
+            .from('property_listings')
+            .select('property_type')
+            .eq('property_number', firstPropertyNumber)
+            .single();
+          
+          if (!propertyError && property && property.property_type) {
+            // データベースの英語値を日本語に変換
+            const propertyTypeMap: Record<string, string> = {
+              'land': '土地',
+              'detached_house': '戸建',
+              'apartment': 'マンション',
+            };
+            
+            const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+            desiredPropertyType = japanesePropertyType;
+            updateData.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService.updateWithSync] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
+        } catch (error) {
+          console.error('[BuyerService.updateWithSync] Failed to fetch property type:', error);
+          // エラーが発生してもパース処理は継続
+        }
+      }
+      
       try {
         const { InquiryHearingParser } = await import('./InquiryHearingParser');
         const parser = new InquiryHearingParser();
-        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, existing.desired_property_type);
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, desiredPropertyType);
         console.log('[BuyerService.updateWithSync] Parsed result:', parsed);
         
         const inquiryHearingUpdatedAt = new Date();
