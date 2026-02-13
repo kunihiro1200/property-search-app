@@ -28,6 +28,10 @@ import PropertyInfoCard from '../components/PropertyInfoCard';
 import { InlineEditableField } from '../components/InlineEditableField';
 import { INQUIRY_SOURCE_OPTIONS } from '../utils/buyerInquirySourceOptions';
 import { LATEST_STATUS_OPTIONS } from '../utils/buyerLatestStatusOptions';
+import {
+  EMAIL_CONFIRMATION_OPTIONS,
+  PINRICH_OPTIONS,
+} from '../utils/buyerDetailFieldOptions';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyInfo {
@@ -111,6 +115,9 @@ export default function NewBuyerPage() {
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [propertyNumberField, setPropertyNumberField] = useState(propertyNumber || '');
   
+  // スタッフイニシャル用の状態
+  const [staffInitials, setStaffInitials] = useState<string[]>([]);
+  
   // 買主データ（新規登録用の空オブジェクト）
   const [buyer, setBuyer] = useState<any>({
     property_number: propertyNumber || '',
@@ -142,6 +149,22 @@ export default function NewBuyerPage() {
     };
 
     fetchNextBuyerNumber();
+  }, []);
+
+  // スタッフイニシャルを取得
+  useEffect(() => {
+    const fetchStaffInitials = async () => {
+      try {
+        const res = await api.get('/api/employees/active-initials');
+        const initials = res.data?.initials || [];
+        setStaffInitials(initials);
+      } catch (error) {
+        console.error('Failed to fetch staff initials:', error);
+        setStaffInitials([]);
+      }
+    };
+
+    fetchStaffInitials();
   }, []);
 
   useEffect(() => {
@@ -177,11 +200,47 @@ export default function NewBuyerPage() {
   };
 
   const handleSubmit = async () => {
+    // 必須フィールドのバリデーション
+    const errors = [];
+    
+    // 氏名は必須
     if (!buyer.name) {
+      errors.push('氏名は必須です');
+    }
+    
+    // パターン1: 内覧促進メールが必須（メール問合せ AND 【問合メール】電話対応 = 済）
+    const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+    const isViewingPromotionEmailRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+    
+    // パターン2: 内覧促進メールが必須（電話問合せ AND 問合時ヒアリングに入力がある）
+    const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+    const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+    const isViewingPromotionEmailRequiredPattern2 = hasPhoneInquiry && hasInquiryHearing;
+    
+    if ((isViewingPromotionEmailRequiredPattern1 || isViewingPromotionEmailRequiredPattern2) && !buyer.viewing_promotion_email) {
+      errors.push('内覧促進メールを選択してください');
+    }
+    
+    // パターン3: 3回架電確認済みが必須（【問合メール】電話対応 = 不通 の場合のみ）
+    const isThreeCallsConfirmedDisplayed = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+    const isThreeCallsConfirmedRequired = buyer.inquiry_email_phone === '不通';
+    
+    if (isThreeCallsConfirmedDisplayed && isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
+      errors.push('3回架電確認済みを選択してください');
+    }
+    
+    // パターン4: 業者問合せが必須（法人名に入力がある場合）
+    const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+    
+    if (hasCompanyName && !buyer.broker_inquiry) {
+      errors.push('業者問合せを選択してください');
+    }
+    
+    if (errors.length > 0) {
       setSnackbar({
         open: true,
-        message: '氏名は必須です',
-        severity: 'error',
+        message: errors.join('\n'),
+        severity: 'error'
       });
       return;
     }
@@ -233,6 +292,47 @@ export default function NewBuyerPage() {
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => {
+            // 必須フィールドのバリデーション
+            const errors = [];
+            
+            // パターン1: 内覧促進メールが必須（メール問合せ AND 【問合メール】電話対応 = 済）
+            const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+            const isViewingPromotionEmailRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+            
+            // パターン2: 内覧促進メールが必須（電話問合せ AND 問合時ヒアリングに入力がある）
+            const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+            const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+            const isViewingPromotionEmailRequiredPattern2 = hasPhoneInquiry && hasInquiryHearing;
+            
+            if ((isViewingPromotionEmailRequiredPattern1 || isViewingPromotionEmailRequiredPattern2) && !buyer.viewing_promotion_email) {
+              errors.push('内覧促進メールを選択してください');
+            }
+            
+            // パターン3: 3回架電確認済みが必須（【問合メール】電話対応 = 不通 の場合のみ）
+            const isThreeCallsConfirmedDisplayed = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+            const isThreeCallsConfirmedRequired = buyer.inquiry_email_phone === '不通';
+            
+            if (isThreeCallsConfirmedDisplayed && isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
+              errors.push('3回架電確認済みを選択してください');
+            }
+            
+            // パターン4: 業者問合せが必須（法人名に入力がある場合）
+            const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+            
+            if (hasCompanyName && !buyer.broker_inquiry) {
+              errors.push('業者問合せを選択してください');
+            }
+            
+            if (errors.length > 0) {
+              setSnackbar({
+                open: true,
+                message: errors.join('\n'),
+                severity: 'error'
+              });
+              return; // 遷移をキャンセル
+            }
+            
+            // バリデーションOKなら遷移
             if (propertyNumberField) {
               navigate(`/property-listings/${propertyNumberField}`);
             } else {
@@ -662,6 +762,466 @@ export default function NewBuyerPage() {
                       );
                     }
 
+                    // three_calls_confirmedフィールドは条件付き表示（ボタン形式）
+                    if (field.key === 'three_calls_confirmed') {
+                      const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      const shouldDisplay = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+
+                      if (!shouldDisplay) {
+                        return null;
+                      }
+
+                      const isRequired = !value || value.trim() === '';
+
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                variant={value === '3回架電OK' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '90px',
+                                  ...(value === '3回架電OK' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('3回架電OK')}
+                              >
+                                3回架電OK
+                              </Button>
+                              <Button
+                                variant={value === '3回架電未' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '90px',
+                                  ...(value === '3回架電未' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('3回架電未')}
+                              >
+                                3回架電未
+                              </Button>
+                              <Button
+                                variant={value === '他' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '60px',
+                                  ...(value === '他' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('他')}
+                              >
+                                他
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // initial_assigneeフィールドは特別処理（スタッフイニシャルボタン形式）
+                    if (field.key === 'initial_assignee') {
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                              {staffInitials.map((initial) => (
+                                <Button
+                                  key={initial}
+                                  variant={value === initial ? 'contained' : 'outlined'}
+                                  sx={{ 
+                                    minWidth: '40px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    ...(value === initial ? {
+                                      backgroundColor: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        backgroundColor: SECTION_COLORS.buyer.dark,
+                                      },
+                                    } : {
+                                      borderColor: SECTION_COLORS.buyer.main,
+                                      color: SECTION_COLORS.buyer.main,
+                                      '&:hover': {
+                                        borderColor: SECTION_COLORS.buyer.dark,
+                                        backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                      },
+                                    }),
+                                  }}
+                                  size="small"
+                                  onClick={() => handleButtonClick(initial)}
+                                >
+                                  {initial}
+                                </Button>
+                              ))}
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // viewing_promotion_emailフィールド（条件付き表示・ボタン形式）
+                    if (field.key === 'viewing_promotion_email') {
+                      const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                      const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+                      const isViewingPromotionRequired = buyer.status === '要内覧促進客';
+                      const isSecondInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('2件目以降紹介');
+                      const shouldDisplay = (hasMailInquiry || hasPhoneInquiry || isViewingPromotionRequired) && !isSecondInquiry;
+
+                      if (!shouldDisplay) {
+                        return null;
+                      }
+
+                      const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+                      const isRequiredPattern1 = hasPhoneInquiry && hasInquiryHearing;
+                      const isRequiredPattern2 = hasMailInquiry && buyer.inquiry_email_phone === '不通';
+                      const isRequired = (isRequiredPattern1 || isRequiredPattern2) && (!value || value.trim() === '');
+
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                variant={value === '要' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('要')}
+                              >
+                                要
+                              </Button>
+                              <Button
+                                variant={value === '不要' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '不要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('不要')}
+                              >
+                                不要
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // distribution_typeフィールドは特別処理（ボタン形式）
+                    if (field.key === 'distribution_type') {
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                variant={value === '要' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('要')}
+                              >
+                                要
+                              </Button>
+                              <Button
+                                variant={value === '不要' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: 1,
+                                  ...(value === '不要' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('不要')}
+                              >
+                                不要
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // broker_inquiryフィールド（条件付き表示・ボタン形式）
+                    if (field.key === 'broker_inquiry') {
+                      const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+                      
+                      if (!hasCompanyName) {
+                        return null;
+                      }
+
+                      const isRequired = !value || value.trim() === '';
+
+                      const handleButtonClick = (newValue: string) => {
+                        const valueToSave = value === newValue ? '' : newValue;
+                        setBuyer((prev: any) => ({ ...prev, [field.key]: valueToSave }));
+                      };
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="caption" color="text.primary" sx={{ display: 'block', mb: 0.5 }}>
+                              {field.label}
+                              {isRequired && <span style={{ color: 'red', fontWeight: 'bold' }}> *必須</span>}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                variant={value === '業者問合せ' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '100px',
+                                  ...(value === '業者問合せ' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('業者問合せ')}
+                              >
+                                業者問合せ
+                              </Button>
+                              <Button
+                                variant={value === '業者（両手）' ? 'contained' : 'outlined'}
+                                sx={{ 
+                                  flex: '1 1 auto', 
+                                  minWidth: '100px',
+                                  ...(value === '業者（両手）' ? {
+                                    backgroundColor: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      backgroundColor: SECTION_COLORS.buyer.dark,
+                                    },
+                                  } : {
+                                    borderColor: SECTION_COLORS.buyer.main,
+                                    color: SECTION_COLORS.buyer.main,
+                                    '&:hover': {
+                                      borderColor: SECTION_COLORS.buyer.dark,
+                                      backgroundColor: `${SECTION_COLORS.buyer.main}15`,
+                                    },
+                                  }),
+                                }}
+                                size="small"
+                                onClick={() => handleButtonClick('業者（両手）')}
+                              >
+                                業者（両手）
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // Pinrich（条件付き必須）
+                    if (field.key === 'pinrich') {
+                      const hasEmail = buyer.email && buyer.email.trim() !== '';
+                      const hasValue = value && value.trim() !== '';
+                      const isRequired = hasEmail && !hasValue;
+
+                      return (
+                        <Grid item {...gridSize} key={field.key}>
+                          <Box 
+                            sx={{ 
+                              mb: 1,
+                              p: isRequired ? 2 : 0,
+                              border: isRequired ? '3px solid' : 'none',
+                              borderColor: isRequired ? 'error.main' : 'transparent',
+                              borderRadius: isRequired ? 1 : 0,
+                              bgcolor: isRequired ? 'error.light' : 'transparent',
+                            }}
+                          >
+                            <InlineEditableField
+                              label={field.label}
+                              value={value || ''}
+                              fieldName={field.key}
+                              fieldType="dropdown"
+                              options={PINRICH_OPTIONS}
+                              onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
+                              showEditIndicator={true}
+                              oneClickDropdown={true}
+                            />
+                            {isRequired && (
+                              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, fontWeight: 'bold' }}>
+                                *必須: メールアドレスが入力されている場合、Pinrichの選択が必要です
+                              </Typography>
+                            )}
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
+                    // email_confirmation（条件付き表示）
+                    if (field.key === 'email_confirmation') {
+                      const shouldDisplay = !buyer.email || buyer.email.trim() === '';
+
+                      if (!shouldDisplay) {
+                        return null;
+                      }
+
+                      return (
+                        <Grid item xs={12} key={field.key}>
+                          <Box 
+                            sx={{ 
+                              mb: 1,
+                              p: 2,
+                              border: '2px solid',
+                              borderColor: 'error.main',
+                              borderRadius: 1,
+                              bgcolor: 'error.light',
+                              animation: 'pulse 2s ease-in-out infinite',
+                              '@keyframes pulse': {
+                                '0%, 100%': {
+                                  opacity: 1,
+                                },
+                                '50%': {
+                                  opacity: 0.8,
+                                },
+                              },
+                            }}
+                          >
+                            <InlineEditableField
+                              label={field.label}
+                              value={value || ''}
+                              fieldName={field.key}
+                              fieldType="dropdown"
+                              options={EMAIL_CONFIRMATION_OPTIONS}
+                              onSave={async (newValue) => handleInlineFieldSave(field.key, newValue)}
+                              showEditIndicator={true}
+                              oneClickDropdown={true}
+                            />
+                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1, fontWeight: 'bold' }}>
+                              *重要: メールアドレスが空欄の場合、メアド確認の選択が必要です
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      );
+                    }
+
                     // 日付フィールド
                     if (field.type === 'date') {
                       return (
@@ -778,6 +1338,47 @@ export default function NewBuyerPage() {
               <Button
                 variant="outlined"
                 onClick={() => {
+                  // 必須フィールドのバリデーション
+                  const errors = [];
+                  
+                  // パターン1: 内覧促進メールが必須（メール問合せ AND 【問合メール】電話対応 = 済）
+                  const hasMailInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('メール');
+                  const isViewingPromotionEmailRequiredPattern1 = hasMailInquiry && buyer.inquiry_email_phone === '済';
+                  
+                  // パターン2: 内覧促進メールが必須（電話問合せ AND 問合時ヒアリングに入力がある）
+                  const hasPhoneInquiry = buyer.inquiry_source && buyer.inquiry_source.includes('電話');
+                  const hasInquiryHearing = buyer.inquiry_hearing && buyer.inquiry_hearing.trim() !== '';
+                  const isViewingPromotionEmailRequiredPattern2 = hasPhoneInquiry && hasInquiryHearing;
+                  
+                  if ((isViewingPromotionEmailRequiredPattern1 || isViewingPromotionEmailRequiredPattern2) && !buyer.viewing_promotion_email) {
+                    errors.push('内覧促進メールを選択してください');
+                  }
+                  
+                  // パターン3: 3回架電確認済みが必須（【問合メール】電話対応 = 不通 の場合のみ）
+                  const isThreeCallsConfirmedDisplayed = hasMailInquiry && (buyer.inquiry_email_phone === '未' || buyer.inquiry_email_phone === '不通');
+                  const isThreeCallsConfirmedRequired = buyer.inquiry_email_phone === '不通';
+                  
+                  if (isThreeCallsConfirmedDisplayed && isThreeCallsConfirmedRequired && !buyer.three_calls_confirmed) {
+                    errors.push('3回架電確認済みを選択してください');
+                  }
+                  
+                  // パターン4: 業者問合せが必須（法人名に入力がある場合）
+                  const hasCompanyName = buyer.company_name && buyer.company_name.trim() !== '';
+                  
+                  if (hasCompanyName && !buyer.broker_inquiry) {
+                    errors.push('業者問合せを選択してください');
+                  }
+                  
+                  if (errors.length > 0) {
+                    setSnackbar({
+                      open: true,
+                      message: errors.join('\n'),
+                      severity: 'error'
+                    });
+                    return; // 遷移をキャンセル
+                  }
+                  
+                  // バリデーションOKなら遷移
                   if (propertyNumberField) {
                     navigate(`/property-listings/${propertyNumberField}`);
                   } else {
