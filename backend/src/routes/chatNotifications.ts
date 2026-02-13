@@ -512,12 +512,16 @@ router.get('/pending-price-reductions', async (_req: Request, res: Response) => 
     // 現在時刻（東京時間）
     const now = new Date();
     
-    // 予約日が今日の9時以降で、ステータスがpendingの通知を取得
+    // 予約日の0:00から表示するため、scheduled_atから日付部分のみを抽出して比較
+    // scheduled_atは "YYYY-MM-DD 09:00:00" 形式なので、日付部分を取得
+    const todayDate = now.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    
+    // 予約日が今日以前で、ステータスがpendingの通知を取得
     const { data: notifications, error } = await supabase
       .from('scheduled_notifications')
       .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_at', now.toISOString())
+      .lte('scheduled_at', `${todayDate}T23:59:59.999Z`)
       .order('scheduled_at', { ascending: true });
     
     if (error) {
