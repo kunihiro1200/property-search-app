@@ -297,7 +297,6 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
   const SiteRegistrationSection = () => (
     <Box sx={{ p: 2 }}>
       <EditableField label="サイト登録締め日" field="site_registration_deadline" type="date" />
-      <EditableField label="サイト登録依頼日" field="site_registration_request_date" type="date" />
       <EditableField label="サイト登録納期予定日" field="site_registration_due_date" type="date" />
       <EditableField label="サイト登録確認" field="site_registration_confirmed" />
       <EditableButtonSelect label="サイト登録確認者" field="site_registration_confirmer" options={ASSIGNEE_OPTIONS} />
