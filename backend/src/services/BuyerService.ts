@@ -1037,117 +1037,97 @@ export class BuyerService {
   }
 
   /**
-   * 買主番号を自動生成（スプレッドシートの5行目から最終行までの最大値+1）
+   * 買主番号を自動生成（スプレッドシートとデータベースの最大値+1）
    */
   private async generateBuyerNumber(): Promise<string> {
+    let maxFromSheet = 0;
+    let maxFromDb = 0;
+
+    // スプレッドシートから最大値を取得
     try {
       // 同期サービスを初期化
       await this.initSyncServices();
       
-      if (!this.writeService) {
-        throw new Error('Write service not initialized');
-      }
-      
-      // スプレッドシートから全データを取得
-      const sheetsClient = (this.writeService as any).sheetsClient;
-      const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
-      
-      // 5行目から最終行までのデータを取得（E列：買主番号）
-      const range = `${sheetName}!E5:E`;
-      
-      console.log('[generateBuyerNumber] Fetching buyer numbers from spreadsheet:', {
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
-        range,
-      });
-      
-      const response = await sheetsClient.sheets.spreadsheets.values.get({
-        spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-        range: range,
-      });
-      
-      const rows = response.data.values || [];
-      
-      console.log('[generateBuyerNumber] Fetched rows:', {
-        totalRows: rows.length,
-        firstFewRows: rows.slice(0, 10),
-        lastFewRows: rows.slice(-10),
-      });
-      
-      // 空欄ではない行から数値の買主番号のみを抽出
-      const buyerNumbers: number[] = [];
-      let emptyRowCount = 0;
-      let invalidValueCount = 0;
-      
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
+      if (this.writeService) {
+        // スプレッドシートから全データを取得
+        const sheetsClient = (this.writeService as any).sheetsClient;
+        const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
         
-        // 行が空、またはA列が空の場合
-        if (!row || !row[0] || row[0].trim() === '') {
-          emptyRowCount++;
-          continue;
+        // 5行目から最終行までのデータを取得（E列：買主番号）
+        const range = `${sheetName}!E5:E`;
+        
+        console.log('[generateBuyerNumber] Fetching buyer numbers from spreadsheet:', {
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+          range,
+        });
+        
+        const response = await sheetsClient.sheets.spreadsheets.values.get({
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+          range: range,
+        });
+        
+        const rows = response.data.values || [];
+        
+        // 空欄ではない行から数値の買主番号のみを抽出
+        const buyerNumbers: number[] = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          
+          // 行が空、またはA列が空の場合
+          if (!row || !row[0] || row[0].trim() === '') {
+            continue;
+          }
+          
+          const value = row[0].trim();
+          const num = parseInt(value, 10);
+          
+          if (!isNaN(num)) {
+            buyerNumbers.push(num);
+          }
         }
         
-        const value = row[0].trim();
-        const num = parseInt(value, 10);
-        
-        if (isNaN(num)) {
-          invalidValueCount++;
-          console.log(`[generateBuyerNumber] Invalid value at row ${i + 5}: "${value}"`);
-          continue;
+        if (buyerNumbers.length > 0) {
+          maxFromSheet = Math.max(...buyerNumbers);
+          console.log('[generateBuyerNumber] Max from spreadsheet:', maxFromSheet);
         }
-        
-        buyerNumbers.push(num);
       }
-      
-      console.log('[generateBuyerNumber] Extracted buyer numbers:', {
-        totalRows: rows.length,
-        emptyRowCount,
-        invalidValueCount,
-        validBuyerNumberCount: buyerNumbers.length,
-        max: buyerNumbers.length > 0 ? Math.max(...buyerNumbers) : 'N/A',
-        min: buyerNumbers.length > 0 ? Math.min(...buyerNumbers) : 'N/A',
-        sampleFirst10: buyerNumbers.slice(0, 10),
-        sampleLast10: buyerNumbers.slice(-10),
-      });
-      
-      if (buyerNumbers.length === 0) {
-        // 買主番号が1つもない場合は1から開始
-        console.log('[generateBuyerNumber] No buyer numbers found, returning 1');
-        return '1';
-      }
-      
-      // 最大値を取得して+1
-      const maxNumber = Math.max(...buyerNumbers);
-      const nextNumber = String(maxNumber + 1);
-      
-      console.log('[generateBuyerNumber] Generated next buyer number:', {
-        maxNumber,
-        nextNumber,
-      });
-      
-      return nextNumber;
     } catch (error: any) {
-      console.error('[generateBuyerNumber] Error:', error);
-      // フォールバック: データベースから取得
-      console.log('[generateBuyerNumber] Falling back to database');
-      
+      console.error('[generateBuyerNumber] Error fetching from spreadsheet:', error);
+    }
+
+    // データベースから最大値を取得
+    try {
       const { data, error: dbError } = await this.supabase
         .from('buyers')
         .select('buyer_number')
         .order('buyer_number', { ascending: false })
         .limit(1);
 
-      if (dbError) {
-        console.error('[generateBuyerNumber] Database error:', dbError);
-        throw new Error(`Failed to generate buyer number: ${dbError.message}`);
+      if (!dbError && data && data.length > 0) {
+        const latestNumber = parseInt(data[0].buyer_number, 10);
+        if (!isNaN(latestNumber)) {
+          maxFromDb = latestNumber;
+          console.log('[generateBuyerNumber] Max from database:', maxFromDb);
+        }
       }
+    } catch (error: any) {
+      console.error('[generateBuyerNumber] Error fetching from database:', error);
+    }
 
-      if (!data || data.length === 0) {
-        console.log('[generateBuyerNumber] No buyers in database, returning 1');
-        return '1';
-      }
-
-      const latestNumber = parseInt(data[0].buyer_number, 10);
+    // 両方の最大値を比較して、より大きい方+1を返す
+    const maxNumber = Math.max(maxFromSheet, maxFromDb);
+    const nextNumber = String(maxNumber + 1);
+    
+    console.log('[generateBuyerNumber] Generated next buyer number:', {
+      maxFromSheet,
+      maxFromDb,
+      maxNumber,
+      nextNumber,
+    });
+    
+    return nextNumber;
+  }
       if (isNaN(latestNumber)) {
         console.error('[generateBuyerNumber] Invalid buyer number format in database:', data[0].buyer_number);
         throw new Error('Invalid buyer number format');
