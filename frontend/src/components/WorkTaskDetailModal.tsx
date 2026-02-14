@@ -32,6 +32,7 @@ interface WorkTaskDetailModalProps {
 interface WorkTaskData {
   id: string;
   property_number: string;
+  property_type: string;
   property_address: string;
   seller_name: string;
   spreadsheet_url: string;
@@ -414,7 +415,16 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
-          <Typography variant="h6">業務詳細 - {propertyNumber || ''}</Typography>
+          <Box>
+            <Typography variant="h6">業務詳細 - {propertyNumber || ''}</Typography>
+            {data && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {data.property_type && `${data.property_type}　`}
+                {data.property_address && `${data.property_address}　`}
+                {data.seller_name && `売主：${data.seller_name}`}
+              </Typography>
+            )}
+          </Box>
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
