@@ -293,6 +293,12 @@ export default function PropertyListingDetailPage() {
     // 即座にローカル状態を更新
     setEditedData((prev) => ({ ...prev, [field]: value }));
     
+    // 売買価格（sales_price）以外のフィールドは自動保存
+    if (field === 'sales_price') {
+      // 売買価格は自動保存しない（保存ボタンで確定）
+      return;
+    }
+    
     // 自動保存（デバウンス処理なし - 即座に保存）
     if (!propertyNumber) return;
     
