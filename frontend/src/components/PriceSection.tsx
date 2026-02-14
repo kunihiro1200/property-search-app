@@ -122,7 +122,7 @@ export default function PriceSection({
       const propertyUrl = `${window.location.origin}/property-listings/${propertyNumber}`;
       
       const message = {
-        text: `【値下げ通知】\n${latestReduction}\n${address || ''}\n${propertyUrl}`
+        text: `【値下げ依頼】\n${latestReduction}\n物件番号: ${propertyNumber}\n${address || ''}\n${propertyUrl}`
       };
 
       const response = await fetch(webhookUrl, {
@@ -137,10 +137,10 @@ export default function PriceSection({
         throw new Error('Failed to send message to Google Chat');
       }
 
-      onChatSendSuccess('値下げ通知を送信しました');
+      onChatSendSuccess('値下げ依頼を送信しました');
     } catch (error: any) {
       console.error('Failed to send price reduction chat:', error);
-      onChatSendError('値下げ通知の送信に失敗しました');
+      onChatSendError('値下げ依頼の送信に失敗しました');
     } finally {
       setSendingChat(false);
     }
