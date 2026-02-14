@@ -49,7 +49,8 @@ export class BuyerLinkageService {
         const { count, error } = await this.supabase
           .from('buyers')
           .select('*', { count: 'exact', head: true })
-          .ilike('property_number', `%${propNum}%`);
+          .ilike('property_number', `%${propNum}%`)
+          .is('deleted_at', null);  // 削除済み買主を除外
 
         if (error) {
           console.error(`Failed to count buyers for property ${propNum}:`, error);
@@ -96,6 +97,7 @@ export class BuyerLinkageService {
           next_call_date
         `)
         .ilike('property_number', `%${propertyNumber}%`)
+        .is('deleted_at', null)  // 削除済み買主を除外
         .order(sortBy, { ascending: sortOrder === 'asc' });
 
       if (limit) {
@@ -130,7 +132,8 @@ export class BuyerLinkageService {
         .from('buyers')
         .select('property_number')
         .in('inquiry_confidence', ['A', 'S', 'A+', 'S+'])
-        .not('property_number', 'is', null);
+        .not('property_number', 'is', null)
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to fetch high confidence properties: ${error.message}`);
@@ -161,7 +164,8 @@ export class BuyerLinkageService {
       const { count, error } = await this.supabase
         .from('buyers')
         .select('*', { count: 'exact', head: true })
-        .ilike('property_number', `%${propertyNumber}%`);
+        .ilike('property_number', `%${propertyNumber}%`)
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to count buyers: ${error.message}`);
@@ -183,7 +187,8 @@ export class BuyerLinkageService {
         .from('buyers')
         .select('*', { count: 'exact', head: true })
         .ilike('property_number', `%${propertyNumber}%`)
-        .in('inquiry_confidence', ['A', 'S', 'A+', 'S+']);
+        .in('inquiry_confidence', ['A', 'S', 'A+', 'S+'])
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to check high confidence buyers: ${error.message}`);

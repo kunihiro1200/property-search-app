@@ -5,7 +5,6 @@ import {
   ShoppingCart as ShoppingCartIcon,
   Home as HomeIcon,
   Assignment as AssignmentIcon,
-  Public as PublicIcon,
 } from '@mui/icons-material';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
@@ -19,10 +18,6 @@ export default function PageNavigation() {
     { path: '/property-listings', label: '物件リスト', icon: <ShoppingCartIcon />, color: SECTION_COLORS.property.main },
     { path: '/work-tasks', label: '業務依頼', icon: <AssignmentIcon />, color: SECTION_COLORS.workTask.main },
   ];
-
-  const handlePublicSiteClick = () => {
-    window.open('/public/properties', '_blank');
-  };
 
   return (
     <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -57,15 +52,6 @@ export default function PageNavigation() {
           </Button>
         ))}
       </ButtonGroup>
-      <Button
-        variant="outlined"
-        color="secondary"
-        startIcon={<PublicIcon />}
-        onClick={handlePublicSiteClick}
-        sx={{ minWidth: 150 }}
-      >
-        公開物件サイト
-      </Button>
     </Box>
   );
 }
