@@ -149,43 +149,82 @@ export default function PriceSection({
   return (
     <Box sx={{ backgroundColor: '#f5f5f5', p: 2, borderRadius: 1 }}>
       {isEditMode ? (
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              売買価格
-            </Typography>
-            <TextField
+        <Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                売買価格
+              </Typography>
+              <TextField
+                fullWidth
+                type="number"
+                value={displaySalesPrice || ''}
+                onChange={(e) => onFieldChange('sales_price', e.target.value ? Number(e.target.value) : null)}
+                InputProps={{
+                  startAdornment: <Typography sx={{ mr: 1 }}>¥</Typography>,
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: 'primary.main',
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                値下げ履歴
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={displayPriceReductionHistory || ''}
+                onChange={(e) => onFieldChange('price_reduction_history', e.target.value)}
+                placeholder="値下げ履歴を入力してください"
+                sx={{ whiteSpace: 'pre-line' }}
+              />
+            </Grid>
+          </Grid>
+          
+          {/* Chat送信ボタン（編集モード中も表示） */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
+            <Button
               fullWidth
-              type="number"
-              value={displaySalesPrice || ''}
-              onChange={(e) => onFieldChange('sales_price', e.target.value ? Number(e.target.value) : null)}
-              InputProps={{
-                startAdornment: <Typography sx={{ mr: 1 }}>¥</Typography>,
-              }}
+              variant="contained"
+              onClick={handleSendPriceReductionChat}
+              disabled={sendingChat || !getLatestPriceReduction()}
               sx={{
-                '& .MuiInputBase-input': {
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                  color: 'primary.main',
+                backgroundColor: isPriceChanged && scheduledNotifications.length === 0 ? '#d32f2f' : '#1976d2',
+                '&:hover': {
+                  backgroundColor: isPriceChanged && scheduledNotifications.length === 0 ? '#b71c1c' : '#1565c0',
+                },
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                animation: isPriceChanged && scheduledNotifications.length === 0 ? 'pulse 2s infinite' : 'none',
+                '@keyframes pulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 10px rgba(211, 47, 47, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
+                  },
                 },
               }}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              値下げ履歴
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              value={displayPriceReductionHistory || ''}
-              onChange={(e) => onFieldChange('price_reduction_history', e.target.value)}
-              placeholder="値下げ履歴を入力してください"
-              sx={{ whiteSpace: 'pre-line' }}
-            />
-          </Grid>
-        </Grid>
+            >
+              {sendingChat ? '送信中...' : 'Chat送信'}
+            </Button>
+            {!getLatestPriceReduction() && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                値下げ履歴が見つかりません
+              </Typography>
+            )}
+          </Box>
+        </Box>
       ) : (
         <Box>
           <Box sx={{ mb: 2 }}>
