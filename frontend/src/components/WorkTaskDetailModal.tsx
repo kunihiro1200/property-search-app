@@ -107,6 +107,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<WorkTaskData | null>(null);
   const [editedData, setEditedData] = useState<Partial<WorkTaskData>>({});
+  const [activeStaffInitials, setActiveStaffInitials] = useState<string[]>([]);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   });
@@ -117,6 +118,19 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
       setEditedData({});
     }
   }, [open, propertyNumber]);
+
+  useEffect(() => {
+    // 通常スタッフのイニシャルを取得
+    const fetchActiveStaff = async () => {
+      try {
+        const response = await api.get('/api/employees/active-initials');
+        setActiveStaffInitials(response.data.initials || []);
+      } catch (error) {
+        console.error('Failed to fetch active staff initials:', error);
+      }
+    };
+    fetchActiveStaff();
+  }, []);
 
   const fetchData = async () => {
     if (!propertyNumber) return;
@@ -319,6 +333,9 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
       return today.toISOString().split('T')[0];
     };
 
+    // サイト登録確認が「完了」かどうか
+    const isSiteRegistrationCompleted = getValue('site_registration_confirmed') === '完了';
+
     return (
       <Box sx={{ p: 2 }}>
         {/* サイト登録締め日（一番上） */}
@@ -334,7 +351,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="CWの方" field="cw_person" />
         <EditableMultilineField label="コメント（サイト登録）" field="site_registration_comment" />
         <EditableField label="パノラマ" field="panorama" />
-        <EditableField label="サイト登録依頼者" field="site_registration_requestor" />
+        <EditableButtonSelect label="サイト登録依頼者" field="site_registration_requestor" options={activeStaffInitials} />
         <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
           <Grid item xs={4}>
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -375,22 +392,26 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="CWの方へ依頼メール（2階以上）" field="cw_request_email_2f_above" />
         <EditableField label="間取図完了予定" field="floor_plan_due_date" type="date" />
 
-        {/* 【図面確認】グループ */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+        {/* 【図面確認】グループ（赤色） */}
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'error.main' }}>
           【図面確認】
         </Typography>
-        <EditableButtonSelect label="間取図確認者" field="floor_plan_confirmer" options={ASSIGNEE_OPTIONS} />
+        <EditableButtonSelect label="間取図確認者" field="floor_plan_confirmer" options={activeStaffInitials} />
         <EditableField label="間取図確認OK/修正コメント" field="floor_plan_ok_comment" />
         <EditableField label="間取図修正回数（当社の依頼ミスのみ）" field="floor_plan_revision_count" type="number" />
         <EditableField label="間取図完了日" field="floor_plan_completed_date" type="date" />
         <EditableField label="間取図格納済み連絡メール" field="floor_plan_stored_email" />
 
-        {/* 【サイト登録確認】グループ */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+        {/* 【サイト登録確認】グループ（赤色） */}
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'error.main' }}>
           【サイト登録確認】
         </Typography>
         <EditableField label="サイト登録確認" field="site_registration_confirmed" />
         <EditableField label="パノラマ完了" field="panorama_completed" />
+        {/* サイト登録確認者（サイト登録確認が「完了」の場合のみ表示） */}
+        {isSiteRegistrationCompleted && (
+          <EditableButtonSelect label="サイト登録確認者" field="site_registration_confirmer" options={activeStaffInitials} />
+        )}
 
         {/* 【確認後処理】グループ */}
         <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
