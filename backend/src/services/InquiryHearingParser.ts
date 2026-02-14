@@ -142,7 +142,6 @@ export class InquiryHearingParser {
     // 問合せ時ヒアリングの最終更新日時が新しい場合は上書き
     return inquiryHearingUpdatedAt > currentUpdatedAt;
   }
-}
 
   /**
    * 物件情報から希望条件を自動設定
@@ -202,3 +201,4 @@ export class InquiryHearingParser {
       return '2000万円以上';
     }
   }
+}

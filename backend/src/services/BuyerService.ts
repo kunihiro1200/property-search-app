@@ -1128,20 +1128,6 @@ export class BuyerService {
     
     return nextNumber;
   }
-      if (isNaN(latestNumber)) {
-        console.error('[generateBuyerNumber] Invalid buyer number format in database:', data[0].buyer_number);
-        throw new Error('Invalid buyer number format');
-      }
-
-      const nextNumber = String(latestNumber + 1);
-      console.log('[generateBuyerNumber] Database fallback result:', {
-        latestNumber,
-        nextNumber,
-      });
-
-      return nextNumber;
-    }
-  }
 
   /**
    * 買主情報を更新
@@ -2881,6 +2867,61 @@ export class BuyerService {
       console.error('[BuyerService.getBuyersByStatus] Error:', error);
       throw new Error(`Failed to get buyers by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * 買主を削除（物理削除）
+   * @param buyerNumber - 買主番号（主キー）
+   * @param userId - ユーザーID（監査ログ用、オプション）
+   * @param userEmail - ユーザーメール（監査ログ用、オプション）
+   * @returns 削除された買主データ
+   */
+  async delete(
+    buyerNumber: string,
+    userId?: string,
+    userEmail?: string
+  ): Promise<any> {
+    console.log(`[BuyerService.delete] Deleting buyer: ${buyerNumber}`);
+
+    // 存在確認
+    const existing = await this.getByBuyerNumber(buyerNumber);
+    if (!existing) {
+      throw new Error('Buyer not found');
+    }
+
+    // 監査ログを記録（オプション）
+    if (userId && userEmail) {
+      try {
+        await AuditLogService.logFieldUpdate(
+          'buyer',
+          existing.buyer_id || buyerNumber,
+          'deleted',
+          'false',
+          'true',
+          userId,
+          userEmail
+        );
+      } catch (auditError) {
+        console.error('[BuyerService.delete] Failed to create audit log:', auditError);
+        // 監査ログのエラーは無視して削除を継続
+      }
+    }
+
+    // データベースから物理削除
+    const { data, error } = await this.supabase
+      .from('buyers')
+      .delete()
+      .eq('buyer_number', buyerNumber)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[BuyerService.delete] Failed to delete buyer: ${error.message}`);
+      throw new Error(`Failed to delete buyer: ${error.message}`);
+    }
+
+    console.log(`[BuyerService.delete] Successfully deleted buyer: ${buyerNumber}`);
+    return data;
   }
 }
 
