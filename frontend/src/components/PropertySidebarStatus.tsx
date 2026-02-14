@@ -33,8 +33,8 @@ interface PropertySidebarStatusProps {
 }
 
 // ステータスの優先順位（表示順）
-// 注意: 「値下げ未完了」は動的に追加されるため、ここには含めない
 const STATUS_PRIORITY: Record<string, number> = {
+  '値下げ未完了': 0, // 最優先
   '未報告': 1,
   '未完了': 2,
   '非公開予定（確認後）': 3,
@@ -105,21 +105,13 @@ export default function PropertySidebarStatus({
     }
   };
 
-  // ステータスリストを構築
-  // 1. 「すべて」を最上位に配置
-  // 2. 「値下げ未完了」を「すべて」の次に動的に追加（カウント > 0の場合のみ）
-  // 3. 他のステータスを優先順位順にソート
+  // ステータスリストを優先順位順にソート
   const statusList = useMemo(() => {
     const list = [{ key: 'all', label: 'すべて', count: statusCounts.all }];
     
-    // 「値下げ未完了」を「すべて」の次に追加（カウント > 0の場合のみ）
-    if (statusCounts['値下げ未完了'] > 0) {
-      list.push({ key: '値下げ未完了', label: '値下げ未完了', count: statusCounts['値下げ未完了'] });
-    }
-    
-    // 他のステータスを優先順位順にソート
+    // ステータスを優先順位順にソート
     const sortedStatuses = Object.entries(statusCounts)
-      .filter(([key]) => key !== 'all' && key !== '' && key !== '値下げ未完了')
+      .filter(([key]) => key !== 'all' && key !== '')
       .sort((a, b) => {
         const priorityA = STATUS_PRIORITY[a[0]] || 999;
         const priorityB = STATUS_PRIORITY[b[0]] || 999;
