@@ -36,6 +36,7 @@ export default function PriceSection({
   const [scheduledNotifications, setScheduledNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showInstantPriceReduction, setShowInstantPriceReduction] = useState(false);
 
   // 予約通知を取得
   useEffect(() => {
@@ -155,6 +156,48 @@ export default function PriceSection({
             </Typography>
           </Box>
           
+          {/* 即値下げ */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              endIcon={showInstantPriceReduction ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowInstantPriceReduction(!showInstantPriceReduction)}
+              sx={{
+                justifyContent: 'space-between',
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                color: 'text.secondary',
+                borderColor: '#ddd',
+                '&:hover': {
+                  borderColor: '#d32f2f',
+                  backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                },
+              }}
+            >
+              即値下げ
+            </Button>
+            
+            <Collapse in={showInstantPriceReduction}>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => window.open('https://chat.googleapis.com/v1/spaces/AAAAw9wyS-o/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=t6SJmZ8af-yyB38DZzAqGOKYI-DnIl6wYtVo-Lyskuk', '_blank')}
+                  fullWidth
+                  sx={{
+                    backgroundColor: '#d32f2f',
+                    '&:hover': {
+                      backgroundColor: '#b71c1c',
+                    },
+                  }}
+                >
+                  Chat送信
+                </Button>
+              </Box>
+            </Collapse>
+          </Box>
+
           {/* 予約値下げ */}
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
             <Button
