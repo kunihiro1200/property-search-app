@@ -20,7 +20,8 @@ export default async function handler(req: any, res: any) {
   }
 
   console.log('[Cron] Starting scheduled notifications processing...');
-  console.log('[Cron] Current time:', new Date().toISOString());
+  console.log('[Cron] Current time (UTC):', new Date().toISOString());
+  console.log('[Cron] Current time (Tokyo):', new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }));
 
   const service = new ScheduledNotificationService();
   
@@ -35,7 +36,11 @@ export default async function handler(req: any, res: any) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('[Cron] Error:', error);
+    console.error('[Cron] Error processing scheduled notifications:', error);
+    console.error('[Cron] Error details:', {
+      message: error.message,
+      stack: error.stack,
+    });
     res.status(500).json({
       success: false,
       error: error.message,

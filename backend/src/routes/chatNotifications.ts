@@ -430,8 +430,11 @@ router.post(
       // scheduledDateは "YYYY-MM-DD" 形式
       const scheduledDateTime = new Date(`${scheduledDate}T09:00:00+09:00`);
       
-      // 現在時刻より前の日付はエラー
-      if (scheduledDateTime <= new Date()) {
+      // 現在時刻（UTC）より前の日付はエラー
+      // 注：scheduledDateTimeは既にUTCに変換されているため、直接比較可能
+      // 例：東京時間 2026-02-14 09:00 → UTC 2026-02-14 00:00
+      const currentTime = new Date();
+      if (scheduledDateTime <= currentTime) {
         return res.status(400).json({
           error: {
             code: 'INVALID_DATE',
@@ -477,6 +480,8 @@ router.post(
         propertyNumber,
         assignee: property.sales_assignee,
         scheduledAt: scheduledDateTime.toISOString(),
+        scheduledAtTokyo: scheduledDateTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+        scheduledAtUTC: scheduledDateTime.toISOString(),
       });
       
       res.json({ 

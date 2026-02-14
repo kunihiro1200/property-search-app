@@ -30,12 +30,16 @@ export class ScheduledNotificationService {
    */
   async processScheduledNotifications(): Promise<number> {
     try {
+      const currentTime = new Date();
+      console.log('[ScheduledNotificationService] Current time (UTC):', currentTime.toISOString());
+      console.log('[ScheduledNotificationService] Current time (Tokyo):', currentTime.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }));
+      
       // 現在時刻を過ぎた未送信の通知を取得
       const { data: notifications, error } = await this.supabase
         .from('scheduled_notifications')
         .select('*')
         .eq('status', 'pending')
-        .lte('scheduled_at', new Date().toISOString())
+        .lte('scheduled_at', currentTime.toISOString())
         .order('scheduled_at', { ascending: true });
 
       if (error) {
@@ -44,15 +48,32 @@ export class ScheduledNotificationService {
       }
 
       if (!notifications || notifications.length === 0) {
+        console.log('[ScheduledNotificationService] No notifications to process');
         return 0;
       }
 
       console.log(`[ScheduledNotificationService] Processing ${notifications.length} scheduled notifications`);
+      console.log('[ScheduledNotificationService] Notifications:', notifications.map(n => {
+        const scheduledDate = new Date(n.scheduled_at);
+        return {
+          id: n.id,
+          property_number: n.property_number,
+          scheduled_at_utc: n.scheduled_at,
+          scheduled_at_tokyo: scheduledDate.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+          is_past: scheduledDate <= currentTime,
+        };
+      }));
 
       let processedCount = 0;
 
       for (const notification of notifications) {
         try {
+          console.log(`[ScheduledNotificationService] Sending notification:`, {
+            id: notification.id,
+            property_number: notification.property_number,
+            scheduled_at: notification.scheduled_at,
+          });
+          
           // チャットに送信
           await axios.post(notification.webhook_url, {
             text: notification.message,
