@@ -36,6 +36,9 @@ export default function PriceSection({
   const [scheduledNotifications, setScheduledNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showImmediateForm, setShowImmediateForm] = useState(false);
+  const [immediateMessage, setImmediateMessage] = useState('');
+  const [sendingImmediate, setSendingImmediate] = useState(false);
 
   // 予約通知を取得
   useEffect(() => {
@@ -96,6 +99,43 @@ export default function PriceSection({
     }
   };
 
+  const handleImmediatePriceReduction = async () => {
+    if (!immediateMessage.trim()) {
+      onChatSendError('メッセージを入力してください');
+      return;
+    }
+
+    setSendingImmediate(true);
+    try {
+      const webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAw9wyS-o/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=t6SJmZ8af-yyB38DZzAqGOKYI-DnIl6wYtVo-Lyskuk';
+      
+      const message = {
+        text: `【即値下げ通知】\n物件番号: ${propertyNumber}\n\n${immediateMessage}`
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message to Google Chat');
+      }
+
+      onChatSendSuccess('即値下げ通知を送信しました');
+      setImmediateMessage('');
+      setShowImmediateForm(false);
+    } catch (error: any) {
+      console.error('Failed to send immediate price reduction:', error);
+      onChatSendError('即値下げ通知の送信に失敗しました');
+    } finally {
+      setSendingImmediate(false);
+    }
+  };
+
   return (
     <Box sx={{ backgroundColor: '#f5f5f5', p: 2, borderRadius: 1 }}>
       {isEditMode ? (
@@ -153,6 +193,61 @@ export default function PriceSection({
             <Typography variant="body1" sx={{ whiteSpace: 'pre-line', fontSize: '1.1rem' }}>
               {displayPriceReductionHistory || '-'}
             </Typography>
+          </Box>
+          
+          {/* 即値下げ */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              endIcon={showImmediateForm ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowImmediateForm(!showImmediateForm)}
+              sx={{
+                justifyContent: 'space-between',
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                color: 'text.secondary',
+                borderColor: '#ddd',
+                '&:hover': {
+                  borderColor: '#d32f2f',
+                  backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                },
+              }}
+            >
+              即値下げ
+            </Button>
+            
+            <Collapse in={showImmediateForm}>
+              <Box sx={{ mt: 2 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={immediateMessage}
+                  onChange={(e) => setImmediateMessage(e.target.value)}
+                  placeholder="即値下げ通知メッセージを入力してください"
+                  sx={{ 
+                    mb: 1,
+                    '& .MuiInputBase-input': { fontSize: '1rem' }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleImmediatePriceReduction}
+                  disabled={!immediateMessage.trim() || sendingImmediate}
+                  fullWidth
+                  sx={{
+                    backgroundColor: '#d32f2f',
+                    '&:hover': {
+                      backgroundColor: '#b71c1c',
+                    },
+                  }}
+                >
+                  {sendingImmediate ? '送信中...' : 'Chat送信'}
+                </Button>
+              </Box>
+            </Collapse>
           </Box>
           
           {/* 予約値下げ */}
