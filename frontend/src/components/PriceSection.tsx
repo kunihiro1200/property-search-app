@@ -11,6 +11,7 @@ interface PriceSectionProps {
   isEditMode: boolean;
   propertyNumber: string;
   salesAssignee?: string;
+  address?: string;
   onChatSendSuccess: (message: string) => void;
   onChatSendError: (message: string) => void;
 }
@@ -24,6 +25,7 @@ export default function PriceSection({
   isEditMode,
   propertyNumber,
   salesAssignee,
+  address,
   onChatSendSuccess,
   onChatSendError,
 }: PriceSectionProps) {
@@ -36,9 +38,17 @@ export default function PriceSection({
   const [scheduledNotifications, setScheduledNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
-  const [showImmediateForm, setShowImmediateForm] = useState(false);
-  const [immediateMessage, setImmediateMessage] = useState('');
-  const [sendingImmediate, setSendingImmediate] = useState(false);
+  const [sendingChat, setSendingChat] = useState(false);
+  
+  // 値下げ履歴の最新行を検出
+  const getLatestPriceReduction = () => {
+    if (!displayPriceReductionHistory) return null;
+    const lines = displayPriceReductionHistory.split('\n').filter(line => line.trim());
+    return lines.length > 0 ? lines[0] : null;
+  };
+  
+  // 売買価格が変更されたかチェック
+  const isPriceChanged = editedData.sales_price !== undefined && editedData.sales_price !== salesPrice;
 
   // 予約通知を取得
   useEffect(() => {
@@ -99,18 +109,20 @@ export default function PriceSection({
     }
   };
 
-  const handleImmediatePriceReduction = async () => {
-    if (!immediateMessage.trim()) {
-      onChatSendError('メッセージを入力してください');
+  const handleSendPriceReductionChat = async () => {
+    const latestReduction = getLatestPriceReduction();
+    if (!latestReduction) {
+      onChatSendError('値下げ履歴が見つかりません');
       return;
     }
 
-    setSendingImmediate(true);
+    setSendingChat(true);
     try {
       const webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAw9wyS-o/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=t6SJmZ8af-yyB38DZzAqGOKYI-DnIl6wYtVo-Lyskuk';
+      const propertyUrl = `${window.location.origin}/property-listings/${propertyNumber}`;
       
       const message = {
-        text: `【即値下げ通知】\n物件番号: ${propertyNumber}\n\n${immediateMessage}`
+        text: `【値下げ通知】\n${latestReduction}\n${address || ''}\n${propertyUrl}`
       };
 
       const response = await fetch(webhookUrl, {
@@ -125,14 +137,12 @@ export default function PriceSection({
         throw new Error('Failed to send message to Google Chat');
       }
 
-      onChatSendSuccess('即値下げ通知を送信しました');
-      setImmediateMessage('');
-      setShowImmediateForm(false);
+      onChatSendSuccess('値下げ通知を送信しました');
     } catch (error: any) {
-      console.error('Failed to send immediate price reduction:', error);
-      onChatSendError('即値下げ通知の送信に失敗しました');
+      console.error('Failed to send price reduction chat:', error);
+      onChatSendError('値下げ通知の送信に失敗しました');
     } finally {
-      setSendingImmediate(false);
+      setSendingChat(false);
     }
   };
 
@@ -195,59 +205,41 @@ export default function PriceSection({
             </Typography>
           </Box>
           
-          {/* 即値下げ */}
+          {/* Chat送信ボタン */}
           <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
             <Button
               fullWidth
-              variant="outlined"
-              endIcon={showImmediateForm ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => setShowImmediateForm(!showImmediateForm)}
+              variant="contained"
+              onClick={handleSendPriceReductionChat}
+              disabled={sendingChat || !getLatestPriceReduction()}
               sx={{
-                justifyContent: 'space-between',
-                textTransform: 'none',
+                backgroundColor: isPriceChanged && scheduledNotifications.length === 0 ? '#d32f2f' : '#1976d2',
+                '&:hover': {
+                  backgroundColor: isPriceChanged && scheduledNotifications.length === 0 ? '#b71c1c' : '#1565c0',
+                },
                 fontSize: '1.1rem',
                 fontWeight: 'bold',
-                color: 'text.secondary',
-                borderColor: '#ddd',
-                '&:hover': {
-                  borderColor: '#d32f2f',
-                  backgroundColor: 'rgba(211, 47, 47, 0.04)',
+                animation: isPriceChanged && scheduledNotifications.length === 0 ? 'pulse 2s infinite' : 'none',
+                '@keyframes pulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 10px rgba(211, 47, 47, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)',
+                  },
                 },
               }}
             >
-              即値下げ
+              {sendingChat ? '送信中...' : 'Chat送信'}
             </Button>
-            
-            <Collapse in={showImmediateForm}>
-              <Box sx={{ mt: 2 }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={immediateMessage}
-                  onChange={(e) => setImmediateMessage(e.target.value)}
-                  placeholder="即値下げ通知メッセージを入力してください"
-                  sx={{ 
-                    mb: 1,
-                    '& .MuiInputBase-input': { fontSize: '1rem' }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleImmediatePriceReduction}
-                  disabled={!immediateMessage.trim() || sendingImmediate}
-                  fullWidth
-                  sx={{
-                    backgroundColor: '#d32f2f',
-                    '&:hover': {
-                      backgroundColor: '#b71c1c',
-                    },
-                  }}
-                >
-                  {sendingImmediate ? '送信中...' : 'Chat送信'}
-                </Button>
-              </Box>
-            </Collapse>
+            {!getLatestPriceReduction() && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                値下げ履歴が見つかりません
+              </Typography>
+            )}
           </Box>
           
           {/* 予約値下げ */}

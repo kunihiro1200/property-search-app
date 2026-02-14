@@ -1111,6 +1111,7 @@ ${propertyDetailUrl}
                   isEditMode={isPriceEditMode}
                   propertyNumber={data.property_number}
                   salesAssignee={data.sales_assignee}
+                  address={data.address}
                   onChatSendSuccess={(message) => setSnackbar({ open: true, message, severity: 'success' })}
                   onChatSendError={(message) => setSnackbar({ open: true, message, severity: 'error' })}
                 />
