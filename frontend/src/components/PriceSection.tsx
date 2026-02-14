@@ -224,6 +224,109 @@ export default function PriceSection({
               </Typography>
             )}
           </Box>
+          
+          {/* 予約値下げ（編集モード中も表示） */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #ddd' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              endIcon={showScheduleForm ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setShowScheduleForm(!showScheduleForm)}
+              sx={{
+                justifyContent: 'space-between',
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                color: 'text.secondary',
+                borderColor: '#ddd',
+                '&:hover': {
+                  borderColor: '#ed6c02',
+                  backgroundColor: 'rgba(237, 108, 2, 0.04)',
+                },
+              }}
+            >
+              予約値下げ
+            </Button>
+            
+            <Collapse in={showScheduleForm}>
+              <Box sx={{ mt: 2 }}>
+                {/* 予約済み通知リスト */}
+                {loadingNotifications ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : scheduledNotifications.length > 0 && (
+                  <Box sx={{ mb: 2, p: 2, backgroundColor: '#fff3e0', borderRadius: 1 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      予約済み
+                    </Typography>
+                    <List dense>
+                      {scheduledNotifications.map((notification) => (
+                        <ListItem key={notification.id} sx={{ px: 0 }}>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip 
+                                  label={new Date(notification.scheduled_at).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' }) + ' 9:00'} 
+                                  size="small" 
+                                  color="warning"
+                                />
+                                <Typography variant="body2">
+                                  {notification.message.split('\n').slice(2).join('\n')}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+                
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="予約日"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  value={scheduledMessage}
+                  onChange={(e) => setScheduledMessage(e.target.value)}
+                  placeholder="値下げ通知メッセージを入力してください"
+                  sx={{ 
+                    mb: 1,
+                    '& .MuiInputBase-input': { fontSize: '1rem' }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={scheduling ? <CircularProgress size={16} color="inherit" /> : <ScheduleIcon />}
+                  onClick={handleSchedulePriceReduction}
+                  disabled={!scheduledDate || !scheduledMessage.trim() || scheduling || !salesAssignee}
+                  fullWidth
+                  sx={{
+                    backgroundColor: '#ed6c02',
+                    '&:hover': {
+                      backgroundColor: '#e65100',
+                    },
+                  }}
+                >
+                  {scheduling ? '設定中...' : `予約値下げを設定（${scheduledDate || '日付未選択'} 9:00送信）`}
+                </Button>
+                {!salesAssignee && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                    物件に担当者が設定されていません
+                  </Typography>
+                )}
+              </Box>
+            </Collapse>
+          </Box>
         </Box>
       ) : (
         <Box>
