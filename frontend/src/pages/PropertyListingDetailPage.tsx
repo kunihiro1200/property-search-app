@@ -36,6 +36,7 @@ import DistributionAreaField from '../components/DistributionAreaField';
 import EditableUrlField from '../components/EditableUrlField';
 import MessageTemplateDialog from '../components/MessageTemplateDialog';
 import AssigneeChatSender from '../components/AssigneeChatSender';
+import PropertySidebarStatus from '../components/PropertySidebarStatus';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface PropertyListing {
@@ -682,6 +683,17 @@ export default function PropertyListingDetailPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3, zoom: '0.6' }}>
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* 左サイドバー - サイドバーステータス */}
+        <PropertySidebarStatus
+          listings={[data]}
+          selectedStatus={data.sidebar_status || null}
+          onStatusChange={() => {}} // 詳細画面では変更不可
+          pendingPriceReductionProperties={new Set()}
+        />
+        
+        {/* メインコンテンツ */}
+        <Box sx={{ flex: 1 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2247,6 +2259,8 @@ ${propertyDetailUrl}
       >
         <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
       </Snackbar>
+        </Box> {/* メインコンテンツの閉じタグ */}
+      </Box> {/* サイドバーとメインコンテンツのコンテナの閉じタグ */}
     </Container>
   );
 }
