@@ -417,10 +417,11 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
           <Box>
             <Typography variant="h6">業務詳細 - {propertyNumber || ''}</Typography>
             {data && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 'bold' }}>
                 {data.property_type && `${data.property_type}　`}
                 {data.property_address && `${data.property_address}　`}
-                {data.seller_name && `売主：${data.seller_name}`}
+                {data.seller_name && `売主：${data.seller_name}　`}
+                {data.sales_assignee && `担当：${data.sales_assignee}`}
               </Typography>
             )}
           </Box>
