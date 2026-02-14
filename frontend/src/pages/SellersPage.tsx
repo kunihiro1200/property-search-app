@@ -1,4 +1,4 @@
-// 管理画面専用ページ - テスト用コメント追加
+// 管理画面専用ページ - デプロイ分離テスト (admin-frontend)
 import { useState, useEffect } from 'react';
 import {
   Container,
