@@ -139,9 +139,11 @@ export class WorkTaskColumnMapper {
         return str;
       }
 
-      // YYYY/MM/DD形式
-      if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(str)) {
-        const parts = str.split('/');
+      // YYYY/MM/DD形式（時刻付きも対応）
+      if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(str)) {
+        // 時刻部分を削除（スペースより前の部分のみを使用）
+        const datePart = str.split(' ')[0];
+        const parts = datePart.split('/');
         const year = parts[0];
         const month = parts[1].padStart(2, '0');
         const day = parts[2].padStart(2, '0');
