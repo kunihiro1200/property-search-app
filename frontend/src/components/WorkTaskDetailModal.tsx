@@ -474,14 +474,14 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="間取図確認OK/修正コメント" field="floor_plan_ok_comment" />
         <EditableField label="間取図修正回数（当社の依頼ミスのみ）" field="floor_plan_revision_count" type="number" />
         <EditableField label="間取図完了日" field="floor_plan_completed_date" type="date" />
-        <EditableField label="間取図格納済み連絡メール" field="floor_plan_stored_email" />
+        <EditableSendCountSelect label="間取図格納済み連絡メール" field="floor_plan_stored_email" />
 
         {/* 【サイト登録確認】グループ（赤色） */}
         <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'error.main' }}>
           【サイト登録確認】
         </Typography>
-        <EditableField label="サイト登録確認" field="site_registration_confirmed" />
-        <EditableField label="パノラマ完了" field="panorama_completed" />
+        <EditableButtonSelect label="サイト登録確認" field="site_registration_confirmed" options={['確認中', '完了', '他']} />
+        <EditableSingleButton label="パノラマ完了" field="panorama_completed" buttonLabel="完了" />
         {/* サイト登録確認者（サイト登録確認が「完了」の場合のみ表示） */}
         {isSiteRegistrationCompleted && (
           <EditableButtonSelect label="サイト登録確認者" field="site_registration_confirmer" options={activeStaffInitials} />
