@@ -9,10 +9,10 @@ import { google } from 'googleapis';
 
 const SPREADSHEET_ID = '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g';
 const SHEET_NAME = '業務依頼';
-const PROPERTY_NUMBER = 'AA1821';
+const PROPERTY_NUMBER = 'AA12495';
 
 async function main() {
-  console.log('🔍 AA1821のデータ同期状況を確認します...\n');
+  console.log('🔍 AA12495のデータ同期状況を確認します...\n');
 
   // Supabaseクライアント
   const supabase = createClient(
@@ -42,7 +42,7 @@ async function main() {
     }
 
     if (!dbData) {
-      console.log('❌ データベースにAA1821が見つかりません');
+      console.log('❌ データベースにAA12495が見つかりません');
       return;
     }
 
@@ -72,10 +72,10 @@ async function main() {
       return;
     }
 
-    // AA1821の行を検索
+    // AA12495の行を検索
     const targetRow = rows.find(row => row[propertyNumberIndex] === PROPERTY_NUMBER);
     if (!targetRow) {
-      console.log('❌ スプレッドシートにAA1821が見つかりません');
+      console.log('❌ スプレッドシートにAA12495が見つかりません');
       return;
     }
 
@@ -147,7 +147,7 @@ async function main() {
       console.log('\n⚠️ 一部のフィールドが一致していません');
       console.log('\n💡 解決方法:');
       console.log('   1. 手動同期を実行: npx ts-node backend/sync-work-tasks.ts');
-      console.log('   2. 特定物件のみ同期: curl -X POST http://localhost:3001/api/work-tasks/sync/AA1821');
+      console.log('   2. 特定物件のみ同期: curl -X POST http://localhost:3001/api/work-tasks/sync/AA12495');
     }
 
     // 4. 最終同期日時を表示

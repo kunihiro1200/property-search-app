@@ -172,7 +172,7 @@ export default function WorkTasksPage() {
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {/* 左サイドバー */}
-        <Paper sx={{ width: 300, flexShrink: 0 }}>
+        <Paper sx={{ width: 400, flexShrink: 0 }}>
           <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
             <Typography variant="subtitle1" fontWeight="bold">
               業務リスト
