@@ -273,11 +273,13 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
       </Grid>
       <Grid item xs={8}>
-        <ButtonGroup size="small" variant="outlined" fullWidth>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
-            variant={getValue(field) === '送信1' ? 'contained' : 'outlined'}
-            onClick={() => handleFieldChange(field, '送信1')}
-            sx={getValue(field) === '送信1' ? {
+            size="small"
+            variant={getValue(field) === 'TRUE' ? 'contained' : 'outlined'}
+            onClick={() => handleFieldChange(field, 'TRUE')}
+            fullWidth
+            sx={getValue(field) === 'TRUE' ? {
               bgcolor: workTaskColor.main,
               color: workTaskColor.contrastText,
               '&:hover': {
@@ -289,9 +291,11 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
             }}
           >送信1</Button>
           <Button
-            variant={getValue(field) === '送信2' ? 'contained' : 'outlined'}
-            onClick={() => handleFieldChange(field, '送信2')}
-            sx={getValue(field) === '送信2' ? {
+            size="small"
+            variant={getValue(field) === 'FALSE' ? 'contained' : 'outlined'}
+            onClick={() => handleFieldChange(field, 'FALSE')}
+            fullWidth
+            sx={getValue(field) === 'FALSE' ? {
               bgcolor: workTaskColor.main,
               color: workTaskColor.contrastText,
               '&:hover': {
@@ -302,7 +306,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
               color: 'text.secondary',
             }}
           >送信2</Button>
-        </ButtonGroup>
+        </Box>
       </Grid>
     </Grid>
   );
