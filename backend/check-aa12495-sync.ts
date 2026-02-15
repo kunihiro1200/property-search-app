@@ -98,6 +98,7 @@ async function main() {
       { sheet: 'サイト登録確認', db: 'site_registration_confirmed' },
       { sheet: 'サイト登録確認者', db: 'site_registration_confirmer' },
       { sheet: '配信日', db: 'distribution_date' },
+      { sheet: 'メール配信', db: 'email_distribution' },
       { sheet: '公開予定日', db: 'publish_scheduled_date' },
       { sheet: '決済日', db: 'settlement_date' },
       { sheet: '決済予定月', db: 'settlement_scheduled_month' },
