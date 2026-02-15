@@ -241,7 +241,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
       </Grid>
       <Grid item xs={8}>
-        <ButtonGroup size="small" variant="outlined">
+        <ButtonGroup size="small" variant="outlined" fullWidth>
           {options.map((opt) => (
             <Button
               key={opt}
@@ -273,7 +273,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
       </Grid>
       <Grid item xs={8}>
-        <ButtonGroup size="small" variant="outlined">
+        <ButtonGroup size="small" variant="outlined" fullWidth>
           <Button
             variant={getValue(field) === '送信1' ? 'contained' : 'outlined'}
             onClick={() => handleFieldChange(field, '送信1')}
@@ -307,6 +307,35 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
     </Grid>
   );
 
+  // 単一ボタン（パノラマ用）
+  const EditableSingleButton = ({ label, field, buttonLabel }: { label: string; field: string; buttonLabel: string }) => (
+    <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
+      <Grid item xs={4}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
+      </Grid>
+      <Grid item xs={8}>
+        <Button
+          size="small"
+          variant={getValue(field) === buttonLabel ? 'contained' : 'outlined'}
+          onClick={() => handleFieldChange(field, buttonLabel)}
+          fullWidth
+          sx={getValue(field) === buttonLabel ? {
+            bgcolor: workTaskColor.main,
+            color: workTaskColor.contrastText,
+            '&:hover': {
+              bgcolor: workTaskColor.dark,
+            }
+          } : {
+            borderColor: 'divider',
+            color: 'text.secondary',
+          }}
+        >
+          {buttonLabel}
+        </Button>
+      </Grid>
+    </Grid>
+  );
+
   // Yes/No選択
   const EditableYesNo = ({ label, field }: { label: string; field: string }) => (
     <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
@@ -314,7 +343,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
       </Grid>
       <Grid item xs={8}>
-        <ButtonGroup size="small" variant="outlined">
+        <ButtonGroup size="small" variant="outlined" fullWidth>
           <Button
             variant={getValue(field) === 'Y' ? 'contained' : 'outlined'}
             onClick={() => handleFieldChange(field, 'Y')}
@@ -391,7 +420,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableSendCountSelect label="CWの方へ依頼メール（サイト登録）" field="cw_request_email_site" />
         <EditableField label="CWの方" field="cw_person" />
         <EditableMultilineField label="コメント（サイト登録）" field="site_registration_comment" />
-        <EditableField label="パノラマ" field="panorama" />
+        <EditableSingleButton label="パノラマ" field="panorama" buttonLabel="あり" />
         <EditableButtonSelect label="サイト登録依頼者" field="site_registration_requestor" options={activeStaffInitials} />
         <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
           <Grid item xs={4}>
