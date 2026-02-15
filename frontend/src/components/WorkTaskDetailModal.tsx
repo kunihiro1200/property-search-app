@@ -459,8 +459,8 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
           【図面作成依頼】
         </Typography>
-        <EditableField label="間取図" field="floor_plan" />
-        <EditableField label="方位記号" field="direction_symbol" />
+        <EditableButtonSelect label="間取図" field="floor_plan" options={['クラウドワークス', '他', '不要']} />
+        <EditableButtonSelect label="方位記号" field="direction_symbol" options={['確認済', '不要（営業相談済）']} />
         <EditableMultilineField label="コメント（間取図関係）" field="floor_plan_comment" />
         <EditableSendCountSelect label="CWの方へ依頼メール（間取り、区画図）" field="cw_request_email_floor_plan" />
         <EditableSendCountSelect label="CWの方へ依頼メール（2階以上）" field="cw_request_email_2f_above" />
