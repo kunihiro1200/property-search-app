@@ -256,7 +256,7 @@ export default function WorkTasksPage() {
                   </TableRow>
                 ) : (
                   paginatedTasks.map((task) => {
-                    const status = calculateTaskStatus(task);
+                    const status = task.sidebar_category || calculateTaskStatus(task);
                     return (
                       <TableRow 
                         key={task.id} 
