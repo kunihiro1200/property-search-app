@@ -266,6 +266,47 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
     </Grid>
   );
 
+  // 編集可能ボタン選択（送信回数用）
+  const EditableSendCountSelect = ({ label, field }: { label: string; field: string }) => (
+    <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
+      <Grid item xs={4}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>{label}</Typography>
+      </Grid>
+      <Grid item xs={8}>
+        <ButtonGroup size="small" variant="outlined">
+          <Button
+            variant={getValue(field) === '送信1' ? 'contained' : 'outlined'}
+            onClick={() => handleFieldChange(field, '送信1')}
+            sx={getValue(field) === '送信1' ? {
+              bgcolor: workTaskColor.main,
+              color: workTaskColor.contrastText,
+              '&:hover': {
+                bgcolor: workTaskColor.dark,
+              }
+            } : {
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
+          >送信1</Button>
+          <Button
+            variant={getValue(field) === '送信2' ? 'contained' : 'outlined'}
+            onClick={() => handleFieldChange(field, '送信2')}
+            sx={getValue(field) === '送信2' ? {
+              bgcolor: workTaskColor.main,
+              color: workTaskColor.contrastText,
+              '&:hover': {
+                bgcolor: workTaskColor.dark,
+              }
+            } : {
+              borderColor: 'divider',
+              color: 'text.secondary',
+            }}
+          >送信2</Button>
+        </ButtonGroup>
+      </Grid>
+    </Grid>
+  );
+
   // Yes/No選択
   const EditableYesNo = ({ label, field }: { label: string; field: string }) => (
     <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
@@ -342,12 +383,12 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="サイト登録締め日" field="site_registration_deadline" type="date" />
         
         {/* 【サイト登録依頼】グループ */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
           【サイト登録依頼】
         </Typography>
         <EditableField label="サイト備考" field="site_notes" />
         <EditableField label="格納先URL" field="storage_url" type="url" />
-        <EditableField label="CWの方へ依頼メール（サイト登録）" field="cw_request_email_site" />
+        <EditableSendCountSelect label="CWの方へ依頼メール（サイト登録）" field="cw_request_email_site" />
         <EditableField label="CWの方" field="cw_person" />
         <EditableMultilineField label="コメント（サイト登録）" field="site_registration_comment" />
         <EditableField label="パノラマ" field="panorama" />
@@ -382,18 +423,18 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="物件一覧に行追加" field="property_list_row_added" />
 
         {/* 【図面作成依頼】グループ */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
           【図面作成依頼】
         </Typography>
         <EditableField label="間取図" field="floor_plan" />
         <EditableField label="方位記号" field="direction_symbol" />
         <EditableMultilineField label="コメント（間取図関係）" field="floor_plan_comment" />
-        <EditableField label="CWの方へ依頼メール（間取り、区画図）" field="cw_request_email_floor_plan" />
-        <EditableField label="CWの方へ依頼メール（2階以上）" field="cw_request_email_2f_above" />
+        <EditableSendCountSelect label="CWの方へ依頼メール（間取り、区画図）" field="cw_request_email_floor_plan" />
+        <EditableSendCountSelect label="CWの方へ依頼メール（2階以上）" field="cw_request_email_2f_above" />
         <EditableField label="間取図完了予定" field="floor_plan_due_date" type="date" />
 
         {/* 【図面確認】グループ（赤色） */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'error.main' }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'error.main' }}>
           【図面確認】
         </Typography>
         <EditableButtonSelect label="間取図確認者" field="floor_plan_confirmer" options={activeStaffInitials} />
@@ -403,7 +444,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         <EditableField label="間取図格納済み連絡メール" field="floor_plan_stored_email" />
 
         {/* 【サイト登録確認】グループ（赤色） */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'error.main' }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'error.main' }}>
           【サイト登録確認】
         </Typography>
         <EditableField label="サイト登録確認" field="site_registration_confirmed" />
@@ -414,7 +455,7 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
         )}
 
         {/* 【確認後処理】グループ */}
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h6" sx={{ mt: 3, mb: 2, fontWeight: 'bold', color: 'primary.main' }}>
           【確認後処理】
         </Typography>
         <EditableField label="配信日" field="distribution_date" type="date" />
