@@ -54,7 +54,7 @@ async function main() {
     const sidebarCategory = workTaskService.calculateSidebarCategory(data);
 
     console.log(`\n✅ 計算されたサイドバーカテゴリー: "${sidebarCategory}"`);
-    console.log(`\n期待される表示: "売買契約 製本待ち 2/19 和"`);
+    console.log(`\n期待される表示: "売買契約 製本待ち"`);
 
   } catch (error: any) {
     console.error('❌ エラー:', error.message);
