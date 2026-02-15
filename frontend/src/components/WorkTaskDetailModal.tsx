@@ -648,7 +648,22 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
           <Box>
-            <Typography variant="h6">業務詳細 - {propertyNumber || ''}</Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                cursor: 'pointer',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+              onClick={() => {
+                if (propertyNumber) {
+                  navigator.clipboard.writeText(propertyNumber);
+                  setSnackbar({ open: true, message: `物件番号 ${propertyNumber} をコピーしました`, severity: 'success' });
+                }
+              }}
+              title="クリックでコピー"
+            >
+              業務詳細 - {propertyNumber || ''}
+            </Typography>
             {data && (
               <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 'bold' }}>
                 {data.property_type && `${data.property_type}　`}

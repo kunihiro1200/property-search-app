@@ -9,10 +9,10 @@ import { google } from 'googleapis';
 
 const SPREADSHEET_ID = '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g';
 const SHEET_NAME = '業務依頼';
-const PROPERTY_NUMBER = 'AA12495';
+const PROPERTY_NUMBER = 'AA10611';
 
 async function main() {
-  console.log('🔍 AA12495のデータ同期状況を確認します...\n');
+  console.log('🔍 AA10611のデータ同期状況を確認します...\n');
 
   // Supabaseクライアント
   const supabase = createClient(

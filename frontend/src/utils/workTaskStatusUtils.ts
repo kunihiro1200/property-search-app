@@ -231,7 +231,7 @@ export const calculateTaskStatus = (task: WorkTask): string => {
 // ステータスカテゴリ定義
 export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
   const statusCounts: Record<string, number> = {};
-  const statusLabels: Record<string, string> = {};
+  const statusLabels: Record<string, Set<string> | string> = {};
   
   // 各タスクのステータスを計算してカウント
   tasks.forEach(task => {
@@ -241,9 +241,13 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
     const statusKey = getStatusKey(status);
     if (statusKey) {
       statusCounts[statusKey] = (statusCounts[statusKey] || 0) + 1;
-      // 最初に見つかったステータスのラベルを保存（日付付き）
+      // 全ての日付を収集（重複を避けるためSetを使用）
       if (!statusLabels[statusKey]) {
-        statusLabels[statusKey] = extractCategoryLabel(status);
+        statusLabels[statusKey] = new Set<string>();
+      }
+      const dateMatch = status.match(/(\d{1,2}\/\d{1,2})/);
+      if (dateMatch) {
+        (statusLabels[statusKey] as Set<string>).add(dateMatch[1]);
       }
     }
   });
@@ -278,9 +282,20 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
   categoryDefinitions.forEach(def => {
     const count = statusCounts[def.key] || 0;
     if (count > 0) {
+      // 日付のSetを配列に変換してソート
+      const dates = statusLabels[def.key] ? Array.from(statusLabels[def.key] as Set<string>).sort((a, b) => {
+        const [aMonth, aDay] = a.split('/').map(Number);
+        const [bMonth, bDay] = b.split('/').map(Number);
+        if (aMonth !== bMonth) return aMonth - bMonth;
+        return aDay - bDay;
+      }) : [];
+      
+      // ラベルを構築（日付がある場合は追加）
+      const label = dates.length > 0 ? `${def.defaultLabel} ${dates.join(', ')}` : def.defaultLabel;
+      
       categories.push({
         key: def.key,
-        label: statusLabels[def.key] || def.defaultLabel, // 日付付きラベルを使用
+        label,
         count,
         filter: (task: WorkTask) => {
           const status = (task as any).sidebar_category || calculateTaskStatus(task);
