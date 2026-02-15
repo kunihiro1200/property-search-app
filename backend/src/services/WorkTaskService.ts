@@ -190,7 +190,12 @@ export class WorkTaskService {
       return `媒介作成_締日（${formatDate(task.mediation_deadline)}`;
     }
 
-    // 条件2: 売買契約 依頼未
+    // 条件2: 売買契約確認 = "確認中"（最優先）
+    if (task.sales_contract_confirmed === '確認中') {
+      return `売買契約　営業確認中 ${formatDate(task.sales_contract_deadline)}`;
+    }
+
+    // 条件3: 売買契約 依頼未
     if (
       isNotBlank(task.sales_contract_deadline) &&
       isBlank(task.binding_scheduled_date) &&
@@ -204,7 +209,7 @@ export class WorkTaskService {
       return `売買契約 依頼未 締日${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
     }
 
-    // 条件3: 売買契約 入力待ち
+    // 条件4: 売買契約 入力待ち
     if (
       isNotBlank(task.sales_contract_deadline) &&
       isBlank(task.binding_scheduled_date) &&
@@ -218,7 +223,7 @@ export class WorkTaskService {
       return `売買契約 入力待ち ${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
     }
 
-    // 条件4: 売買契約 製本待ち
+    // 条件5: 売買契約 製本待ち
     if (
       isNotBlank(task.sales_contract_deadline) &&
       isNotBlank(task.binding_scheduled_date) &&
@@ -227,11 +232,6 @@ export class WorkTaskService {
       isBlank(task.binding_completed)
     ) {
       return `売買契約 製本待ち ${formatDate(task.binding_scheduled_date)} ${task.sales_contract_assignee || ''}`;
-    }
-
-    // 条件5: 売買契約確認 = "確認中"
-    if (task.sales_contract_confirmed === '確認中') {
-      return `売買契約　営業確認中${formatDate(task.sales_contract_deadline)}`;
     }
 
     // 条件6: サイト登録要確認
