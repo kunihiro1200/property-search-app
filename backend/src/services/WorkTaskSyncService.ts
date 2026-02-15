@@ -1,9 +1,18 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { google, sheets_v4 } from 'googleapis';
 import { WorkTaskColumnMapper, WorkTaskData } from './WorkTaskColumnMapper';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const SPREADSHEET_ID = '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g';
 const SHEET_NAME = '業務依頼';
+
+// カラムマッピング設定を読み込み
+const columnMappingPath = path.join(__dirname, '../config/work-task-column-mapping.json');
+const columnMapping = JSON.parse(fs.readFileSync(columnMappingPath, 'utf-8'));
+
+// ブラウザ専用フィールド（スプレッドシート同期時に上書きしない）
+const BROWSER_ONLY_FIELDS: string[] = columnMapping.syncRules.browser_to_spreadsheet;
 
 export interface SyncError {
   rowNumber: number;
@@ -109,6 +118,22 @@ export class WorkTaskSyncService {
           const workTaskData = this.columnMapper.mapToDatabase(sheetRow);
           workTaskData.synced_at = new Date().toISOString();
 
+          // 既存データを取得してブラウザ専用フィールドを保護
+          const { data: existingData } = await this.supabase
+            .from('work_tasks')
+            .select('*')
+            .eq('property_number', propertyNumber)
+            .single();
+
+          // ブラウザ専用フィールドは既存値を保持（スプレッドシートの値で上書きしない）
+          if (existingData) {
+            BROWSER_ONLY_FIELDS.forEach((field: string) => {
+              if (existingData[field] !== null && existingData[field] !== undefined && existingData[field] !== '') {
+                workTaskData[field] = existingData[field];
+              }
+            });
+          }
+
           // Upsert処理
           const { error: upsertError } = await this.supabase
             .from('work_tasks')
@@ -198,6 +223,22 @@ export class WorkTaskSyncService {
       // データ変換
       const workTaskData = this.columnMapper.mapToDatabase(sheetRow);
       workTaskData.synced_at = new Date().toISOString();
+
+      // 既存データを取得してブラウザ専用フィールドを保護
+      const { data: existingData } = await this.supabase
+        .from('work_tasks')
+        .select('*')
+        .eq('property_number', propertyNumber)
+        .single();
+
+      // ブラウザ専用フィールドは既存値を保持（スプレッドシートの値で上書きしない）
+      if (existingData) {
+        BROWSER_ONLY_FIELDS.forEach((field: string) => {
+          if (existingData[field] !== null && existingData[field] !== undefined && existingData[field] !== '') {
+            workTaskData[field] = existingData[field];
+          }
+        });
+      }
 
       // Upsert処理
       const { error: upsertError } = await this.supabase
