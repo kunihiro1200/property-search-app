@@ -184,7 +184,7 @@ export class WorkTaskService {
 
     // 条件1: 売買契約確認 = "確認中"
     if (task.sales_contract_confirmed === '確認中') {
-      return '売買契約　営業確認中';
+      return `売買契約　営業確認中${formatDate(task.sales_contract_deadline)}`;
     }
 
     // 条件2: 売買契約 入力待ち
@@ -198,7 +198,7 @@ export class WorkTaskService {
       isBlank(task.accounting_confirmed) &&
       (isBlank(task.cw_completion_email_sales) || isBlank(task.work_completion_chat_hirose))
     ) {
-      return '売買契約 入力待ち';
+      return `売買契約 入力待ち ${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
     }
 
     // 条件3: サイト登録依頼してください
@@ -210,7 +210,7 @@ export class WorkTaskService {
       isNotBlank(task.site_registration_deadline) &&
       isBlank(task.sales_contract_deadline)
     ) {
-      return 'サイト登録依頼してください';
+      return `サイト登録依頼してください ${formatDate(task.site_registration_deadline)}`;
     }
 
     // 条件4: 決済完了チャット送信未
@@ -252,7 +252,7 @@ export class WorkTaskService {
       task.site_registration_confirmed !== '完了' &&
       siteRegistrationDeadline && siteRegistrationDeadline >= new Date('2025-10-30')
     ) {
-      return 'サイト依頼済み納品待ち';
+      return `サイト依頼済み納品待ち ${formatDate(task.site_registration_due_date)}`;
     }
 
     // 条件8: 売買契約 製本待ち
@@ -263,7 +263,7 @@ export class WorkTaskService {
       isBlank(task.on_hold) &&
       isBlank(task.binding_completed)
     ) {
-      return '売買契約 製本待ち';
+      return `売買契約 製本待ち ${formatDate(task.binding_scheduled_date)} ${task.sales_contract_assignee || ''}`;
     }
 
     // 条件9: 売買契約 依頼未
@@ -277,7 +277,7 @@ export class WorkTaskService {
       isBlank(task.hirose_request_sales) &&
       isBlank(task.cw_request_sales)
     ) {
-      return '売買契約 依頼未';
+      return `売買契約 依頼未 締日${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
     }
 
     // 条件10: サイト登録要確認
@@ -285,7 +285,7 @@ export class WorkTaskService {
       isNotBlank(task.site_registration_confirmation_request_date) &&
       isBlank(task.site_registration_confirmed)
     ) {
-      return 'サイト登録要確認';
+      return `サイト登録要確認 ${formatDate(task.site_registration_deadline)}`;
     }
 
     // 条件11: 媒介作成_締日
@@ -296,7 +296,7 @@ export class WorkTaskService {
       isBlank(task.sales_contract_deadline) &&
       isBlank(task.on_hold)
     ) {
-      return '媒介作成_締日';
+      return `媒介作成_締日（${formatDate(task.mediation_deadline)}`;
     }
 
     // 条件12: 保留
