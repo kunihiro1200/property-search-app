@@ -2,7 +2,10 @@
  * ローカル環境で物件リスト同期をテスト
  */
 import * as dotenv from 'dotenv';
-dotenv.config();
+import * as path from 'path';
+
+// backend/.envを読み込む
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 import { PropertyListingSyncService } from './api/src/services/PropertyListingSyncService';
 
@@ -15,7 +18,7 @@ async function testPropertyListingSync() {
   delete process.env.GOOGLE_PRIVATE_KEY;
 
   // ローカル環境用の環境変数を設定
-  process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH = './google-service-account.json';
+  process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH = 'backend/google-service-account.json';
   process.env.PROPERTY_LISTING_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
   process.env.PROPERTY_LISTING_SHEET_NAME = '物件';
   process.env.GYOMU_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';

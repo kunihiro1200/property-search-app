@@ -20,8 +20,8 @@ async function testLocalAuth() {
   try {
     const client = new GoogleSheetsClient({
       spreadsheetId: spreadsheetId,
-      sheetName: '物件リスト',
-      serviceAccountKeyPath: './google-service-account.json',
+      sheetName: '物件',
+      serviceAccountKeyPath: 'backend/google-service-account.json',
     });
     
     console.log('📝 Authenticating...');

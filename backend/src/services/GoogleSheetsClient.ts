@@ -225,19 +225,31 @@ export class GoogleSheetsClient {
       throw new Error(`Service account key file not found: ${keyPath}`);
     }
 
-    // GoogleAuthを使用（推奨される方法）
-    // keyFileオプションを使用すると、GoogleAuthが自動的にファイルを読み込む
-    this.auth = new google.auth.GoogleAuth({
-      keyFile: keyPath,
+    // JSONファイルを読み込む
+    const keyFileContent = fs.readFileSync(keyPath, 'utf8');
+    const keyFile = JSON.parse(keyFileContent);
+    
+    console.error('[GoogleSheetsClient] Key file loaded:', {
+      client_email: keyFile.client_email,
+      project_id: keyFile.project_id,
+      private_key_id: keyFile.private_key_id,
+      has_private_key: !!keyFile.private_key,
+      private_key_length: keyFile.private_key?.length || 0
+    });
+
+    // JWTクライアントを作成
+    this.auth = new JWT({
+      email: keyFile.client_email,
+      key: keyFile.private_key,
       scopes: [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive.readonly'
       ],
     });
 
-    console.error('[GoogleSheetsClient] GoogleAuth created, getting client...');
-    await this.auth.getClient(); // クライアントを取得して認証を確認
-    console.error('[GoogleSheetsClient] Client obtained successfully');
+    console.error('[GoogleSheetsClient] JWT client created, authorizing...');
+    await this.auth.authorize();
+    console.error('[GoogleSheetsClient] Authorization successful');
 
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
