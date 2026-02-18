@@ -1569,6 +1569,43 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
   }
 });
 
+// デバッグエンドポイント：環境変数の確認
+app.get('/api/debug/env-check', async (req, res) => {
+  try {
+    console.log('[Debug] Checking environment variables...');
+    
+    const envCheck = {
+      GOOGLE_SERVICE_ACCOUNT_JSON: {
+        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+        first50: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.substring(0, 50) || 'N/A',
+      },
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: {
+        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        value: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || 'N/A',
+      },
+      GOOGLE_PRIVATE_KEY: {
+        exists: !!process.env.GOOGLE_PRIVATE_KEY,
+        length: process.env.GOOGLE_PRIVATE_KEY?.length || 0,
+        first50: process.env.GOOGLE_PRIVATE_KEY?.substring(0, 50) || 'N/A',
+      },
+      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: {
+        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+        value: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'N/A',
+      },
+    };
+    
+    console.log('[Debug] Environment check:', envCheck);
+    
+    res.json(envCheck);
+  } catch (error: any) {
+    console.error('[Debug] Error checking environment:', error);
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+
 // Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
 app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
