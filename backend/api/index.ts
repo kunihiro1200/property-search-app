@@ -1607,20 +1607,27 @@ app.get('/api/debug/env-check', async (req, res) => {
 });
 
 // Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
+// バッチ処理版：100件ずつ処理してタイムアウトを回避
 app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
-    console.log('[Cron] Starting property listings sync job...');
+    console.log('[Cron] Starting property listings sync job (batch mode)...');
     
     // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
     // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
-    // PropertyListingSyncServiceを使用してフル同期を実行
+    // クエリパラメータからバッチサイズと開始インデックスを取得
+    const batchSize = parseInt(req.query.batchSize as string) || 100;
+    const startIndex = parseInt(req.query.startIndex as string) || 0;
+    
+    console.log(`[Cron] Batch parameters: batchSize=${batchSize}, startIndex=${startIndex}`);
+    
+    // PropertyListingSyncServiceを使用してバッチ同期を実行
     const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
-    console.log('[Cron] Running property listings sync...');
-    const result = await syncService.runFullSync('scheduled');
+    console.log('[Cron] Running property listings sync (batch)...');
+    const result = await syncService.runFullSync('scheduled', batchSize, startIndex);
     
     console.log(`[Cron] Property listings sync job completed:`, {
       success: result.success,
@@ -1639,6 +1646,9 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
       errors: result.errors,
       duration: result.endTime.getTime() - result.startTime.getTime(),
       syncedAt: result.endTime.toISOString(),
+      batchSize,
+      startIndex,
+      nextStartIndex: startIndex + result.totalProcessed,
     });
     
   } catch (error: any) {

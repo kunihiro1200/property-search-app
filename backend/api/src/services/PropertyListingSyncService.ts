@@ -111,12 +111,19 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * フル同期を実行
+   * フル同期を実行（バッチ処理版）
    * 物件リストスプレッドシートからproperty_listingsテーブルを同期
+   * 
+   * @param batchSize バッチサイズ（デフォルト: 100件）
+   * @param startIndex 開始インデックス（デフォルト: 0）
    */
-  async runFullSync(triggeredBy: 'scheduled' | 'manual' = 'scheduled'): Promise<PropertyListingSyncResult> {
+  async runFullSync(
+    triggeredBy: 'scheduled' | 'manual' = 'scheduled',
+    batchSize: number = 100,
+    startIndex: number = 0
+  ): Promise<PropertyListingSyncResult> {
     const startTime = new Date();
-    console.log(`🔄 Starting property listings sync (triggered by: ${triggeredBy})`);
+    console.log(`🔄 Starting property listings sync (triggered by: ${triggeredBy}, batch: ${startIndex}-${startIndex + batchSize})`);
 
     if (!this.propertyListSheetsClient) {
       throw new Error('PropertyListingSyncService not initialized');
@@ -155,17 +162,20 @@ export class PropertyListingSyncService {
         return propertyNumber && String(propertyNumber).trim() !== '';
       });
       
-      // 全行を処理（100行の制限を削除）
-      const rows = nonEmptyRows;
+      console.log(`📊 Total non-empty rows: ${nonEmptyRows.length} (out of ${totalRows} total rows)`);
       
-      if (!rows || rows.length === 0) {
-        console.log('⚠️ No non-empty rows found');
+      // バッチ処理：指定された範囲のみ処理
+      const endIndex = Math.min(startIndex + batchSize, nonEmptyRows.length);
+      const rows = nonEmptyRows.slice(startIndex, endIndex);
+      
+      if (rows.length === 0) {
+        console.log('⚠️ No rows to process in this batch');
         result.success = true;
         result.endTime = new Date();
         return result;
       }
 
-      console.log(`📊 Processing all ${rows.length} non-empty rows (out of ${totalRows} total rows)`);
+      console.log(`📊 Processing batch ${startIndex}-${endIndex} (${rows.length} rows)`);
 
       // 2. 各行を処理
       for (const row of rows) {
@@ -293,12 +303,14 @@ export class PropertyListingSyncService {
 
       console.log('');
       console.log('═══════════════════════════════════════════════════════════');
-      console.log('📊 Property Listings Sync Summary:');
+      console.log('📊 Property Listings Sync Summary (Batch):');
+      console.log(`   Batch range: ${startIndex}-${endIndex}`);
       console.log(`   Total processed: ${result.totalProcessed}`);
       console.log(`   ✅ Added: ${result.successfullyAdded}`);
       console.log(`   ✅ Updated: ${result.successfullyUpdated}`);
       console.log(`   ❌ Failed: ${result.failed}`);
       console.log(`   Duration: ${result.endTime.getTime() - result.startTime.getTime()}ms`);
+      console.log(`   Remaining: ${Math.max(0, nonEmptyRows.length - endIndex)} rows`);
       console.log('═══════════════════════════════════════════════════════════');
 
       return result;
