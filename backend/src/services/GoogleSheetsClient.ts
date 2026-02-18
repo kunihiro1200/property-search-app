@@ -55,31 +55,51 @@ export class GoogleSheetsClient {
    * 5. OAuth 2.0
    */
   async authenticate(): Promise<void> {
+    console.error('[GoogleSheetsClient] Starting authentication...');
+    console.error('[GoogleSheetsClient] Environment check:', {
+      hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      GOOGLE_SERVICE_ACCOUNT_JSON_length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+      hasGOOGLE_SERVICE_ACCOUNT_EMAIL: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      hasGOOGLE_PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+      hasServiceAccountKeyPath: !!this.config.serviceAccountKeyPath,
+      hasServiceAccountEmail: !!this.config.serviceAccountEmail,
+      hasPrivateKey: !!this.config.privateKey,
+      hasOAuth: !!(this.config.clientId && this.config.clientSecret && this.config.refreshToken),
+    });
+    
     try {
       // 1. 環境変数からJSON読み込み（Vercel環境用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.error('[GoogleSheetsClient] Using GOOGLE_SERVICE_ACCOUNT_JSON');
         await this.authenticateWithServiceAccountJson();
       }
       // 2. 個別の環境変数から読み込み（Vercel環境用 - フォールバック）
       else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        console.error('[GoogleSheetsClient] Using GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY');
         await this.authenticateWithServiceAccountEnv();
       }
       // 3. JSONファイルから読み込み（ローカル環境用）
       else if (this.config.serviceAccountKeyPath) {
+        console.error('[GoogleSheetsClient] Using serviceAccountKeyPath');
         await this.authenticateWithServiceAccountFile();
       }
       // 4. コンストラクタ引数から読み込み
       else if (this.config.serviceAccountEmail && this.config.privateKey) {
+        console.error('[GoogleSheetsClient] Using serviceAccountEmail + privateKey');
         await this.authenticateWithServiceAccount();
       } 
       // 5. OAuth 2.0認証（フォールバック）
       else if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
+        console.error('[GoogleSheetsClient] Using OAuth 2.0');
         await this.authenticateWithOAuth();
       } 
       else {
+        console.error('[GoogleSheetsClient] No valid authentication credentials provided');
         throw new Error('No valid authentication credentials provided');
       }
     } catch (error: any) {
+      console.error('[GoogleSheetsClient] Authentication error:', error.message);
+      console.error('[GoogleSheetsClient] Error stack:', error.stack);
       throw new Error(`Google Sheets authentication failed: ${error.message}`);
     }
   }
