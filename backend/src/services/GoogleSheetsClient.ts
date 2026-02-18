@@ -111,18 +111,29 @@ export class GoogleSheetsClient {
     
     let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
     
+    console.log('[GoogleSheetsClient] Environment variable length:', jsonString.length);
+    console.log('[GoogleSheetsClient] First 50 chars:', jsonString.substring(0, 50));
+    
     // Base64エンコードされている場合はデコード
+    let isBase64 = false;
     try {
       // まずJSONとしてパースを試みる
-      const testParse = JSON.parse(jsonString);
+      JSON.parse(jsonString);
       console.log('[GoogleSheetsClient] JSON format detected');
     } catch (e) {
       // パースに失敗した場合、Base64としてデコード
       console.log('[GoogleSheetsClient] Base64 format detected, decoding...');
+      isBase64 = true;
       jsonString = Buffer.from(jsonString, 'base64').toString('utf8');
+      console.log('[GoogleSheetsClient] Decoded length:', jsonString.length);
+      console.log('[GoogleSheetsClient] Decoded first 100 chars:', jsonString.substring(0, 100));
     }
     
     const keyFile = JSON.parse(jsonString);
+    
+    console.log('[GoogleSheetsClient] Parsed JSON successfully');
+    console.log('[GoogleSheetsClient] client_email:', keyFile.client_email);
+    console.log('[GoogleSheetsClient] project_id:', keyFile.project_id);
     
     // private_keyの改行を復元
     // JSONファイルから読み込んだ場合、private_keyには実際の改行が含まれている
@@ -135,7 +146,8 @@ export class GoogleSheetsClient {
     console.log('[GoogleSheetsClient] Private key format check:', {
       hasNewlines: keyFile.private_key.includes('\n'),
       startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
-      length: keyFile.private_key.length
+      length: keyFile.private_key.length,
+      first50: keyFile.private_key.substring(0, 50)
     });
 
     this.auth = new google.auth.JWT({
@@ -144,6 +156,7 @@ export class GoogleSheetsClient {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
+    console.log('[GoogleSheetsClient] JWT created, attempting authorization...');
     await this.auth.authorize();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
