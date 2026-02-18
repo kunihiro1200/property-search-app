@@ -47,7 +47,12 @@ export class GoogleSheetsClient {
 
   /**
    * 認証を実行（Environment Contract準拠）
-   * 優先順位: GOOGLE_SERVICE_ACCOUNT_JSON > serviceAccountKeyPath > OAuth 2.0
+   * 優先順位: 
+   * 1. GOOGLE_SERVICE_ACCOUNT_JSON (JSON文字列)
+   * 2. GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY (個別環境変数)
+   * 3. serviceAccountKeyPath (JSONファイルパス)
+   * 4. serviceAccountEmail + privateKey (コンストラクタ引数)
+   * 5. OAuth 2.0
    */
   async authenticate(): Promise<void> {
     try {
@@ -55,15 +60,19 @@ export class GoogleSheetsClient {
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         await this.authenticateWithServiceAccountJson();
       }
-      // 2. JSONファイルから読み込み（ローカル環境用）
+      // 2. 個別の環境変数から読み込み（Vercel環境用 - フォールバック）
+      else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        await this.authenticateWithServiceAccountEnv();
+      }
+      // 3. JSONファイルから読み込み（ローカル環境用）
       else if (this.config.serviceAccountKeyPath) {
         await this.authenticateWithServiceAccountFile();
       }
-      // 3. 個別の環境変数から読み込み
+      // 4. コンストラクタ引数から読み込み
       else if (this.config.serviceAccountEmail && this.config.privateKey) {
         await this.authenticateWithServiceAccount();
       } 
-      // 4. OAuth 2.0認証（フォールバック）
+      // 5. OAuth 2.0認証（フォールバック）
       else if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
         await this.authenticateWithOAuth();
       } 
@@ -163,6 +172,31 @@ export class GoogleSheetsClient {
 
     await this.auth.authorize();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+  }
+
+  /**
+   * サービスアカウント認証を実行（個別の環境変数から）
+   * Environment Contract準拠: Vercel環境用（フォールバック）
+   */
+  private async authenticateWithServiceAccountEnv(): Promise<void> {
+    console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY');
+    
+    const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY!;
+    
+    // private_keyの改行を復元
+    const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+    
+    this.auth = new google.auth.JWT({
+      email: email,
+      key: formattedPrivateKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'],
+    });
+
+    await this.auth.authorize();
+    this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+    
+    console.log('[GoogleSheetsClient] Authentication successful');
   }
 
   /**
