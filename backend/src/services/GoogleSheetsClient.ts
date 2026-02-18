@@ -107,43 +107,46 @@ export class GoogleSheetsClient {
    * Environment Contract準拠: Vercel環境用
    */
   private async authenticateWithServiceAccountJson(): Promise<void> {
-    console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_JSON');
+    console.error('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_JSON');
     
     let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
     
-    console.log('[GoogleSheetsClient] Environment variable length:', jsonString.length);
-    console.log('[GoogleSheetsClient] First 50 chars:', jsonString.substring(0, 50));
+    console.error('[GoogleSheetsClient] Environment variable length:', jsonString.length);
+    console.error('[GoogleSheetsClient] First 50 chars:', jsonString.substring(0, 50));
+    console.error('[GoogleSheetsClient] Last 50 chars:', jsonString.substring(jsonString.length - 50));
     
     // Base64エンコードされている場合はデコード
     let isBase64 = false;
     try {
       // まずJSONとしてパースを試みる
       JSON.parse(jsonString);
-      console.log('[GoogleSheetsClient] JSON format detected');
+      console.error('[GoogleSheetsClient] JSON format detected');
     } catch (e) {
       // パースに失敗した場合、Base64としてデコード
-      console.log('[GoogleSheetsClient] Base64 format detected, decoding...');
+      console.error('[GoogleSheetsClient] Base64 format detected, decoding...');
       isBase64 = true;
       jsonString = Buffer.from(jsonString, 'base64').toString('utf8');
-      console.log('[GoogleSheetsClient] Decoded length:', jsonString.length);
-      console.log('[GoogleSheetsClient] Decoded first 100 chars:', jsonString.substring(0, 100));
+      console.error('[GoogleSheetsClient] Decoded length:', jsonString.length);
+      console.error('[GoogleSheetsClient] Decoded first 100 chars:', jsonString.substring(0, 100));
+      console.error('[GoogleSheetsClient] Decoded last 100 chars:', jsonString.substring(jsonString.length - 100));
     }
     
     const keyFile = JSON.parse(jsonString);
     
-    console.log('[GoogleSheetsClient] Parsed JSON successfully');
-    console.log('[GoogleSheetsClient] client_email:', keyFile.client_email);
-    console.log('[GoogleSheetsClient] project_id:', keyFile.project_id);
+    console.error('[GoogleSheetsClient] Parsed JSON successfully');
+    console.error('[GoogleSheetsClient] client_email:', keyFile.client_email);
+    console.error('[GoogleSheetsClient] project_id:', keyFile.project_id);
+    console.error('[GoogleSheetsClient] private_key exists:', !!keyFile.private_key);
     
     // private_keyの改行を復元
     // JSONファイルから読み込んだ場合、private_keyには実際の改行が含まれている
     // しかし、環境変数経由の場合、\nがエスケープされている可能性がある
     if (keyFile.private_key && !keyFile.private_key.includes('\n')) {
-      console.log('[GoogleSheetsClient] Replacing escaped newlines in private_key');
+      console.error('[GoogleSheetsClient] Replacing escaped newlines in private_key');
       keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
     }
 
-    console.log('[GoogleSheetsClient] Private key format check:', {
+    console.error('[GoogleSheetsClient] Private key format check:', {
       hasNewlines: keyFile.private_key.includes('\n'),
       startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
       length: keyFile.private_key.length,
@@ -156,11 +159,11 @@ export class GoogleSheetsClient {
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-    console.log('[GoogleSheetsClient] JWT created, attempting authorization...');
+    console.error('[GoogleSheetsClient] JWT created, attempting authorization...');
     await this.auth.authorize();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
-    console.log('[GoogleSheetsClient] Authentication successful');
+    console.error('[GoogleSheetsClient] Authentication successful');
   }
 
   /**
