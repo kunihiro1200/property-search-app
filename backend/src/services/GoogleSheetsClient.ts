@@ -124,10 +124,19 @@ export class GoogleSheetsClient {
     
     const keyFile = JSON.parse(jsonString);
     
-    // private_keyの改行を復元（Environment Contract準拠）
-    if (keyFile.private_key) {
+    // private_keyの改行を復元
+    // JSONファイルから読み込んだ場合、private_keyには実際の改行が含まれている
+    // しかし、環境変数経由の場合、\nがエスケープされている可能性がある
+    if (keyFile.private_key && !keyFile.private_key.includes('\n')) {
+      console.log('[GoogleSheetsClient] Replacing escaped newlines in private_key');
       keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
     }
+
+    console.log('[GoogleSheetsClient] Private key format check:', {
+      hasNewlines: keyFile.private_key.includes('\n'),
+      startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
+      length: keyFile.private_key.length
+    });
 
     this.auth = new google.auth.JWT({
       email: keyFile.client_email,
