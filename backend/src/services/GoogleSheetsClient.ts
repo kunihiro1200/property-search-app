@@ -109,7 +109,20 @@ export class GoogleSheetsClient {
   private async authenticateWithServiceAccountJson(): Promise<void> {
     console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_JSON');
     
-    const keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!);
+    let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
+    
+    // Base64エンコードされている場合はデコード
+    try {
+      // まずJSONとしてパースを試みる
+      const testParse = JSON.parse(jsonString);
+      console.log('[GoogleSheetsClient] JSON format detected');
+    } catch (e) {
+      // パースに失敗した場合、Base64としてデコード
+      console.log('[GoogleSheetsClient] Base64 format detected, decoding...');
+      jsonString = Buffer.from(jsonString, 'base64').toString('utf8');
+    }
+    
+    const keyFile = JSON.parse(jsonString);
     
     // private_keyの改行を復元（Environment Contract準拠）
     if (keyFile.private_key) {
