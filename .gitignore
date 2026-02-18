@@ -6,6 +6,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.vercel.production
 VERCEL_ENV_VARIABLES.md
 
 # Google Service Account
@@ -54,5 +55,8 @@ coverage/
 
 # Redis
 dump.rdb
+.vercel
+.env*.local
+
 .vercel
 .env*.local

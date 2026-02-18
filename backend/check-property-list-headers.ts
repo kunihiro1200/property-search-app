@@ -1,36 +1,47 @@
-import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
+import { google } from 'googleapis';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
+// .envファイルを読み込む
+dotenv.config({ path: './backend/.env' });
 
 async function checkHeaders() {
   console.log('🔍 Checking property list spreadsheet headers...\n');
 
-  const config = {
-    spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
-    sheetName: process.env.PROPERTY_LISTING_SHEET_NAME || '物件',
-    serviceAccountKeyPath: './google-service-account.json',
-  };
+  // Google Sheets APIクライアントを初期化
+  const auth = new google.auth.GoogleAuth({
+    keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  });
 
-  const client = new GoogleSheetsClient(config);
-  await client.authenticate();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = process.env.PROPERTY_LISTING_SPREADSHEET_ID;
 
-  const headers = await client.getHeaders();
-  
+  // ヘッダー行（1行目）を取得
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: '物件リスト!1:1',
+  });
+
+  const headers = response.data.values?.[0] || [];
+
   console.log('📋 Headers:');
   headers.forEach((header, index) => {
-    const column = String.fromCharCode(65 + index); // A, B, C, ...
-    console.log(`  ${column}列: ${header}`);
+    const columnLetter = String.fromCharCode(65 + index); // A, B, C, ...
+    console.log(`  ${columnLetter}列: ${header || '（空）'}`);
   });
-  
-  console.log('');
-  console.log('🔍 Looking for "物件番号" column...');
-  const propertyNumberIndex = headers.indexOf('物件番号');
-  if (propertyNumberIndex !== -1) {
-    const column = String.fromCharCode(65 + propertyNumberIndex);
-    console.log(`✅ Found "物件番号" at column ${column} (index ${propertyNumberIndex})`);
+
+  console.log(`\n📊 Total columns: ${headers.length}`);
+
+  // storage_locationカラムを検索
+  const storageLocationIndex = headers.findIndex(h => 
+    h && (h.includes('格納先') || h.includes('storage') || h.includes('Storage'))
+  );
+
+  if (storageLocationIndex !== -1) {
+    const columnLetter = String.fromCharCode(65 + storageLocationIndex);
+    console.log(`\n✅ Found storage_location column: ${columnLetter}列 (${headers[storageLocationIndex]})`);
   } else {
-    console.log('❌ "物件番号" column not found');
+    console.log('\n❌ storage_location column not found');
   }
 }
 
