@@ -7,42 +7,15 @@
       "config": {
         "distDir": "dist"
       }
-    },
-    {
-      "src": "backend/api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["backend/src/**"]
-      }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/api/index.ts"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/assets/$1"
-    },
-    {
-      "src": "/(.*\\.(png|jpg|jpeg|gif|svg|ico|webp))",
-      "dest": "/frontend/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
-    }
-  ],
-
-  "crons": [
-    {
-      "path": "/api/cron/sync-inquiries",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/sync-property-listings",
-      "schedule": "*/15 * * * *"
+      "dest": "/index.html"
     }
   ]
 }
