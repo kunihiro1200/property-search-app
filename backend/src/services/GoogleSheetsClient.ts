@@ -137,13 +137,15 @@ export class GoogleSheetsClient {
 
     const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
 
-    this.auth = new google.auth.JWT({
-      email: keyFile.client_email,
-      key: keyFile.private_key,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    // GoogleAuthを使用（推奨される方法）
+    this.auth = new google.auth.GoogleAuth({
+      credentials: keyFile,
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive.readonly'
+      ],
     });
 
-    await this.auth.authorize();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
     console.log('[GoogleSheetsClient] Authentication successful');
