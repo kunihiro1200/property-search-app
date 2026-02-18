@@ -212,31 +212,36 @@ export class GoogleSheetsClient {
    * Environment Contract準拠: ローカル環境用
    */
   private async authenticateWithServiceAccountFile(): Promise<void> {
-    console.log('[GoogleSheetsClient] Authenticating with service account file');
+    console.error('[GoogleSheetsClient] Authenticating with service account file');
     
     const fs = require('fs');
     const path = require('path');
     
     const keyPath = path.resolve(process.cwd(), this.config.serviceAccountKeyPath!);
     
+    console.error('[GoogleSheetsClient] Key file path:', keyPath);
+    
     if (!fs.existsSync(keyPath)) {
       throw new Error(`Service account key file not found: ${keyPath}`);
     }
 
-    const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-
     // GoogleAuthを使用（推奨される方法）
+    // keyFileオプションを使用すると、GoogleAuthが自動的にファイルを読み込む
     this.auth = new google.auth.GoogleAuth({
-      credentials: keyFile,
+      keyFile: keyPath,
       scopes: [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive.readonly'
       ],
     });
 
+    console.error('[GoogleSheetsClient] GoogleAuth created, getting client...');
+    await this.auth.getClient(); // クライアントを取得して認証を確認
+    console.error('[GoogleSheetsClient] Client obtained successfully');
+
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
     
-    console.log('[GoogleSheetsClient] Authentication successful');
+    console.error('[GoogleSheetsClient] Authentication successful');
   }
 
   /**

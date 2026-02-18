@@ -48,28 +48,30 @@ export class PropertyListingSyncService {
 
     try {
       // 1. 物件リストスプレッドシート（メインソース）
-      const propertyListConfig = {
+      const propertyListConfig: any = {
         spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
         sheetName: process.env.PROPERTY_LISTING_SHEET_NAME || '物件',
-        // ⚠️ 重要: serviceAccountKeyPathを渡さない
-        // Vercel環境では GOOGLE_SERVICE_ACCOUNT_JSON 環境変数を優先的に使用
-        // ローカル環境では GOOGLE_SERVICE_ACCOUNT_KEY_PATH 環境変数を使用
-        // GoogleSheetsClient内部で自動的に判断される
       };
+      
+      // ローカル環境の場合、serviceAccountKeyPathを渡す
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
+        propertyListConfig.serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+      }
       
       this.propertyListSheetsClient = new GoogleSheetsClient(propertyListConfig);
       await this.propertyListSheetsClient.authenticate();
       console.log('✅ Property list spreadsheet client initialized');
 
       // 2. 業務依頼シート（補助情報：スプシURL取得用）
-      const gyomuListConfig = {
+      const gyomuListConfig: any = {
         spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID!,
         sheetName: process.env.GYOMU_LIST_SHEET_NAME || '業務依頼',
-        // ⚠️ 重要: serviceAccountKeyPathを渡さない
-        // Vercel環境では GOOGLE_SERVICE_ACCOUNT_JSON 環境変数を優先的に使用
-        // ローカル環境では GOOGLE_SERVICE_ACCOUNT_KEY_PATH 環境変数を使用
-        // GoogleSheetsClient内部で自動的に判断される
       };
+      
+      // ローカル環境の場合、serviceAccountKeyPathを渡す
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
+        gyomuListConfig.serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+      }
       
       this.gyomuListSheetsClient = new GoogleSheetsClient(gyomuListConfig);
       await this.gyomuListSheetsClient.authenticate();

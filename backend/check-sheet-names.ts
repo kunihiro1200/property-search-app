@@ -1,84 +1,37 @@
-/**
- * スプレッドシートのシート名確認スクリプト
- */
+import { google } from 'googleapis';
+import * as path from 'path';
 
-import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
-import * as dotenv from 'dotenv';
+async function checkSheetNames() {
+  console.log('📋 Checking sheet names in spreadsheet...\n');
 
-dotenv.config();
-
-async function checkSheetNames(): Promise<void> {
   try {
-    // テスト用のスプレッドシートID
-    const testSpreadsheetId = '1PUTQXeuvnfj17XPTzHOWI_oDDvoErMCNA31L3dAlSCI';
+    const keyPath = path.resolve(process.cwd(), 'google-service-account.json');
     
-    console.log('スプレッドシートのシート名を確認中...\n');
-    console.log(`スプレッドシートID: ${testSpreadsheetId}\n`);
-    
-    const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
-    
-    const client = new GoogleSheetsClient({
-      spreadsheetId: testSpreadsheetId,
-      sheetName: 'athome', // 仮のシート名
-      serviceAccountKeyPath,
+    const auth = new google.auth.GoogleAuth({
+      keyFile: keyPath,
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive.readonly'
+      ],
     });
+
+    const sheets = google.sheets({ version: 'v4', auth });
     
-    await client.authenticate();
+    const spreadsheetId = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
     
-    // スプレッドシートのメタデータを取得
-    const sheets = (client as any).sheets;
     const response = await sheets.spreadsheets.get({
-      spreadsheetId: testSpreadsheetId,
+      spreadsheetId,
     });
+
+    console.log('✅ Spreadsheet title:', response.data.properties?.title);
+    console.log('\n📄 Available sheets:');
     
-    const sheetList = response.data.sheets;
-    
-    console.log('='.repeat(80));
-    console.log('利用可能なシート一覧:');
-    console.log('='.repeat(80));
-    console.log('');
-    
-    for (const sheet of sheetList) {
-      const title = sheet.properties.title;
-      const sheetId = sheet.properties.sheetId;
-      const index = sheet.properties.index;
-      
-      console.log(`${index + 1}. シート名: "${title}"`);
-      console.log(`   シートID: ${sheetId}`);
-      
-      // 'athome'に似た名前かチェック
-      if (title.toLowerCase().includes('athome') || title.toLowerCase().includes('at home')) {
-        console.log(`   ⭐ 'athome'に関連するシート名です`);
-      }
-      
-      console.log('');
-    }
-    
-    console.log('='.repeat(80));
-    console.log('推奨事項:');
-    console.log('='.repeat(80));
-    console.log('');
-    
-    const athomeSheet = sheetList.find((s: any) => 
-      s.properties.title.toLowerCase() === 'athome' ||
-      s.properties.title.toLowerCase() === 'at home'
-    );
-    
-    if (athomeSheet) {
-      console.log(`✅ 'athome'シートが見つかりました: "${athomeSheet.properties.title}"`);
-    } else {
-      console.log(`❌ 'athome'という名前のシートが見つかりませんでした`);
-      console.log('');
-      console.log('対応方法:');
-      console.log('  1. 正しいシート名を確認してください');
-      console.log('  2. FavoriteCommentServiceとRecommendedCommentServiceのsheetName設定を更新してください');
-    }
+    response.data.sheets?.forEach((sheet, index) => {
+      console.log(`  ${index + 1}. "${sheet.properties?.title}"`);
+    });
     
   } catch (error: any) {
-    console.error('エラーが発生しました:', error.message);
-    if (error.response?.data) {
-      console.error('詳細:', JSON.stringify(error.response.data, null, 2));
-    }
+    console.error('\n❌ Error:', error.message);
   }
 }
 
