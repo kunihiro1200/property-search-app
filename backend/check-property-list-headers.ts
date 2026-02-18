@@ -19,7 +19,7 @@ async function checkHeaders() {
   // ヘッダー行（1行目）を取得
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '物件リスト!1:1',
+    range: '物件!1:1',
   });
 
   const headers = response.data.values?.[0] || [];

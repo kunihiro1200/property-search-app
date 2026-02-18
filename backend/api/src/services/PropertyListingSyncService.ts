@@ -209,14 +209,22 @@ export class PropertyListingSyncService {
           }
 
           // 4. storage_locationを取得
+          // 優先順位: 1. スプレッドシートの「保存場所」列 2. Google Drive検索 3. 既存のDB値
           let storageLocation = existing?.storage_location || null;
           
-          if (!storageLocation) {
+          // スプレッドシートの「保存場所」列から取得
+          const spreadsheetStorageLocation = row['保存場所'];
+          if (spreadsheetStorageLocation && String(spreadsheetStorageLocation).trim() !== '') {
+            storageLocation = String(spreadsheetStorageLocation);
+            console.log(`  ✅ Found storage_location in spreadsheet: ${storageLocation}`);
+          }
+          // スプレッドシートに値がない場合、Google Driveで検索
+          else if (!storageLocation) {
             console.log(`  🔍 Searching for Google Drive folder...`);
             storageLocation = await this.propertyImageService.getImageFolderUrl(propertyNumber);
             
             if (storageLocation) {
-              console.log(`  ✅ Found folder: ${storageLocation}`);
+              console.log(`  ✅ Found folder in Google Drive: ${storageLocation}`);
             } else {
               console.log(`  ⚠️ Folder not found in Google Drive`);
             }
