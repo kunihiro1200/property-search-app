@@ -51,7 +51,10 @@ export class PropertyListingSyncService {
       const propertyListConfig = {
         spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
         sheetName: process.env.PROPERTY_LISTING_SHEET_NAME || '物件',
-        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+        // ⚠️ 重要: serviceAccountKeyPathを渡さない
+        // Vercel環境では GOOGLE_SERVICE_ACCOUNT_JSON 環境変数を優先的に使用
+        // ローカル環境では GOOGLE_SERVICE_ACCOUNT_KEY_PATH 環境変数を使用
+        // GoogleSheetsClient内部で自動的に判断される
       };
       
       this.propertyListSheetsClient = new GoogleSheetsClient(propertyListConfig);
@@ -62,7 +65,10 @@ export class PropertyListingSyncService {
       const gyomuListConfig = {
         spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID!,
         sheetName: process.env.GYOMU_LIST_SHEET_NAME || '業務依頼',
-        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+        // ⚠️ 重要: serviceAccountKeyPathを渡さない
+        // Vercel環境では GOOGLE_SERVICE_ACCOUNT_JSON 環境変数を優先的に使用
+        // ローカル環境では GOOGLE_SERVICE_ACCOUNT_KEY_PATH 環境変数を使用
+        // GoogleSheetsClient内部で自動的に判断される
       };
       
       this.gyomuListSheetsClient = new GoogleSheetsClient(gyomuListConfig);
