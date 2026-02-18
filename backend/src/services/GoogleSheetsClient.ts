@@ -151,27 +151,48 @@ export class GoogleSheetsClient {
       console.error('[GoogleSheetsClient] Decoded last 100 chars:', jsonString.substring(jsonString.length - 100));
     }
     
-    const keyFile = JSON.parse(jsonString);
+    let keyFile;
+    try {
+      keyFile = JSON.parse(jsonString);
+      console.error('[GoogleSheetsClient] ✅ Parsed JSON successfully');
+    } catch (parseError: any) {
+      console.error('[GoogleSheetsClient] ❌ JSON parse error:', parseError.message);
+      console.error('[GoogleSheetsClient] Failed to parse:', jsonString.substring(0, 200));
+      throw new Error(`Failed to parse service account JSON: ${parseError.message}`);
+    }
     
-    console.error('[GoogleSheetsClient] Parsed JSON successfully');
     console.error('[GoogleSheetsClient] client_email:', keyFile.client_email);
     console.error('[GoogleSheetsClient] project_id:', keyFile.project_id);
     console.error('[GoogleSheetsClient] private_key exists:', !!keyFile.private_key);
+    console.error('[GoogleSheetsClient] private_key length:', keyFile.private_key?.length || 0);
     
     // private_keyの改行を復元
     // JSONファイルから読み込んだ場合、private_keyには実際の改行が含まれている
     // しかし、環境変数経由の場合、\nがエスケープされている可能性がある
-    if (keyFile.private_key && !keyFile.private_key.includes('\n')) {
-      console.error('[GoogleSheetsClient] Replacing escaped newlines in private_key');
-      keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+    if (keyFile.private_key) {
+      console.error('[GoogleSheetsClient] Original private_key format:', {
+        hasNewlines: keyFile.private_key.includes('\n'),
+        hasEscapedNewlines: keyFile.private_key.includes('\\n'),
+        startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
+        length: keyFile.private_key.length,
+        first50: keyFile.private_key.substring(0, 50)
+      });
+      
+      if (!keyFile.private_key.includes('\n')) {
+        console.error('[GoogleSheetsClient] Replacing escaped newlines in private_key');
+        keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+      }
+      
+      console.error('[GoogleSheetsClient] After newline replacement:', {
+        hasNewlines: keyFile.private_key.includes('\n'),
+        startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
+        length: keyFile.private_key.length,
+        first50: keyFile.private_key.substring(0, 50)
+      });
+    } else {
+      console.error('[GoogleSheetsClient] ❌ private_key is missing!');
+      throw new Error('private_key is missing from service account JSON');
     }
-
-    console.error('[GoogleSheetsClient] Private key format check:', {
-      hasNewlines: keyFile.private_key.includes('\n'),
-      startsWithBegin: keyFile.private_key.startsWith('-----BEGIN'),
-      length: keyFile.private_key.length,
-      first50: keyFile.private_key.substring(0, 50)
-    });
 
     this.auth = new google.auth.JWT({
       email: keyFile.client_email,
