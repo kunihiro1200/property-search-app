@@ -1,12 +1,12 @@
 // 物件リストのCRUDサービス
 import { createClient } from '@supabase/supabase-js';
-import { PropertyDistributionAreaCalculator } from './PropertyDistributionAreaCalculator';
-import { CityNameExtractor } from './CityNameExtractor';
-import { PropertyImageService } from './PropertyImageService';
-import { GoogleDriveService } from './GoogleDriveService';
-import { GeocodingService } from './GeocodingService';
-import { PropertyDetailsService } from './PropertyDetailsService';
-import { GoogleSheetsClient } from './GoogleSheetsClient';
+import { PropertyDistributionAreaCalculator } from './PropertyDistributionAreaCalculator.js';
+import { CityNameExtractor } from './CityNameExtractor.js';
+import { PropertyImageService } from './PropertyImageService.js';
+import { GoogleDriveService } from './GoogleDriveService.js';
+import { GeocodingService } from './GeocodingService.js';
+import { PropertyDetailsService } from './PropertyDetailsService.js';
+import { GoogleSheetsClient } from './GoogleSheetsClient.js';
 
 export class PropertyListingService {
   private supabase;
