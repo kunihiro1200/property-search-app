@@ -48,15 +48,32 @@ export class GoogleDriveService extends BaseRepository {
         console.log('📝 Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
         console.log(`   Length: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars`);
         console.log(`   First 50 chars: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50)}`);
+        
+        let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+        
+        // Base64エンコードされているかチェック（改行がなく、Base64文字のみ）
+        const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(jsonString.trim());
+        
+        if (isBase64) {
+          console.log('🔓 Detected Base64 encoded value, decoding...');
+          try {
+            jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+            console.log('✅ Successfully decoded Base64');
+          } catch (decodeError: any) {
+            console.error('❌ Failed to decode Base64:', decodeError.message);
+            throw new Error(`Failed to decode Base64: ${decodeError.message}`);
+          }
+        }
+        
         try {
-          keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          keyFile = JSON.parse(jsonString);
           console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
           console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
           console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
           console.log(`   - private_key: ${keyFile.private_key ? '(exists)' : '(not found)'}`);
         } catch (parseError: any) {
           console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
-          console.error('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
+          console.error('First 100 chars:', jsonString.substring(0, 100));
           throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
         }
       } 
