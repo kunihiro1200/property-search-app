@@ -34,6 +34,7 @@ export class PropertyListingSyncService {
   private gyomuListSheetsClient: GoogleSheetsClient | null = null;
   private propertyImageService: PropertyImageService;
   private isInitialized = false;
+  private gyomuListCache: Array<Record<string, any>> | null = null;
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -86,17 +87,40 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * 業務依頼シートからスプシURLを取得
+   * 業務依頼シートのデータを一度だけ取得してキャッシュ
+   */
+  private async loadGyomuListCache(): Promise<void> {
+    if (this.gyomuListCache !== null) {
+      console.log('  📦 Using cached gyomu list data');
+      return;
+    }
+
+    if (!this.gyomuListSheetsClient) {
+      return;
+    }
+
+    try {
+      console.log('  🔄 Loading gyomu list data...');
+      this.gyomuListCache = await this.gyomuListSheetsClient.readAll();
+      console.log(`  ✅ Gyomu list data loaded (${this.gyomuListCache.length} rows)`);
+    } catch (error: any) {
+      console.error(`  ❌ Error loading gyomu list data:`, error.message);
+      this.gyomuListCache = [];
+    }
+  }
+
+  /**
+   * 業務依頼シートからスプシURLを取得（キャッシュ使用）
    */
   private async getSpreadsheetUrlFromGyomuList(propertyNumber: string): Promise<string | null> {
-    if (!this.gyomuListSheetsClient) {
+    await this.loadGyomuListCache();
+    
+    if (!this.gyomuListCache) {
       return null;
     }
 
     try {
-      const rows = await this.gyomuListSheetsClient.readAll();
-      
-      for (const row of rows) {
+      for (const row of this.gyomuListCache) {
         if (row['物件番号'] === propertyNumber) {
           const url = row['スプシURL'];
           return url ? String(url) : null;
@@ -111,17 +135,17 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * 業務依頼シートから格納先URL（CO列）を取得
+   * 業務依頼シートから格納先URL（CO列）を取得（キャッシュ使用）
    */
   private async getStorageLocationFromGyomuList(propertyNumber: string): Promise<string | null> {
-    if (!this.gyomuListSheetsClient) {
+    await this.loadGyomuListCache();
+    
+    if (!this.gyomuListCache) {
       return null;
     }
 
     try {
-      const rows = await this.gyomuListSheetsClient.readAll();
-      
-      for (const row of rows) {
+      for (const row of this.gyomuListCache) {
         if (row['物件番号'] === propertyNumber) {
           const storageUrl = row['格納先URL'];
           return storageUrl ? String(storageUrl) : null;
