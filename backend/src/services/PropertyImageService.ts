@@ -326,7 +326,9 @@ export class PropertyImageService {
 
     try {
       // Googleドライブから画像を取得
+      console.log(`[PropertyImageService] Fetching images from folder: ${targetFolderId}`);
       const driveFiles = await this.driveService.listImagesWithThumbnails(targetFolderId);
+      console.log(`[PropertyImageService] Found ${driveFiles.length} images`);
       
       // PropertyImage形式に変換
       const images = this.convertToPropertyImages(driveFiles);
@@ -340,7 +342,16 @@ export class PropertyImageService {
         cached: false,
       };
     } catch (error: any) {
-      console.error(`Error fetching images from folder ${targetFolderId}:`, error.message);
+      console.error(`❌ [PropertyImageService] Error fetching images from folder ${targetFolderId}:`, error.message);
+      console.error('❌ [PropertyImageService] Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        stack: error.stack,
+        response: error.response?.data,
+        errors: error.errors,
+      });
+      console.error('❌ [PropertyImageService] Full error:', JSON.stringify(error, null, 2));
       
       // エラー時は空の配列を返す（ユーザー体験を損なわない）
       return {

@@ -49,6 +49,7 @@ export class GoogleDriveService extends BaseRepository {
         try {
           keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
           console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
+          console.log('📧 Service account email:', keyFile.client_email);
           
           // ⚠️ 重要：private_keyの\\nを実際の改行に変換
           if (keyFile.private_key) {
@@ -587,14 +588,18 @@ export class GoogleDriveService extends BaseRepository {
         thumbnailLink: (file as any).thumbnailLink || undefined,
       }));
     } catch (error: any) {
-      console.error('Error listing images with thumbnails:', error.message);
-      console.error('Error details:', {
+      console.error('❌ [GoogleDriveService] Error listing images with thumbnails:', error.message);
+      console.error('❌ [GoogleDriveService] Error details:', {
         folderId,
         isSharedDrive: !!this.parentFolderId,
         parentFolderId: this.parentFolderId,
         errorCode: error.code,
+        errorStatus: error.status,
         errorMessage: error.message,
+        errorResponse: error.response?.data,
+        errorErrors: error.errors,
       });
+      console.error('❌ [GoogleDriveService] Full error object:', JSON.stringify(error, null, 2));
       throw error;
     }
   }
