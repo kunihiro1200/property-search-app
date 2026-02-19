@@ -30,67 +30,13 @@ console.log('🔍 Environment variables check:', {
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
-// GOOGLE_SERVICE_ACCOUNT_JSONの詳細チェック
-if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-  try {
-    const parsed = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    console.log('✅ GOOGLE_SERVICE_ACCOUNT_JSON is valid JSON');
-    console.log('   - project_id:', parsed.project_id || '(not found)');
-    console.log('   - client_email:', parsed.client_email || '(not found)');
-    console.log('   - private_key:', parsed.private_key ? '(exists)' : '(not found)');
-  } catch (error: any) {
-    console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON is invalid JSON:', error.message);
-    console.error('   First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
-  }
-} else {
-  console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON is not set');
-}
-
 // Supabase クライアントの初期化
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// GoogleDriveServiceをシングルトンとして初期化
-let googleDriveServiceInstance: GoogleDriveService | null = null;
-let googleDriveServiceError: Error | null = null;
-
-function getGoogleDriveService(): GoogleDriveService {
-  if (googleDriveServiceError) {
-    console.error('❌ [getGoogleDriveService] Returning cached error:', googleDriveServiceError.message);
-    throw googleDriveServiceError;
-  }
-  
-  if (!googleDriveServiceInstance) {
-    try {
-      console.log('🔧 [getGoogleDriveService] Initializing GoogleDriveService singleton...');
-      console.log('🔧 [getGoogleDriveService] Environment variables:', {
-        hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-        GOOGLE_SERVICE_ACCOUNT_JSON_length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        hasGOOGLE_DRIVE_PARENT_FOLDER_ID: !!process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID,
-        GOOGLE_DRIVE_PARENT_FOLDER_ID: process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || '(not set)',
-      });
-      
-      googleDriveServiceInstance = new GoogleDriveService();
-      console.log('✅ [getGoogleDriveService] GoogleDriveService singleton initialized successfully');
-    } catch (error: any) {
-      console.error('❌ [getGoogleDriveService] Failed to initialize GoogleDriveService singleton:', error);
-      console.error('❌ [getGoogleDriveService] Error details:', {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        stack: error.stack,
-      });
-      googleDriveServiceError = error;
-      throw error;
-    }
-  }
-  
-  return googleDriveServiceInstance;
-}
-
-// PropertyListingServiceの初期化（GoogleDriveServiceシングルトンを注入）
-const propertyListingService = new PropertyListingService(getGoogleDriveService());
+// PropertyListingServiceの初期化（ローカル環境と同じ）
+const propertyListingService = new PropertyListingService();
 
 // Middleware
 app.use(helmet());
@@ -120,69 +66,6 @@ app.get('/api/health', (_req, res) => {
     timestamp: new Date().toISOString(),
     version: '2026-01-29-16:30-price-fix-api-endpoint'
   });
-});
-
-// 環境変数テスト用エンドポイント
-app.get('/api/test-env', (_req, res) => {
-  try {
-    const hasEnv = !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    
-    if (!hasEnv) {
-      return res.json({
-        success: false,
-        error: 'GOOGLE_SERVICE_ACCOUNT_JSON not found',
-        allEnvKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE')),
-      });
-    }
-    
-    const envValue = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
-    const length = envValue.length;
-    const first50 = envValue.substring(0, 50);
-    
-    // JSONとしてパースを試みる
-    try {
-      const parsed = JSON.parse(envValue);
-      return res.json({
-        success: true,
-        format: 'raw_json',
-        length,
-        first50,
-        project_id: parsed.project_id,
-        client_email: parsed.client_email,
-        has_private_key: !!parsed.private_key,
-      });
-    } catch (error: any) {
-      // Base64デコードを試みる
-      try {
-        const decoded = Buffer.from(envValue, 'base64').toString('utf-8');
-        const parsed = JSON.parse(decoded);
-        return res.json({
-          success: true,
-          format: 'base64',
-          length,
-          first50,
-          decoded_length: decoded.length,
-          project_id: parsed.project_id,
-          client_email: parsed.client_email,
-          has_private_key: !!parsed.private_key,
-        });
-      } catch (decodeError: any) {
-        return res.json({
-          success: false,
-          error: 'Failed to parse JSON or decode Base64',
-          length,
-          first50,
-          parse_error: error.message,
-          decode_error: decodeError.message,
-        });
-      }
-    }
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
 });
 
 // URL短縮リダイレクト解決エンドポイント
@@ -673,12 +556,8 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       });
     }
 
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
-    
     // PropertyImageServiceを使用して画像を取得
     const propertyImageService = new PropertyImageService(
-      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -767,12 +646,8 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
       });
     }
 
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
-    
     // PropertyImageServiceを使用してキャッシュをクリア
     const propertyImageService = new PropertyImageService(
-      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -821,12 +696,8 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
-    
     // PropertyImageServiceを使用して全キャッシュをクリア
     const propertyImageService = new PropertyImageService(
-      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -953,12 +824,8 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     console.log(`[Refresh Essential] Property found: ${property.property_number}`);
     console.log(`[Refresh Essential] Current storage_location: ${property.storage_location}`);
     
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
-    
     // 画像を取得（Google Drive）- キャッシュをバイパス
     const propertyImageService = new PropertyImageService(
-      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1066,12 +933,8 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
     // 全てのデータを並列取得（キャッシュをバイパス）
     const startTime = Date.now();
     
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
-    
     // PropertyImageServiceのインスタンスを作成
     const propertyImageService = new PropertyImageService(
-      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1175,8 +1038,8 @@ app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
     
     console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
     
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
+    // GoogleDriveServiceを使用して画像データを取得
+    const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
@@ -1224,8 +1087,8 @@ app.get('/api/public/images/:fileId', async (req, res) => {
     
     console.log(`🖼️ Proxying full image: ${fileId}`);
     
-    // GoogleDriveServiceシングルトンを取得
-    const driveService = getGoogleDriveService();
+    // GoogleDriveServiceを使用して画像データを取得
+    const driveService = new GoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
@@ -1706,65 +1569,21 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
   }
 });
 
-// デバッグエンドポイント：環境変数の確認
-app.get('/api/debug/env-check', async (req, res) => {
-  try {
-    console.log('[Debug] Checking environment variables...');
-    
-    const envCheck = {
-      GOOGLE_SERVICE_ACCOUNT_JSON: {
-        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-        length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        first50: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.substring(0, 50) || 'N/A',
-      },
-      GOOGLE_SERVICE_ACCOUNT_EMAIL: {
-        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        value: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || 'N/A',
-      },
-      GOOGLE_PRIVATE_KEY: {
-        exists: !!process.env.GOOGLE_PRIVATE_KEY,
-        length: process.env.GOOGLE_PRIVATE_KEY?.length || 0,
-        first50: process.env.GOOGLE_PRIVATE_KEY?.substring(0, 50) || 'N/A',
-      },
-      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: {
-        exists: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
-        value: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'N/A',
-      },
-    };
-    
-    console.log('[Debug] Environment check:', envCheck);
-    
-    res.json(envCheck);
-  } catch (error: any) {
-    console.error('[Debug] Error checking environment:', error);
-    res.status(500).json({
-      error: error.message
-    });
-  }
-});
-
 // Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
-// バッチ処理版：100件ずつ処理してタイムアウトを回避
 app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
-    console.log('[Cron] Starting property listings sync job (batch mode)...');
+    console.log('[Cron] Starting property listings sync job...');
     
     // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
     // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
-    // クエリパラメータからバッチサイズと開始インデックスを取得
-    const batchSize = parseInt(req.query.batchSize as string) || 100;
-    const startIndex = parseInt(req.query.startIndex as string) || 0;
-    
-    console.log(`[Cron] Batch parameters: batchSize=${batchSize}, startIndex=${startIndex}`);
-    
-    // PropertyListingSyncServiceを使用してバッチ同期を実行
+    // PropertyListingSyncServiceを使用してフル同期を実行
     const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
-    console.log('[Cron] Running property listings sync (batch)...');
-    const result = await syncService.runFullSync('scheduled', batchSize, startIndex);
+    console.log('[Cron] Running property listings sync...');
+    const result = await syncService.runFullSync('scheduled');
     
     console.log(`[Cron] Property listings sync job completed:`, {
       success: result.success,
@@ -1783,9 +1602,6 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
       errors: result.errors,
       duration: result.endTime.getTime() - result.startTime.getTime(),
       syncedAt: result.endTime.toISOString(),
-      batchSize,
-      startIndex,
-      nextStartIndex: startIndex + result.totalProcessed,
     });
     
   } catch (error: any) {
