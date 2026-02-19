@@ -41,11 +41,18 @@ export class GoogleDriveService extends BaseRepository {
    */
   private initializeServiceAccount() {
     try {
+      console.log('🔧 [GoogleDriveService] Starting initializeServiceAccount...');
+      console.log('🔧 [GoogleDriveService] Environment check:', {
+        hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        hasGOOGLE_SERVICE_ACCOUNT_KEY_PATH: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+        NODE_ENV: process.env.NODE_ENV,
+      });
+      
       let keyFile: any;
       
       // 1. 環境変数から直接読み込み（Vercel用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        console.log('📝 Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
+        console.log('📝 [GoogleDriveService] Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
         console.log(`   Length: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars`);
         console.log(`   First 50 chars: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50)}`);
         
@@ -55,27 +62,31 @@ export class GoogleDriveService extends BaseRepository {
         let parseError: any = null;
         try {
           keyFile = JSON.parse(jsonString);
-          console.log('✅ Successfully parsed as raw JSON');
+          console.log('✅ [GoogleDriveService] Successfully parsed as raw JSON');
         } catch (error: any) {
           parseError = error;
           // パースに失敗した場合、Base64デコードを試みる
-          console.log('⚠️ Failed to parse as JSON, trying Base64 decode...');
+          console.log('⚠️ [GoogleDriveService] Failed to parse as JSON, trying Base64 decode...');
           try {
             jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
-            console.log('✅ Successfully decoded Base64');
+            console.log('✅ [GoogleDriveService] Successfully decoded Base64');
+            console.log(`   Decoded length: ${jsonString.length} chars`);
             keyFile = JSON.parse(jsonString);
-            console.log('✅ Successfully parsed decoded JSON');
+            console.log('✅ [GoogleDriveService] Successfully parsed decoded JSON');
           } catch (decodeError: any) {
-            console.error('❌ Failed to decode Base64 or parse JSON:', decodeError.message);
-            console.error('Original parse error:', parseError.message);
+            console.error('❌ [GoogleDriveService] Failed to decode Base64 or parse JSON:', decodeError.message);
+            console.error('❌ [GoogleDriveService] Original parse error:', parseError.message);
+            console.error('❌ [GoogleDriveService] First 100 chars of env var:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
             throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
           }
         }
         
         if (keyFile) {
+          console.log('✅ [GoogleDriveService] Service account key parsed successfully:');
           console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
           console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
-          console.log(`   - private_key: ${keyFile.private_key ? '(exists)' : '(not found)'}`);
+          console.log(`   - private_key: ${keyFile.private_key ? '(exists, length: ' + keyFile.private_key.length + ')' : '(not found)'}`);
+          console.log(`   - type: ${keyFile.type || '(not found)'}`);
         }
       } 
       // 2. ファイルから読み込み（ローカル環境用）
@@ -83,29 +94,32 @@ export class GoogleDriveService extends BaseRepository {
         const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
         const absolutePath = path.resolve(__dirname, '../../', keyPath);
         
-        console.log(`📝 Attempting to load service account from file: ${absolutePath}`);
+        console.log(`📝 [GoogleDriveService] Attempting to load service account from file: ${absolutePath}`);
         
         if (!fs.existsSync(absolutePath)) {
-          console.error('❌ Service account key file not found:', absolutePath);
-          console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON environment variable is also not set');
-          console.error('❌ Please set GOOGLE_SERVICE_ACCOUNT_JSON environment variable for Vercel deployment');
+          console.error('❌ [GoogleDriveService] Service account key file not found:', absolutePath);
+          console.error('❌ [GoogleDriveService] GOOGLE_SERVICE_ACCOUNT_JSON environment variable is also not set');
+          console.error('❌ [GoogleDriveService] Please set GOOGLE_SERVICE_ACCOUNT_JSON environment variable for Vercel deployment');
           throw new Error('Google Drive service account is not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON environment variable.');
         }
         
-        console.log('📝 Loading service account from file:', absolutePath);
+        console.log('📝 [GoogleDriveService] Loading service account from file:', absolutePath);
         keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
-        console.log('✅ Successfully loaded service account from file');
+        console.log('✅ [GoogleDriveService] Successfully loaded service account from file');
       }
       
+      console.log('🔧 [GoogleDriveService] Creating GoogleAuth instance...');
       this.serviceAccountAuth = new google.auth.GoogleAuth({
         credentials: keyFile,
         scopes: ['https://www.googleapis.com/auth/drive'],
       });
       
-      console.log('✅ Google Drive Service Account initialized successfully');
+      console.log('✅ [GoogleDriveService] Google Drive Service Account initialized successfully');
     } catch (error: any) {
-      console.error('❌ Failed to initialize service account:', error.message);
-      console.error('Error stack:', error.stack);
+      console.error('❌ [GoogleDriveService] Failed to initialize service account:', error.message);
+      console.error('❌ [GoogleDriveService] Error stack:', error.stack);
+      console.error('❌ [GoogleDriveService] Error name:', error.name);
+      console.error('❌ [GoogleDriveService] Error code:', error.code);
       // エラーを再スローして、getDriveClient()で適切なエラーメッセージを返せるようにする
       throw error;
     }

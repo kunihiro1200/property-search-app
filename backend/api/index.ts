@@ -1116,16 +1116,30 @@ let googleDriveServiceError: Error | null = null;
 
 function getGoogleDriveService(): GoogleDriveService {
   if (googleDriveServiceError) {
+    console.error('❌ [getGoogleDriveService] Returning cached error:', googleDriveServiceError.message);
     throw googleDriveServiceError;
   }
   
   if (!googleDriveServiceInstance) {
     try {
-      console.log('🔧 Initializing GoogleDriveService singleton...');
+      console.log('🔧 [getGoogleDriveService] Initializing GoogleDriveService singleton...');
+      console.log('🔧 [getGoogleDriveService] Environment variables:', {
+        hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        GOOGLE_SERVICE_ACCOUNT_JSON_length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+        hasGOOGLE_DRIVE_PARENT_FOLDER_ID: !!process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID,
+        GOOGLE_DRIVE_PARENT_FOLDER_ID: process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || '(not set)',
+      });
+      
       googleDriveServiceInstance = new GoogleDriveService();
-      console.log('✅ GoogleDriveService singleton initialized successfully');
+      console.log('✅ [getGoogleDriveService] GoogleDriveService singleton initialized successfully');
     } catch (error: any) {
-      console.error('❌ Failed to initialize GoogleDriveService singleton:', error);
+      console.error('❌ [getGoogleDriveService] Failed to initialize GoogleDriveService singleton:', error);
+      console.error('❌ [getGoogleDriveService] Error details:', {
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        stack: error.stack,
+      });
       googleDriveServiceError = error;
       throw error;
     }
