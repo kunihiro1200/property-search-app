@@ -588,7 +588,9 @@ export class GoogleDriveService extends BaseRepository {
    */
   async listImagesWithThumbnails(folderId: string): Promise<DriveFile[]> {
     try {
+      console.log(`🔍 [listImagesWithThumbnails] Starting for folder: ${folderId}`);
       const drive = await this.getDriveClient();
+      console.log(`✅ [listImagesWithThumbnails] Drive client obtained`);
       
       // 共有ドライブを使用している場合は corpora: 'drive' と driveId を指定
       // 使用していない場合は corpora: 'user' を指定
@@ -609,9 +611,15 @@ export class GoogleDriveService extends BaseRepository {
         queryParams.corpora = 'user';
       }
 
+      console.log(`📋 [listImagesWithThumbnails] Query params:`, JSON.stringify(queryParams, null, 2));
+      console.log(`🚀 [listImagesWithThumbnails] Calling Google Drive API...`);
+      
       const response = await drive.files.list(queryParams);
+      
+      console.log(`✅ [listImagesWithThumbnails] API call completed`);
 
       const files = response.data.files || [];
+      console.log(`📊 [listImagesWithThumbnails] Found ${files.length} images`);
       
       return files.map(file => ({
         id: file.id || '',
@@ -624,15 +632,20 @@ export class GoogleDriveService extends BaseRepository {
         thumbnailLink: (file as any).thumbnailLink || undefined,
       }));
     } catch (error: any) {
-      console.error('Error listing images with thumbnails:', error.message);
-      console.error('Error details:', {
+      console.error('❌ [listImagesWithThumbnails] Error:', error.message);
+      console.error('❌ [listImagesWithThumbnails] Error stack:', error.stack);
+      console.error('❌ [listImagesWithThumbnails] Error details:', {
         folderId,
         isSharedDrive: !!this.parentFolderId,
         parentFolderId: this.parentFolderId,
         errorCode: error.code,
         errorMessage: error.message,
+        errorName: error.name,
       });
-      throw error;
+      
+      // エラー時は空の配列を返す（ユーザー体験を損なわない）
+      console.warn(`⚠️ [listImagesWithThumbnails] Returning empty array due to error`);
+      return [];
     }
   }
 

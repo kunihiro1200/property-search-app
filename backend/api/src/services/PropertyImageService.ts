@@ -272,8 +272,11 @@ export class PropertyImageService {
    * 検索順序: athome公開 → atbb公開 → 親フォルダ
    */
   async getImagesFromStorageUrl(storageUrl: string | null | undefined): Promise<PropertyImagesResult> {
+    console.log(`🔍 [getImagesFromStorageUrl] Starting with URL: ${storageUrl}`);
+    
     // 格納先URLが設定されていない場合
     if (!storageUrl) {
+      console.log(`⚠️ [getImagesFromStorageUrl] No storage URL provided`);
       return {
         images: [],
         folderId: null,
@@ -283,9 +286,10 @@ export class PropertyImageService {
 
     // フォルダIDを抽出
     const parentFolderId = this.extractFolderIdFromUrl(storageUrl);
+    console.log(`📋 [getImagesFromStorageUrl] Extracted parent folder ID: ${parentFolderId}`);
     
     if (!parentFolderId) {
-      console.warn(`Invalid storage URL format: ${storageUrl}`);
+      console.warn(`❌ [getImagesFromStorageUrl] Invalid storage URL format: ${storageUrl}`);
       return {
         images: [],
         folderId: null,
@@ -293,29 +297,37 @@ export class PropertyImageService {
       };
     }
 
-    // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
-    // 検索順序: athome公開 → atbb公開 → 親フォルダ
-    const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
-
-    // キャッシュを確認
-    const cachedResult = this.getFromCache(targetFolderId);
-    if (cachedResult) {
-      return {
-        images: cachedResult.images,
-        folderId: cachedResult.folderId,
-        cached: true,
-      };
-    }
-
     try {
+      // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
+      // 検索順序: athome公開 → atbb公開 → 親フォルダ
+      console.log(`🔍 [getImagesFromStorageUrl] Checking for public subfolder...`);
+      const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
+      console.log(`✅ [getImagesFromStorageUrl] Target folder ID: ${targetFolderId}`);
+
+      // キャッシュを確認
+      const cachedResult = this.getFromCache(targetFolderId);
+      if (cachedResult) {
+        console.log(`✅ [getImagesFromStorageUrl] Cache hit for folder: ${targetFolderId}`);
+        return {
+          images: cachedResult.images,
+          folderId: cachedResult.folderId,
+          cached: true,
+        };
+      }
+
+      console.log(`⚠️ [getImagesFromStorageUrl] Cache miss, fetching from Google Drive...`);
+      
       // Googleドライブから画像を取得
       const driveFiles = await this.driveService.listImagesWithThumbnails(targetFolderId);
+      console.log(`📊 [getImagesFromStorageUrl] Retrieved ${driveFiles.length} images from Google Drive`);
       
       // PropertyImage形式に変換
       const images = this.convertToPropertyImages(driveFiles);
+      console.log(`✅ [getImagesFromStorageUrl] Converted to ${images.length} PropertyImages`);
       
       // キャッシュに保存
       this.saveToCache(targetFolderId, images);
+      console.log(`✅ [getImagesFromStorageUrl] Saved to cache`);
       
       return {
         images,
@@ -323,12 +335,14 @@ export class PropertyImageService {
         cached: false,
       };
     } catch (error: any) {
-      console.error(`Error fetching images from folder ${targetFolderId}:`, error.message);
+      console.error(`❌ [getImagesFromStorageUrl] Error fetching images from folder ${parentFolderId}:`, error.message);
+      console.error(`❌ [getImagesFromStorageUrl] Error stack:`, error.stack);
       
       // エラー時は空の配列を返す（ユーザー体験を損なわない）
+      console.warn(`⚠️ [getImagesFromStorageUrl] Returning empty array due to error`);
       return {
         images: [],
-        folderId: targetFolderId,
+        folderId: parentFolderId,
         cached: false,
       };
     }
