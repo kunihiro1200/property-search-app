@@ -456,9 +456,18 @@ export class PropertyListingService {
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
+                
+                // image_urlからファイルIDを抽出（プロキシURL形式の場合）
+                // 例: https://property-site-frontend-kappa.vercel.app/api/public/images/1pvY-mO6ZfOuK3uwaXcfNfYhv1z5_nmWL/thumbnail
+                let fileId = 'legacy';
+                const proxyUrlMatch = property.image_url.match(/\/api\/public\/images\/([^\/]+)\/thumbnail/);
+                if (proxyUrlMatch) {
+                  fileId = proxyUrlMatch[1];
+                }
+                
                 // image_urlをオブジェクト形式に変換
                 images = [{
-                  id: 'legacy',
+                  id: fileId,
                   name: 'Property Image',
                   thumbnailUrl: property.image_url,
                   fullImageUrl: property.image_url,
