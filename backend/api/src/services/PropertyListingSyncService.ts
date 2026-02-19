@@ -234,7 +234,7 @@ export class PropertyListingSyncService {
           }
 
           // 4. storage_locationを取得
-          // 優先順位: 1. 既存のDB値 2. 業務依頼シートのCO列「格納先URL」 3. Google Drive検索
+          // 優先順位: 1. 既存のDB値 2. 業務依頼シートのCO列「格納先URL」（URL形式のみ） 3. Google Drive検索
           let storageLocation = existing?.storage_location || null;
 
           if (!storageLocation) {
@@ -242,11 +242,18 @@ export class PropertyListingSyncService {
             console.log(`  🔍 Fetching storage location from gyomu list...`);
             const gyomuStorageLocation = await this.getStorageLocationFromGyomuList(propertyNumber);
             
-            if (gyomuStorageLocation && String(gyomuStorageLocation).trim() !== '') {
+            // URL形式かチェック（https://drive.google.com/drive/folders/で始まる）
+            if (gyomuStorageLocation && 
+                String(gyomuStorageLocation).trim() !== '' &&
+                String(gyomuStorageLocation).startsWith('https://drive.google.com/drive/folders/')) {
               storageLocation = String(gyomuStorageLocation);
-              console.log(`  ✅ Found storage_location in gyomu list: ${storageLocation}`);
+              console.log(`  ✅ Found valid storage_location URL in gyomu list: ${storageLocation}`);
             } else {
-              // 業務依頼シートにもない場合、Google Driveで検索
+              if (gyomuStorageLocation) {
+                console.log(`  ⚠️ Invalid storage_location format in gyomu list (not a URL): ${gyomuStorageLocation}`);
+              }
+              
+              // 業務依頼シートにURL形式の値がない場合、Google Driveで検索
               console.log(`  🔍 Searching for Google Drive folder...`);
               storageLocation = await this.propertyImageService.getImageFolderUrl(propertyNumber);
               
