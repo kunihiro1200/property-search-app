@@ -67,12 +67,13 @@ export class PropertyImageService {
   private maxSubfoldersToSearch: number;
 
   constructor(
+    driveService: GoogleDriveService, // GoogleDriveServiceを外部から注入
     cacheTTLMinutes: number = 60,
     folderIdCacheTTLMinutes: number = 60,
     searchTimeoutSeconds: number = 2,
     maxSubfoldersToSearch: number = 3
   ) {
-    this.driveService = new GoogleDriveService();
+    this.driveService = driveService; // 注入されたインスタンスを使用
     this.cacheTTL = cacheTTLMinutes * 60 * 1000;
     this.folderIdCacheTTL = folderIdCacheTTLMinutes * 60 * 1000;
     this.searchTimeoutMs = searchTimeoutSeconds * 1000;

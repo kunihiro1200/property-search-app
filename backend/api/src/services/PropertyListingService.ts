@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { PropertyDistributionAreaCalculator } from './PropertyDistributionAreaCalculator';
 import { CityNameExtractor } from './CityNameExtractor';
 import { PropertyImageService } from './PropertyImageService';
+import { GoogleDriveService } from './GoogleDriveService';
 import { GeocodingService } from './GeocodingService';
 
 export class PropertyListingService {
@@ -12,7 +13,7 @@ export class PropertyListingService {
   private propertyImageService: PropertyImageService;
   private geocodingService: GeocodingService;
 
-  constructor() {
+  constructor(driveService?: GoogleDriveService) {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY!
@@ -25,12 +26,26 @@ export class PropertyListingService {
     const searchTimeoutSeconds = parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10);
     const maxSubfoldersToSearch = parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10);
     
-    this.propertyImageService = new PropertyImageService(
-      60, // cacheTTLMinutes（画像キャッシュ）
-      folderIdCacheTTLMinutes,
-      searchTimeoutSeconds,
-      maxSubfoldersToSearch
-    );
+    // GoogleDriveServiceが渡された場合は注入、なければ新規作成（後方互換性）
+    if (driveService) {
+      this.propertyImageService = new PropertyImageService(
+        driveService, // GoogleDriveServiceシングルトンを注入
+        60, // cacheTTLMinutes（画像キャッシュ）
+        folderIdCacheTTLMinutes,
+        searchTimeoutSeconds,
+        maxSubfoldersToSearch
+      );
+    } else {
+      // 後方互換性のため、GoogleDriveServiceが渡されない場合は新規作成
+      const newDriveService = new GoogleDriveService();
+      this.propertyImageService = new PropertyImageService(
+        newDriveService,
+        60, // cacheTTLMinutes（画像キャッシュ）
+        folderIdCacheTTLMinutes,
+        searchTimeoutSeconds,
+        maxSubfoldersToSearch
+      );
+    }
     
     this.geocodingService = new GeocodingService();
   }

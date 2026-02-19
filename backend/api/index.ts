@@ -51,8 +51,46 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// PropertyListingServiceの初期化（ローカル環境と同じ）
-const propertyListingService = new PropertyListingService();
+// GoogleDriveServiceをシングルトンとして初期化
+let googleDriveServiceInstance: GoogleDriveService | null = null;
+let googleDriveServiceError: Error | null = null;
+
+function getGoogleDriveService(): GoogleDriveService {
+  if (googleDriveServiceError) {
+    console.error('❌ [getGoogleDriveService] Returning cached error:', googleDriveServiceError.message);
+    throw googleDriveServiceError;
+  }
+  
+  if (!googleDriveServiceInstance) {
+    try {
+      console.log('🔧 [getGoogleDriveService] Initializing GoogleDriveService singleton...');
+      console.log('🔧 [getGoogleDriveService] Environment variables:', {
+        hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        GOOGLE_SERVICE_ACCOUNT_JSON_length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
+        hasGOOGLE_DRIVE_PARENT_FOLDER_ID: !!process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID,
+        GOOGLE_DRIVE_PARENT_FOLDER_ID: process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || '(not set)',
+      });
+      
+      googleDriveServiceInstance = new GoogleDriveService();
+      console.log('✅ [getGoogleDriveService] GoogleDriveService singleton initialized successfully');
+    } catch (error: any) {
+      console.error('❌ [getGoogleDriveService] Failed to initialize GoogleDriveService singleton:', error);
+      console.error('❌ [getGoogleDriveService] Error details:', {
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        stack: error.stack,
+      });
+      googleDriveServiceError = error;
+      throw error;
+    }
+  }
+  
+  return googleDriveServiceInstance;
+}
+
+// PropertyListingServiceの初期化（GoogleDriveServiceシングルトンを注入）
+const propertyListingService = new PropertyListingService(getGoogleDriveService());
 
 // Middleware
 app.use(helmet());
@@ -635,8 +673,12 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       });
     }
 
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
+    
     // PropertyImageServiceを使用して画像を取得
     const propertyImageService = new PropertyImageService(
+      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -725,8 +767,12 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
       });
     }
 
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
+    
     // PropertyImageServiceを使用してキャッシュをクリア
     const propertyImageService = new PropertyImageService(
+      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -775,8 +821,12 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
+    
     // PropertyImageServiceを使用して全キャッシュをクリア
     const propertyImageService = new PropertyImageService(
+      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -903,8 +953,12 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     console.log(`[Refresh Essential] Property found: ${property.property_number}`);
     console.log(`[Refresh Essential] Current storage_location: ${property.storage_location}`);
     
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
+    
     // 画像を取得（Google Drive）- キャッシュをバイパス
     const propertyImageService = new PropertyImageService(
+      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1012,8 +1066,12 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
     // 全てのデータを並列取得（キャッシュをバイパス）
     const startTime = Date.now();
     
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
+    
     // PropertyImageServiceのインスタンスを作成
     const propertyImageService = new PropertyImageService(
+      driveService, // GoogleDriveServiceシングルトンを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1110,44 +1168,6 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
 });
 
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
-// GoogleDriveServiceをシングルトンとして初期化
-let googleDriveServiceInstance: GoogleDriveService | null = null;
-let googleDriveServiceError: Error | null = null;
-
-function getGoogleDriveService(): GoogleDriveService {
-  if (googleDriveServiceError) {
-    console.error('❌ [getGoogleDriveService] Returning cached error:', googleDriveServiceError.message);
-    throw googleDriveServiceError;
-  }
-  
-  if (!googleDriveServiceInstance) {
-    try {
-      console.log('🔧 [getGoogleDriveService] Initializing GoogleDriveService singleton...');
-      console.log('🔧 [getGoogleDriveService] Environment variables:', {
-        hasGOOGLE_SERVICE_ACCOUNT_JSON: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-        GOOGLE_SERVICE_ACCOUNT_JSON_length: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        hasGOOGLE_DRIVE_PARENT_FOLDER_ID: !!process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID,
-        GOOGLE_DRIVE_PARENT_FOLDER_ID: process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || '(not set)',
-      });
-      
-      googleDriveServiceInstance = new GoogleDriveService();
-      console.log('✅ [getGoogleDriveService] GoogleDriveService singleton initialized successfully');
-    } catch (error: any) {
-      console.error('❌ [getGoogleDriveService] Failed to initialize GoogleDriveService singleton:', error);
-      console.error('❌ [getGoogleDriveService] Error details:', {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        stack: error.stack,
-      });
-      googleDriveServiceError = error;
-      throw error;
-    }
-  }
-  
-  return googleDriveServiceInstance;
-}
-
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
   try {
