@@ -234,16 +234,27 @@ export class PropertyListingSyncService {
           }
 
           // 4. storage_locationを取得
+          // 優先順位: 1. 既存のDB値 2. 業務依頼シートのCO列「格納先URL」 3. Google Drive検索
           let storageLocation = existing?.storage_location || null;
 
           if (!storageLocation) {
-            console.log(`  🔍 Searching for Google Drive folder...`);
-            storageLocation = await this.propertyImageService.getImageFolderUrl(propertyNumber);
+            // まず業務依頼シートのCO列「格納先URL」から取得
+            console.log(`  🔍 Fetching storage location from gyomu list...`);
+            const gyomuStorageLocation = await this.getStorageLocationFromGyomuList(propertyNumber);
             
-            if (storageLocation) {
-              console.log(`  ✅ Found folder: ${storageLocation}`);
+            if (gyomuStorageLocation && String(gyomuStorageLocation).trim() !== '') {
+              storageLocation = String(gyomuStorageLocation);
+              console.log(`  ✅ Found storage_location in gyomu list: ${storageLocation}`);
             } else {
-              console.log(`  ⚠️ Folder not found in Google Drive`);
+              // 業務依頼シートにもない場合、Google Driveで検索
+              console.log(`  🔍 Searching for Google Drive folder...`);
+              storageLocation = await this.propertyImageService.getImageFolderUrl(propertyNumber);
+              
+              if (storageLocation) {
+                console.log(`  ✅ Found folder in Google Drive: ${storageLocation}`);
+              } else {
+                console.log(`  ⚠️ Folder not found in gyomu list or Google Drive`);
+              }
             }
           }
 
