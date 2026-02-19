@@ -111,6 +111,31 @@ export class PropertyListingSyncService {
   }
 
   /**
+   * 業務依頼シートから格納先URL（CO列）を取得
+   */
+  private async getStorageLocationFromGyomuList(propertyNumber: string): Promise<string | null> {
+    if (!this.gyomuListSheetsClient) {
+      return null;
+    }
+
+    try {
+      const rows = await this.gyomuListSheetsClient.readAll();
+      
+      for (const row of rows) {
+        if (row['物件番号'] === propertyNumber) {
+          const storageUrl = row['格納先URL'];
+          return storageUrl ? String(storageUrl) : null;
+        }
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error(`  ⚠️ Error fetching storage location for ${propertyNumber}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * フル同期を実行（バッチ処理版）
    * 物件リストスプレッドシートからproperty_listingsテーブルを同期
    * 
@@ -209,16 +234,18 @@ export class PropertyListingSyncService {
           }
 
           // 4. storage_locationを取得
-          // 優先順位: 1. スプレッドシートの「保存場所」列 2. Google Drive検索 3. 既存のDB値
+          // 優先順位: 1. 業務依頼シートのCO列「格納先URL」 2. Google Drive検索 3. 既存のDB値
           let storageLocation = existing?.storage_location || null;
           
-          // スプレッドシートの「保存場所」列から取得
-          const spreadsheetStorageLocation = row['保存場所'];
-          if (spreadsheetStorageLocation && String(spreadsheetStorageLocation).trim() !== '') {
-            storageLocation = String(spreadsheetStorageLocation);
-            console.log(`  ✅ Found storage_location in spreadsheet: ${storageLocation}`);
+          // 業務依頼シートのCO列「格納先URL」から取得
+          console.log(`  🔍 Fetching storage location from gyomu list...`);
+          const gyomuStorageLocation = await this.getStorageLocationFromGyomuList(propertyNumber);
+          
+          if (gyomuStorageLocation && String(gyomuStorageLocation).trim() !== '') {
+            storageLocation = String(gyomuStorageLocation);
+            console.log(`  ✅ Found storage_location in gyomu list: ${storageLocation}`);
           }
-          // スプレッドシートに値がない場合、Google Driveで検索
+          // 業務依頼シートに値がない場合、Google Driveで検索
           else if (!storageLocation) {
             console.log(`  🔍 Searching for Google Drive folder...`);
             storageLocation = await this.propertyImageService.getImageFolderUrl(propertyNumber);
