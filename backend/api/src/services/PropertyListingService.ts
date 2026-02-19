@@ -442,7 +442,7 @@ export class PropertyListingService {
             });
             
             try {
-              let images: string[] = [];
+              let images: any[] = [];
               let storageLocation = property.storage_location;
               
               // storage_locationが空の場合、業務リストから取得
@@ -457,16 +457,40 @@ export class PropertyListingService {
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
-                images = [property.image_url];
+                
+                // image_urlからファイルIDを抽出（プロキシURL形式の場合）
+                // 例: https://property-site-frontend-kappa.vercel.app/api/public/images/1pvY-mO6ZfOuK3uwaXcfNfYhv1z5_nmWL/thumbnail
+                let fileId = 'legacy';
+                const proxyUrlMatch = property.image_url.match(/\/api\/public\/images\/([^\/]+)\/thumbnail/);
+                if (proxyUrlMatch) {
+                  fileId = proxyUrlMatch[1];
+                }
+                
+                // image_urlをオブジェクト形式に変換
+                images = [{
+                  id: fileId,
+                  name: 'Property Image',
+                  thumbnailUrl: property.image_url,
+                  fullImageUrl: property.image_url,
+                  mimeType: 'image/jpeg',
+                  size: 0,
+                  modifiedTime: new Date().toISOString()
+                }];
               }
               // 2. storage_locationがある場合はGoogle Driveから取得
               else if (storageLocation) {
                 console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
-                images = await this.propertyImageService.getFirstImage(
-                  property.id,
-                  storageLocation
-                );
-                console.log(`[PropertyListingService] Got ${images.length} images for ${property.property_number}`);
+                
+                // PropertyImageServiceを使用して画像オブジェクトを取得
+                const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
+                
+                if (imageResult.images.length > 0) {
+                  // 最初の画像のみを使用
+                  images = [imageResult.images[0]];
+                  console.log(`[PropertyListingService] Got image for ${property.property_number}: ${images[0].thumbnailUrl}`);
+                } else {
+                  console.log(`[PropertyListingService] No images found for ${property.property_number}`);
+                }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
               }
