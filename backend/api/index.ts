@@ -564,7 +564,13 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
     );
 
+    console.log(`[Images API] Calling getImagesFromStorageUrl with: ${storageUrl}`);
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
+    console.log(`[Images API] getImagesFromStorageUrl returned:`, {
+      images_count: result.images.length,
+      folderId: result.folderId,
+      cached: result.cached
+    });
 
     // 非表示画像リストを取得
     const hiddenImages = await propertyListingService.getHiddenImages(property.id);
@@ -593,10 +599,19 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       message: error.message,
       stack: error.stack,
       code: error.code,
+      status: error.status,
+      response: error.response?.data,
+      errors: error.errors,
     });
+    
+    // より詳細なエラー情報をレスポンスに含める
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message || 'Failed to fetch images'
+      message: error.message || 'Failed to fetch images',
+      errorCode: error.code,
+      errorStatus: error.status,
+      errorDetails: error.response?.data || error.errors || null,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
