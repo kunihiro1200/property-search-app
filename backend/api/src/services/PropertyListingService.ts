@@ -5,6 +5,8 @@ import { CityNameExtractor } from './CityNameExtractor';
 import { PropertyImageService } from './PropertyImageService';
 import { GoogleDriveService } from './GoogleDriveService';
 import { GeocodingService } from './GeocodingService';
+import { PropertyDetailsService } from './PropertyDetailsService';
+import { GoogleSheetsClient } from './GoogleSheetsClient';
 
 export class PropertyListingService {
   private supabase;
@@ -610,7 +612,6 @@ export class PropertyListingService {
       }
       
       // property_detailsテーブルから追加データを取得
-      const { PropertyDetailsService } = await import('./PropertyDetailsService');
       const propertyDetailsService = new PropertyDetailsService();
       const details = await propertyDetailsService.getPropertyDetails(data.property_number);
       
@@ -668,7 +669,6 @@ export class PropertyListingService {
       }
       
       // property_detailsテーブルから追加データを取得
-      const { PropertyDetailsService } = await import('./PropertyDetailsService');
       const propertyDetailsService = new PropertyDetailsService();
       const details = await propertyDetailsService.getPropertyDetails(propertyNumber);
       
@@ -784,7 +784,6 @@ export class PropertyListingService {
       console.log(`[PropertyListingService] Loading 業務リスト（業務依頼） into cache...`);
       
       // 業務リスト（業務依頼）スプレッドシートに接続
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
       const gyomuListClient = new GoogleSheetsClient({
         spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g',
         sheetName: '業務依頼',
@@ -834,7 +833,6 @@ export class PropertyListingService {
   }> {
     try {
       // property_detailsテーブルから取得（スキーマキャッシュ問題を回避）
-      const { PropertyDetailsService } = await import('./PropertyDetailsService');
       const propertyDetailsService = new PropertyDetailsService();
       
       const details = await propertyDetailsService.getPropertyDetails(propertyNumber);
