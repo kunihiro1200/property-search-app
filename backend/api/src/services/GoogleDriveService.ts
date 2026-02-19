@@ -46,9 +46,14 @@ export class GoogleDriveService extends BaseRepository {
       // 1. 環境変数から直接読み込み（Vercel用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         console.log('📝 Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
+        console.log(`   Length: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars`);
+        console.log(`   First 50 chars: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50)}`);
         try {
           keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
           console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
+          console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
+          console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
+          console.log(`   - private_key: ${keyFile.private_key ? '(exists)' : '(not found)'}`);
         } catch (parseError: any) {
           console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
           console.error('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
@@ -60,14 +65,18 @@ export class GoogleDriveService extends BaseRepository {
         const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
         const absolutePath = path.resolve(__dirname, '../../', keyPath);
         
+        console.log(`📝 Attempting to load service account from file: ${absolutePath}`);
+        
         if (!fs.existsSync(absolutePath)) {
-          console.warn('⚠️ Service account key file not found:', absolutePath);
-          console.warn('⚠️ Set GOOGLE_SERVICE_ACCOUNT_JSON environment variable for Vercel deployment');
-          return;
+          console.error('❌ Service account key file not found:', absolutePath);
+          console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON environment variable is also not set');
+          console.error('❌ Please set GOOGLE_SERVICE_ACCOUNT_JSON environment variable for Vercel deployment');
+          throw new Error('Google Drive service account is not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON environment variable.');
         }
         
         console.log('📝 Loading service account from file:', absolutePath);
         keyFile = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+        console.log('✅ Successfully loaded service account from file');
       }
       
       this.serviceAccountAuth = new google.auth.GoogleAuth({
@@ -75,10 +84,12 @@ export class GoogleDriveService extends BaseRepository {
         scopes: ['https://www.googleapis.com/auth/drive'],
       });
       
-      console.log('✅ Google Drive Service Account initialized');
+      console.log('✅ Google Drive Service Account initialized successfully');
     } catch (error: any) {
       console.error('❌ Failed to initialize service account:', error.message);
       console.error('Error stack:', error.stack);
+      // エラーを再スローして、getDriveClient()で適切なエラーメッセージを返せるようにする
+      throw error;
     }
   }
 
