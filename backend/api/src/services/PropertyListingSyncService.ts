@@ -238,7 +238,8 @@ export class PropertyListingSyncService {
           let storageLocation = existing?.storage_location || null;
           
           // 既存のDB値がURL形式でない場合は無効とみなす
-          if (storageLocation && !String(storageLocation).startsWith('https://drive.google.com/drive/folders/')) {
+          // URL形式: https://drive.google.com/drive/folders/... または https://drive.google.com/drive/u/0/folders/...
+          if (storageLocation && !String(storageLocation).startsWith('https://drive.google.com/drive/')) {
             console.log(`  ⚠️ Existing storage_location is not a valid URL format: ${storageLocation}`);
             storageLocation = null; // 無効な値なので再取得
           }
@@ -248,10 +249,11 @@ export class PropertyListingSyncService {
             console.log(`  🔍 Fetching storage location from gyomu list...`);
             const gyomuStorageLocation = await this.getStorageLocationFromGyomuList(propertyNumber);
             
-            // URL形式かチェック（https://drive.google.com/drive/folders/で始まる）
+            // URL形式かチェック（https://drive.google.com/drive/で始まる）
+            // /u/0/が含まれる形式も許可: https://drive.google.com/drive/u/0/folders/...
             if (gyomuStorageLocation && 
                 String(gyomuStorageLocation).trim() !== '' &&
-                String(gyomuStorageLocation).startsWith('https://drive.google.com/drive/folders/')) {
+                String(gyomuStorageLocation).startsWith('https://drive.google.com/drive/')) {
               storageLocation = String(gyomuStorageLocation);
               console.log(`  ✅ Found valid storage_location URL in gyomu list: ${storageLocation}`);
             } else {
