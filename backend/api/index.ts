@@ -84,6 +84,69 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// 環境変数テスト用エンドポイント
+app.get('/api/test-env', (_req, res) => {
+  try {
+    const hasEnv = !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    
+    if (!hasEnv) {
+      return res.json({
+        success: false,
+        error: 'GOOGLE_SERVICE_ACCOUNT_JSON not found',
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('GOOGLE')),
+      });
+    }
+    
+    const envValue = process.env.GOOGLE_SERVICE_ACCOUNT_JSON!;
+    const length = envValue.length;
+    const first50 = envValue.substring(0, 50);
+    
+    // JSONとしてパースを試みる
+    try {
+      const parsed = JSON.parse(envValue);
+      return res.json({
+        success: true,
+        format: 'raw_json',
+        length,
+        first50,
+        project_id: parsed.project_id,
+        client_email: parsed.client_email,
+        has_private_key: !!parsed.private_key,
+      });
+    } catch (error: any) {
+      // Base64デコードを試みる
+      try {
+        const decoded = Buffer.from(envValue, 'base64').toString('utf-8');
+        const parsed = JSON.parse(decoded);
+        return res.json({
+          success: true,
+          format: 'base64',
+          length,
+          first50,
+          decoded_length: decoded.length,
+          project_id: parsed.project_id,
+          client_email: parsed.client_email,
+          has_private_key: !!parsed.private_key,
+        });
+      } catch (decodeError: any) {
+        return res.json({
+          success: false,
+          error: 'Failed to parse JSON or decode Base64',
+          length,
+          first50,
+          parse_error: error.message,
+          decode_error: decodeError.message,
+        });
+      }
+    }
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // URL短縮リダイレクト解決エンドポイント
 app.get('/api/url-redirect/resolve', async (req, res) => {
   try {
