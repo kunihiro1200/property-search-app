@@ -30,6 +30,22 @@ console.log('🔍 Environment variables check:', {
   NODE_ENV: process.env.NODE_ENV || 'Not set',
 });
 
+// GOOGLE_SERVICE_ACCOUNT_JSONの詳細チェック
+if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+  try {
+    const parsed = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    console.log('✅ GOOGLE_SERVICE_ACCOUNT_JSON is valid JSON');
+    console.log('   - project_id:', parsed.project_id || '(not found)');
+    console.log('   - client_email:', parsed.client_email || '(not found)');
+    console.log('   - private_key:', parsed.private_key ? '(exists)' : '(not found)');
+  } catch (error: any) {
+    console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON is invalid JSON:', error.message);
+    console.error('   First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
+  }
+} else {
+  console.error('❌ GOOGLE_SERVICE_ACCOUNT_JSON is not set');
+}
+
 // Supabase クライアントの初期化
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;

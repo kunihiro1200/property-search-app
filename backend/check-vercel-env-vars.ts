@@ -1,49 +1,50 @@
 /**
- * Vercel環境変数を確認
+ * Vercel環境変数の設定状況を確認するスクリプト
+ * 
+ * このスクリプトは、Vercelにデプロイされた環境で実行されることを想定しています。
+ * ローカル環境では、.env.localファイルから環境変数を読み込みます。
  */
 
-console.log('🔍 Checking Vercel environment variables...\n');
+// 環境変数の存在確認
+function checkEnvVar(name: string): void {
+  const value = process.env[name];
+  
+  if (value) {
+    console.log(`✅ ${name}: Set (length: ${value.length} chars)`);
+    
+    // GOOGLE_SERVICE_ACCOUNT_JSONの場合、JSONとしてパース可能か確認
+    if (name === 'GOOGLE_SERVICE_ACCOUNT_JSON') {
+      try {
+        const parsed = JSON.parse(value);
+        console.log(`   - Valid JSON`);
+        console.log(`   - project_id: ${parsed.project_id || '(not found)'}`);
+        console.log(`   - client_email: ${parsed.client_email || '(not found)'}`);
+        console.log(`   - private_key: ${parsed.private_key ? '(exists)' : '(not found)'}`);
+      } catch (error: any) {
+        console.log(`   ❌ Invalid JSON: ${error.message}`);
+        console.log(`   First 100 chars: ${value.substring(0, 100)}`);
+      }
+    }
+  } else {
+    console.log(`❌ ${name}: Not set`);
+  }
+}
 
+console.log('🔍 Checking Vercel environment variables...\n');
+console.log('─'.repeat(60));
+
+// 必須環境変数をチェック
 const requiredEnvVars = [
   'GOOGLE_SERVICE_ACCOUNT_JSON',
   'GOOGLE_DRIVE_PARENT_FOLDER_ID',
-  'PROPERTY_LISTING_SPREADSHEET_ID',
-  'PROPERTY_LISTING_SHEET_NAME',
-  'GYOMU_LIST_SPREADSHEET_ID',
-  'GYOMU_LIST_SHEET_NAME',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
 ];
 
-console.log('📊 Required environment variables:\n');
-
-requiredEnvVars.forEach((varName) => {
-  const value = process.env[varName];
-  
-  if (value) {
-    if (varName === 'GOOGLE_SERVICE_ACCOUNT_JSON') {
-      console.log(`✅ ${varName}: Set (${value.length} characters)`);
-      
-      // Base64デコードを試行
-      try {
-        const decoded = Buffer.from(value, 'base64').toString('utf-8');
-        const parsed = JSON.parse(decoded);
-        console.log(`   - project_id: ${parsed.project_id}`);
-        console.log(`   - client_email: ${parsed.client_email}`);
-      } catch (e) {
-        console.log(`   ⚠️ Failed to decode/parse: ${e}`);
-      }
-    } else {
-      console.log(`✅ ${varName}: ${value}`);
-    }
-  } else {
-    console.log(`❌ ${varName}: NOT SET`);
-  }
-});
-
-console.log('\n📝 Summary:');
-const missingVars = requiredEnvVars.filter(v => !process.env[v]);
-if (missingVars.length === 0) {
-  console.log('✅ All required environment variables are set');
-} else {
-  console.log(`❌ Missing ${missingVars.length} environment variables:`);
-  missingVars.forEach(v => console.log(`   - ${v}`));
+for (const envVar of requiredEnvVars) {
+  checkEnvVar(envVar);
+  console.log('');
 }
+
+console.log('─'.repeat(60));
+console.log('✅ Check complete');
