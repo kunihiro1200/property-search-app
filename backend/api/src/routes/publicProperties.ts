@@ -1,16 +1,16 @@
 // 公開物件サイト用のAPIルート
 import { Router, Request, Response } from 'express';
-import { PropertyListingService } from '../services/PropertyListingService';
-import { PropertyImageService } from '../services/PropertyImageService';
-import { WorkTaskService } from '../services/WorkTaskService';
-import { RecommendedCommentService } from '../services/RecommendedCommentService';
-import { FavoriteCommentService } from '../services/FavoriteCommentService';
-import { AthomeDataService } from '../services/AthomeDataService';
-import { InquirySyncService } from '../services/InquirySyncService';
-import { PropertyService } from '../services/PropertyService';
-import { PanoramaUrlService } from '../services/PanoramaUrlService';
-import { createRateLimiter } from '../middleware/rateLimiter';
-import { authenticate } from '../middleware/auth';
+import { PropertyListingService } from '../services/PropertyListingService.js';
+import { PropertyImageService } from '../services/PropertyImageService.js';
+import { WorkTaskService } from '../services/WorkTaskService.js';
+import { RecommendedCommentService } from '../services/RecommendedCommentService.js';
+import { FavoriteCommentService } from '../services/FavoriteCommentService.js';
+import { AthomeDataService } from '../services/AthomeDataService.js';
+import { InquirySyncService } from '../services/InquirySyncService.js';
+import { PropertyService } from '../services/PropertyService.js';
+import { PanoramaUrlService } from '../services/PanoramaUrlService.js';
+import { createRateLimiter } from '../middleware/rateLimiter.js';
+import { authenticate } from '../middleware/auth.js';
 import { z } from 'zod';
 
 const router = Router();

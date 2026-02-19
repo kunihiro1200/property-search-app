@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { PropertyInfo, PropertyType } from '../types';
-import { CacheHelper } from '../utils/cache';
+import { PropertyInfo, PropertyType } from '../types/index.js';
+import { CacheHelper } from '../utils/cache.js';
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
@@ -272,7 +272,7 @@ export class PropertyService {
         return cached;
       }
       
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+      const { GoogleSheetsClient } = await import('./GoogleSheetsClient.js');
       
       // GoogleSheetsClientを使用して物件シートにアクセス
       const sheetsClient = new GoogleSheetsClient({
@@ -357,7 +357,7 @@ export class PropertyService {
         return cached;
       }
       
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+      const { GoogleSheetsClient } = await import('./GoogleSheetsClient.js');
       
       console.log(`[getPropertyAbout] Starting for property: ${propertyNumber}`);
       
@@ -610,7 +610,7 @@ export class PropertyService {
    */
   async retrieveStorageUrl(propertyNumber: string): Promise<string | null> {
     try {
-      const { PropertyImageService } = await import('./PropertyImageService');
+      const { PropertyImageService } = await import('./PropertyImageService.js');
       const propertyImageService = new PropertyImageService();
       
       const folderUrl = await propertyImageService.getImageFolderUrl(propertyNumber);

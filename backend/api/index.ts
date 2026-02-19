@@ -7,15 +7,15 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
-import { PropertyListingService } from './src/services/PropertyListingService';
-import { PropertyImageService } from './src/services/PropertyImageService';
-import { GoogleDriveService } from './src/services/GoogleDriveService';
-import { PropertyDetailsService } from './src/services/PropertyDetailsService';
-import { PropertyService } from './src/services/PropertyService';
-import { PanoramaUrlService } from './src/services/PanoramaUrlService';
-import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
-import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
-import publicPropertiesRoutes from './src/routes/publicProperties';
+import { PropertyListingService } from './src/services/PropertyListingService.js';
+import { PropertyImageService } from './src/services/PropertyImageService.js';
+import { GoogleDriveService } from './src/services/GoogleDriveService.js';
+import { PropertyDetailsService } from './src/services/PropertyDetailsService.js';
+import { PropertyService } from './src/services/PropertyService.js';
+import { PanoramaUrlService } from './src/services/PanoramaUrlService.js';
+import { GoogleSheetsClient } from './src/services/GoogleSheetsClient.js';
+import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService.js';
+import publicPropertiesRoutes from './src/routes/publicProperties.js';
 
 const app = express();
 
