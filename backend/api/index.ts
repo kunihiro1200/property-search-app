@@ -1110,6 +1110,30 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
 });
 
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
+// GoogleDriveServiceをシングルトンとして初期化
+let googleDriveServiceInstance: GoogleDriveService | null = null;
+let googleDriveServiceError: Error | null = null;
+
+function getGoogleDriveService(): GoogleDriveService {
+  if (googleDriveServiceError) {
+    throw googleDriveServiceError;
+  }
+  
+  if (!googleDriveServiceInstance) {
+    try {
+      console.log('🔧 Initializing GoogleDriveService singleton...');
+      googleDriveServiceInstance = new GoogleDriveService();
+      console.log('✅ GoogleDriveService singleton initialized successfully');
+    } catch (error: any) {
+      console.error('❌ Failed to initialize GoogleDriveService singleton:', error);
+      googleDriveServiceError = error;
+      throw error;
+    }
+  }
+  
+  return googleDriveServiceInstance;
+}
+
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
   try {
@@ -1117,8 +1141,8 @@ app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {
     
     console.log(`🖼️ Proxying thumbnail image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
-    const driveService = new GoogleDriveService();
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
@@ -1166,8 +1190,8 @@ app.get('/api/public/images/:fileId', async (req, res) => {
     
     console.log(`🖼️ Proxying full image: ${fileId}`);
     
-    // GoogleDriveServiceを使用して画像データを取得
-    const driveService = new GoogleDriveService();
+    // GoogleDriveServiceシングルトンを取得
+    const driveService = getGoogleDriveService();
     
     const imageData = await driveService.getImageData(fileId);
     
