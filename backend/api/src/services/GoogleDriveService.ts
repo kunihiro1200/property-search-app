@@ -51,30 +51,31 @@ export class GoogleDriveService extends BaseRepository {
         
         let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
         
-        // Base64エンコードされているかチェック（改行がなく、Base64文字のみ）
-        const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(jsonString.trim());
-        
-        if (isBase64) {
-          console.log('🔓 Detected Base64 encoded value, decoding...');
+        // JSONとしてパースを試みる
+        let parseError: any = null;
+        try {
+          keyFile = JSON.parse(jsonString);
+          console.log('✅ Successfully parsed as raw JSON');
+        } catch (error: any) {
+          parseError = error;
+          // パースに失敗した場合、Base64デコードを試みる
+          console.log('⚠️ Failed to parse as JSON, trying Base64 decode...');
           try {
             jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
             console.log('✅ Successfully decoded Base64');
+            keyFile = JSON.parse(jsonString);
+            console.log('✅ Successfully parsed decoded JSON');
           } catch (decodeError: any) {
-            console.error('❌ Failed to decode Base64:', decodeError.message);
-            throw new Error(`Failed to decode Base64: ${decodeError.message}`);
+            console.error('❌ Failed to decode Base64 or parse JSON:', decodeError.message);
+            console.error('Original parse error:', parseError.message);
+            throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
           }
         }
         
-        try {
-          keyFile = JSON.parse(jsonString);
-          console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
+        if (keyFile) {
           console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
           console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
           console.log(`   - private_key: ${keyFile.private_key ? '(exists)' : '(not found)'}`);
-        } catch (parseError: any) {
-          console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
-          console.error('First 100 chars:', jsonString.substring(0, 100));
-          throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
         }
       } 
       // 2. ファイルから読み込み（ローカル環境用）
