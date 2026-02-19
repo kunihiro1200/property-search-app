@@ -114,7 +114,9 @@ export const connectRedis = async () => {
 
 export const getRedisClient = (): RedisLike => {
   if (!redisClient) {
-    throw new Error('Redis client not initialized. Call connectRedis() first.');
+    // 遅延初期化：初回アクセス時にメモリストアを作成
+    console.warn('⚠️ Redis client not initialized, using in-memory store');
+    redisClient = new MemoryStore();
   }
   return redisClient;
 };
