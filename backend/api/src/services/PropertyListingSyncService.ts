@@ -234,8 +234,14 @@ export class PropertyListingSyncService {
           }
 
           // 4. storage_locationを取得
-          // 優先順位: 1. 既存のDB値 2. 業務依頼シートのCO列「格納先URL」（URL形式のみ） 3. Google Drive検索
+          // 優先順位: 1. 既存のDB値（URL形式のみ） 2. 業務依頼シートのCO列「格納先URL」 3. Google Drive検索
           let storageLocation = existing?.storage_location || null;
+          
+          // 既存のDB値がURL形式でない場合は無効とみなす
+          if (storageLocation && !String(storageLocation).startsWith('https://drive.google.com/drive/folders/')) {
+            console.log(`  ⚠️ Existing storage_location is not a valid URL format: ${storageLocation}`);
+            storageLocation = null; // 無効な値なので再取得
+          }
 
           if (!storageLocation) {
             // まず業務依頼シートのCO列「格納先URL」から取得
