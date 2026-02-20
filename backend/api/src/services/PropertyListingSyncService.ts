@@ -15,6 +15,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from './GoogleSheetsClient.js';
 import { PropertyImageService } from './PropertyImageService.js';
+import { GoogleDriveService } from './GoogleDriveService.js';
 
 export interface PropertyListingSyncResult {
   success: boolean;
@@ -38,7 +39,15 @@ export class PropertyListingSyncService {
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
-    this.propertyImageService = new PropertyImageService();
+    // GoogleDriveServiceをインスタンス化して、PropertyImageServiceに渡す
+    const driveService = new GoogleDriveService();
+    this.propertyImageService = new PropertyImageService(
+      driveService,
+      60, // cacheTTLMinutes
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
   }
 
   /**
