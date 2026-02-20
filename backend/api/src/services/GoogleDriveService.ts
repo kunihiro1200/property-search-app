@@ -61,10 +61,6 @@ export class GoogleDriveService extends BaseRepository {
         // JSONとしてパースを試みる
         let parseError: any = null;
         try {
-          // 🔧 FIX: パース前に改行を変換
-          jsonString = jsonString.replace(/\\n/g, '\n');
-          console.log('✅ [GoogleDriveService] Converted \\\\n to actual newlines before parsing');
-          
           keyFile = JSON.parse(jsonString);
           console.log('✅ [GoogleDriveService] Successfully parsed as raw JSON');
         } catch (error: any) {
@@ -72,14 +68,9 @@ export class GoogleDriveService extends BaseRepository {
           // パースに失敗した場合、Base64デコードを試みる
           console.log('⚠️ [GoogleDriveService] Failed to parse as JSON, trying Base64 decode...');
           try {
-            jsonString = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!, 'base64').toString('utf-8');
+            jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
             console.log('✅ [GoogleDriveService] Successfully decoded Base64');
             console.log(`   Decoded length: ${jsonString.length} chars`);
-            
-            // Base64デコード後も改行を変換
-            jsonString = jsonString.replace(/\\n/g, '\n');
-            console.log('✅ [GoogleDriveService] Converted \\\\n to actual newlines after Base64 decode');
-            
             keyFile = JSON.parse(jsonString);
             console.log('✅ [GoogleDriveService] Successfully parsed decoded JSON');
           } catch (decodeError: any) {

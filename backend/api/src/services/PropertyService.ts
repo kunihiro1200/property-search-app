@@ -434,13 +434,7 @@ export class PropertyService {
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         // Vercel環境: 環境変数から直接読み込む
         console.log(`[generateEstimatePdf] Using GOOGLE_SERVICE_ACCOUNT_JSON from environment`);
-        
-        // 🔧 FIX: パース前に改行を変換
-        let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-        jsonString = jsonString.replace(/\\n/g, '\n');
-        console.log(`[generateEstimatePdf] Converted \\\\n to actual newlines before parsing`);
-        
-        keyFile = JSON.parse(jsonString);
+        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
       } else {
         // ローカル環境: ファイルから読み込む
         console.log(`[generateEstimatePdf] Using service account key file`);
@@ -617,16 +611,7 @@ export class PropertyService {
   async retrieveStorageUrl(propertyNumber: string): Promise<string | null> {
     try {
       const { PropertyImageService } = await import('./PropertyImageService.js');
-      const { GoogleDriveService } = await import('./GoogleDriveService.js');
-      
-      const driveService = new GoogleDriveService();
-      const propertyImageService = new PropertyImageService(
-        driveService,
-        60, // cacheTTLMinutes
-        parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
-        parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
-        parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
-      );
+      const propertyImageService = new PropertyImageService();
       
       const folderUrl = await propertyImageService.getImageFolderUrl(propertyNumber);
       
