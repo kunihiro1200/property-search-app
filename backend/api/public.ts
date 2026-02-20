@@ -4,8 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import publicPropertiesRoutes from '../src/routes/publicProperties';
-import publicInquiriesRoutes from '../src/routes/publicInquiries';
+import publicPropertiesRoutes from './src/routes/publicProperties.js';
+import publicInquiriesRoutes from './src/routes/publicInquiries.js';
 
 const app = express();
 
