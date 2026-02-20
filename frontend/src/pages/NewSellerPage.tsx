@@ -144,7 +144,7 @@ export default function NewSellerPage() {
 
   // ステータス情報
   const [status, setStatus] = useState('following_up');
-  const [confidence, setConfidence] = useState('B');
+  const [confidence, setConfidence] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
 
   // 競合情報
@@ -153,6 +153,7 @@ export default function NewSellerPage() {
   const [otherDecisionCountermeasure, setOtherDecisionCountermeasure] = useState('');
   const [contractYearMonth, setContractYearMonth] = useState('');
   const [exclusiveOtherDecisionMeeting, setExclusiveOtherDecisionMeeting] = useState('');
+  const [exclusiveDecisionDate, setExclusiveDecisionDate] = useState('');
 
   // Pinrich情報
   const [pinrichStatus, setPinrichStatus] = useState('');
@@ -169,6 +170,12 @@ export default function NewSellerPage() {
   const [priceLossListEntered, setPriceLossListEntered] = useState(false);
   const [companyIntroduction, setCompanyIntroduction] = useState('');
   const [propertyIntroduction, setPropertyIntroduction] = useState('');
+
+  // コメント・コミュニケーション情報
+  const [comments, setComments] = useState('');
+  const [phoneContactPerson, setPhoneContactPerson] = useState('');
+  const [communicationPreferredContactTime, setCommunicationPreferredContactTime] = useState('');
+  const [communicationContactMethod, setCommunicationContactMethod] = useState('');
 
   // 重複チェック（一時的に無効化）
   useEffect(() => {
@@ -208,6 +215,31 @@ export default function NewSellerPage() {
     if (!propertyAddress || !propertyType) {
       setError('物件の住所、種別は必須です');
       return;
+    }
+
+    if (!confidence) {
+      setError('確度は必須です');
+      return;
+    }
+
+    // 状況に応じた必須項目チェック（通話モードと同じ条件）
+    const requiresDecisionDate = (status: string): boolean => {
+      return status.includes('専任') || status.includes('他決');
+    };
+
+    if (requiresDecisionDate(status)) {
+      if (!exclusiveDecisionDate) {
+        setError('専任（他決）決定日は必須です');
+        return;
+      }
+      if (!competitorName) {
+        setError('競合は必須です');
+        return;
+      }
+      if (!exclusiveOtherDecisionFactor) {
+        setError('専任・他決要因は必須です');
+        return;
+      }
     }
 
     try {
@@ -258,6 +290,7 @@ export default function NewSellerPage() {
         otherDecisionCountermeasure: otherDecisionCountermeasure || undefined,
         contractYearMonth: contractYearMonth || undefined,
         exclusiveOtherDecisionMeeting: exclusiveOtherDecisionMeeting || undefined,
+        exclusiveDecisionDate: exclusiveDecisionDate || undefined,
 
         // Pinrich
         pinrichStatus: pinrichStatus || undefined,
@@ -274,6 +307,12 @@ export default function NewSellerPage() {
         priceLossListEntered: priceLossListEntered || undefined,
         companyIntroduction: companyIntroduction || undefined,
         propertyIntroduction: propertyIntroduction || undefined,
+
+        // コメント・コミュニケーション情報
+        comments: comments || undefined,
+        phoneContactPerson: phoneContactPerson || undefined,
+        preferredContactTime: communicationPreferredContactTime || undefined,
+        contactMethod: communicationContactMethod || undefined,
         
         property: {
           address: propertyAddress,
@@ -347,6 +386,18 @@ export default function NewSellerPage() {
               基本情報
             </Typography>
             <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="売主番号"
+                  value="自動採番"
+                  disabled
+                  helperText="登録時に自動的に採番されます"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                {/* 空白 */}
+              </Grid>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -626,6 +677,60 @@ export default function NewSellerPage() {
             </Grid>
           </Paper>
 
+          {/* コメント・コミュニケーション情報セクション */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              コメント・コミュニケーション情報
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="コメント"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="売主に関するメモや特記事項を記入"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="電話担当（任意）"
+                  value={phoneContactPerson}
+                  onChange={(e) => setPhoneContactPerson(e.target.value)}
+                  placeholder="例: 奥様"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="連絡取りやすい日、時間帯"
+                  value={communicationPreferredContactTime}
+                  onChange={(e) => setCommunicationPreferredContactTime(e.target.value)}
+                  placeholder="例: 平日18時以降、土日午前中"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="連絡方法"
+                  value={communicationContactMethod}
+                  onChange={(e) => setCommunicationContactMethod(e.target.value)}
+                >
+                  <MenuItem value="">選択なし</MenuItem>
+                  {contactMethods.map((m) => (
+                    <MenuItem key={m.value} value={m.value}>
+                      {m.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            </Grid>
+          </Paper>
+
           {/* 査定情報セクション */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -830,11 +935,15 @@ export default function NewSellerPage() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  required
                   select
                   label="確度"
                   value={confidence}
                   onChange={(e) => setConfidence(e.target.value)}
+                  error={!confidence}
+                  helperText={!confidence ? '必須項目です' : ''}
                 >
+                  <MenuItem value="">選択してください</MenuItem>
                   <MenuItem value="A">A（売る気あり）</MenuItem>
                   <MenuItem value="B">B（売る気あるがまだ先の話）</MenuItem>
                   <MenuItem value="B_PRIME">B'（売る気は全く無い）</MenuItem>
@@ -861,6 +970,29 @@ export default function NewSellerPage() {
               競合情報
             </Typography>
             <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="専任（他決）決定日"
+                  type="date"
+                  value={exclusiveDecisionDate}
+                  onChange={(e) => setExclusiveDecisionDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required={status.includes('専任') || status.includes('他決')}
+                  error={(status.includes('専任') || status.includes('他決')) && !exclusiveDecisionDate}
+                  helperText={(status.includes('専任') || status.includes('他決')) && !exclusiveDecisionDate ? '必須項目です' : ''}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="契約年月"
+                  type="month"
+                  value={contractYearMonth}
+                  onChange={(e) => setContractYearMonth(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -868,6 +1000,9 @@ export default function NewSellerPage() {
                   value={competitorName}
                   onChange={(e) => setCompetitorName(e.target.value)}
                   placeholder="他決・専任媒介時に記録"
+                  required={status.includes('専任') || status.includes('他決')}
+                  error={(status.includes('専任') || status.includes('他決')) && !competitorName}
+                  helperText={(status.includes('専任') || status.includes('他決')) && !competitorName ? '必須項目です' : ''}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -878,6 +1013,9 @@ export default function NewSellerPage() {
                   label="専任・他決要因"
                   value={exclusiveOtherDecisionFactor}
                   onChange={(e) => setExclusiveOtherDecisionFactor(e.target.value)}
+                  required={status.includes('専任') || status.includes('他決')}
+                  error={(status.includes('専任') || status.includes('他決')) && !exclusiveOtherDecisionFactor}
+                  helperText={(status.includes('専任') || status.includes('他決')) && !exclusiveOtherDecisionFactor ? '必須項目です' : ''}
                 />
               </Grid>
               <Grid item xs={12}>

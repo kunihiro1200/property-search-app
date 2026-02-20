@@ -23,6 +23,15 @@ let cacheLastUpdated: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5分
 
 /**
+ * 通常スタッフのイニシャルリスト
+ * スタッフ管理スプレッドシート（ID: 19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xxs）の
+ * I列「通常」がTRUEのスタッフのみ
+ * 
+ * 訪問予定/訪問済みのサイドバー表示で、このリストに含まれるスタッフのみを対象とする
+ */
+const NORMAL_STAFF_INITIALS = ['K', 'Y', 'I', '林', '生', 'U', 'R', '久', '和', 'H'];
+
+/**
  * スタッフのイニシャルからフルネームを取得
  */
 async function getEmployeeNameByInitials(initials: string | null | undefined): Promise<string | null> {
@@ -143,6 +152,11 @@ export class SellerService extends BaseRepository {
       is_unreachable: false,
       duplicate_confirmed: false,
       exclusion_date: exclusionDate,
+      // コメント・コミュニケーション情報
+      comments: data.comments || null,
+      phone_contact_person: data.phoneContactPerson || null,
+      preferred_contact_time: data.preferredContactTime || null,
+      contact_method: data.contactMethod || null,
     };
 
     // 売主を作成
@@ -256,6 +270,7 @@ export class SellerService extends BaseRepository {
       sellerNumber: decryptedSeller.sellerNumber,
       name: decryptedSeller.name,
       phoneNumber: decryptedSeller.phoneNumber,
+      propertyAddress: decryptedSeller.propertyAddress, // ← 追加
       visitAcquisitionDate: decryptedSeller.visitAcquisitionDate,
       visitDate: decryptedSeller.visitDate,
       visitValuationAcquirer: decryptedSeller.visitValuationAcquirer,
@@ -421,6 +436,11 @@ export class SellerService extends BaseRepository {
       updates.latest_status = this.sanitizeLatestStatus(data.latestStatus);
     }
 
+    // コメント（統一コメント欄）
+    if (data.comments !== undefined) {
+      updates.comments = data.comments;
+    }
+
     // Phase 1 fields
     if (data.inquirySource !== undefined) {
       updates.inquiry_source = data.inquirySource;
@@ -428,7 +448,10 @@ export class SellerService extends BaseRepository {
     if (data.inquiryYear !== undefined) {
       updates.inquiry_year = data.inquiryYear;
     }
-    if (data.inquiryDate !== undefined) {
+    // inquiryDateがnullの場合は更新しない（既存の値を保持）
+    // これにより、フロントエンドから空のinquiryDateが送信されても、
+    // データベースの値が上書きされることを防ぐ
+    if (data.inquiryDate !== undefined && data.inquiryDate !== null) {
       updates.inquiry_date = data.inquiryDate;
     }
 
@@ -701,7 +724,21 @@ export class SellerService extends BaseRepository {
       sortOrder = 'desc',
       includeDeleted = false, // デフォルトで削除済みを除外
       statusCategory, // サイドバーカテゴリフィルター
+      visitAssignee, // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      visitStatus, // 訪問ステータスフィルター（'scheduled' | 'completed'）
+      todayCallWithInfoLabel, // 当日TEL（内容）のサブカテゴリフィルター
     } = params;
+
+    // デバッグログ
+    if (statusCategory === 'todayCallAssigned') {
+      console.log('🔍 [listSellers] todayCallAssigned params:', {
+        statusCategory,
+        visitAssignee,
+        visitStatus,
+        page,
+        pageSize,
+      });
+    }
 
     // JST今日の日付を取得
     const now = new Date();
@@ -721,7 +758,9 @@ export class SellerService extends BaseRepository {
       sortBy,
       sortOrder,
       includeDeleted ? 'with-deleted' : 'active-only',
-      statusCategory || 'all'
+      statusCategory || 'all',
+      visitAssignee || 'all',
+      todayCallWithInfoLabel || 'all'
     );
 
     // キャッシュをチェック
@@ -743,26 +782,78 @@ export class SellerService extends BaseRepository {
     if (statusCategory && statusCategory !== 'all') {
       switch (statusCategory) {
         case 'visitScheduled':
-          // 訪問予定（営担に入力あり AND 訪問日が今日以降）
-          query = query
-            .not('visit_assignee', 'is', null)
-            .neq('visit_assignee', '')
-            .gte('visit_date', todayJST);
-          break;
-        case 'visitCompleted':
-          // 訪問済み（営担に入力あり AND 訪問日が昨日以前）
-          query = query
-            .not('visit_assignee', 'is', null)
-            .neq('visit_assignee', '')
-            .lt('visit_date', todayJST);
-          break;
-        case 'todayCallAssigned':
-          // 当日TEL（担当）（営担あり（「外す」以外） AND 次電日が今日以前）
+          // 訪問予定（営担に入力あり AND 訪問日が今日以降 AND 通常スタッフのみ）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
           query = query
             .not('visit_assignee', 'is', null)
             .neq('visit_assignee', '')
             .neq('visit_assignee', '外す')
+            .gte('visit_date', todayJST);
+          
+          // 特定のイニシャルでフィルタリング
+          if (visitAssignee) {
+            query = query.eq('visit_assignee', visitAssignee);
+          } else {
+            // イニシャル指定がない場合は通常スタッフ全員
+            query = query.in('visit_assignee', NORMAL_STAFF_INITIALS);
+          }
+          break;
+        case 'visitCompleted':
+          // 訪問済み（営担に入力あり AND 訪問日が昨日以前 AND 通常スタッフのみ）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
+          query = query
+            .not('visit_assignee', 'is', null)
+            .neq('visit_assignee', '')
+            .neq('visit_assignee', '外す')
+            .lt('visit_date', todayJST);
+          
+          // 特定のイニシャルでフィルタリング
+          if (visitAssignee) {
+            query = query.eq('visit_assignee', visitAssignee);
+          } else {
+            // イニシャル指定がない場合は通常スタッフ全員
+            query = query.in('visit_assignee', NORMAL_STAFF_INITIALS);
+          }
+          break;
+        case 'todayCallAssigned':
+          // 当日TEL（担当）（営担あり（「外す」以外） AND 次電日が今日以前 AND 状況に「追客中」が含まれる）
+          query = query
+            .not('visit_assignee', 'is', null)
+            .neq('visit_assignee', '')
+            .neq('visit_assignee', '外す')
+            .ilike('status', '%追客中%')
             .lte('next_call_date', todayJST);
+          
+          // 特定のイニシャルでフィルタリング
+          if (visitAssignee) {
+            query = query.eq('visit_assignee', visitAssignee);
+          }
+          break;
+        case 'visitOther':
+          // その他（担当）（営担あり（「外す」以外） AND (次電日が今日より後 OR 次電日なし OR 追客中ではない)）
+          // 🚨 重要: 営担が有効な売主のみを対象にする
+          console.log('🔍 [listSellers] visitOther params:', {
+            statusCategory,
+            visitAssignee,
+            page,
+            pageSize,
+          });
+          
+          // 特定のイニシャルでフィルタリング（必須）
+          if (visitAssignee) {
+            console.log(`🔍 [listSellers] Filtering by visitAssignee: ${visitAssignee}`);
+            query = query.eq('visit_assignee', visitAssignee);
+          } else {
+            // visitAssigneeが指定されていない場合は、営担が有効な売主全てを取得
+            query = query
+              .not('visit_assignee', 'is', null)
+              .neq('visit_assignee', '')
+              .neq('visit_assignee', '外す');
+          }
+          
+          // 注意: 「その他」は「当日TEL（担当）」以外の全ての売主が対象
+          // つまり、次電日が今日以前 AND 追客中の売主は除外する必要がある
+          // これはデータ取得後にフィルタリングする（後述のdecryptedSellersフィルタリング）
           break;
         case 'todayCall':
           // 当日TEL分（追客中 AND 次電日が今日以前 AND コミュニケーション情報なし AND 営担なし）
@@ -785,17 +876,25 @@ export class SellerService extends BaseRepository {
             .or('visit_assignee.is.null,visit_assignee.eq.,visit_assignee.eq.外す')
             // コミュニケーション情報のいずれかに入力あり
             .or('phone_contact_person.neq.,preferred_contact_time.neq.,contact_method.neq.');
+          
+          // サブカテゴリフィルター（例: "当日TEL(Eメール)"）
+          // todayCallWithInfoLabelが指定されている場合、さらにフィルタリング
+          // ただし、Supabaseのクエリでは複雑な条件を表現できないため、
+          // 全件取得してからフィルタリングする必要がある
+          // → この処理は後で行う（decryptedSellersをフィルタリング）
           break;
         case 'unvaluated':
           // 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
+          // 「外す」は営担なしと同じ扱い（サイドバーカウントと一致させる）
+          // 注意: mailing_statusがnullの場合も含めるため、.or()を使用
           query = query
             .ilike('status', '%追客中%')
             .gte('inquiry_date', cutoffDate)
-            .or('visit_assignee.is.null,visit_assignee.eq.')
+            .or('visit_assignee.is.null,visit_assignee.eq.,visit_assignee.eq.外す')
             .is('valuation_amount_1', null)
             .is('valuation_amount_2', null)
             .is('valuation_amount_3', null)
-            .neq('mailing_status', '不要');
+            .or('mailing_status.is.null,mailing_status.eq.,mailing_status.neq.不要');
           break;
         case 'mailingPending':
           // 査定（郵送）（郵送ステータスが「未」）
@@ -826,8 +925,12 @@ export class SellerService extends BaseRepository {
     }
 
     // ページネーション
+    // 注意: visitOtherの場合、データ取得後にフィルタリングを行うため、
+    // ページネーションは後で適用する
     const offset = (page - 1) * pageSize;
-    query = query.range(offset, offset + pageSize - 1);
+    if (statusCategory !== 'visitOther') {
+      query = query.range(offset, offset + pageSize - 1);
+    }
 
     const { data: sellers, error, count } = await query;
 
@@ -835,9 +938,29 @@ export class SellerService extends BaseRepository {
       throw new Error(`Failed to list sellers: ${error.message}`);
     }
 
+    // デバッグログ: クエリ実行結果
+    if (statusCategory === 'visitOther') {
+      console.log(`🔍 [listSellers] Query result for visitOther:`, {
+        sellersCount: sellers?.length || 0,
+        visitAssignee,
+        count,
+      });
+      if (sellers && sellers.length > 0) {
+        console.log(`🔍 [listSellers] First 3 sellers:`, sellers.slice(0, 3).map(s => ({
+          seller_number: s.seller_number,
+          visit_assignee: s.visit_assignee,
+          next_call_date: s.next_call_date,
+          status: s.status,
+        })));
+      }
+    }
+
     // 復号化して物件情報を追加
-    const decryptedSellers = await Promise.all((sellers || []).map(async (seller) => {
+    let decryptedSellers = await Promise.all((sellers || []).map(async (seller) => {
       const decrypted = await this.decryptSeller(seller);
+      
+      // 元のsellerオブジェクトも保持（フィルタリング用）
+      (decrypted as any)._rawSeller = seller;
       
       // 物件情報を追加（配列の場合は最初の要素を使用）
       if (seller.properties) {
@@ -869,6 +992,108 @@ export class SellerService extends BaseRepository {
       
       return decrypted;
     }));
+
+    // todayCallWithInfoLabelが指定されている場合、さらにフィルタリング
+    if (statusCategory === 'todayCallWithInfo' && todayCallWithInfoLabel) {
+      // "当日TEL(Eメール)" → "Eメール" を抽出
+      const labelMatch = todayCallWithInfoLabel.match(/当日TEL\((.+)\)/);
+      const targetValue = labelMatch ? labelMatch[1] : todayCallWithInfoLabel;
+      
+      decryptedSellers = decryptedSellers.filter(seller => {
+        // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+        if (seller.contactMethod && seller.contactMethod.trim() === targetValue) {
+          return true;
+        }
+        if (seller.preferredContactTime && seller.preferredContactTime.trim() === targetValue) {
+          return true;
+        }
+        if (seller.phoneContactPerson && seller.phoneContactPerson.trim() === targetValue) {
+          return true;
+        }
+        return false;
+      });
+    }
+
+    // visitOtherカテゴリの場合、「当日TEL（担当）」に該当する売主を除外
+    if (statusCategory === 'visitOther') {
+      const beforeFilterCount = decryptedSellers.length;
+      console.log(`🔍 [listSellers] Before filtering visitOther: ${beforeFilterCount} sellers`);
+      
+      decryptedSellers = decryptedSellers.filter(seller => {
+        const rawSeller = (seller as any)._rawSeller;
+        const rawVisitAssignee = rawSeller?.visit_assignee;
+        
+        // 🚨 重要: 営担が有効な売主のみを対象にする
+        // 営担が空、null、undefined、「外す」の売主は除外
+        const hasValidVisitAssignee = rawVisitAssignee && 
+                                       rawVisitAssignee.trim() !== '' && 
+                                       rawVisitAssignee.trim() !== '外す';
+        
+        if (!hasValidVisitAssignee) {
+          return false; // 営担が無効な売主は除外
+        }
+        
+        // visitAssigneeパラメータが指定されている場合、その値と一致する売主のみを含める
+        // 注意: rawVisitAssigneeはイニシャル（例: "U"）、visitAssigneeパラメータもイニシャル
+        if (visitAssignee && rawVisitAssignee !== visitAssignee) {
+          return false;
+        }
+        
+        // 「当日TEL（担当）」の条件: 次電日が今日以前 AND 追客中
+        // これに該当しない売主が「その他」に含まれる
+        
+        const isFollowingUp = seller.status && seller.status.includes('追客中');
+        const hasNextCallDate = !!seller.nextCallDate;
+        
+        if (!hasNextCallDate) {
+          return true; // 次電日なし → その他に含める
+        }
+        
+        const nextCallDate = new Date(seller.nextCallDate);
+        const today = new Date(todayJST);
+        const isNextCallDateTodayOrBefore = nextCallDate <= today;
+        
+        // 次電日が今日以前 AND 追客中 → 「当日TEL（担当）」なので除外
+        if (isNextCallDateTodayOrBefore && isFollowingUp) {
+          return false;
+        }
+        
+        // それ以外 → 「その他」に含める
+        return true;
+      });
+      
+      const afterFilterCount = decryptedSellers.length;
+      console.log(`🔍 [listSellers] After filtering visitOther: ${afterFilterCount} sellers (removed ${beforeFilterCount - afterFilterCount})`);
+      if (decryptedSellers.length > 0) {
+        console.log(`🔍 [listSellers] First 3 filtered sellers:`, decryptedSellers.slice(0, 3).map(s => ({
+          sellerNumber: s.sellerNumber,
+          visitAssignee: s.visitAssignee,
+          rawVisitAssignee: ((s as any)._rawSeller)?.visit_assignee,
+          nextCallDate: s.nextCallDate,
+          status: s.status,
+        })));
+      }
+      
+      // フィルタリング後の総件数を保存
+      const totalCount = decryptedSellers.length;
+      
+      // ページネーションを適用
+      const offset = (page - 1) * pageSize;
+      decryptedSellers = decryptedSellers.slice(offset, offset + pageSize);
+      
+      // _rawSellerを削除（クライアントに送信する必要がない）
+      decryptedSellers.forEach(seller => {
+        delete (seller as any)._rawSeller;
+      });
+      
+      // countを更新（フィルタリング後の総件数）
+      return {
+        data: decryptedSellers,
+        total: totalCount,
+        page,
+        pageSize,
+      };
+    }
 
     // 各売主の最新通話日時を取得（一時的にコメントアウト）
     // const sellersWithCallDate = await Promise.all(
@@ -1120,6 +1345,11 @@ export class SellerService extends BaseRepository {
         buildYear: seller.build_year,
         structure: seller.structure,
         floorPlan: seller.floor_plan,
+        // Current status (状況売主)
+        currentStatus: seller.current_status,
+        // Coordinates (座標)
+        latitude: seller.latitude,
+        longitude: seller.longitude,
       };
       
       return decrypted;
@@ -1385,15 +1615,23 @@ export class SellerService extends BaseRepository {
    * 2. 訪問済み（営担あり + 訪問日が昨日以前）← 2番目
    * 3. 当日TEL（担当）（営担あり + 次電日が今日以前）← 3番目
    * 4. 当日TEL分/当日TEL（内容）← 営担なしの場合のみ
+   * 5. 当日TEL_未着手（当日TEL分 + 不通が空欄 + 反響日付が2026/1/1以降）
+   * 6. Pinrich空欄（当日TEL分 + Pinrichが空欄）
    */
   async getSidebarCounts(): Promise<{
     todayCall: number;
     todayCallWithInfo: number;
-    todayCallAssigned: number;
-    visitScheduled: number;
-    visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
+    todayCallNotStarted: number;
+    pinrichEmpty: number;
+    assigneeGroups: {
+      initial: string;
+      totalCount: number;
+      todayCallCount: number;
+      otherCount: number;
+    }[];
+    todayCallWithInfoGroups: { label: string; count: number }[];
   }> {
     // JST今日の日付を取得
     const now = new Date();
@@ -1411,40 +1649,85 @@ export class SellerService extends BaseRepository {
       return true;
     };
 
-    // 1. 訪問予定（営担に入力あり AND 訪問日が今日以降）← 最優先
-    const { count: visitScheduledCount } = await this.table('sellers')
-      .select('*', { count: 'exact', head: true })
+    // ヘルパー関数: 通常スタッフかどうかを判定
+    const isNormalStaff = (visitAssignee: string | null | undefined): boolean => {
+      if (!visitAssignee || visitAssignee.trim() === '' || visitAssignee.trim() === '外す') {
+        return false;
+      }
+      return NORMAL_STAFF_INITIALS.includes(visitAssignee.trim());
+    };
+
+    // 1. 担当（イニシャル）（営担あり + 通常スタッフのみ）← 最優先
+    // 営担がある全ての売主を取得（訪問日の有無に関係なく）
+    const { data: assignedSellers } = await this.table('sellers')
+      .select('id, visit_assignee, next_call_date, status')
       .is('deleted_at', null)
       .not('visit_assignee', 'is', null)
       .neq('visit_assignee', '')
-      .neq('visit_assignee', '外す')
-      .gte('visit_date', todayJST);
+      .neq('visit_assignee', '外す');
 
-    // 2. 訪問済み（営担に入力あり AND 訪問日が昨日以前）← 2番目
-    const { count: visitCompletedCount } = await this.table('sellers')
-      .select('*', { count: 'exact', head: true })
-      .is('deleted_at', null)
-      .not('visit_assignee', 'is', null)
-      .neq('visit_assignee', '')
-      .neq('visit_assignee', '外す')
-      .lt('visit_date', todayJST);
+    // 通常スタッフのみをフィルタリング
+    // 🚨 重要: 営業担当が有効かつ通常スタッフの売主のみを対象にする
+    const filteredAssignedSellers = (assignedSellers || []).filter(s => {
+      const assignee = s.visit_assignee?.trim() || '';
+      // 空文字、null、undefined、「外す」を除外
+      if (!assignee || assignee === '外す') {
+        return false;
+      }
+      // 通常スタッフのみを含める
+      return isNormalStaff(assignee);
+    });
 
-    // 3. 当日TEL（担当）（営担あり + 次電日が今日以前）
-    // 訪問日の有無に関係なく、営担があり次電日が今日以前であれば対象
-    const { data: todayCallAssignedSellers } = await this.table('sellers')
-      .select('id, visit_assignee')
-      .is('deleted_at', null)
-      .not('visit_assignee', 'is', null)
-      .neq('visit_assignee', '')
-      .neq('visit_assignee', '外す')
-      .lte('next_call_date', todayJST);
+    // イニシャル別にグループ化し、サブカテゴリ（当日TEL、その他）をカウント
+    const assigneeGroupsMap: { 
+      [key: string]: { 
+        total: any[]; 
+        todayCall: any[]; 
+        other: any[]; 
+      } 
+    } = {};
 
-    const todayCallAssignedCount = (todayCallAssignedSellers || []).length;
+    filteredAssignedSellers.forEach(s => {
+      const assignee = s.visit_assignee?.trim() || '';
+      // 🚨 重要: 営業担当が有効な売主のみを処理
+      // 空文字、null、undefined、「外す」を除外
+      if (!assignee || assignee === '外す') {
+        return;
+      }
 
-    // 4. 当日TEL分/当日TEL（内容）
+      if (!assigneeGroupsMap[assignee]) {
+        assigneeGroupsMap[assignee] = {
+          total: [],
+          todayCall: [],
+          other: [],
+        };
+      }
+
+      assigneeGroupsMap[assignee].total.push(s);
+
+      // 次電日が今日以前 AND 追客中なら「当日TEL」、それ以外は「その他」
+      const isFollowingUp = s.status && s.status.includes('追客中');
+      if (s.next_call_date && s.next_call_date <= todayJST && isFollowingUp) {
+        assigneeGroupsMap[assignee].todayCall.push(s);
+      } else {
+        assigneeGroupsMap[assignee].other.push(s);
+      }
+    });
+
+    // assigneeGroupsを配列に変換
+    const assigneeGroups = Object.entries(assigneeGroupsMap)
+      .map(([initial, data]) => ({
+        initial,
+        totalCount: data.total.length,
+        todayCallCount: data.todayCall.length,
+        otherCount: data.other.length,
+      }))
+      .sort((a, b) => b.totalCount - a.totalCount); // 件数の多い順
+
+    // 2. 当日TEL分/当日TEL（内容）
     // 追客中 AND 次電日が今日以前 AND 営担なしの売主を取得
     const { data: todayCallBaseSellers } = await this.table('sellers')
-      .select('id, visit_assignee, phone_contact_person, preferred_contact_time, contact_method')
+      .select('id, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, unreachable_status, pinrich_status, inquiry_date')
       .is('deleted_at', null)
       .ilike('status', '%追客中%')
       .lte('next_call_date', todayJST);
@@ -1456,19 +1739,64 @@ export class SellerService extends BaseRepository {
     });
 
     // コミュニケーション情報があるものをカウント（当日TEL（内容））
-    const todayCallWithInfoCount = filteredTodayCallSellers.filter(s => {
+    const todayCallWithInfoSellers = filteredTodayCallSellers.filter(s => {
       const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
                       (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
                       (s.contact_method && s.contact_method.trim() !== '');
       return hasInfo;
-    }).length;
+    });
+    const todayCallWithInfoCount = todayCallWithInfoSellers.length;
+
+    // 当日TEL（内容）のグループ化
+    const todayCallWithInfoGroupsMap: { [key: string]: number } = {};
+    todayCallWithInfoSellers.forEach(s => {
+      // 優先順位: 連絡方法 > 連絡取りやすい時間 > 電話担当
+      let label = '';
+      if (s.contact_method && s.contact_method.trim() !== '') {
+        label = `当日TEL(${s.contact_method.trim()})`;
+      } else if (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') {
+        label = `当日TEL(${s.preferred_contact_time.trim()})`;
+      } else if (s.phone_contact_person && s.phone_contact_person.trim() !== '') {
+        label = `当日TEL(${s.phone_contact_person.trim()})`;
+      }
+      
+      if (label) {
+        todayCallWithInfoGroupsMap[label] = (todayCallWithInfoGroupsMap[label] || 0) + 1;
+      }
+    });
+    const todayCallWithInfoGroups = Object.entries(todayCallWithInfoGroupsMap)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
 
     // コミュニケーション情報がないものをカウント（当日TEL分）
-    const todayCallNoInfoCount = filteredTodayCallSellers.filter(s => {
+    const todayCallNoInfoSellers = filteredTodayCallSellers.filter(s => {
       const hasInfo = (s.phone_contact_person && s.phone_contact_person.trim() !== '') ||
                       (s.preferred_contact_time && s.preferred_contact_time.trim() !== '') ||
                       (s.contact_method && s.contact_method.trim() !== '');
       return !hasInfo;
+    });
+    const todayCallNoInfoCount = todayCallNoInfoSellers.length;
+
+    // 3. 当日TEL_未着手（当日TEL分 + 不通が空欄 + 反響日付が2026/1/1以降）
+    const todayCallNotStartedCutoff = '2026-01-01';
+    const todayCallNotStartedCount = todayCallNoInfoSellers.filter(s => {
+      // 不通が空欄かチェック
+      const unreachableStatus = s.unreachable_status || '';
+      if (unreachableStatus && unreachableStatus.trim() !== '') {
+        return false;
+      }
+      // 反響日付が2026/1/1以降かチェック
+      const inquiryDate = s.inquiry_date || '';
+      if (!inquiryDate) {
+        return false;
+      }
+      return inquiryDate >= todayCallNotStartedCutoff;
+    }).length;
+
+    // 4. Pinrich空欄（当日TEL分 + Pinrichが空欄）
+    const pinrichEmptyCount = todayCallNoInfoSellers.filter(s => {
+      const pinrichStatus = s.pinrich_status || '';
+      return !pinrichStatus || pinrichStatus.trim() === '';
     }).length;
 
     // 5. 未査定（追客中 AND 査定額が全て空 AND 反響日付が基準日以降 AND 営担が空）
@@ -1495,11 +1823,34 @@ export class SellerService extends BaseRepository {
     return {
       todayCall: todayCallNoInfoCount || 0,
       todayCallWithInfo: todayCallWithInfoCount || 0,
-      todayCallAssigned: todayCallAssignedCount || 0,
-      visitScheduled: visitScheduledCount || 0,
-      visitCompleted: visitCompletedCount || 0,
       unvaluated: unvaluatedCount || 0,
       mailingPending: mailingPendingCount || 0,
+      todayCallNotStarted: todayCallNotStartedCount || 0,
+      pinrichEmpty: pinrichEmptyCount || 0,
+      assigneeGroups,
+      todayCallWithInfoGroups,
     };
+  }
+
+  /**
+   * 売主の座標を更新
+   * @param sellerId - 売主ID
+   * @param latitude - 緯度
+   * @param longitude - 経度
+   */
+  async updateCoordinates(sellerId: string, latitude: number, longitude: number): Promise<void> {
+    const { error } = await this.table('sellers')
+      .update({ latitude, longitude })
+      .eq('id', sellerId);
+    
+    if (error) {
+      throw new Error(`Failed to update coordinates: ${error.message}`);
+    }
+    
+    // キャッシュを無効化
+    const cacheKey = CacheHelper.generateKey('seller', sellerId);
+    await CacheHelper.del(cacheKey);
+    
+    console.log(`✅ Coordinates updated for seller ${sellerId}: (${latitude}, ${longitude})`);
   }
 }

@@ -182,6 +182,10 @@ export interface Seller {
   buildYear?: number; // 築年
   structure?: string; // 構造
   floorPlan?: string; // 間取り
+  
+  // 座標情報（地図表示用）
+  latitude?: number; // 緯度
+  longitude?: number; // 経度
 }
 
 export interface PropertyInfo {
@@ -367,12 +371,18 @@ export interface CreateSellerRequest {
   sellerNumber?: string;
   inquirySource: string;
   inquiryYear: number;
+  inquiryDate?: string; // 反響日付
   // inquiry_date は削除（DBに存在しない）
   inquiryDatetime?: Date;
   confidenceLevel?: ConfidenceLevel;
   firstCallerInitials?: string;
   firstCallerEmployeeId?: string;
   site?: string; // サイト（問い合わせ元）
+  // コメント・コミュニケーション情報
+  comments?: string; // コメント
+  phoneContactPerson?: string; // 電話担当（任意）
+  preferredContactTime?: string; // 連絡取りやすい日、時間帯
+  contactMethod?: string; // 連絡方法
 }
 
 export interface UpdateSellerRequest {
@@ -398,6 +408,7 @@ export interface UpdateSellerRequest {
   phoneContactPerson?: string; // 電話担当（任意）
   preferredContactTime?: string; // 連絡取りやすい日、時間帯
   contactMethod?: string; // 連絡方法
+  comments?: string; // コメント（統一コメント欄）
   // Phase 1 fields
   inquirySource?: string;
   inquiryYear?: number;
@@ -430,6 +441,13 @@ export interface ListSellersParams {
   includeDeleted?: boolean; // Default: false (exclude deleted sellers)
   // サイドバーカテゴリフィルター
   statusCategory?: 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending';
+  // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+  visitAssignee?: string;
+  // 当日TEL（内容）のサブカテゴリフィルター（例: "当日TEL(Eメール)"）
+  todayCallWithInfoLabel?: string;
+  // 訪問ステータス（'scheduled' = 訪問予定, 'completed' = 訪問済み）
+  // 当日TEL（担当）のカテゴリー排他性のために使用
+  visitStatus?: 'scheduled' | 'completed';
 }
 
 export interface PaginatedResult<T> {
