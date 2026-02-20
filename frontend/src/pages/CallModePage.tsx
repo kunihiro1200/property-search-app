@@ -2532,7 +2532,6 @@ HP：https://ifoo-oita.com/
                       color: SECTION_COLORS.seller.contrastText,
                       fontWeight: 'bold'
                     }}
-                    sx={{ fontWeight: 'bold' }}
                   />
                 )}
                 {!isManualValuation && seller.fixedAssetTaxRoadPrice && (

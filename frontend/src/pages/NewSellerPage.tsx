@@ -270,7 +270,6 @@ export default function NewSellerPage() {
         
         // 追客情報
         nextCallDate: nextCallDate || undefined,
-        contactMethod: contactMethod || undefined,
         preferredContactTime: preferredContactTime || undefined,
         
         // 訪問査定情報
