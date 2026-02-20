@@ -82,6 +82,12 @@ export class GoogleDriveService extends BaseRepository {
         }
         
         if (keyFile) {
+          // 🔧 FIX: Vercel環境では\\nが実際の改行に変換されないため、手動で変換
+          if (keyFile.private_key) {
+            keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+            console.log('✅ [GoogleDriveService] Converted \\\\n to actual newlines in private_key');
+          }
+          
           console.log('✅ [GoogleDriveService] Service account key parsed successfully:');
           console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
           console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);

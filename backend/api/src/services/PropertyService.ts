@@ -435,6 +435,12 @@ export class PropertyService {
         // Vercel環境: 環境変数から直接読み込む
         console.log(`[generateEstimatePdf] Using GOOGLE_SERVICE_ACCOUNT_JSON from environment`);
         keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        
+        // 🔧 FIX: Vercel環境では\\nが実際の改行に変換されないため、手動で変換
+        if (keyFile.private_key) {
+          keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+          console.log(`[generateEstimatePdf] Converted \\\\n to actual newlines in private_key`);
+        }
       } else {
         // ローカル環境: ファイルから読み込む
         console.log(`[generateEstimatePdf] Using service account key file`);
