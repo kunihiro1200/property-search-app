@@ -8,11 +8,11 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "../src/**/*.ts"
+    "**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "../src"
   ]
 }
