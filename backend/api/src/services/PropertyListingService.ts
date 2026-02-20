@@ -1053,7 +1053,7 @@ export class PropertyListingService {
       }
 
       // Google Drive APIを使用して画像一覧を取得
-      const { GoogleDriveService } = await import('./GoogleDriveService');
+      const { GoogleDriveService } = await import('./GoogleDriveService.js');
       const driveService = new GoogleDriveService();
       
       // storage_locationからフォルダIDを抽出
