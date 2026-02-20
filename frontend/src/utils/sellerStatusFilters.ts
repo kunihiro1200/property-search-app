@@ -54,9 +54,10 @@ export interface TodayCallWithInfoGroup {
 // todayCallAssigned: 営担あり + 訪問日なし + 次電日が今日以前
 // visitScheduled: 訪問予定（営担に入力あり、訪問日が今日以降）
 // visitCompleted: 訪問済み（営担に入力あり、訪問日が昨日以前）
+// visitOther: その他（担当）（営担あり + 「当日TEL（担当）」以外）
 // todayCallNotStarted: 当日TEL_未着手（不通が空欄 + 反響日付が2026/1/1以降）
 // pinrichEmpty: Pinrich空欄（Pinrichカラムが空欄）
-export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending' | 'todayCallNotStarted' | 'pinrichEmpty';
+export type StatusCategory = 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'visitOther' | 'unvaluated' | 'mailingPending' | 'todayCallNotStarted' | 'pinrichEmpty';
 
 // カテゴリカウントのインターフェース
 export interface CategoryCounts {
@@ -740,6 +741,42 @@ export const isPinrichEmpty = (seller: Seller | any): boolean => {
 };
 
 /**
+ * その他（担当）判定（営担あり + 「当日TEL（担当）」以外）
+ * 
+ * 【サイドバー表示】「その他（イニシャル）」
+ * 
+ * 条件:
+ * - 営担（visitAssignee）に入力がある
+ * - 営担が「外す」ではない
+ * - 「当日TEL（担当）」の条件を満たさない
+ *   （次電日が今日より後 OR 次電日なし OR 追客中ではない）
+ * 
+ * @param seller 売主データ
+ * @returns その他（担当）対象かどうか
+ */
+export const isVisitOther = (seller: Seller | any): boolean => {
+  // 営担がない場合は対象外
+  if (!hasVisitAssignee(seller)) {
+    return false;
+  }
+  
+  // 「当日TEL（担当）」の条件を満たす場合は対象外
+  // （次電日が今日以前 AND 追客中）
+  const status = seller.status || seller.situation_company || '';
+  const isFollowingUp = typeof status === 'string' && status.includes('追客中');
+  const nextCallDate = seller.nextCallDate || seller.next_call_date;
+  const isNextCallTodayOrBefore = isTodayOrBefore(nextCallDate);
+  
+  // 次電日が今日以前 AND 追客中 → 「当日TEL（担当）」なので除外
+  if (isNextCallTodayOrBefore && isFollowingUp) {
+    return false;
+  }
+  
+  // それ以外 → 「その他（担当）」に含める
+  return true;
+};
+
+/**
  * カテゴリ別の売主数をカウント
  * 
  * @param sellers 売主リスト
@@ -786,6 +823,8 @@ export const filterSellersByCategory = (
       return sellers.filter(isVisitScheduled);
     case 'visitCompleted':
       return sellers.filter(isVisitCompleted);
+    case 'visitOther':
+      return sellers.filter(isVisitOther);
     case 'unvaluated':
       return sellers.filter(isUnvaluated);
     case 'mailingPending':
