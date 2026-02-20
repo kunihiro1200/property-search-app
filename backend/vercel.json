@@ -7,7 +7,8 @@
       "config": {
         "includeFiles": ["src/**", "google-service-account.json"],
         "typescript": {
-          "noEmitOnError": false
+          "noEmitOnError": false,
+          "transpileOnly": true
         }
       }
     }
@@ -17,5 +18,8 @@
       "src": "/(.*)",
       "dest": "src/index.ts"
     }
-  ]
+  ],
+  "env": {
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  }
 }
