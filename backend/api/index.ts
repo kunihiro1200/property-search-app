@@ -1604,7 +1604,7 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
     // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
     // PropertyListingSyncServiceを使用してフル同期を実行
-    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService.js');
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
