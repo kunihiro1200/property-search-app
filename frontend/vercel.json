@@ -2,29 +2,10 @@
   "buildCommand": "rm -rf node_modules/.vite && rm -rf dist && npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "functions": {
-    "api/auth-callback.ts": {
-      "runtime": "@vercel/node@3"
-    },
-    "api/auth-me.ts": {
-      "runtime": "@vercel/node@3"
-    }
-  },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/auth/callback",
-      "dest": "/api/auth-callback"
-    },
-    {
-      "src": "/api/auth/me",
-      "dest": "/api/auth-me"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "framework": "vite"
