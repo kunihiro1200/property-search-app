@@ -95,17 +95,37 @@ const initializeConnections = async () => {
 
 // Middleware
 app.use(helmet());
+
+// CORS設定を動的に構築
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:5174', 
+  'http://localhost:5175',
+  'http://localhost:3000',
+  'https://property-site-frontend-kappa.vercel.app',
+  'https://baikyaku-property-site3.vercel.app',
+  'https://new-admin-management-system.vercel.app',
+  'https://new-admin-management-system-v2.vercel.app'
+];
+
+console.log('🔒 CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    'http://localhost:3000',  // バックエンド自身も追加
-    'https://property-site-frontend-kappa.vercel.app',  // 本番環境フロントエンド
-    'https://baikyaku-property-site3.vercel.app',  // 本番環境バックエンド
-    'https://new-admin-management-system.vercel.app',  // 社内管理システムフロントエンド（旧）
-    'https://new-admin-management-system-v2.vercel.app'  // 社内管理システムフロントエンド（新）
-  ],
+  origin: (origin, callback) => {
+    // originがundefinedの場合（同一オリジンリクエスト）は許可
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // 許可されたオリジンリストに含まれているか確認
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS allowed for origin:', origin);
+      callback(null, true);
+    } else {
+      console.warn('❌ CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
