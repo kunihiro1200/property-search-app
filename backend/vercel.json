@@ -2,10 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/index.ts",
-      "use": "@vercel/node"
-    },
-    {
       "src": "api/index.ts",
       "use": "@vercel/node"
     },
@@ -15,6 +11,14 @@
     },
     {
       "src": "api/redirect.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-callback.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-me.ts",
       "use": "@vercel/node"
     },
     {
@@ -32,6 +36,14 @@
     {
       "source": "/p/:propertyNumber",
       "destination": "/api/redirect"
+    },
+    {
+      "source": "/api/auth/callback",
+      "destination": "/api/auth-callback"
+    },
+    {
+      "source": "/api/auth/me",
+      "destination": "/api/auth-me"
     },
     {
       "source": "/api/(.*)",
