@@ -28,7 +28,7 @@ import PageNavigation from '../components/PageNavigation';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 export default function WorkTasksPage() {
-  const workTaskColor = SECTION_COLORS.workTask;
+  const workTaskColor = SECTION_COLORS.task;
   const [allWorkTasks, setAllWorkTasks] = useState<WorkTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
