@@ -22,8 +22,33 @@ const api = axios.create({
   timeout: 120000, // 120秒（2分）のタイムアウト
 });
 
+// 認証専用のaxiosインスタンス（同一オリジン用）
+const authApi = axios.create({
+  baseURL: '', // 相対パスを使用（同一オリジン）
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000, // 30秒のタイムアウト
+});
+
 // リクエストインターセプター（JWT認証トークンを追加）
 api.interceptors.request.use(
+  async (config) => {
+    const sessionToken = localStorage.getItem('session_token');
+    
+    if (sessionToken) {
+      config.headers.Authorization = `Bearer ${sessionToken}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 認証API用のリクエストインターセプター
+authApi.interceptors.request.use(
   async (config) => {
     const sessionToken = localStorage.getItem('session_token');
     

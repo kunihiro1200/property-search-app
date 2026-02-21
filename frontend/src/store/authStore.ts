@@ -3,6 +3,32 @@ import { persist } from 'zustand/middleware';
 import { Employee } from '../types';
 import api from '../services/api';
 import { supabase } from '../config/supabase';
+import axios from 'axios';
+
+// 認証専用のaxiosインスタンス（同一オリジン用）
+const authApi = axios.create({
+  baseURL: '', // 相対パスを使用（同一オリジン）
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000, // 30秒のタイムアウト
+});
+
+// 認証API用のリクエストインターセプター
+authApi.interceptors.request.use(
+  async (config) => {
+    const sessionToken = localStorage.getItem('session_token');
+    
+    if (sessionToken) {
+      config.headers.Authorization = `Bearer ${sessionToken}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 interface AuthState {
   employee: Employee | null;
@@ -95,8 +121,8 @@ export const useAuthStore = create<AuthState>()(
       }
 
       // バックエンドにトークンを送信して社員情報を取得
-      console.log('🔵 Calling backend /auth/callback...');
-      const response = await api.post('/auth/callback', {
+      console.log('🔵 Calling /api/auth/callback...');
+      const response = await authApi.post('/api/auth/callback', {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
       });
@@ -176,7 +202,7 @@ export const useAuthStore = create<AuthState>()(
 
       // 社員情報を取得
       try {
-        const response = await api.get('/api/auth/me');
+        const response = await authApi.get('/api/auth/me');
         console.log('✅ Auth check successful');
         set({ employee: response.data, isAuthenticated: true, isLoading: false });
       } catch (apiError: any) {
