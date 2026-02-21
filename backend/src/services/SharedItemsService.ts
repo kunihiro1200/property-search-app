@@ -33,9 +33,9 @@ export class SharedItemsService {
     this.sheetsClient = new GoogleSheetsClient({
       spreadsheetId: '1BuvYd9cKOdgIAy0XhL-voVx1tiGA-cd6MCU_dYvbAQE',
       sheetName: '共有',
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
-      serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      privateKey: process.env.GOOGLE_PRIVATE_KEY,
+      // Vercel環境では GOOGLE_SERVICE_ACCOUNT_JSON 環境変数を使用
+      // ローカル環境では serviceAccountKeyPath を使用
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
     });
   }
 
