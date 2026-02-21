@@ -24,15 +24,11 @@ import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface SharedItem {
   id: string;
-  item_number: string;
-  title: string;
-  category: string | null;
-  priority: string | null;
-  status: string | null;
-  assignee: string | null;
-  due_date: string | null;
-  created_at: string;
-  updated_at: string;
+  sharing_location: string;  // D列「共有場」
+  sharing_date: string | null;  // P列「共有日」
+  staff_not_shared: string | null;  // S列「共有できていない」
+  confirmation_date: string | null;  // 確認日
+  [key: string]: any;  // その他のカラム
 }
 
 export default function SharedItemsPage() {
@@ -72,12 +68,12 @@ export default function SharedItemsPage() {
     if (!searchQuery.trim()) return allSharedItems;
     
     const query = searchQuery.toLowerCase();
-    return allSharedItems.filter(item => 
-      item.item_number?.toLowerCase().includes(query) ||
-      item.title?.toLowerCase().includes(query) ||
-      item.category?.toLowerCase().includes(query) ||
-      item.assignee?.toLowerCase().includes(query)
-    );
+    return allSharedItems.filter(item => {
+      // 全てのフィールドを検索対象にする
+      return Object.values(item).some(value => 
+        value && String(value).toLowerCase().includes(query)
+      );
+    });
   }, [allSharedItems, searchQuery]);
 
   // ページネーション用
@@ -139,7 +135,7 @@ export default function SharedItemsPage() {
           <TextField
             fullWidth
             size="small"
-            placeholder="Search 共有リスト（項目番号、タイトル、カテゴリ、担当者）"
+            placeholder="Search 共有リスト（全フィールド検索）"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -190,26 +186,23 @@ export default function SharedItemsPage() {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: `${sharedItemsColor.light}20` }}>
-                <TableCell>項目番号</TableCell>
-                <TableCell>タイトル</TableCell>
-                <TableCell>カテゴリ</TableCell>
-                <TableCell>優先度</TableCell>
-                <TableCell>ステータス</TableCell>
-                <TableCell>担当者</TableCell>
-                <TableCell>期限</TableCell>
-                <TableCell>作成日</TableCell>
+                <TableCell>ID</TableCell>
+                <TableCell>共有場</TableCell>
+                <TableCell>共有日</TableCell>
+                <TableCell>共有できていない</TableCell>
+                <TableCell>確認日</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={5} align="center">
                     読み込み中...
                   </TableCell>
                 </TableRow>
               ) : paginatedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={5} align="center">
                     共有データが見つかりませんでした
                   </TableCell>
                 </TableRow>
@@ -223,16 +216,13 @@ export default function SharedItemsPage() {
                   >
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold" sx={{ color: sharedItemsColor.main }}>
-                        {item.item_number || '-'}
+                        {item.id || '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{item.title || '-'}</TableCell>
-                    <TableCell>{item.category || '-'}</TableCell>
-                    <TableCell>{item.priority || '-'}</TableCell>
-                    <TableCell>{item.status || '-'}</TableCell>
-                    <TableCell>{item.assignee || '-'}</TableCell>
-                    <TableCell>{formatDate(item.due_date)}</TableCell>
-                    <TableCell>{formatDate(item.created_at)}</TableCell>
+                    <TableCell>{item.sharing_location || '-'}</TableCell>
+                    <TableCell>{formatDate(item.sharing_date)}</TableCell>
+                    <TableCell>{item.staff_not_shared || '-'}</TableCell>
+                    <TableCell>{formatDate(item.confirmation_date)}</TableCell>
                   </TableRow>
                 ))
               )}

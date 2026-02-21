@@ -213,13 +213,20 @@ export class SharedItemsService {
    * 行データをSharedItemに変換
    */
   private mapRowToItem(row: SheetRow, rowIndex: number): SharedItem {
-    return {
+    // スプレッドシートの全カラムをそのまま含める
+    const item: SharedItem = {
       id: rowIndex.toString(),
       sharing_location: (row['共有場'] as string) || '',
       sharing_date: (row['共有日'] as string) || null,
       staff_not_shared: (row['共有できていない'] as string) || null,
       confirmation_date: (row['確認日'] as string) || null,
-      ...row,
     };
+
+    // スプレッドシートの全カラムを追加
+    Object.keys(row).forEach(key => {
+      item[key] = row[key];
+    });
+
+    return item;
   }
 }
