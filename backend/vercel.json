@@ -1,5 +1,39 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/main.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/test-env.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/simple-test.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/redirect.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-callback.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-me.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron/process-scheduled-notifications.ts",
+      "use": "@vercel/node"
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/process-scheduled-notifications",
