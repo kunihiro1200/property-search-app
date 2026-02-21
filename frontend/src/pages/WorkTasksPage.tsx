@@ -125,6 +125,44 @@ export default function WorkTasksPage() {
     }
   };
 
+  // カテゴリーラベルから日付を抽出して期限切れかチェック
+  const checkIfOverdue = (label: string): boolean => {
+    // M/D形式の日付を抽出（例: "2/19", "12/31"）
+    const dateMatch = label.match(/(\d{1,2})\/(\d{1,2})/);
+    if (!dateMatch) return false;
+
+    const month = parseInt(dateMatch[1], 10);
+    const day = parseInt(dateMatch[2], 10);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 今年の日付として比較
+    const targetDate = new Date(today.getFullYear(), month - 1, day);
+    targetDate.setHours(0, 0, 0, 0);
+
+    // 当日以前（当日を含む）の場合はtrue
+    return targetDate <= today;
+  };
+
+  // カテゴリーラベルの日付部分を太字にする
+  const formatCategoryLabel = (label: string, isOverdue: boolean) => {
+    // M/D形式の日付を太字にする
+    const parts = label.split(/(\d{1,2}\/\d{1,2})/);
+
+    return (
+      <span>
+        {parts.map((part, index) => {
+          // 日付部分（M/D形式）の場合は太字
+          if (/^\d{1,2}\/\d{1,2}$/.test(part)) {
+            return <strong key={index}>{part}</strong>;
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </span>
+    );
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, color: workTaskColor.main }}>業務依頼</Typography>
@@ -141,46 +179,52 @@ export default function WorkTasksPage() {
             </Typography>
           </Box>
           <List dense>
-            {statusCategories.map((cat) => (
-              <ListItemButton
-                key={cat.key}
-                selected={selectedCategory === cat.key}
-                onClick={() => handleCategoryChange(cat.key)}
-                sx={{ 
-                  py: 0.5,
-                  '&.Mui-selected': { 
-                    bgcolor: `${workTaskColor.light}30`,
-                    color: workTaskColor.dark,
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 600,
-                    }
-                  }
-                }}
-              >
-                <ListItemText 
-                  primary={cat.label} 
-                  primaryTypographyProps={{ 
-                    variant: 'body2',
-                    sx: { 
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }
-                  }}
-                />
-                <Badge
-                  badgeContent={cat.count}
-                  max={999}
+            {statusCategories.map((cat) => {
+              // 日付を抽出して期限切れかチェック
+              const isOverdue = checkIfOverdue(cat.label);
+
+              return (
+                <ListItemButton
+                  key={cat.key}
+                  selected={selectedCategory === cat.key}
+                  onClick={() => handleCategoryChange(cat.key)}
                   sx={{ 
-                    ml: 1,
-                    '& .MuiBadge-badge': {
-                      bgcolor: workTaskColor.main,
-                      color: workTaskColor.contrastText,
+                    py: 0.5,
+                    '&.Mui-selected': { 
+                      bgcolor: `${workTaskColor.light}30`,
+                      color: workTaskColor.dark,
+                      '& .MuiListItemText-primary': {
+                        fontWeight: 600,
+                      }
                     }
                   }}
-                />
-              </ListItemButton>
-            ))}
+                >
+                  <ListItemText 
+                    primary={formatCategoryLabel(cat.label, isOverdue)} 
+                    primaryTypographyProps={{ 
+                      variant: 'body2',
+                      sx: { 
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: isOverdue ? 'error.main' : 'inherit',
+                      }
+                    }}
+                  />
+                  <Badge
+                    badgeContent={cat.count}
+                    max={999}
+                    sx={{ 
+                      ml: 1,
+                      '& .MuiBadge-badge': {
+                        bgcolor: workTaskColor.main,
+                        color: workTaskColor.contrastText,
+                      }
+                    }}
+                  />
+                </ListItemButton>
+              );
+            })}
           </List>
         </Paper>
 
