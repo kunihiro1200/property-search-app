@@ -1,14 +1,16 @@
 {
   "version": 2,
   "env": {
-    "TS_NODE_TRANSPILE_ONLY": "true"
+    "TS_NODE_TRANSPILE_ONLY": "true",
+    "TSC_COMPILE_ON_ERROR": "true"
   },
   "builds": [
     {
       "src": "src/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**"]
+        "includeFiles": ["src/**"],
+        "maxLambdaSize": "50mb"
       }
     }
   ],

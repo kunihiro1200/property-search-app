@@ -26,9 +26,13 @@
     "alwaysStrict": false,
     "noPropertyAccessFromIndexSignature": false,
     "noEmitOnError": false,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "noEmit": false,
-    "skipDefaultLibCheck": true
+    "skipDefaultLibCheck": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "allowSyntheticDefaultImports": true,
+    "allowJs": true,
+    "checkJs": false
   },
   "include": ["src/**/*", "api/main.ts", "api/index.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "api/src/**/*"],

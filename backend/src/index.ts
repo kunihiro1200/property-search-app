@@ -115,6 +115,67 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint for Google Sheets authentication
+app.get('/api/test/google-sheets-auth', async (req, res) => {
+  try {
+    console.log('[Test] Testing Google Sheets authentication...');
+    
+    // 環境変数の確認
+    const hasJson = !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const hasEmail = !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const hasKey = !!process.env.GOOGLE_PRIVATE_KEY;
+    const hasPath = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+    
+    console.log('[Test] Environment variables:', {
+      GOOGLE_SERVICE_ACCOUNT_JSON: hasJson ? 'Present' : 'Missing',
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: hasEmail ? 'Present' : 'Missing',
+      GOOGLE_PRIVATE_KEY: hasKey ? 'Present' : 'Missing',
+      GOOGLE_SERVICE_ACCOUNT_KEY_PATH: hasPath ? process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH : 'Missing'
+    });
+    
+    // GoogleSheetsClientをインポート
+    const { GoogleSheetsClient } = await import('./services/GoogleSheetsClient');
+    
+    // クライアントを作成
+    const sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: '1BuvYd9cKOdgIAy0XhL-voVx1tiGA-cd6MCU_dYvbAQE',
+      sheetName: '共有',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    });
+    
+    console.log('[Test] GoogleSheetsClient created');
+    
+    // 認証を試行
+    await sheetsClient.authenticate();
+    console.log('[Test] Authentication successful');
+    
+    // ヘッダーを取得
+    const headers = await sheetsClient.getHeaders();
+    console.log('[Test] Headers fetched:', headers.length, 'columns');
+    
+    res.json({
+      success: true,
+      message: 'Google Sheets authentication successful',
+      environment: {
+        GOOGLE_SERVICE_ACCOUNT_JSON: hasJson,
+        GOOGLE_SERVICE_ACCOUNT_EMAIL: hasEmail,
+        GOOGLE_PRIVATE_KEY: hasKey,
+        GOOGLE_SERVICE_ACCOUNT_KEY_PATH: hasPath
+      },
+      headers: headers.slice(0, 10), // 最初の10列のみ返す
+      totalColumns: headers.length
+    });
+    
+  } catch (error: any) {
+    console.error('[Test] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
 // ⚠️ 重要: 他のルートより前に定義（より具体的なルートを優先）
 app.get('/api/cron/sync-inquiries', async (req, res) => {
