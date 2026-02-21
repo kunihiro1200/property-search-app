@@ -28,8 +28,8 @@
     "noEmitOnError": false,
     "isolatedModules": true
   },
-  "include": ["src/**/*", "api/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "include": ["src/**/*", "api/main.ts", "api/index.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "api/src/**/*"],
   "ts-node": {
     "transpileOnly": true,
     "compilerOptions": {
