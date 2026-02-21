@@ -68,7 +68,6 @@
     "物件担当チャット": "property_assignee_chat",
     "経理確認済み": "accounting_confirmed",
     "契約形態": "contract_type",
-    "売買資料ドライブ": "sales_materials_drive",
     "融資承認予定日": "loan_approval_scheduled_date",
     "国広とチャット": "kunihiro_chat",
     "山本へチャット送信": "yamamoto_chat",
@@ -114,7 +113,6 @@
     "作業完了コメント": "work_completed_comment",
     "CWへ依頼（売買契約関連）": "cw_request_sales",
     "廣瀬さんへ完了チャット（売買関連）": "hirose_completed_chat_sales",
-    "CWへ完了チャット（売買関連）": "cw_completed_chat_sales",
     "CWへ完了メール（売買関連）": "cw_completed_email_sales",
     "廣瀬さんへ間取り図格納コメント": "hirose_floor_plan_stored_comment",
     "完了コメント（売買関連）": "completed_comment_sales",
@@ -201,12 +199,7 @@
       "cadastral_map_sales_input",
       "road_dimensions",
       "property_type",
-      "review_count",
-      "seller_name_field",
-      "buyer_name_field",
-      "loan_field",
-      "financial_institution",
-      "delivery_scheduled"
+      "review_count"
     ],
     "browser_to_spreadsheet": [
       "mediation_creator",
@@ -253,7 +246,6 @@
       "settlement_completed_chat",
       "property_assignee_chat",
       "accounting_confirmed",
-      "sales_materials_drive",
       "kunihiro_chat",
       "yamamoto_chat",
       "ura_chat",
@@ -288,12 +280,10 @@
       "work_completed_comment",
       "cw_request_sales",
       "hirose_completed_chat_sales",
-      "cw_completed_chat_sales",
       "cw_completed_email_sales",
       "hirose_floor_plan_stored_comment",
       "completed_comment_sales",
       "invoice_stamped",
-      "property_related_documents",
       "review_seller",
       "review_buyer",
       "wall_core_area_input",
@@ -308,11 +298,6 @@
       "pre_request_check",
       "cw_person"
     ],
-    "bidirectional": [
-      "seller_email",
-      "seller_phone",
-      "buyer_email",
-      "buyer_phone"
-    ]
+    "bidirectional": []
   }
 }
