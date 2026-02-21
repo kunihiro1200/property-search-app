@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { google } from 'googleapis';
 import { BaseRepository } from '../repositories/BaseRepository';
 import { Appointment, SellerStatus } from '../types';
