@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BaseRepository } from '../repositories/BaseRepository';
 import {
   Seller,

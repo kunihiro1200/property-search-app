@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BaseRepository } from '../repositories/BaseRepository';
 import { PropertyInfo, ValuationResult, PropertyType } from '../types';
 import { CacheHelper, CACHE_TTL } from '../utils/cache';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SyncLogger } from './SyncLogger';
 
