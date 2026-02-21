@@ -96,36 +96,13 @@ const initializeConnections = async () => {
 // Middleware
 app.use(helmet());
 
-// CORS設定 - 本番環境では全てのVercelドメインを許可
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // originがundefinedの場合（同一オリジンリクエスト）は許可
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // 許可するオリジンのパターン
-    const allowedPatterns = [
-      /^http:\/\/localhost:\d+$/,  // localhost
-      /^https:\/\/.*\.vercel\.app$/,  // 全てのVercelドメイン
-    ];
-    
-    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-    
-    if (isAllowed) {
-      console.log('✅ CORS allowed for origin:', origin);
-      callback(null, true);
-    } else {
-      console.warn('❌ CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// CORS設定 - 全てのVercelドメインを許可
+app.use(cors({
+  origin: true,  // 全てのオリジンを許可（開発用）
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-app.use(cors(corsOptions));
+}));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' })); // 画像付きメール対応のため制限を増やす
