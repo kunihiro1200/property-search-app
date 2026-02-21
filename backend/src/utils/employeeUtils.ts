@@ -265,13 +265,14 @@ export class EmployeeUtils extends BaseRepository {
 
     try {
       // イニシャルを正規化
-      const normalizedInitials = initials.trim().toUpperCase();
+      const normalizedInitials = initials.trim();
       console.log('[EmployeeUtils] Normalized initials:', normalizedInitials);
 
-      // 全従業員を取得
+      // データベースのinitialsカラムで直接検索（大文字小文字を区別しない）
       const { data: employees, error } = await this.table('employees')
-        .select('id, name, email')
-        .eq('is_active', true);
+        .select('id, name, email, initials')
+        .eq('is_active', true)
+        .ilike('initials', normalizedInitials);
 
       if (error) {
         console.error('[EmployeeUtils] Error fetching employees:', error);
@@ -279,36 +280,23 @@ export class EmployeeUtils extends BaseRepository {
       }
 
       if (!employees || employees.length === 0) {
-        console.log('[EmployeeUtils] No active employees found');
-        return null;
-      }
-
-      console.log(`[EmployeeUtils] Searching through ${employees.length} active employees`);
-
-      // 名前からイニシャルを抽出してマッチング
-      const matchedEmployees = employees.filter((employee) => {
-        const extractedInitials = this.extractInitials(employee.name);
-        return extractedInitials === normalizedInitials;
-      });
-
-      // 重複チェック
-      if (matchedEmployees.length > 1) {
-        const names = matchedEmployees.map(e => e.name).join(', ');
-        console.error(`[EmployeeUtils] DUPLICATE INITIALS DETECTED: "${normalizedInitials}" matches multiple employees: ${names}`);
-        throw new Error(`イニシャル（${initials}）が複数の社員に一致します: ${names}`);
-      }
-
-      if (matchedEmployees.length === 0) {
         console.log(`[EmployeeUtils] No employee found with initials: ${normalizedInitials}`);
         return null;
       }
 
-      const matchedEmployee = matchedEmployees[0];
+      // 重複チェック
+      if (employees.length > 1) {
+        const names = employees.map(e => e.name).join(', ');
+        console.error(`[EmployeeUtils] DUPLICATE INITIALS DETECTED: "${normalizedInitials}" matches multiple employees: ${names}`);
+        throw new Error(`イニシャル（${initials}）が複数の社員に一致します: ${names}`);
+      }
+
+      const matchedEmployee = employees[0];
       const result: EmployeeLookupResult = {
         id: matchedEmployee.id,
         name: matchedEmployee.name,
         email: matchedEmployee.email,
-        initials: normalizedInitials
+        initials: matchedEmployee.initials || normalizedInitials
       };
 
       console.log('[EmployeeUtils] Employee found:', {

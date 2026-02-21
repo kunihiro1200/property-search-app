@@ -23,7 +23,6 @@ import {
 } from '@mui/material';
 import { ArrowBack, Phone, Save, CalendarToday, Email, Image as ImageIcon } from '@mui/icons-material';
 import api, { emailImageApi } from '../services/api';
-import { SECTION_COLORS } from '../theme/sectionColors';
 import { Seller, PropertyInfo, Activity, SellerStatus, ConfidenceLevel, DuplicateMatch, SelectedImages } from '../types';
 import { getDisplayName } from '../utils/employeeUtils';
 import { formatDateTime } from '../utils/dateFormat';
@@ -2412,7 +2411,7 @@ HP：https://ifoo-oita.com/
       {/* ヘッダー */}
       <Box
         sx={{
-          p: 1.5,
+          p: 2,
           borderBottom: 1,
           borderColor: 'divider',
           display: 'flex',
@@ -2426,26 +2425,19 @@ HP：https://ifoo-oita.com/
             一覧
           </Button>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="h5" fontWeight="bold" sx={{ color: SECTION_COLORS.seller.main }}>{seller?.name || '読み込み中...'}</Typography>
+            <Typography variant="h5">通話モード - {seller?.name || '読み込み中...'}</Typography>
             {seller?.sellerNumber && (
               <>
                 <Chip 
                   label={seller.sellerNumber} 
                   size="small" 
-                  sx={{ 
-                    backgroundColor: SECTION_COLORS.seller.main,
-                    color: SECTION_COLORS.seller.contrastText,
-                    cursor: 'pointer',
-                    '&:hover': { 
-                      backgroundColor: SECTION_COLORS.seller.dark,
-                      opacity: 0.9
-                    }
-                  }}
+                  color="primary"
                   onClick={() => {
                     navigator.clipboard.writeText(seller.sellerNumber || '');
                     setCopiedSellerNumber(true);
                     setTimeout(() => setCopiedSellerNumber(false), 1500);
                   }}
+                  sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                   title="クリックでコピー"
                 />
                 {copiedSellerNumber && (
@@ -2465,30 +2457,12 @@ HP：https://ifoo-oita.com/
             startIcon={<CalendarToday />}
             onClick={scrollToAppointmentSection}
             variant="outlined"
-            sx={{ 
-              ml: 2,
-              borderColor: SECTION_COLORS.seller.main,
-              color: SECTION_COLORS.seller.main,
-              '&:hover': {
-                borderColor: SECTION_COLORS.seller.dark,
-                backgroundColor: `${SECTION_COLORS.seller.main}15`,
-              }
-            }}
-            title="訪問セクションへ"
+            color="primary"
+            sx={{ ml: 2 }}
+            title="訪問予約セクションへ"
           >
-            訪問
+            訪問予約
           </Button>
-          {seller?.id && (
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => window.open(`/sellers/${seller.id}/nearby-buyers`, '_blank')}
-              sx={{ ml: 1, fontWeight: 'bold' }}
-              title="近隣買主を開く"
-            >
-              近隣買主
-            </Button>
-          )}
         </Box>
 
         {/* 査定額表示（中央） */}
@@ -2526,12 +2500,9 @@ HP：https://ifoo-oita.com/
                 {isManualValuation && (
                   <Chip 
                     label="手入力" 
+                    color="primary" 
                     size="small"
-                    sx={{
-                      backgroundColor: SECTION_COLORS.seller.main,
-                      color: SECTION_COLORS.seller.contrastText,
-                      fontWeight: 'bold'
-                    }}
+                    sx={{ fontWeight: 'bold' }}
                   />
                 )}
                 {!isManualValuation && seller.fixedAssetTaxRoadPrice && (
@@ -2556,14 +2527,7 @@ HP：https://ifoo-oita.com/
               <Button
                 size="small"
                 variant="outlined"
-                sx={{
-                  borderColor: SECTION_COLORS.seller.main,
-                  color: SECTION_COLORS.seller.main,
-                  '&:hover': {
-                    borderColor: SECTION_COLORS.seller.dark,
-                    backgroundColor: `${SECTION_COLORS.seller.main}15`,
-                  }
-                }}
+                color="primary"
                 onClick={scrollToValuationSection}
               >
                 査定計算へ
@@ -2672,16 +2636,10 @@ HP：https://ifoo-oita.com/
             {/* 電話番号ボタン */}
             <Button
               variant="contained"
+              color="primary"
               startIcon={<Phone />}
               href={`tel:${seller.phoneNumber}`}
-              sx={{ 
-                fontWeight: 'bold',
-                backgroundColor: SECTION_COLORS.seller.main,
-                color: SECTION_COLORS.seller.contrastText,
-                '&:hover': {
-                  backgroundColor: SECTION_COLORS.seller.dark,
-                }
-              }}
+              sx={{ fontWeight: 'bold' }}
             >
               {seller.phoneNumber}
             </Button>
@@ -2696,21 +2654,10 @@ HP：https://ifoo-oita.com/
         </Alert>
       )}
 
-      {/* メインコンテンツ（サイドバー + 追客ログ + 左右2分割） */}
+      {/* メインコンテンツ（サイドバー + 左右2分割） */}
       <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {/* サイドバー */}
         <Box sx={{ flexShrink: 0, overflow: 'auto', borderRight: 1, borderColor: 'divider' }}>
-          {/* 売主追客ログ（一番上） */}
-          <Box sx={{ width: 280, p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <CallLogDisplay sellerId={id!} />
-            
-            {/* 追客ログ履歴（APPSHEET） */}
-            {seller?.sellerNumber && (
-              <FollowUpLogHistoryTable sellerNumber={seller.sellerNumber} />
-            )}
-          </Box>
-          
-          {/* カテゴリー（一番下） */}
           <SellerStatusSidebar
             currentSeller={seller}
             isCallMode={true}
@@ -3066,6 +3013,21 @@ HP：https://ifoo-oita.com/
               console.log('🗺️ [CallModePage] 地図を表示しない（売主番号が未設定）');
               return null;
             })()}
+
+            {/* 近隣買主リスト */}
+            {seller?.id && (
+              <Box sx={{ mb: 2 }}>
+                <Button
+                  variant="contained"
+                  color="info"
+                  fullWidth
+                  onClick={() => window.open(`/sellers/${seller.id}/nearby-buyers`, '_blank')}
+                  sx={{ py: 1.5 }}
+                >
+                  近隣買主リストを開く
+                </Button>
+              </Box>
+            )}
 
             {/* 売主情報 */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -4496,10 +4458,20 @@ HP：https://ifoo-oita.com/
               </Paper>
             </Box>
 
-            {/* 除外申請セクション */}
+            {/* 売主追客ログ */}
+            <Box sx={{ mb: 3 }}>
+              <CallLogDisplay sellerId={id!} />
+              
+              {/* 追客ログ履歴（APPSHEET） */}
+              {seller?.sellerNumber && (
+                <FollowUpLogHistoryTable sellerNumber={seller.sellerNumber} />
+              )}
+            </Box>
+
+            {/* 他セクション */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="h6">
-                📌 除外申請
+                📌 他
               </Typography>
             </Box>
             <Paper sx={{ p: 2, mb: 3 }}>

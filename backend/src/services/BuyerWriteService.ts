@@ -254,4 +254,25 @@ export class BuyerWriteService {
       return null;
     }
   }
+
+  /**
+   * 新規買主をスプレッドシートに追加
+   * @param buyerData 買主データ（スプレッドシートのカラム名をキーとしたオブジェクト）
+   * @returns 書き込み結果
+   */
+  async appendBuyerRow(buyerData: Record<string, any>): Promise<WriteResult> {
+    try {
+      // スプレッドシートに新規行を追加
+      await this.sheetsClient.appendRow(buyerData);
+
+      return {
+        success: true
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error occurred'
+      };
+    }
+  }
 }

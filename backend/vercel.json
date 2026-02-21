@@ -1,23 +1,100 @@
 {
   "version": 2,
-  "env": {
-    "TS_NODE_TRANSPILE_ONLY": "true",
-    "TSC_COMPILE_ON_ERROR": "true"
-  },
   "builds": [
     {
-      "src": "src/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["src/**"],
-        "maxLambdaSize": "50mb"
-      }
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/main.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/test-env.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/simple-test.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/redirect.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-callback.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/auth-me.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron/process-scheduled-notifications.ts",
+      "use": "@vercel/node"
     }
   ],
-  "routes": [
+  "crons": [
     {
-      "src": "/(.*)",
-      "dest": "/src/index.ts"
+      "path": "/api/cron/process-scheduled-notifications",
+      "schedule": "* * * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/auth/callback",
+      "destination": "/api/auth-callback"
+    },
+    {
+      "source": "/api/auth/me",
+      "destination": "/api/auth-me"
+    },
+    {
+      "source": "/api/test-env",
+      "destination": "/api/test-env"
+    },
+    {
+      "source": "/api/simple-test",
+      "destination": "/api/simple-test"
+    },
+    {
+      "source": "/p/:propertyNumber",
+      "destination": "/api/redirect"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/main"
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": "/api/main"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
+        }
+      ]
     }
   ]
 }

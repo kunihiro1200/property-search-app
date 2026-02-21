@@ -8,11 +8,13 @@ const googleAuthService = new GoogleAuthService();
 /**
  * Google Calendar OAuth認証を開始（会社アカウント用）
  * GET /api/auth/google/calendar
+ * 認証不要 - 直接Googleカレンダー認証画面にリダイレクト
  */
-router.get('/', authenticate, async (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const authUrl = await googleAuthService.getAuthUrl();
-    res.json({ authUrl });
+    // JSONではなく、直接リダイレクト
+    res.redirect(authUrl);
   } catch (error: any) {
     console.error('Get auth URL error:', error);
     res.status(500).json({
@@ -36,30 +38,58 @@ router.get('/callback', async (req: Request, res: Response) => {
     // OAuth エラーチェック
     if (oauthError) {
       console.error('OAuth error:', oauthError);
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/employees/calendar-status?calendar_error=${oauthError}`
-      );
+      return res.send(`
+        <html>
+          <head><title>カレンダー接続エラー</title></head>
+          <body>
+            <h1>❌ カレンダー接続に失敗しました</h1>
+            <p>エラー: ${oauthError}</p>
+            <p><a href="/">トップページに戻る</a></p>
+          </body>
+        </html>
+      `);
     }
 
     if (!code || typeof code !== 'string') {
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/employees/calendar-status?calendar_error=no_code`
-      );
+      return res.send(`
+        <html>
+          <head><title>カレンダー接続エラー</title></head>
+          <body>
+            <h1>❌ カレンダー接続に失敗しました</h1>
+            <p>認証コードが見つかりません</p>
+            <p><a href="/">トップページに戻る</a></p>
+          </body>
+        </html>
+      `);
     }
 
     // 認証コードをトークンに交換（会社アカウント用）
     await googleAuthService.exchangeCodeForTokens(code);
 
-    // 成功時はフロントエンドにリダイレクト
-    res.redirect(`${process.env.FRONTEND_URL}/employees/calendar-status?calendar_connected=true`);
+    // 成功時はシンプルな成功ページを表示
+    res.send(`
+      <html>
+        <head><title>カレンダー接続成功</title></head>
+        <body>
+          <h1>✅ Googleカレンダーに接続しました</h1>
+          <p>tenant@ifoo-oita.com のカレンダーに接続されました。</p>
+          <p>このウィンドウを閉じて、買主詳細ページで「カレンダーで開く」ボタンを押してください。</p>
+        </body>
+      </html>
+    `);
   } catch (error: any) {
     console.error('OAuth callback error:', error);
     
-    // エラーメッセージをURLエンコード
-    const errorMessage = encodeURIComponent(error.message || 'exchange_failed');
-    res.redirect(
-      `${process.env.FRONTEND_URL}/employees/calendar-status?calendar_error=${errorMessage}`
-    );
+    res.send(`
+      <html>
+        <head><title>カレンダー接続エラー</title></head>
+        <body>
+          <h1>❌ カレンダー接続に失敗しました</h1>
+          <p>エラー: ${error.message || 'exchange_failed'}</p>
+          <p><a href="/api/auth/google/calendar">再試行</a></p>
+        </body>
+      </html>
+    `);
   }
 });
 

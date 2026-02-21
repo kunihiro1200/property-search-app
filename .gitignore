@@ -8,6 +8,11 @@ node_modules/
 .env.*.local
 .env.vercel.production
 VERCEL_ENV_VARIABLES.md
+COMPLETE-ENV-VALUES.md
+ENV-SETUP-INSTRUCTIONS.md
+THREE-ENV-VARS.txt
+env-values-for-admin-backend.md
+SETUP-ADMIN-BACKEND-ENV.md
 
 # Google Service Account
 google-service-account.json

@@ -7,15 +7,17 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
-import { PropertyListingService } from './src/services/PropertyListingService.js';
-import { PropertyImageService } from './src/services/PropertyImageService.js';
-import { GoogleDriveService } from './src/services/GoogleDriveService.js';
-import { PropertyDetailsService } from './src/services/PropertyDetailsService.js';
-import { PropertyService } from './src/services/PropertyService.js';
-import { PanoramaUrlService } from './src/services/PanoramaUrlService.js';
-import { GoogleSheetsClient } from './src/services/GoogleSheetsClient.js';
-import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService.js';
-import publicPropertiesRoutes from './src/routes/publicProperties.js';
+import { PropertyListingService } from '../src/services/PropertyListingService';
+import { PropertyImageService } from '../src/services/PropertyImageService';
+import { GoogleDriveService } from '../src/services/GoogleDriveService';
+import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
+import { PropertyService } from '../src/services/PropertyService';
+import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
+import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
+import { AthomeSheetSyncService } from '../src/services/AthomeSheetSyncService';
+import { BuyerService } from '../src/services/BuyerService';
+import publicPropertiesRoutes from '../src/routes/publicProperties';
+import authSupabaseRoutes from '../src/routes/auth.supabase'; // 業務管理システム用の認証ルート
 
 const app = express();
 
@@ -38,13 +40,45 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 // PropertyListingServiceの初期化（ローカル環境と同じ）
 const propertyListingService = new PropertyListingService();
 
+// BuyerServiceの初期化
+const buyerService = new BuyerService();
+
+/**
+ * 日本語の物件種別を英語に変換
+ * 
+ * @param japaneseType - 日本語の物件種別（例: "土地", "戸建", "マンション"）
+ * @returns 英語の物件種別（例: "land", "detached_house", "apartment"）
+ */
+function convertPropertyTypeToEnglish(japaneseType: string | null | undefined): 'land' | 'detached_house' | 'apartment' | null {
+  if (!japaneseType) return null;
+  
+  const typeMapping: Record<string, 'land' | 'detached_house' | 'apartment'> = {
+    '戸建': 'detached_house',
+    '戸建て': 'detached_house',
+    'マンション': 'apartment',
+    '土地': 'land',
+    // 英語の値もそのまま返す
+    'land': 'land',
+    'detached_house': 'detached_house',
+    'apartment': 'apartment',
+  };
+  
+  return typeMapping[japaneseType] || null;
+}
+
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS設定（業務管理システムと物件公開サイトの両方をサポート）
 app.use(cors({
-  origin: '*', // 公開サイトなので全てのオリジンを許可
-  credentials: false,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: true, // リクエストのOriginヘッダーをそのまま許可
+  credentials: true, // 認証に必要なクッキーやヘッダーを許可
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24時間
 }));
 app.use(compression());
 app.use(morgan('dev'));
@@ -154,8 +188,108 @@ app.get('/api/public/properties', async (req, res) => {
     const showPublicOnly = req.query.showPublicOnly === 'true';
     const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
     const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
+    const nearby = req.query.nearby as string; // 近隣物件フィルター
     
-    console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages });
+    console.log('🔍🔍🔍 [API Endpoint] skipImages param:', req.query.skipImages, 'parsed:', skipImages);
+    console.log('📊 Query params:', { limit, offset, propertyNumber, location, types, minPrice, maxPrice, minAge, maxAge, showPublicOnly, withCoordinates, skipImages, nearby });
+    
+    // 近隣物件フィルターが指定されている場合、近隣物件APIを使用
+    if (nearby) {
+      console.log('🔍 [API Endpoint] Nearby filter enabled for property:', nearby);
+      
+      // BuyerServiceを使用して近隣物件を取得
+      try {
+        const result = await buyerService.getNearbyProperties(nearby);
+        const nearbyProperties = result.nearbyProperties || [];
+        
+        console.log(`✅ Found ${nearbyProperties.length} nearby properties for ${nearby}`);
+        
+        // 近隣物件の詳細情報を取得（ページネーション対応）
+        if (nearbyProperties.length > 0) {
+          // ページネーション用の計算
+          const total = nearbyProperties.length;
+          const paginatedPropertyNumbers = nearbyProperties
+            .slice(offset, offset + limit)
+            .map((p: any) => p.property_number);
+          
+          console.log(`✅ Fetching details for ${paginatedPropertyNumbers.length} nearby properties (total: ${total})`);
+          
+          // PropertyListingServiceを使用して物件詳細を取得（画像を含む）
+          const propertiesWithImages = await Promise.all(
+            paginatedPropertyNumbers.map(async (propertyNumber: string) => {
+              try {
+                const property = await propertyListingService.getPublicPropertyByNumber(propertyNumber);
+                if (!property) {
+                  console.error(`[API Endpoint] Property not found: ${propertyNumber}`);
+                  return null;
+                }
+                
+                // デバッグ: 価格フィールドを確認
+                console.log(`[API Endpoint] Property ${propertyNumber} price fields:`, {
+                  sales_price: property.sales_price,
+                  listing_price: property.listing_price,
+                  price: property.price,
+                });
+                
+                // 価格フィールドを計算
+                const calculatedPrice = property.sales_price || property.listing_price || property.price || 0;
+                
+                console.log(`[API Endpoint] Property ${propertyNumber} calculated price:`, calculatedPrice);
+                
+                return {
+                  ...property,
+                  price: calculatedPrice,
+                  badge_type: property.atbb_status === 'atbb成約済み' ? 'sold' : 
+                             property.atbb_status === '非公開（専任）' || property.atbb_status === 'E外し非公開' ? 'sold' : 
+                             'available',
+                  is_clickable: true,
+                };
+              } catch (error: any) {
+                console.error(`[API Endpoint] Error fetching property ${propertyNumber}:`, error);
+                return null;
+              }
+            })
+          );
+          
+          // nullを除外
+          const validProperties = propertiesWithImages.filter((p: any) => p !== null);
+          
+          console.log(`✅ Returning ${validProperties.length} nearby properties with images (total: ${total})`);
+          
+          return res.json({ 
+            success: true, 
+            properties: validProperties,
+            pagination: {
+              total,
+              limit,
+              offset,
+              page: Math.floor(offset / limit) + 1,
+              totalPages: Math.ceil(total / limit)
+            }
+          });
+        } else {
+          // 近隣物件が見つからない場合
+          console.log('⚠️ No nearby properties found for:', nearby);
+          return res.json({ 
+            success: true, 
+            properties: [],
+            pagination: {
+              total: 0,
+              limit,
+              offset,
+              page: 1,
+              totalPages: 0
+            }
+          });
+        }
+      } catch (nearbyError: any) {
+        console.error('❌ Error fetching nearby properties:', nearbyError);
+        return res.status(500).json({ 
+          success: false, 
+          error: nearbyError.message || 'Failed to fetch nearby properties'
+        });
+      }
+    }
     
     // 価格範囲のバリデーション
     let priceFilter: { min?: number; max?: number } | undefined;
@@ -379,10 +513,17 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             });
             try {
               const athomeSheetSyncService = new AthomeSheetSyncService();
-              const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
-                property.property_number,
-                property.property_type as 'land' | 'detached_house' | 'apartment'
-              );
+              // 日本語の物件種別を英語に変換
+              const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+              console.log(`[Complete API] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+              
+              if (!englishPropertyType) {
+                console.error(`[Complete API] Invalid property type: "${property.property_type}"`);
+              } else {
+                const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+                  property.property_number,
+                  englishPropertyType
+                );
               
               if (syncSuccess) {
                 console.log(`[Complete API] Successfully synced comments from Athome sheet`);
@@ -419,6 +560,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
                 return updatedDetails;
               } else {
                 console.error(`[Complete API] Failed to sync comments from Athome sheet`);
+              }
               }
             } catch (syncError: any) {
               console.error(`[Complete API] Error syncing comments:`, syncError.message);
@@ -557,22 +699,14 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
     }
 
     // PropertyImageServiceを使用して画像を取得
-    const driveService = new GoogleDriveService();
     const propertyImageService = new PropertyImageService(
-      driveService,
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
       parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
     );
 
-    console.log(`[Images API] Calling getImagesFromStorageUrl with: ${storageUrl}`);
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
-    console.log(`[Images API] getImagesFromStorageUrl returned:`, {
-      images_count: result.images.length,
-      folderId: result.folderId,
-      cached: result.cached
-    });
 
     // 非表示画像リストを取得
     const hiddenImages = await propertyListingService.getHiddenImages(property.id);
@@ -601,19 +735,10 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       message: error.message,
       stack: error.stack,
       code: error.code,
-      status: error.status,
-      response: error.response?.data,
-      errors: error.errors,
     });
-    
-    // より詳細なエラー情報をレスポンスに含める
     res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message || 'Failed to fetch images',
-      errorCode: error.code,
-      errorStatus: error.status,
-      errorDetails: error.response?.data || error.errors || null,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: error.message || 'Failed to fetch images'
     });
   }
 });
@@ -664,9 +789,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
     }
 
     // PropertyImageServiceを使用してキャッシュをクリア
-    const driveService = new GoogleDriveService();
     const propertyImageService = new PropertyImageService(
-      driveService,
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -716,9 +839,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
     console.log(`🗑️ Clearing all image cache`);
 
     // PropertyImageServiceを使用して全キャッシュをクリア
-    const driveService = new GoogleDriveService();
     const propertyImageService = new PropertyImageService(
-      driveService,
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -846,9 +967,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     console.log(`[Refresh Essential] Current storage_location: ${property.storage_location}`);
     
     // 画像を取得（Google Drive）- キャッシュをバイパス
-    const driveService = new GoogleDriveService();
     const propertyImageService = new PropertyImageService(
-      driveService,
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -957,9 +1076,7 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
     const startTime = Date.now();
     
     // PropertyImageServiceのインスタンスを作成
-    const driveService = new GoogleDriveService();
     const propertyImageService = new PropertyImageService(
-      driveService,
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1321,9 +1438,8 @@ app.post('/api/public/inquiries', async (req, res) => {
       console.log('[Inquiry API] Authentication completed successfully');
       
       // 最後の行だけを取得（高速）
-      console.log('[Inquiry API] Calling readAll()...');
-      const allRows = await sheetsClient.readAll();
-      const lastRow = allRows.length > 0 ? allRows[allRows.length - 1] : null;
+      console.log('[Inquiry API] Calling getLastRow()...');
+      const lastRow = await sheetsClient.getLastRow();
       
       console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
       
@@ -1604,7 +1720,7 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
     // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
     
     // PropertyListingSyncServiceを使用してフル同期を実行
-    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService.js');
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
@@ -1664,9 +1780,22 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
     
     // AthomeSheetSyncServiceを使用して同期
     const athomeSheetSyncService = new AthomeSheetSyncService();
+    // 日本語の物件種別を英語に変換
+    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+    console.log(`[Manual Sync] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+    
+    if (!englishPropertyType) {
+      console.error(`[Manual Sync] Invalid property type: "${property.property_type}"`);
+      return res.status(400).json({
+        success: false,
+        error: `Invalid property type: "${property.property_type}"`,
+        propertyNumber
+      });
+    }
+    
     const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
       propertyNumber,
-      property.property_type as 'land' | 'detached_house' | 'apartment'
+      englishPropertyType
     );
     
     if (syncSuccess) {
@@ -1735,9 +1864,24 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
         
         // AthomeSheetSyncServiceを使用して同期
         const athomeSheetSyncService = new AthomeSheetSyncService();
+        // 日本語の物件種別を英語に変換
+        const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+        console.log(`[Batch Sync] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
+        
+        if (!englishPropertyType) {
+          console.error(`[Batch Sync] ❌ ${propertyNumber}: Invalid property type "${property.property_type}"`);
+          results.failed++;
+          results.details.push({
+            propertyNumber,
+            success: false,
+            error: `Invalid property type: "${property.property_type}"`
+          });
+          continue;
+        }
+        
         const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
           propertyNumber,
-          property.property_type as 'land' | 'detached_house' | 'apartment'
+          englishPropertyType
         );
         
         if (syncSuccess) {
@@ -1782,6 +1926,16 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
     });
   }
 });
+
+// 業務管理システム用の認証ルート（物件公開サイトには影響なし）
+import authSupabaseRoutes from '../src/routes/auth.supabase';
+
+// OPTIONSリクエストを明示的に処理（プリフライトリクエスト対応）
+app.options('/api/auth/*', (req, res) => {
+  res.status(200).end();
+});
+
+app.use('/api/auth', authSupabaseRoutes);
 
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

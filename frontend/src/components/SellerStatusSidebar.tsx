@@ -352,17 +352,12 @@ export default function SellerStatusSidebar({
     prefix: string,
     color: string
   ) => {
-    // categoryCountsが存在しない場合は早期リターン
-    if (!categoryCounts) {
-      return null;
-    }
-    
     // categoryCountsからイニシャル別カウントを取得（APIから取得したデータを優先）
     const byAssigneeKey = category === 'visitScheduled' ? 'visitScheduledByAssignee' : 'visitCompletedByAssignee';
-    const byAssigneeData = categoryCounts[byAssigneeKey] || [];
+    const byAssigneeData = categoryCounts?.[byAssigneeKey] || [];
     
     // 当日TEL（担当）のカウントを取得
-    const todayCallAssignedData = categoryCounts.todayCallAssignedByAssignee || [];
+    const todayCallAssignedData = categoryCounts?.todayCallAssignedByAssignee || [];
     
     // APIからイニシャル別カウントが取得できた場合はそれを使用
     if (byAssigneeData.length > 0) {
@@ -863,7 +858,7 @@ export default function SellerStatusSidebar({
           const label = `担当(${group.initial})`;
           
           return (
-            <Box key={`assignee-${group.initial}`} sx={{ bgcolor: '#f5f5f5', borderRadius: 1, p: 0.5 }}>
+            <Box key={`assignee-${group.initial}`}>
               {/* 担当(イニシャル)ボタン */}
               <Button
                 fullWidth

@@ -313,7 +313,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -366,11 +366,15 @@ export class PropertyListingService {
       
       // NEW: 公開中のみ表示フィルター
       if (showPublicOnly) {
-        // atbb_statusに「公開中」が含まれる物件のみを表示
-        // nullや空文字列を除外し、明示的に「公開中」を含むもののみ
+        // atbb_statusに「公開中」「公開前」「非公開（配信メールのみ）」のいずれかが含まれる物件を表示
+        // 「一般・公開前」も「公開前」に含まれるため、正しく表示される
         query = query
           .not('atbb_status', 'is', null)
-          .ilike('atbb_status', '%公開中%');
+          .or(
+            'atbb_status.ilike.%公開中%,' +
+            'atbb_status.ilike.%公開前%,' +
+            'atbb_status.ilike.%非公開（配信メールのみ）%'
+          );
       }
       
       // NEW: 座標がある物件のみ取得（地図表示用）
@@ -411,8 +415,10 @@ export class PropertyListingService {
       
       // ソートとページネーション
       // 配信日（公開）の最新日順に並べ替え
+      // distribution_dateがNULLの物件は最後に表示
       query = query
         .order('distribution_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
       const { data, error, count } = await query;
@@ -427,8 +433,12 @@ export class PropertyListingService {
       
       if (skipImages) {
         // 画像取得をスキップ（地図ビュー用）
-        console.log('[PropertyListingService] Skipping image fetching (skipImages=true)');
+        console.log('🖼️🖼️🖼️ [PropertyListingService] Skipping image fetching (skipImages=true)');
+        console.log('🖼️🖼️🖼️ [PropertyListingService] Processing', (data || []).length, 'properties');
         for (const property of data || []) {
+          // デバッグ: atbb_statusの値を確認
+          console.log(`🎨🎨🎨 [PropertyListingService] Property ${property.property_number} atbb_status: "${property.atbb_status}"`);
+          
           const { price: _price, ...propertyWithoutPrice } = property; // priceカラムを除外
           propertiesWithImages.push({
             ...propertyWithoutPrice,

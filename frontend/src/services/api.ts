@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// 環境変数が正しく読み込まれないため、直接指定
+const API_BASE_URL = 'http://localhost:3001';
 
 // デバッグ用ログ
 console.log('🔍 [api] Environment:', {
@@ -14,6 +15,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 120秒（2分）のタイムアウト
 });
 
 // リクエストインターセプター（JWT認証トークンを追加）

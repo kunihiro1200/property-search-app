@@ -211,6 +211,82 @@ export class AuthService extends BaseRepository {
   }
 
   /**
+   * Supabaseトークンで認証
+   * @param accessToken Supabaseアクセストークン
+   * @returns 認証結果
+   */
+  async loginWithSupabaseToken(accessToken: string): Promise<AuthResult> {
+    try {
+      // Supabaseクライアントでユーザー情報を取得
+      const { data: { user }, error: userError } = await this.supabase.auth.getUser(accessToken);
+
+      if (userError || !user) {
+        throw new Error(`Failed to get user from Supabase: ${userError?.message || 'User not found'}`);
+      }
+
+      console.log('📝 Supabase user:', {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || user.user_metadata?.name,
+      });
+
+      // 既存の社員を検索（emailで）
+      const { data: existingEmployees, error: searchError } = await this.supabase
+        .from('employees')
+        .select('*')
+        .eq('email', user.email)
+        .limit(1);
+
+      if (searchError) {
+        throw new Error(`Failed to search employee: ${searchError.message}`);
+      }
+
+      let employee: Employee;
+
+      // 初回ログインの場合、社員アカウントを作成
+      if (!existingEmployees || existingEmployees.length === 0) {
+        employee = await this.createEmployee({
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email!,
+        });
+      } else {
+        employee = existingEmployees[0] as Employee;
+        
+        // 最終ログイン日時を更新
+        const { error: updateError } = await this.supabase
+          .from('employees')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('id', employee.id);
+
+        if (updateError) {
+          console.error('Failed to update last login:', updateError);
+        }
+        
+        employee.lastLoginAt = new Date();
+      }
+
+      // セッショントークンとリフレッシュトークンを生成
+      const sessionToken = this.generateSessionToken(employee);
+      const refreshToken = uuidv4();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24時間後
+
+      // Redisにセッション情報を保存
+      await this.saveSession(sessionToken, employee, refreshToken);
+
+      return {
+        employee,
+        sessionToken,
+        refreshToken,
+        expiresAt,
+      };
+    } catch (error: any) {
+      console.error('❌ loginWithSupabaseToken error:', error);
+      throw new Error(`Supabase authentication failed: ${error.message}`);
+    }
+  }
+
+  /**
    * トークンをリフレッシュ
    * @param refreshToken リフレッシュトークン
    * @returns 新しい認証結果

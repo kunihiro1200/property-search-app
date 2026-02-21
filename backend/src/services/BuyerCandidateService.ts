@@ -1,17 +1,19 @@
 // 買主候補抽出サービス
 import { createClient } from '@supabase/supabase-js';
+import { BeppuAreaMappingService } from './BeppuAreaMappingService';
+import { OitaCityAreaMappingService } from './OitaCityAreaMappingService';
+import { GeolocationService } from './GeolocationService';
 
 export interface BuyerCandidate {
-  id: string;
   buyer_number: string;
   name: string | null;
   latest_status: string | null;
-  inquiry_confidence: string | null;
   desired_area: string | null;
   desired_property_type: string | null;
   reception_date: string | null;
   email: string | null;
   phone_number: string | null;
+  inquiry_property_address: string | null;
 }
 
 export interface BuyerCandidateResponse {
@@ -22,17 +24,24 @@ export interface BuyerCandidateResponse {
     property_type: string | null;
     sales_price: number | null;
     distribution_areas: string | null;
+    address: string | null;
   };
 }
 
 export class BuyerCandidateService {
   private supabase;
+  private beppuAreaMappingService: BeppuAreaMappingService;
+  private oitaCityAreaMappingService: OitaCityAreaMappingService;
+  private geolocationService: GeolocationService;
 
   constructor() {
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY!
     );
+    this.beppuAreaMappingService = new BeppuAreaMappingService();
+    this.oitaCityAreaMappingService = new OitaCityAreaMappingService();
+    this.geolocationService = new GeolocationService();
   }
 
   /**
@@ -42,7 +51,7 @@ export class BuyerCandidateService {
     // 物件情報を取得
     const { data: property, error: propertyError } = await this.supabase
       .from('property_listings')
-      .select('property_number, property_type, sales_price, distribution_areas')
+      .select('*')
       .eq('property_number', propertyNumber)
       .single();
 
@@ -50,106 +59,201 @@ export class BuyerCandidateService {
       throw new Error('Property not found');
     }
 
-    // 買主を取得（最新状況/問合せ時確度でフィルタリング）
+    // 物件の住所からエリア番号をマッピング
+    const propertyAreaNumbers = await this.getAreaNumbersForProperty(property);
+
+    // 物件の座標を取得
+    const propertyCoords = await this.getPropertyCoordinates(property);
+
+    // 買主を取得（削除済みを除外、配信種別でフィルタリング）
+    // パフォーマンス最適化: シンプルなクエリで高速化
     const { data: buyers, error: buyersError } = await this.supabase
       .from('buyers')
-      .select(`
-        id,
-        buyer_number,
-        name,
-        latest_status,
-        inquiry_confidence,
-        inquiry_source,
-        distribution_type,
-        broker_inquiry,
-        desired_area,
-        desired_property_type,
-        price_range_house,
-        price_range_apartment,
-        price_range_land,
-        reception_date,
-        email,
-        phone_number
-      `)
-      .order('reception_date', { ascending: false, nullsFirst: false });
+      .select('buyer_number, name, latest_status, desired_area, desired_property_type, reception_date, email, phone_number, property_number, inquiry_source, distribution_type, broker_inquiry, price_range_house, price_range_apartment, price_range_land')
+      .is('deleted_at', null)  // 削除済みを除外
+      .eq('distribution_type', '要')  // 配信種別が「要」のみ
+      .not('latest_status', 'is', null)  // 最新状況が空欄を除外
+      .order('reception_date', { ascending: false, nullsFirst: false })
+      .limit(1000);  // 最大1000件
 
     if (buyersError) {
       throw new Error(`Failed to fetch buyers: ${buyersError.message}`);
     }
 
     // フィルタリング
-    const candidates = this.filterCandidates(
+    const candidates = await this.filterCandidates(
       buyers || [],
       property.property_type,
       property.sales_price,
-      property.distribution_areas
+      propertyAreaNumbers,
+      propertyCoords
     );
 
     // 最大50件に制限
     const limitedCandidates = candidates.slice(0, 50);
 
-    return {
-      candidates: limitedCandidates.map(b => ({
-        id: b.id,
+    // 全買主の問い合わせ物件番号を収集
+    const allPropertyNumbers = new Set<string>();
+    limitedCandidates.forEach(b => {
+      if (b.property_number) {
+        const numbers = b.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+        numbers.forEach(n => allPropertyNumbers.add(n));
+      }
+    });
+
+    // 一括で物件住所を取得
+    const propertyAddressMap = await this.getPropertyAddressesInBatch(Array.from(allPropertyNumbers));
+
+    // 各買主の問い合わせ物件住所を設定
+    const candidatesWithAddress = limitedCandidates.map(b => {
+      let inquiryPropertyAddress: string | null = null;
+      if (b.property_number) {
+        const firstPropertyNumber = b.property_number.split(',')[0].trim();
+        inquiryPropertyAddress = propertyAddressMap.get(firstPropertyNumber) || null;
+      }
+
+      return {
         buyer_number: b.buyer_number,
         name: b.name,
         latest_status: b.latest_status,
-        inquiry_confidence: b.inquiry_confidence,
         desired_area: b.desired_area,
         desired_property_type: b.desired_property_type,
         reception_date: b.reception_date,
         email: b.email,
         phone_number: b.phone_number,
-      })),
+        inquiry_property_address: inquiryPropertyAddress,
+      };
+    });
+
+    return {
+      candidates: candidatesWithAddress,
       total: limitedCandidates.length,
       property: {
         property_number: property.property_number,
         property_type: property.property_type,
         sales_price: property.sales_price,
-        distribution_areas: property.distribution_areas,
+        distribution_areas: propertyAreaNumbers.join(''),
+        address: property.address,
       },
     };
   }
 
   /**
+   * 複数の物件番号に対して住所を一括取得
+   */
+  private async getPropertyAddressesInBatch(propertyNumbers: string[]): Promise<Map<string, string>> {
+    const addressMap = new Map<string, string>();
+
+    if (propertyNumbers.length === 0) {
+      return addressMap;
+    }
+
+    try {
+      const { data: properties, error } = await this.supabase
+        .from('property_listings')
+        .select('property_number, address')
+        .in('property_number', propertyNumbers);
+
+      if (error) {
+        console.error(`[BuyerCandidateService] Error getting property addresses in batch:`, error);
+        return addressMap;
+      }
+
+      if (properties) {
+        properties.forEach(p => {
+          if (p.property_number && p.address) {
+            addressMap.set(p.property_number, p.address);
+          }
+        });
+      }
+
+      return addressMap;
+    } catch (error) {
+      console.error(`[BuyerCandidateService] Error in getPropertyAddressesInBatch:`, error);
+      return addressMap;
+    }
+  }
+
+  /**
+   * 買主が問い合わせた物件の住所を取得
+   */
+  private async getInquiryPropertyAddress(propertyNumber: string | null): Promise<string | null> {
+    if (!propertyNumber) {
+      return null;
+    }
+
+    try {
+      // カンマ区切りで複数の物件番号がある場合は最初の1件のみ
+      const firstPropertyNumber = propertyNumber.split(',')[0].trim();
+      
+      if (!firstPropertyNumber) {
+        return null;
+      }
+
+      const { data: property, error } = await this.supabase
+        .from('property_listings')
+        .select('address')
+        .eq('property_number', firstPropertyNumber)
+        .single();
+
+      if (error || !property) {
+        return null;
+      }
+
+      return property.address;
+    } catch (error) {
+      console.error(`[BuyerCandidateService] Error getting inquiry property address:`, error);
+      return null;
+    }
+  }
+
+  /**
    * 買主候補をフィルタリング
    */
-  private filterCandidates(
+  private async filterCandidates(
     buyers: any[],
     propertyType: string | null,
     salesPrice: number | null,
-    distributionAreas: string | null
-  ): any[] {
-    const propertyAreaNumbers = this.extractAreaNumbers(distributionAreas || '');
+    propertyAreaNumbers: string[],
+    propertyCoords: { lat: number; lng: number } | null
+  ): Promise<any[]> {
+    const filteredBuyers: any[] = [];
 
-    return buyers.filter(buyer => {
+    for (const buyer of buyers) {
       // 1. 除外条件の評価（早期リターン）
       if (this.shouldExcludeBuyer(buyer)) {
-        return false;
+        continue;
       }
 
       // 2. 最新状況/問合せ時確度フィルタ
       if (!this.matchesStatus(buyer)) {
-        return false;
+        continue;
       }
 
-      // 3. エリアフィルタ
-      if (!this.matchesAreaCriteria(buyer, propertyAreaNumbers)) {
-        return false;
+      // 3. エリアフィルタ（距離ベースも含む）
+      const matchesArea = await this.matchesAreaCriteriaWithDistance(
+        buyer,
+        propertyAreaNumbers,
+        propertyCoords
+      );
+      if (!matchesArea) {
+        continue;
       }
 
       // 4. 種別フィルタ
       if (!this.matchesPropertyTypeCriteria(buyer, propertyType)) {
-        return false;
+        continue;
       }
 
       // 5. 価格帯フィルタ
       if (!this.matchesPriceCriteria(buyer, salesPrice, propertyType)) {
-        return false;
+        continue;
       }
 
-      return true;
-    });
+      filteredBuyers.push(buyer);
+    }
+
+    return filteredBuyers;
   }
 
   /**
@@ -203,24 +307,33 @@ export class BuyerCandidateService {
    * 配信種別が「要」かどうかを判定
    */
   private hasDistributionRequired(buyer: any): boolean {
-    const distributionType = (buyer.distribution_type || '').trim();
-    return distributionType === '要';
+    // データベース側で既にフィルタリング済み
+    return true;
   }
 
   /**
    * 最新状況によるフィルタリング
-   * - 買付またはDを含む場合: 除外
-   * - それ以外: 条件を満たす
+   * - A、B、C、不明を含む場合: 条件を満たす
+   * - それ以外（買付、D、その他）: 除外
    */
   private matchesStatus(buyer: any): boolean {
     const latestStatus = (buyer.latest_status || '').trim();
 
-    // 買付またはDを含む場合は除外
-    if (latestStatus.includes('買付') || latestStatus.includes('D')) {
+    // 空欄の場合は除外（データベース側で既に除外済み）
+    if (!latestStatus) {
       return false;
     }
 
-    return true;
+    // A、B、C、不明を含む場合は条件を満たす
+    if (latestStatus.includes('A') || 
+        latestStatus.includes('B') || 
+        latestStatus.includes('C') || 
+        latestStatus.includes('不明')) {
+      return true;
+    }
+
+    // それ以外は除外
+    return false;
   }
 
   /**
@@ -253,11 +366,16 @@ export class BuyerCandidateService {
   }
 
   /**
-   * エリア条件によるフィルタリング
+   * エリア条件によるフィルタリング（距離ベースも含む）
    * - 買主の希望エリアが空欄の場合: 条件を満たす
    * - 物件の配信エリアと買主の希望エリアが1つでも合致: 条件を満たす
+   * - 買主が問い合わせた物件が半径3km以内: 条件を満たす（一時的に無効化）
    */
-  private matchesAreaCriteria(buyer: any, propertyAreaNumbers: string[]): boolean {
+  private async matchesAreaCriteriaWithDistance(
+    buyer: any,
+    propertyAreaNumbers: string[],
+    propertyCoords: { lat: number; lng: number } | null
+  ): Promise<boolean> {
     const desiredArea = (buyer.desired_area || '').trim();
 
     // 希望エリアが空欄の場合は条件を満たす
@@ -265,16 +383,82 @@ export class BuyerCandidateService {
       return true;
     }
 
-    // 物件の配信エリアが空欄の場合は条件を満たさない
-    if (propertyAreaNumbers.length === 0) {
-      return false;
+    // 1. エリア番号でのマッチング
+    if (propertyAreaNumbers.length > 0) {
+      const buyerAreaNumbers = this.extractAreaNumbers(desiredArea);
+      const areaMatch = propertyAreaNumbers.some(area => buyerAreaNumbers.includes(area));
+      if (areaMatch) {
+        return true;
+      }
     }
 
-    // 買主の希望エリアを抽出
-    const buyerAreaNumbers = this.extractAreaNumbers(desiredArea);
+    // 2. 距離ベースのマッチング（一時的に無効化 - パフォーマンス問題のため）
+    // if (propertyCoords) {
+    //   const distanceMatch = await this.matchesByInquiryDistance(buyer, propertyCoords);
+    //   if (distanceMatch) {
+    //     console.log(`[BuyerCandidateService] Distance match for buyer ${buyer.buyer_number}`);
+    //     return true;
+    //   }
+    // }
 
-    // 1つでも合致すれば条件を満たす
-    return propertyAreaNumbers.some(area => buyerAreaNumbers.includes(area));
+    return false;
+  }
+
+  /**
+   * 買主が問い合わせた物件との距離でマッチング
+   * 買主が過去に問い合わせた物件の座標から3km以内であれば条件を満たす
+   */
+  private async matchesByInquiryDistance(
+    buyer: any,
+    propertyCoords: { lat: number; lng: number }
+  ): Promise<boolean> {
+    try {
+      // 買主が問い合わせた物件番号を取得
+      const inquiryPropertyNumber = (buyer.property_number || '').trim();
+      if (!inquiryPropertyNumber) {
+        return false;
+      }
+
+      // カンマ区切りで複数の物件番号がある場合は分割（最初の1件のみチェック）
+      const firstPropertyNumber = inquiryPropertyNumber.split(',')[0].trim();
+      if (!firstPropertyNumber) {
+        return false;
+      }
+      
+      // 問い合わせ物件の情報を取得
+      const { data: inquiryProperty, error } = await this.supabase
+        .from('property_listings')
+        .select('google_map_url')
+        .eq('property_number', firstPropertyNumber)
+        .single();
+
+      if (error || !inquiryProperty || !inquiryProperty.google_map_url) {
+        return false;
+      }
+
+      // 問い合わせ物件の座標を取得
+      const inquiryCoords = await this.geolocationService.extractCoordinatesFromUrl(
+        inquiryProperty.google_map_url
+      );
+
+      if (!inquiryCoords) {
+        return false;
+      }
+
+      // 距離を計算
+      const distance = this.geolocationService.calculateDistance(
+        propertyCoords,
+        inquiryCoords
+      );
+
+      console.log(`[BuyerCandidateService] Distance from inquiry property ${firstPropertyNumber}: ${distance.toFixed(2)}km`);
+
+      // 3km以内であれば条件を満たす
+      return distance <= 3.0;
+    } catch (error) {
+      console.error(`[BuyerCandidateService] Error in distance matching:`, error);
+      return false;
+    }
   }
 
   /**
@@ -360,6 +544,86 @@ export class BuyerCandidateService {
   }
 
   /**
+   * 物件の住所からエリア番号を取得
+   * 1. distribution_areasフィールドから丸数字を抽出
+   * 2. 住所から詳細エリアマッピング（BeppuAreaMappingService、OitaCityAreaMappingService）
+   * 3. 市全体マッピング（大分市→㊵、別府市→㊶）
+   */
+  private async getAreaNumbersForProperty(property: any): Promise<string[]> {
+    const areaNumbers = new Set<string>();
+
+    // 1. distribution_areasフィールドから丸数字を抽出
+    const distributionAreas = property.distribution_areas || property.distribution_area || '';
+    if (distributionAreas) {
+      const extracted = this.extractAreaNumbers(distributionAreas);
+      extracted.forEach(num => areaNumbers.add(num));
+    }
+
+    // 2. 住所から詳細エリアマッピング
+    const address = (property.address || '').trim();
+    if (address) {
+      // 大分市の場合
+      if (address.includes('大分市')) {
+        // 市全体エリアを追加
+        areaNumbers.add('㊵');
+        
+        // 詳細エリアを取得（例: 萩原 → ②）
+        try {
+          const oitaAreas = await this.oitaCityAreaMappingService.getDistributionAreasForAddress(address);
+          if (oitaAreas) {
+            const detailedAreas = this.extractAreaNumbers(oitaAreas);
+            detailedAreas.forEach(num => areaNumbers.add(num));
+            console.log(`[BuyerCandidateService] Oita detailed areas for ${address}:`, detailedAreas);
+          }
+        } catch (error) {
+          console.error(`[BuyerCandidateService] Error getting Oita areas:`, error);
+        }
+      }
+      
+      // 別府市の場合
+      if (address.includes('別府市')) {
+        try {
+          const beppuAreas = await this.beppuAreaMappingService.getDistributionAreasForAddress(address);
+          if (beppuAreas) {
+            const detailedAreas = this.extractAreaNumbers(beppuAreas);
+            detailedAreas.forEach(num => areaNumbers.add(num));
+            console.log(`[BuyerCandidateService] Beppu detailed areas for ${address}:`, detailedAreas);
+          } else {
+            // マッピングが見つからない場合は別府市全体にフォールバック
+            areaNumbers.add('㊶');
+            console.log(`[BuyerCandidateService] No detailed mapping for ${address}, using ㊶`);
+          }
+        } catch (error) {
+          console.error(`[BuyerCandidateService] Error getting Beppu areas:`, error);
+          areaNumbers.add('㊶');
+        }
+      }
+    }
+
+    const result = Array.from(areaNumbers);
+    console.log(`[BuyerCandidateService] Final area numbers for property:`, result);
+    return result;
+  }
+
+  /**
+   * 物件の座標を取得
+   */
+  private async getPropertyCoordinates(property: any): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const googleMapUrl = property.google_map_url;
+      if (!googleMapUrl) {
+        return null;
+      }
+
+      const coords = await this.geolocationService.extractCoordinatesFromUrl(googleMapUrl);
+      return coords;
+    } catch (error) {
+      console.error(`[BuyerCandidateService] Error extracting coordinates:`, error);
+      return null;
+    }
+  }
+
+  /**
    * 種別を正規化
    */
   private normalizePropertyType(type: string): string {
@@ -395,8 +659,8 @@ export class BuyerCandidateService {
       .replace(/億/g, '00000000')
       .trim();
 
-    // 範囲パターン（〜、-、～）
-    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-]\s*(\d+)?/);
+    // 範囲パターン（〜、～、-、~）
+    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-~]\s*(\d+)?/);
     if (rangeMatch) {
       if (rangeMatch[1]) {
         min = parseInt(rangeMatch[1], 10);

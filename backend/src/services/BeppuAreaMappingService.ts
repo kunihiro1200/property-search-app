@@ -39,8 +39,8 @@ export class BeppuAreaMappingService {
       `[BeppuAreaMapping] Extracted region: ${regionName} from ${address}`
     );
 
-    // 2. データベースから配信エリアを検索
-    const areas = await this.lookupDistributionAreas(regionName);
+    // 2. コード内マッピングから配信エリアを検索
+    const areas = this.lookupDistributionAreasFromCode(regionName);
 
     if (areas) {
       console.log(
@@ -49,9 +49,78 @@ export class BeppuAreaMappingService {
       return areas;
     }
 
+    // 3. データベースから配信エリアを検索（フォールバック）
+    const dbAreas = await this.lookupDistributionAreas(regionName);
+
+    if (dbAreas) {
+      console.log(
+        `[BeppuAreaMapping] Found areas from DB: ${dbAreas} for region: ${regionName}`
+      );
+      return dbAreas;
+    }
+
     console.warn(
       `[BeppuAreaMapping] No mapping found for region: ${regionName}`
     );
+    return null;
+  }
+
+  /**
+   * コード内マッピングから配信エリアを検索
+   * @param regionName 地域名
+   * @returns 配信エリア番号 または null
+   */
+  private lookupDistributionAreasFromCode(regionName: string): string | null {
+    // ⑨ 青山中学校エリア
+    const aoyamaAreas: Record<string, string> = {
+      '南立石': '⑨㊸',
+      '堀田': '⑨',
+      '南荘園': '⑨㊸',
+      '観海寺': '⑨㊸',
+      '鶴見園町': '⑨㊸',
+      '扇山': '⑨',
+      '荘園': '⑨㊸',
+      '鶴見': '⑨', // 7組・9組・ルミエールの丘を除く
+    };
+
+    // ⑩ 中部中学校エリア
+    const chubuAreas: Record<string, string> = {
+      '荘園北町': '⑩㊸',
+      '緑丘町': '⑩㊸',
+      '東荘園': '⑩㊸',
+    };
+
+    // ㊷ 別府駅周辺エリア
+    const stationAreas: Record<string, string> = {
+      '中央町': '㊷',
+      '駅前本町': '㊷',
+      '上田の湯町': '㊷',
+      '野口中町': '㊷',
+      '西野口町': '㊷',
+      '駅前町': '㊷',
+    };
+
+    // ㊸ 鉄輪線より下エリア（特殊な鶴見）
+    const kannawaLineAreas: Record<string, string> = {
+      '鶴見7組': '㊸',
+      '鶴見9組': '㊸',
+      '鶴見ルミエールの丘': '㊸',
+    };
+
+    // 優先順位: 特殊な鶴見 > 駅周辺 > 中部 > 青山
+    if (kannawaLineAreas[regionName]) {
+      return kannawaLineAreas[regionName];
+    }
+    if (stationAreas[regionName]) {
+      return stationAreas[regionName];
+    }
+    if (chubuAreas[regionName]) {
+      return chubuAreas[regionName];
+    }
+    if (aoyamaAreas[regionName]) {
+      return aoyamaAreas[regionName];
+    }
+
     return null;
   }
 

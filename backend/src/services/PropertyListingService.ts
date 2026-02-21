@@ -71,6 +71,7 @@ export class PropertyListingService {
         image_url,
         google_map_url,
         atbb_status,
+        sidebar_status,
         special_notes,
         storage_location,
         seller_name,
@@ -95,8 +96,15 @@ export class PropertyListingService {
       query = query.eq('property_type', propertyType);
     }
 
-    // ソート
-    query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+    // ソート（配信日の場合、NULLを最後に）
+    if (orderBy === 'distribution_date') {
+      query = query.order(orderBy, { 
+        ascending: orderDirection === 'asc',
+        nullsFirst: false  // NULLを最後に
+      });
+    } else {
+      query = query.order(orderBy, { ascending: orderDirection === 'asc' });
+    }
 
     // ページネーション
     query = query.range(offset, offset + limit - 1);
@@ -296,7 +304,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -395,8 +403,12 @@ export class PropertyListingService {
       
       // ソートとページネーション
       // 配信日（公開）の最新日順に並べ替え
+      // distribution_dateがNULLの物件は最後に表示
+      // 注意: nullsFirst: falseはascending: falseの場合、NULLを最後に配置するはずだが
+      // 正しく動作しない場合があるため、2段階ソートを使用
       query = query
         .order('distribution_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
       const { data, error, count } = await query;
@@ -636,6 +648,44 @@ export class PropertyListingService {
         }
       }
       
+      // 画像を取得
+      let images: any[] = [];
+      try {
+        // 1. image_urlがある場合はそれを使用
+        if (data.image_url) {
+          console.log(`[PropertyListingService] Using image_url for ${propertyNumber}`);
+          // image_urlをオブジェクト形式に変換
+          images = [{
+            id: 'legacy',
+            name: 'Property Image',
+            thumbnailUrl: data.image_url,
+            fullImageUrl: data.image_url,
+            mimeType: 'image/jpeg',
+            size: 0,
+            modifiedTime: new Date().toISOString()
+          }];
+        }
+        // 2. storage_locationがある場合はGoogle Driveから取得
+        else if (storageLocation) {
+          console.log(`[PropertyListingService] Fetching images from Google Drive for ${propertyNumber}`);
+          
+          // PropertyImageServiceを使用して画像オブジェクトを取得
+          const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
+          
+          if (imageResult.images.length > 0) {
+            // 最初の画像のみを使用
+            images = [imageResult.images[0]];
+            console.log(`[PropertyListingService] Got image for ${propertyNumber}: ${images[0].thumbnailUrl}`);
+          } else {
+            console.log(`[PropertyListingService] No images found for ${propertyNumber}`);
+          }
+        } else {
+          console.log(`[PropertyListingService] No image source for ${propertyNumber}`);
+        }
+      } catch (imageError: any) {
+        console.error(`[PropertyListingService] Failed to fetch image for ${propertyNumber}:`, imageError.message);
+      }
+      
       // property_detailsテーブルから追加データを取得
       const { PropertyDetailsService } = await import('./PropertyDetailsService');
       const propertyDetailsService = new PropertyDetailsService();
@@ -650,7 +700,9 @@ export class PropertyListingService {
         property_about: details.property_about,
         recommended_comments: details.recommended_comments,
         athome_data: details.athome_data,
-        favorite_comment: details.favorite_comment
+        favorite_comment: details.favorite_comment,
+        // 画像を含める
+        images
       };
     } catch (error: any) {
       console.error('Error in getPublicPropertyByNumber:', error);

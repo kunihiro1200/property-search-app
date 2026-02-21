@@ -18,9 +18,8 @@ import {
   ListItemButton,
   ListItemText,
   Badge,
-  IconButton,
 } from '@mui/material';
-import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
+import { Search as SearchIcon } from '@mui/icons-material';
 import api from '../services/api';
 import WorkTaskDetailModal from '../components/WorkTaskDetailModal';
 import { WorkTask, getStatusCategories, filterTasksByStatus, calculateTaskStatus } from '../utils/workTaskStatusUtils';
@@ -28,12 +27,7 @@ import PageNavigation from '../components/PageNavigation';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 export default function WorkTasksPage() {
-  const workTaskColor = SECTION_COLORS?.task || {
-    main: '#f57c00',
-    light: '#ffb74d',
-    dark: '#e65100',
-    contrastText: '#ffffff',
-  };
+  const workTaskColor = SECTION_COLORS.workTask;
   const [allWorkTasks, setAllWorkTasks] = useState<WorkTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -84,18 +78,19 @@ export default function WorkTasksPage() {
 
   // 選択されたカテゴリでフィルタリング
   const filteredTasks = useMemo(() => {
-    // 検索クエリが入力されている場合は、カテゴリーに関係なく全件から検索
+    let tasks = filterTasksByStatus(allWorkTasks, selectedCategory);
+    
+    // 検索クエリでさらにフィルタリング
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return allWorkTasks.filter(t => 
+      tasks = tasks.filter(t => 
         t.property_number?.toLowerCase().includes(query) ||
         t.property_address?.toLowerCase().includes(query) ||
         t.seller_name?.toLowerCase().includes(query)
       );
     }
-
-    // 検索クエリがない場合は、選択されたカテゴリでフィルタリング
-    return filterTasksByStatus(allWorkTasks, selectedCategory);
+    
+    return tasks;
   }, [allWorkTasks, selectedCategory, searchQuery]);
 
   // ページネーション用
@@ -130,44 +125,6 @@ export default function WorkTasksPage() {
     }
   };
 
-  // カテゴリーラベルから日付を抽出して期限切れかチェック
-  const checkIfOverdue = (label: string): boolean => {
-    // M/D形式の日付を抽出（例: "2/19", "12/31"）
-    const dateMatch = label.match(/(\d{1,2})\/(\d{1,2})/);
-    if (!dateMatch) return false;
-
-    const month = parseInt(dateMatch[1], 10);
-    const day = parseInt(dateMatch[2], 10);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // 今年の日付として比較
-    const targetDate = new Date(today.getFullYear(), month - 1, day);
-    targetDate.setHours(0, 0, 0, 0);
-
-    // 当日以前（当日を含む）の場合はtrue
-    return targetDate <= today;
-  };
-
-  // カテゴリーラベルの日付部分を太字にする
-  const formatCategoryLabel = (label: string, isOverdue: boolean) => {
-    // M/D形式の日付を太字にする
-    const parts = label.split(/(\d{1,2}\/\d{1,2})/);
-
-    return (
-      <span>
-        {parts.map((part, index) => {
-          // 日付部分（M/D形式）の場合は太字
-          if (/^\d{1,2}\/\d{1,2}$/.test(part)) {
-            return <strong key={index}>{part}</strong>;
-          }
-          return <span key={index}>{part}</span>;
-        })}
-      </span>
-    );
-  };
-
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, color: workTaskColor.main }}>業務依頼</Typography>
@@ -177,59 +134,53 @@ export default function WorkTasksPage() {
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {/* 左サイドバー */}
-        <Paper sx={{ width: 400, flexShrink: 0 }}>
+        <Paper sx={{ width: 220, flexShrink: 0 }}>
           <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
             <Typography variant="subtitle1" fontWeight="bold">
               業務リスト
             </Typography>
           </Box>
           <List dense>
-            {statusCategories.map((cat) => {
-              // 日付を抽出して期限切れかチェック
-              const isOverdue = checkIfOverdue(cat.label);
-
-              return (
-                <ListItemButton
-                  key={cat.key}
-                  selected={selectedCategory === cat.key}
-                  onClick={() => handleCategoryChange(cat.key)}
-                  sx={{ 
-                    py: 0.5,
-                    '&.Mui-selected': { 
-                      bgcolor: `${workTaskColor.light}30`,
-                      color: workTaskColor.dark,
-                      '& .MuiListItemText-primary': {
-                        fontWeight: 600,
-                      }
+            {statusCategories.map((cat) => (
+              <ListItemButton
+                key={cat.key}
+                selected={selectedCategory === cat.key}
+                onClick={() => handleCategoryChange(cat.key)}
+                sx={{ 
+                  py: 0.5,
+                  '&.Mui-selected': { 
+                    bgcolor: `${workTaskColor.light}30`,
+                    color: workTaskColor.dark,
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 600,
+                    }
+                  }
+                }}
+              >
+                <ListItemText 
+                  primary={cat.label} 
+                  primaryTypographyProps={{ 
+                    variant: 'body2',
+                    sx: { 
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }
                   }}
-                >
-                  <ListItemText 
-                    primary={formatCategoryLabel(cat.label, isOverdue)} 
-                    primaryTypographyProps={{ 
-                      variant: 'body2',
-                      sx: { 
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: isOverdue ? 'error.main' : 'inherit',
-                      }
-                    }}
-                  />
-                  <Badge
-                    badgeContent={cat.count}
-                    max={999}
-                    sx={{ 
-                      ml: 1,
-                      '& .MuiBadge-badge': {
-                        bgcolor: workTaskColor.main,
-                        color: workTaskColor.contrastText,
-                      }
-                    }}
-                  />
-                </ListItemButton>
-              );
-            })}
+                />
+                <Badge
+                  badgeContent={cat.count}
+                  max={999}
+                  sx={{ 
+                    ml: 1,
+                    '& .MuiBadge-badge': {
+                      bgcolor: workTaskColor.main,
+                      color: workTaskColor.contrastText,
+                    }
+                  }}
+                />
+              </ListItemButton>
+            ))}
           </List>
         </Paper>
 
@@ -250,19 +201,6 @@ export default function WorkTasksPage() {
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: searchQuery && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setPage(0);
-                      }}
-                    >
-                      <ClearIcon />
-                    </IconButton>
                   </InputAdornment>
                 ),
               }}
@@ -300,6 +238,7 @@ export default function WorkTasksPage() {
                   <TableCell>媒介締め日</TableCell>
                   <TableCell>媒介完了</TableCell>
                   <TableCell>媒介備考</TableCell>
+                  <TableCell>ステータス</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -311,12 +250,13 @@ export default function WorkTasksPage() {
                   </TableRow>
                 ) : paginatedTasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">
+                    <TableCell colSpan={10} align="center">
                       業務データが見つかりませんでした
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedTasks.map((task) => {
+                    const status = calculateTaskStatus(task);
                     return (
                       <TableRow 
                         key={task.id} 
@@ -341,6 +281,16 @@ export default function WorkTasksPage() {
                         <TableCell>{formatDate(task.mediation_deadline)}</TableCell>
                         <TableCell>{task.mediation_completed || '-'}</TableCell>
                         <TableCell>{task.mediation_notes || '-'}</TableCell>
+                        <TableCell>
+                          {status && (
+                            <Chip 
+                              label={status} 
+                              size="small" 
+                              color={status.includes('未') || status.includes('要') ? 'warning' : 'default'}
+                              sx={{ maxWidth: 200, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                            />
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })

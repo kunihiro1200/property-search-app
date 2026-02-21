@@ -60,7 +60,7 @@
     "担当への伝言/質問事項": "message_to_assignee",
     "山本へチャット送信": "chat_to_yamamoto",
     "裏へチャット送信": "chat_to_ura",
-    "内覧形態": "viewing_type",
+    "内覧形態": "viewing_mobile",
     "担当への確認事項": "confirmation_to_assignee",
     "買付コメント（任意）": "offer_comment",
     "価格帯（戸建）": "price_range_house",
@@ -187,7 +187,8 @@
     "next_call_date": "date",
     "campaign_date": "date",
     "phone_duplicate_count": "number",
-    "price": "number"
+    "price": "number",
+    "viewing_time": "time"
   },
   "requiredFields": ["buyer_number"]
 }

@@ -8,6 +8,7 @@ import { EnhancedBuyerDistributionService } from '../services/EnhancedBuyerDistr
 import { DataIntegrityDiagnosticService } from '../services/DataIntegrityDiagnosticService';
 import { BuyerCandidateService } from '../services/BuyerCandidateService';
 import { UrlValidator } from '../utils/urlValidator';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 const propertyListingService = new PropertyListingService();
@@ -140,7 +141,7 @@ router.get('/:propertyNumber', async (req: Request, res: Response): Promise<void
 });
 
 // 更新
-router.put('/:propertyNumber', async (req: Request, res: Response) => {
+router.put('/:propertyNumber', authenticate, async (req: Request, res: Response) => {
   try {
     const { propertyNumber } = req.params;
     const updates = req.body;
@@ -154,6 +155,58 @@ router.put('/:propertyNumber', async (req: Request, res: Response) => {
         return res.status(400).json({ 
           error: 'Invalid distribution_areas format. Must contain only valid area numbers (①-⑯, ㊵, ㊶)' 
         });
+      }
+    }
+
+    // 価格変更時に値下げ履歴を自動追加
+    if (updates.price !== undefined || updates.sales_price !== undefined) {
+      // 現在の物件データを取得
+      const currentProperty = await propertyListingService.getByPropertyNumber(propertyNumber);
+      
+      if (currentProperty) {
+        // 新しい価格を取得（priceまたはsales_priceのどちらか）
+        const newPrice = updates.price !== undefined ? updates.price : updates.sales_price;
+        // 現在の価格を取得（priceまたはsales_priceのどちらか）
+        const oldPrice = currentProperty.price || currentProperty.sales_price;
+        
+        // 価格が変更された場合のみ履歴を追加
+        if (newPrice !== oldPrice && oldPrice !== null && oldPrice !== undefined && newPrice !== null) {
+          // ログインユーザーのイニシャルを取得
+          const userInitials = req.employee?.initials || 'U';
+          
+          // 現在の日付（月/日形式）
+          const now = new Date();
+          const month = now.getMonth() + 1;
+          const day = now.getDate();
+          const dateStr = `${month}/${day}`;
+          
+          // 価格を万円単位に変換
+          const oldPriceMan = Math.round(oldPrice / 10000);
+          const newPriceMan = Math.round(newPrice / 10000);
+          
+          // 新しい履歴エントリ: "K2/13 890万→790万"
+          const newHistoryEntry = `${userInitials}${dateStr} ${oldPriceMan}万→${newPriceMan}万`;
+          
+          // 既存の履歴の前に追加
+          const existingHistory = currentProperty.price_reduction_history || '';
+          updates.price_reduction_history = existingHistory 
+            ? `${newHistoryEntry}\n${existingHistory}`
+            : newHistoryEntry;
+          
+          console.log('[price-change] Auto-added price reduction history:', {
+            propertyNumber,
+            oldPrice,
+            newPrice,
+            userInitials,
+            userEmail: req.employee?.email,
+            newHistoryEntry
+          });
+        }
+        
+        // sales_priceが送信された場合、priceフィールドも更新
+        if (updates.sales_price !== undefined && updates.price === undefined) {
+          updates.price = updates.sales_price;
+        }
       }
     }
 

@@ -101,15 +101,10 @@ export class PropertyService {
    */
   async getPropertyBySellerId(sellerId: string, includeDeleted: boolean = false): Promise<PropertyInfo | null> {
     try {
-      let query = supabase
+      const query = supabase
         .from('properties')
         .select('*')
         .eq('seller_id', sellerId);
-
-      // Filter out deleted properties by default
-      if (!includeDeleted) {
-        query = query.is('deleted_at', null);
-      }
 
       const { data, error } = await query.single();
 

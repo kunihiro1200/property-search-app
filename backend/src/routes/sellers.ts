@@ -7,7 +7,66 @@ import { CreateSellerRequest, ListSellersParams } from '../types';
 const router = Router();
 const sellerService = new SellerService();
 
-// 全てのルートに認証を適用
+/**
+ * 売主番号で売主情報を取得（認証不要）
+ * GET /api/sellers/by-number/:sellerNumber
+ */
+router.get('/by-number/:sellerNumber', async (req: Request, res: Response) => {
+  try {
+    const { sellerNumber } = req.params;
+    console.log(`🔍 Getting seller by number: ${sellerNumber}`);
+
+    // 売主番号で検索
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
+    );
+
+    const { data: seller, error } = await supabase
+      .from('sellers')
+      .select('id, seller_number, latitude, longitude, property_address')
+      .eq('seller_number', sellerNumber)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !seller) {
+      console.log(`❌ Seller not found: ${sellerNumber}`);
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Seller not found',
+          retryable: false,
+        },
+      });
+    }
+
+    console.log(`✅ Seller found:`, {
+      sellerNumber: seller.seller_number,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+    });
+
+    res.json({
+      id: seller.id,
+      sellerNumber: seller.seller_number,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+      propertyAddress: seller.property_address,
+    });
+  } catch (error) {
+    console.error('Get seller by number error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_SELLER_ERROR',
+        message: 'Failed to get seller',
+        retryable: true,
+      },
+    });
+  }
+});
+
+// 全てのルートに認証を適用（/by-number/:sellerNumberを除く）
 router.use(authenticate);
 
 /**
@@ -83,7 +142,11 @@ router.get(
     query('firstCaller').optional().isString().withMessage('First caller must be a string'),
     query('duplicateConfirmed').optional().isBoolean().withMessage('Duplicate confirmed must be a boolean'),
     // サイドバーカテゴリフィルター
-    query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'unvaluated', 'mailingPending']).withMessage('Invalid status category'),
+    query('statusCategory').optional().isIn(['all', 'todayCall', 'todayCallWithInfo', 'todayCallAssigned', 'visitScheduled', 'visitCompleted', 'visitOther', 'unvaluated', 'mailingPending', 'todayCallNotStarted', 'pinrichEmpty']).withMessage('Invalid status category'),
+    // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+    query('visitAssignee').optional().isString().withMessage('Visit assignee must be a string'),
+    // 当日TEL（内容）のサブカテゴリフィルター
+    query('todayCallWithInfoLabel').optional().isString().withMessage('Today call with info label must be a string'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -118,6 +181,10 @@ router.get(
         duplicateConfirmed: req.query.duplicateConfirmed === 'true' ? true : req.query.duplicateConfirmed === 'false' ? false : undefined,
         // サイドバーカテゴリフィルター
         statusCategory: req.query.statusCategory as 'all' | 'todayCall' | 'todayCallWithInfo' | 'todayCallAssigned' | 'visitScheduled' | 'visitCompleted' | 'unvaluated' | 'mailingPending',
+        // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+        visitAssignee: req.query.visitAssignee as string,
+        // 当日TEL（内容）のサブカテゴリフィルター
+        todayCallWithInfoLabel: req.query.todayCallWithInfoLabel as string,
       };
 
       const result = await sellerService.listSellers(params);
@@ -745,5 +812,173 @@ router.get(
     }
   }
 );
+
+/**
+ * 売主の座標を更新
+ * PATCH /api/sellers/:id/coordinates
+ */
+router.patch(
+  '/:id/coordinates',
+  [
+    body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+    body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Validation failed',
+            details: errors.array(),
+            retryable: false,
+          },
+        });
+      }
+
+      const { id } = req.params;
+      const { latitude, longitude } = req.body;
+
+      console.log(`🗺️ Updating coordinates for seller ${id}:`, { latitude, longitude });
+
+      await sellerService.updateCoordinates(id, latitude, longitude);
+
+      res.json({
+        success: true,
+        message: 'Coordinates updated successfully',
+      });
+    } catch (error) {
+      console.error('Update coordinates error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'UPDATE_COORDINATES_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to update coordinates',
+      });
+    }
+  }
+);
+
+/**
+ * 売主の近隣買主リストを取得
+ * GET /api/sellers/:id/nearby-buyers
+ */
+router.get('/:id/nearby-buyers', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log(`🏘️ Getting nearby buyers for seller ${id}`);
+
+    // 売主情報を取得
+    const seller = await sellerService.getSeller(id);
+    if (!seller) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Seller not found',
+          retryable: false,
+        },
+      });
+    }
+
+    // 物件住所が設定されているか確認
+    if (!seller.propertyAddress) {
+      console.log(`⚠️ Property address not set for seller ${id}`);
+      return res.json({
+        buyers: [],
+        matchedAreas: [],
+        propertyAddress: null,
+        propertyType: null,
+        salesPrice: null,
+        message: '物件住所が設定されていません',
+      });
+    }
+
+    // 物件リストと同じ仕組みで配信エリアを計算
+    const { PropertyDistributionAreaCalculator } = await import('../services/PropertyDistributionAreaCalculator');
+    const { CityNameExtractor } = await import('../services/CityNameExtractor');
+    
+    const calculator = new PropertyDistributionAreaCalculator();
+    const cityExtractor = new CityNameExtractor();
+    
+    // Google Map URLと物件情報を取得（sellersテーブルから）
+    // 注意: 売主リストなので、property_listingsテーブルは使用しない
+    const googleMapUrl = seller.googleMapUrl || null;
+    const propertyType = seller.propertyType || null;
+    
+    // 売出価格を取得（査定額の中央値を使用）
+    let salesPrice: number | null = null;
+    const valuations = [
+      seller.valuationAmount1,
+      seller.valuationAmount2,
+      seller.valuationAmount3
+    ].filter(v => v !== null && v !== undefined) as number[];
+    
+    if (valuations.length > 0) {
+      // 中央値を計算
+      valuations.sort((a, b) => a - b);
+      const mid = Math.floor(valuations.length / 2);
+      salesPrice = valuations.length % 2 === 0
+        ? (valuations[mid - 1] + valuations[mid]) / 2
+        : valuations[mid];
+    }
+    
+    // 市名を物件住所から抽出
+    const city = cityExtractor.extractCityFromAddress(seller.propertyAddress);
+    
+    console.log(`📍 Calculating distribution areas for ${seller.propertyAddress}`, {
+      city,
+      citySource: 'extracted from address',
+      googleMapUrl: googleMapUrl ? 'あり' : 'なし',
+      propertyType,
+      salesPrice
+    });
+    
+    // 配信エリアを計算（物件リストと同じロジック）
+    const result = await calculator.calculateDistributionAreas(
+      googleMapUrl,
+      city,
+      seller.propertyAddress
+    );
+
+    console.log(`📍 Calculated distribution areas:`, result.areas);
+
+    // 配信エリアが空の場合
+    if (!result.areas || result.areas.length === 0) {
+      console.log(`⚠️ No distribution areas found for seller ${id}`);
+      return res.json({
+        buyers: [],
+        matchedAreas: [],
+        propertyAddress: seller.propertyAddress,
+        propertyType,
+        salesPrice,
+        message: '配信エリアを計算できませんでした',
+      });
+    }
+
+    // 該当エリアの買主を取得（物件種別と売出価格でフィルタリング）
+    const { BuyerService } = await import('../services/BuyerService');
+    const buyerService = new BuyerService();
+    const buyers = await buyerService.getBuyersByAreas(result.areas, propertyType, salesPrice);
+
+    console.log(`✅ Found ${buyers.length} nearby buyers for seller ${id} (after filtering)`);
+
+    res.json({
+      buyers,
+      matchedAreas: result.areas,
+      propertyAddress: seller.propertyAddress,
+      propertyType,
+      salesPrice,
+    });
+  } catch (error) {
+    console.error('Get nearby buyers error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_NEARBY_BUYERS_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to get nearby buyers',
+        retryable: true,
+      },
+    });
+  }
+});
 
 export default router;

@@ -1,0 +1,371 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Container,
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  TextField,
+  InputAdornment,
+  Chip,
+  List,
+  ListItemButton,
+  ListItemText,
+  Badge,
+} from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import ClearIcon from '@mui/icons-material/Clear';
+import IconButton from '@mui/material/IconButton';
+import api from '../services/api';
+import WorkTaskDetailModal from '../components/WorkTaskDetailModal';
+import { WorkTask, getStatusCategories, filterTasksByStatus, calculateTaskStatus } from '../utils/workTaskStatusUtils';
+import PageNavigation from '../components/PageNavigation';
+import { SECTION_COLORS } from '../theme/sectionColors';
+
+export default function WorkTasksPage() {
+  const workTaskColor = SECTION_COLORS.workTask;
+  const [allWorkTasks, setAllWorkTasks] = useState<WorkTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedPropertyNumber, setSelectedPropertyNumber] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleRowClick = (propertyNumber: string) => {
+    setSelectedPropertyNumber(propertyNumber);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setSelectedPropertyNumber(null);
+  };
+
+  useEffect(() => {
+    fetchAllWorkTasks();
+  }, []);
+
+  const fetchAllWorkTasks = async () => {
+    try {
+      setLoading(true);
+      // 全件取得してフロントエンドでフィルタリング
+      const response = await api.get('/api/work-tasks', {
+        params: {
+          limit: 1000,
+          offset: 0,
+          orderBy: 'created_at',
+          orderDirection: 'desc',
+        },
+      });
+      setAllWorkTasks(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch work tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ステータスカテゴリを計算（0件は除外）
+  const statusCategories = useMemo(() => {
+    return getStatusCategories(allWorkTasks);
+  }, [allWorkTasks]);
+
+  // 選択されたカテゴリでフィルタリング
+  const filteredTasks = useMemo(() => {
+    // 検索クエリが入力されている場合は、カテゴリーに関係なく全件から検索
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return allWorkTasks.filter(t => 
+        t.property_number?.toLowerCase().includes(query) ||
+        t.property_address?.toLowerCase().includes(query) ||
+        t.seller_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    // 検索クエリがない場合は、選択されたカテゴリでフィルタリング
+    return filterTasksByStatus(allWorkTasks, selectedCategory);
+  }, [allWorkTasks, selectedCategory, searchQuery]);
+
+  // ページネーション用
+  const paginatedTasks = useMemo(() => {
+    const start = page * rowsPerPage;
+    return filteredTasks.slice(start, start + rowsPerPage);
+  }, [filteredTasks, page, rowsPerPage]);
+
+  const total = filteredTasks.length;
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleCategoryChange = (key: string) => {
+    setSelectedCategory(key);
+    setPage(0); // カテゴリ変更時はページをリセット
+  };
+
+  // 日付フォーマット
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    try {
+      return new Date(dateStr).toLocaleDateString('ja-JP');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // カテゴリーラベルから日付を抽出して期限切れかチェック
+  const checkIfOverdue = (label: string): boolean => {
+    // M/D形式の日付を抽出（例: "2/19", "12/31"）
+    const dateMatch = label.match(/(\d{1,2})\/(\d{1,2})/);
+    if (!dateMatch) return false;
+
+    const month = parseInt(dateMatch[1], 10);
+    const day = parseInt(dateMatch[2], 10);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // 今年の日付として比較
+    const targetDate = new Date(today.getFullYear(), month - 1, day);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    // 当日以前（当日を含む）の場合はtrue
+    return targetDate <= today;
+  };
+
+  // カテゴリーラベルの日付部分を太字にする
+  const formatCategoryLabel = (label: string, isOverdue: boolean) => {
+    // M/D形式の日付を太字にする
+    const parts = label.split(/(\d{1,2}\/\d{1,2})/);
+    
+    return (
+      <span>
+        {parts.map((part, index) => {
+          // 日付部分（M/D形式）の場合は太字
+          if (/^\d{1,2}\/\d{1,2}$/.test(part)) {
+            return <strong key={index}>{part}</strong>;
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </span>
+    );
+  };
+
+  return (
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, color: workTaskColor.main }}>業務依頼</Typography>
+      
+      {/* ページナビゲーション */}
+      <PageNavigation />
+
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* 左サイドバー */}
+        <Paper sx={{ width: 400, flexShrink: 0 }}>
+          <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              業務リスト
+            </Typography>
+          </Box>
+          <List dense>
+            {statusCategories.map((cat) => {
+              // 日付を抽出して期限切れかチェック
+              const isOverdue = checkIfOverdue(cat.label);
+              
+              return (
+                <ListItemButton
+                  key={cat.key}
+                  selected={selectedCategory === cat.key}
+                  onClick={() => handleCategoryChange(cat.key)}
+                  sx={{ 
+                    py: 0.5,
+                    '&.Mui-selected': { 
+                      bgcolor: `${workTaskColor.light}30`,
+                      color: workTaskColor.dark,
+                      '& .MuiListItemText-primary': {
+                        fontWeight: 600,
+                      }
+                    }
+                  }}
+                >
+                  <ListItemText 
+                    primary={formatCategoryLabel(cat.label, isOverdue)}
+                    primaryTypographyProps={{ 
+                      variant: 'body2',
+                      sx: { 
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: isOverdue ? 'error.main' : 'inherit',
+                      }
+                    }}
+                  />
+                  <Badge
+                    badgeContent={cat.count}
+                    max={999}
+                    sx={{ 
+                      ml: 1,
+                      '& .MuiBadge-badge': {
+                        bgcolor: workTaskColor.main,
+                        color: workTaskColor.contrastText,
+                      }
+                    }}
+                  />
+                </ListItemButton>
+              );
+            })}
+          </List>
+        </Paper>
+
+        {/* メインコンテンツ */}
+        <Box sx={{ flex: 1 }}>
+          {/* 検索バー */}
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search 業務リスト（物件番号、所在、売主）"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(0);
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setPage(0);
+                      }}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Paper>
+
+          {/* 上部ページネーション */}
+          <Box sx={{ mb: 2 }}>
+            <Paper>
+              <TablePagination
+                rowsPerPageOptions={[25, 50, 100]}
+                component="div"
+                count={total}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="表示件数:"
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}件`}
+              />
+            </Paper>
+          </Box>
+
+          {/* テーブル */}
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: `${workTaskColor.light}20` }}>
+                  <TableCell>物件番号</TableCell>
+                  <TableCell>物件所在</TableCell>
+                  <TableCell>売主</TableCell>
+                  <TableCell>営業担当</TableCell>
+                  <TableCell>種別</TableCell>
+                  <TableCell>媒介形態</TableCell>
+                  <TableCell>媒介締め日</TableCell>
+                  <TableCell>媒介完了</TableCell>
+                  <TableCell>媒介備考</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      読み込み中...
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedTasks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">
+                      業務データが見つかりませんでした
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedTasks.map((task) => {
+                    return (
+                      <TableRow 
+                        key={task.id} 
+                        hover 
+                        onClick={() => task.property_number && handleRowClick(task.property_number)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="bold" sx={{ color: workTaskColor.main }}>
+                            {task.property_number || '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{task.property_address || '-'}</TableCell>
+                        <TableCell>{task.seller_name || '-'}</TableCell>
+                        <TableCell>{task.sales_assignee || '-'}</TableCell>
+                        <TableCell>{task.property_type || '-'}</TableCell>
+                        <TableCell>
+                          {task.mediation_type ? (
+                            <Chip label={task.mediation_type} size="small" color="default" />
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{formatDate(task.mediation_deadline)}</TableCell>
+                        <TableCell>{task.mediation_completed || '-'}</TableCell>
+                        <TableCell>{task.mediation_notes || '-'}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[25, 50, 100]}
+              component="div"
+              count={total}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="表示件数:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}件`}
+            />
+          </TableContainer>
+        </Box>
+      </Box>
+
+      {/* 詳細モーダル */}
+      <WorkTaskDetailModal
+        open={modalOpen}
+        onClose={handleModalClose}
+        propertyNumber={selectedPropertyNumber}
+        onUpdate={fetchAllWorkTasks}
+      />
+    </Container>
+  );
+}

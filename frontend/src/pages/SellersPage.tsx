@@ -1,3 +1,4 @@
+// 管理画面専用ページ - デプロイ分離テスト (admin-frontend)
 import { useState, useEffect } from 'react';
 import {
   Container,
@@ -16,12 +17,14 @@ import {
   Chip,
   InputAdornment,
   MenuItem,
+  IconButton,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
   Phone as PhoneIcon,
   FilterList as FilterListIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -59,6 +62,10 @@ interface Seller {
   confidenceLevel?: string;
   firstCallerInitials?: string;
   isUnreachable?: boolean;
+  // 訪問予定/訪問済み用フィールド
+  visitAssignee?: string;
+  visitDate?: string;
+  propertyAddress?: string;
 }
 
 const statusLabels: Record<string, string> = {
@@ -118,17 +125,26 @@ export default function SellersPage() {
   const [sidebarCounts, setSidebarCounts] = useState<{
     todayCall: number;
     todayCallWithInfo: number;
-    visitScheduled: number;
-    visitCompleted: number;
     unvaluated: number;
     mailingPending: number;
+    todayCallNotStarted: number;
+    pinrichEmpty: number;
+    assigneeGroups: {
+      initial: string;
+      totalCount: number;
+      todayCallCount: number;
+      otherCount: number;
+    }[];
+    todayCallWithInfoGroups: { label: string; count: number }[];
   }>({
     todayCall: 0,
     todayCallWithInfo: 0,
-    visitScheduled: 0,
-    visitCompleted: 0,
     unvaluated: 0,
     mailingPending: 0,
+    todayCallNotStarted: 0,
+    pinrichEmpty: 0,
+    assigneeGroups: [],
+    todayCallWithInfoGroups: [],
   });
   const [sidebarLoading, setSidebarLoading] = useState(true);
   
@@ -160,6 +176,26 @@ export default function SellersPage() {
       return savedCategory as StatusCategory;
     }
     return 'all';
+  });
+  
+  // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+  const [selectedVisitAssignee, setSelectedVisitAssignee] = useState<string | undefined>(() => {
+    const saved = sessionStorage.getItem('selectedVisitAssignee');
+    if (saved) {
+      sessionStorage.removeItem('selectedVisitAssignee');
+      return saved;
+    }
+    return undefined;
+  });
+
+  // 訪問ステータス（訪問予定 or 訪問済み）
+  const [selectedVisitStatus, setSelectedVisitStatus] = useState<'scheduled' | 'completed' | undefined>(() => {
+    const saved = sessionStorage.getItem('selectedVisitStatus');
+    if (saved) {
+      sessionStorage.removeItem('selectedVisitStatus');
+      return saved as 'scheduled' | 'completed';
+    }
+    return undefined;
   });
 
   // 自動同期の通知データ
@@ -249,10 +285,12 @@ export default function SellersPage() {
       setSidebarCounts({
         todayCall: 0,
         todayCallWithInfo: 0,
-        visitScheduled: 0,
-        visitCompleted: 0,
         unvaluated: 0,
         mailingPending: 0,
+        todayCallNotStarted: 0,
+        pinrichEmpty: 0,
+        assigneeGroups: [],
+        todayCallWithInfoGroups: [],
       });
     } finally {
       setSidebarLoading(false);
@@ -264,14 +302,34 @@ export default function SellersPage() {
     fetchSidebarCounts();
   }, []);
 
+  // カテゴリまたは営担が変更された時、ページを0にリセット
   useEffect(() => {
+    setPage(0);
+  }, [selectedCategory, selectedVisitAssignee, selectedVisitStatus]);
+
+  useEffect(() => {
+    console.log('[SellersPage] Fetching sellers with:', {
+      selectedCategory,
+      selectedVisitAssignee,
+      selectedVisitStatus,
+      page,
+      rowsPerPage
+    });
     fetchSellers();
-  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory]);
+  }, [page, rowsPerPage, inquirySourceFilter, confidenceLevelFilter, showUnreachableOnly, selectedCategory, selectedVisitAssignee, selectedVisitStatus]);
 
   const fetchSellers = async () => {
     try {
       setLoading(true);
-      const params: any = {
+      
+      // その他（担当）カテゴリの場合、visitAssigneeが設定されるまで待つ
+      if (selectedCategory === 'visitOther' && !selectedVisitAssignee) {
+        console.log('[fetchSellers] Skipping request: visitOther category without assignee');
+        setLoading(false);
+        return;
+      }
+      
+      let params: any = {
         page: page + 1,
         pageSize: rowsPerPage,
         sortBy: 'inquiry_date',
@@ -294,11 +352,61 @@ export default function SellersPage() {
         params.statusCategory = selectedCategory;
       }
       
+      // 当日TEL（内容）のサブカテゴリフィルター
+      if (selectedCategory === 'todayCallWithInfo' && selectedVisitAssignee) {
+        params.todayCallWithInfoLabel = selectedVisitAssignee;
+      }
+      
+      // 訪問予定/訪問済みの営担フィルター（イニシャル指定）
+      if ((selectedCategory === 'visitScheduled' || selectedCategory === 'visitCompleted') && selectedVisitAssignee) {
+        params.visitAssignee = selectedVisitAssignee;
+      }
+      
+      // 当日TEL（担当）の営担フィルター（イニシャル指定）
+      if (selectedCategory === 'todayCallAssigned' && selectedVisitAssignee) {
+        params.visitAssignee = selectedVisitAssignee;
+        // 訪問ステータスを渡す（訪問予定 or 訪問済み）
+        if (selectedVisitStatus) {
+          params.visitStatus = selectedVisitStatus;
+        }
+      }
+      
+      // その他（担当）の営担フィルター（イニシャル指定）
+      console.log('[fetchSellers] Before visitOther check:', {
+        selectedCategory,
+        selectedVisitAssignee,
+        categoryType: typeof selectedCategory,
+        assigneeType: typeof selectedVisitAssignee,
+        categoryEquals: selectedCategory === 'visitOther',
+        assigneeTruthy: !!selectedVisitAssignee
+      });
+      if (selectedCategory === 'visitOther' && selectedVisitAssignee) {
+        // 🚨 重要: paramsオブジェクトを直接変更するのではなく、新しいオブジェクトを作成
+        params = {
+          ...params,
+          visitAssignee: selectedVisitAssignee
+        };
+        console.log('[fetchSellers] visitOther category selected with assignee:', selectedVisitAssignee);
+        console.log('[fetchSellers] params after setting visitAssignee:', JSON.stringify(params));
+      }
+      
+      console.log('[listSellers] Requesting with params:', params);
       const response = await api.get('/api/sellers', { params });
+      console.log('[listSellers] Response received:', {
+        dataLength: response.data.data?.length,
+        total: response.data.total
+      });
+      
       setSellers(response.data.data);
       setTotal(response.data.total);
-    } catch (error) {
-      console.error('Failed to fetch sellers:', error);
+    } catch (error: any) {
+      console.error('[listSellers] Failed to fetch sellers:', error);
+      console.error('[listSellers] Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     } finally {
       setLoading(false);
     }
@@ -402,14 +510,18 @@ export default function SellersPage() {
         <PageNavigation />
 
         {/* サイドバーとメインコンテンツのレイアウト */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, overflow: 'visible' }}>
           {/* 左側サイドバー - SellerStatusSidebarコンポーネントを使用 */}
           <SellerStatusSidebar
             categoryCounts={categoryCounts}
             selectedCategory={selectedCategory}
-            onCategorySelect={(category) => {
+            selectedVisitAssignee={selectedVisitAssignee}
+            onCategorySelect={(category, visitAssignee, visitStatus) => {
+              console.log('[onCategorySelect] Called with:', { category, visitAssignee, visitStatus });
               setSelectedCategory(category);
-              setPage(0); // カテゴリが変わったらページを0にリセット
+              setSelectedVisitAssignee(visitAssignee);
+              setSelectedVisitStatus(visitStatus);
+              console.log('[onCategorySelect] State will be updated to:', { category, visitAssignee, visitStatus });
             }}
             isCallMode={false}
             sellers={sellers}
@@ -417,9 +529,20 @@ export default function SellersPage() {
           />
 
           {/* メインコンテンツ */}
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, position: 'relative' }}>
 
-        <Paper sx={{ p: 2, mb: 3 }}>
+        {/* 検索バー - スクロールしても固定表示 */}
+        <Paper 
+          sx={{ 
+            p: 2, 
+            mb: 3,
+            position: 'sticky',
+            top: 64, // ヘッダーの高さ分オフセット
+            zIndex: 100,
+            backgroundColor: 'background.paper',
+            boxShadow: 2,
+          }}
+        >
           <Box sx={{ display: 'flex', gap: 2, mb: showFilters ? 2 : 0 }}>
             <TextField
               fullWidth
@@ -434,7 +557,26 @@ export default function SellersPage() {
                   </InputAdornment>
                 ),
                 endAdornment: (
-                  <Button onClick={handleSearch}>検索</Button>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {/* 検索条件クリアボタン（×ボタン） */}
+                    {searchQuery && (
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setSearchQuery('');
+                          fetchSellers(); // 検索をクリアして全件表示
+                        }}
+                        sx={{ 
+                          color: 'text.secondary',
+                          '&:hover': { color: 'error.main' }
+                        }}
+                        title="検索条件をクリア"
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                    <Button onClick={handleSearch}>検索</Button>
+                  </Box>
                 ),
               }}
             />

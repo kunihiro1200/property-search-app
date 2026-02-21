@@ -1937,20 +1937,19 @@ export class EnhancedAutoSyncService {
   }
 
   /**
-   * Phase 4.6: 新規物件追加同期と既存物件更新同期を実行
-   * PropertyListingSyncService.syncNewProperties()とsyncUpdatedPropertyListings()を呼び出し
+   * Phase 4.6: 新規物件追加同期を実行
+   * PropertyListingSyncService.syncNewProperties()を呼び出し
    */
   async syncNewPropertyAddition(): Promise<{
     success: boolean;
     added: number;
-    updated: number;
     failed: number;
     duration_ms: number;
   }> {
     const startTime = Date.now();
 
     try {
-      console.log('🆕 Starting property sync (new + updates)...');
+      console.log('🆕 Starting new property addition sync...');
 
       // PropertyListingSyncServiceを初期化
       const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
@@ -1970,36 +1969,27 @@ export class EnhancedAutoSyncService {
 
       const syncService = new PropertyListingSyncService(sheetsClient);
 
-      // 1. 新規物件追加同期を実行
-      console.log('📝 Step 1: Syncing new properties...');
-      const newResult = await syncService.syncNewProperties();
-      console.log(`✅ New properties: ${newResult.added} added, ${newResult.failed} failed`);
-
-      // 2. 既存物件更新同期を実行
-      console.log('🔄 Step 2: Syncing property updates...');
-      const updateResult = await syncService.syncUpdatedPropertyListings();
-      console.log(`✅ Property updates: ${updateResult.updated} updated, ${updateResult.failed} failed`);
+      // 新規物件追加同期を実行
+      const result = await syncService.syncNewProperties();
 
       const duration_ms = Date.now() - startTime;
 
-      console.log(`✅ Property sync completed: ${newResult.added} added, ${updateResult.updated} updated, ${newResult.failed + updateResult.failed} failed`);
+      console.log(`✅ New property addition sync completed: ${result.added} added, ${result.failed} failed`);
 
       return {
-        success: (newResult.failed + updateResult.failed) === 0,
-        added: newResult.added,
-        updated: updateResult.updated,
-        failed: newResult.failed + updateResult.failed,
+        success: result.failed === 0,
+        added: result.added,
+        failed: result.failed,
         duration_ms
       };
 
     } catch (error: any) {
       const duration_ms = Date.now() - startTime;
-      console.error('❌ Property sync failed:', error.message);
+      console.error('❌ New property addition sync failed:', error.message);
 
       return {
         success: false,
         added: 0,
-        updated: 0,
         failed: 1,
         duration_ms
       };
@@ -2274,16 +2264,16 @@ export class EnhancedAutoSyncService {
         duration_ms: 0,
       };
 
-      // Phase 4.6: 物件同期（新規追加 + 既存更新）
-      console.log('\n🆕 Phase 4.6: Property Sync (New + Updates)');
-      console.log('   Syncing properties from spreadsheet...');
+      // Phase 4.6: 新規物件追加同期
+      console.log('\n🆕 Phase 4.6: New Property Addition Sync');
+      console.log('   Syncing new properties from spreadsheet...');
       
       const newPropertyAdditionResult = await this.syncNewPropertyAddition();
       
       if (newPropertyAdditionResult.success) {
-        console.log(`✅ Property sync completed: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.updated} updated, ${newPropertyAdditionResult.failed} failed`);
+        console.log(`✅ New property addition sync completed: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.failed} failed`);
       } else {
-        console.log(`⚠️  Property sync completed with errors: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.updated} updated, ${newPropertyAdditionResult.failed} failed`);
+        console.log(`⚠️  New property addition sync completed with errors: ${newPropertyAdditionResult.added} added, ${newPropertyAdditionResult.failed} failed`);
       }
 
       // Phase 4.7: property_details同期

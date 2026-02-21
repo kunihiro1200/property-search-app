@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase接続テスト</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #357ae8;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .warning {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Supabase接続テスト</h1>
+        
+        <div>
+            <button onclick="testConnection()">1. 接続テスト</button>
+            <button onclick="testGoogleLogin()">2. Googleログインテスト</button>
+            <button onclick="clearLog()">ログをクリア</button>
+        </div>
+
+        <div id="log" class="log">
+            <div class="log-entry info">準備完了。テストボタンをクリックしてください。</div>
+        </div>
+    </div>
+
+    <script>
+        // 環境変数（.envファイルから手動でコピー）
+        const SUPABASE_URL = 'https://fzcuexscuwhoywcicdqq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Y3VleHNjdXdob3l3Y2ljZHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0ODc3MDUsImV4cCI6MjA4MDA2MzcwNX0.rsmIbn3XqXs3oHIcG-W8wEnjgP7ocu6p3iIAmcg0Ak4';
+
+        // Supabaseクライアントを作成
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true,
+            },
+        });
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div class="log-entry info">ログをクリアしました。</div>';
+        }
+
+        async function testConnection() {
+            log('🔵 接続テストを開始...', 'info');
+            
+            try {
+                // 環境変数の確認
+                log(`SUPABASE_URL: ${SUPABASE_URL}`, 'info');
+                log(`SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY.substring(0, 20)}...`, 'info');
+                
+                // Supabaseクライアントの確認
+                log('Supabaseクライアントを作成しました', 'success');
+                
+                // 基本的な接続テスト
+                const { data, error } = await supabase.from('employees').select('count').limit(1);
+                
+                if (error) {
+                    log(`❌ 接続エラー: ${error.message}`, 'error');
+                    log(`エラー詳細: ${JSON.stringify(error)}`, 'error');
+                } else {
+                    log('✅ Supabase接続成功！', 'success');
+                    log(`データ: ${JSON.stringify(data)}`, 'info');
+                }
+            } catch (error) {
+                log(`❌ 予期しないエラー: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function testGoogleLogin() {
+            log('🔵 Googleログインテストを開始...', 'info');
+            
+            try {
+                log('signInWithOAuthを呼び出します...', 'info');
+                
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${window.location.origin}/auth/callback`,
+                    },
+                });
+
+                if (error) {
+                    log(`❌ ログインエラー: ${error.message}`, 'error');
+                    log(`エラー詳細: ${JSON.stringify(error)}`, 'error');
+                } else {
+                    log('✅ ログインリクエスト成功！', 'success');
+                    log(`URL: ${data.url}`, 'info');
+                    log(`Provider: ${data.provider}`, 'info');
+                    log('Googleログイン画面にリダイレクトされます...', 'warning');
+                    
+                    // 実際にリダイレクト
+                    setTimeout(() => {
+                        window.location.href = data.url;
+                    }, 2000);
+                }
+            } catch (error) {
+                log(`❌ 予期しないエラー: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // ページ読み込み時の初期化
+        window.addEventListener('load', () => {
+            log('ページが読み込まれました', 'success');
+            log('Supabaseクライアントが初期化されました', 'success');
+        });
+    </script>
+</body>
+</html>

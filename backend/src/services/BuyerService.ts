@@ -2072,44 +2072,61 @@ export class BuyerService {
     console.log(`[BuyerService.getBuyersByAreas] Property type:`, propertyType);
     console.log(`[BuyerService.getBuyersByAreas] Sales price:`, salesPrice);
 
-    // パフォーマンス最適化：最大取得件数を制限
-    const MAX_BUYERS = 100; // 最大100件まで取得（パフォーマンス改善）
+    // 全ての買主を取得（フィルタリングは後で行う）
+    // ソートはフィルタリング後にJavaScript側で行う（複雑なソート条件のため）
+    // 注意: Supabase Postgrestのmax-rows設定により、1回のクエリで取得できる最大件数が制限されている
+    // そのため、ページネーションを使用して全件取得する
+    const allBuyers: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
+    let hasMore = true;
 
-    const { data, error } = await this.supabase
-      .from('buyers')
-      .select(`
-        buyer_number,
-        name,
-        latest_status,
-        latest_viewing_date,
-        inquiry_confidence,
-        inquiry_source,
-        distribution_type,
-        distribution_areas,
-        broker_inquiry,
-        desired_area,
-        desired_property_type,
-        price_range_house,
-        price_range_apartment,
-        price_range_land,
-        reception_date,
-        email,
-        phone_number,
-        inquiry_hearing,
-        viewing_result_follow_up,
-        property_number
-      `)
-      .is('deleted_at', null) // 削除済みを除外
-      .order('reception_date', { ascending: false, nullsFirst: false }) // 受付日の新しい順
-      .limit(MAX_BUYERS);
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('buyers')
+        .select(`
+          buyer_id,
+          buyer_number,
+          name,
+          latest_status,
+          latest_viewing_date,
+          inquiry_confidence,
+          inquiry_source,
+          distribution_type,
+          distribution_areas,
+          broker_inquiry,
+          desired_area,
+          desired_property_type,
+          price_range_house,
+          price_range_apartment,
+          price_range_land,
+          reception_date,
+          email,
+          phone_number
+        `)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    if (error) {
-      console.error(`[BuyerService.getBuyersByAreas] Error:`, error);
-      throw new Error(`Failed to fetch buyers by areas: ${error.message}`);
+      if (error) {
+        console.error(`[BuyerService.getBuyersByAreas] Error:`, error);
+        throw new Error(`Failed to fetch buyers by areas: ${error.message}`);
+      }
+
+      if (data && data.length > 0) {
+        allBuyers.push(...data);
+        console.log(`[BuyerService.getBuyersByAreas] Fetched page ${page + 1}: ${data.length} buyers (total: ${allBuyers.length})`);
+        
+        // 取得したデータが pageSize より少ない場合は、これが最後のページ
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
-    const allBuyers = data || [];
-    console.log(`[BuyerService.getBuyersByAreas] Fetched ${allBuyers.length} buyers from database`);
+    console.log(`[BuyerService.getBuyersByAreas] Fetched ${allBuyers.length} buyers from database (${page + 1} pages)`);
 
     // BuyerCandidateServiceと同じ条件でフィルタリング
     const filteredBuyers = this.filterBuyerCandidates(
@@ -2133,48 +2150,7 @@ export class BuyerService {
       distribution_areas: this.parseDistributionAreas(buyer.distribution_areas || buyer.desired_area)
     }));
     
-    // 物件番号を収集（重複を除外）
-    const propertyNumbers = Array.from(
-      new Set(
-        buyersWithParsedAreas
-          .map(buyer => buyer.property_number)
-          .filter(pn => pn)
-      )
-    );
-    
-    // 物件情報を一括取得（N+1問題を回避）
-    let propertyMap = new Map<string, any>();
-    if (propertyNumbers.length > 0) {
-      console.log(`[BuyerService.getBuyersByAreas] Fetching ${propertyNumbers.length} properties in bulk`);
-      
-      const { data: properties, error } = await this.supabase
-        .from('property_listings')
-        .select('property_number, address, property_type, price, sales_price')
-        .in('property_number', propertyNumbers);
-      
-      if (!error && properties) {
-        properties.forEach(property => {
-          propertyMap.set(property.property_number, property);
-        });
-        console.log(`[BuyerService.getBuyersByAreas] Fetched ${properties.length} properties`);
-      } else if (error) {
-        console.error(`[BuyerService.getBuyersByAreas] Failed to fetch properties:`, error);
-      }
-    }
-    
-    // 買主に物件情報を追加
-    const buyersWithPropertyInfo = buyersWithParsedAreas.map(buyer => {
-      const property = buyer.property_number ? propertyMap.get(buyer.property_number) : null;
-      
-      return {
-        ...buyer,
-        property_address: property?.address || null,
-        inquiry_property_type: property?.property_type || null,
-        inquiry_price: property?.price || property?.sales_price || null
-      };
-    });
-    
-    return buyersWithPropertyInfo;
+    return buyersWithParsedAreas;
   }
   
   /**
@@ -2385,8 +2361,8 @@ export class BuyerService {
   private matchesStatus(buyer: any): boolean {
     const latestStatus = (buyer.latest_status || '').trim();
 
-    // 買付、買、D、またはEを含む場合は除外
-    if (latestStatus.includes('買付') || latestStatus.includes('買') || latestStatus.includes('D') || latestStatus.includes('E')) {
+    // 買付またはDを含む場合は除外
+    if (latestStatus.includes('買付') || latestStatus.includes('D')) {
       return false;
     }
 

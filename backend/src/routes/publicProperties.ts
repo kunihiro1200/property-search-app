@@ -17,8 +17,17 @@ import { z } from 'zod';
 const router = Router();
 
 // Supabase クライアントの初期化
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Supabase environment variables are missing:', {
+    SUPABASE_URL: supabaseUrl ? 'Set' : 'Missing',
+    SUPABASE_SERVICE_KEY: supabaseServiceKey ? 'Set' : 'Missing',
+  });
+  throw new Error('Supabase environment variables are required');
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const propertyListingService = new PropertyListingService();
@@ -594,7 +603,7 @@ router.get('/properties/:id/images', async (req: Request, res: Response): Promis
     }
 
     // 格納先URLから画像を取得
-    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
+    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
     // 非表示画像リストを取得（UUIDを使用）
     const hiddenImages = await propertyListingService.getHiddenImages(property.id);
@@ -1218,7 +1227,7 @@ router.post('/properties/:identifier/clear-image-cache', async (req: Request, re
 
     // 画像表示時と同じロジックで実際のフォルダIDを取得
     // （athome公開フォルダが存在する場合はそのID、なければ親フォルダID）
-    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
+    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
     const actualFolderId = result.folderId || parentFolderId;
     
     console.log(`📁 Parent folder ID: ${parentFolderId}`);
@@ -1321,7 +1330,7 @@ router.post('/properties/:identifier/refresh-essential', async (req: Request, re
         propertyImageService.clearCache(folderId);
       }
       
-      const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
+      const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
       
       // 非表示画像をフィルタリング
       const hiddenImages = await propertyListingService.getHiddenImages(property.id);
@@ -1422,7 +1431,7 @@ router.post('/properties/:identifier/refresh-all', async (req: Request, res: Res
         propertyImageService.clearCache(folderId);
       }
       
-      const result = await propertyImageService.getImagesFromStorageUrl(storageUrl, property.property_number);
+      const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
       const hiddenImages = await propertyListingService.getHiddenImages(property.id);
       images = result.images.filter(img => !hiddenImages.includes(img.id));
       

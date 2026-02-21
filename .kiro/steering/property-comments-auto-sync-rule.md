@@ -1,277 +1,157 @@
----
-inclusion: manual
----
+# 物件コメントデータ自動同期ルール（絶対に守るべきルール）
 
-# 物件コメントデータ自動同期ルール（絶対に間違えないルール）
+## ⚠️ 最重要：2つの同期の違い
 
-## ⚠️ 重要：コメントデータは自動同期される
+### 1. 物件リスト同期（Phase 4.6）
+**対象**: スプレッドシート「物件」シートに存在する**全ての物件**
+- `atbb_status`の値に関係なく、全て同期
+- `work_tasks`の有無に関係なく、全て同期
+- **AA13527-2も対象**
 
-公開物件サイトのコメントデータは、**自動同期サービスによって5分ごとに同期されます**。
-
-**手動同期は不要です。**
-
----
-
-## 🚨 最重要：データ取得元の定義
-
-### 「こちらの物件について」（property_about）
-
-**取得元**: **物件リストスプレッドシートのBQ列（●内覧前伝達事項）**
-
-| フィールド | データベースカラム | 取得元 | 列位置 | ヘッダー名 |
-|-----------|------------------|--------|--------|-----------|
-| **こちらの物件について** | `property_about` | **物件リストスプレッドシート** | **BQ列** | **●内覧前伝達事項** |
-
-**⚠️ 絶対に間違えないこと**:
-- ❌ 個別物件スプレッドシートのathomeシートから取得 ← **間違い**
-- ✅ 物件リストスプレッドシートのBQ列（●内覧前伝達事項）から取得 ← **正しい**
-
-### その他のコメントデータ
-
-| フィールド | データベースカラム | 取得元 | セル位置（物件種別ごと） |
-|-----------|------------------|--------|------------------------|
-| お気に入り文言 | `favorite_comment` | 個別物件スプレッドシートの`athome`シート | 土地: B53, 戸建て: B142, マンション: B150 |
-| アピールポイント | `recommended_comments` | 個別物件スプレッドシートの`athome`シート | 土地: B63:L79, 戸建て: B152:L166, マンション: B149:L163 |
-| パノラマURL | `athome_data` | 個別物件スプレッドシートの`athome`シート | 全種別共通: N1 |
+### 2. コメント同期（Phase 4.7）
+**対象**: 業務依頼シート（スプレッドシート）に`spreadsheet_url`が入っている物件のみ
+- 個別物件スプレッドシートが存在する物件のみ
+- `athome`シートからコメントデータを取得
+- **AA13527-2も対象**（業務依頼シートにスプレッドシートURLが存在するため）
+- **work_tasksテーブルへの依存を解消**（2026年2月3日修正）
 
 ---
 
-## 🔄 自動同期の仕組み
+## 📋 Phase 4.7: property_details同期（コメント同期）
 
-### Phase 4.5/4.6: property_listings同期
+**実装**: `EnhancedAutoSyncService.syncMissingPropertyDetails()`
 
-**同期内容**:
-- 物件基本情報（物件番号、住所、価格など）
-- **注意**: `property_about`はPhase 4.5/4.6では同期されない（Phase 4.7で同期）
+**実行タイミング**: **5分ごと**の自動同期で実行
 
-### Phase 4.7: property_details同期
+**対象物件**:
+1. 業務依頼シート（スプレッドシート）に`spreadsheet_url`が入っている物件
+2. `property_details`テーブルにコメントデータが空の物件
 
-**実行タイミング**: 5分ごと（自動同期サービスの一部として）
+**処理内容**:
+1. 業務依頼シートから物件番号と`spreadsheet_url`を取得（60分間キャッシュ）
+2. これらの物件の`property_details`を確認
+3. コメントデータが空の物件を検出
+4. `AthomeSheetSyncService`を使用して個別物件スプレッドシートの`athome`シートから同期
+5. バッチ処理（10件ずつ、3秒間隔）でAPIクォータを回避
 
-**同期対象**:
-1. `property_listings`に存在するが`property_details`に**存在しない**物件
-2. `property_details`に存在するが`recommended_comments`が**空**の物件
-
-**同期内容**:
-- `favorite_comment` - お気に入り文言（個別物件スプレッドシートのathomeシートから）
-- `recommended_comments` - アピールポイント（配列）（個別物件スプレッドシートのathomeシートから）
-- `athome_data` - パノラマURL（配列）（個別物件スプレッドシートのathomeシートから）
-- **`property_about` - こちらの物件について（物件リストスプレッドシートのBQ列から）** ← **2026年1月30日追加**
-
-**🚨 重要**: `property_about`は`AthomeSheetSyncService`ではなく、`PropertyService.getPropertyAbout()`を使用して物件リストスプレッドシートのBQ列から取得します。
+**APIクォータ対策**:
+- 業務依頼シートのデータを60分間キャッシュ
+- Phase 4.7実行時に1回だけ業務依頼シートを読み取り
+- 手動同期時はキャッシュを自動的にクリア
 
 ---
 
-## 🚨 過去の問題と解決策
+## 🚨 同期対象外の物件
 
-### 問題: AA13407のコメントデータが同期されなかった
+以下の物件は自動同期の対象外：
+- 業務依頼シート（スプレッドシート）に存在しない物件
+- 業務依頼シートに存在するが、`spreadsheet_url`（D列）が空の物件
 
-**症状**: お気に入り文言は表示されるが、アピールポイントが表示されない
+**理由**:
+- `spreadsheet_url`がない物件は、個別物件スプレッドシートが存在しない
+- 個別物件スプレッドシートがない場合、`athome`シートも存在しない
+- `athome`シートがない場合、コメントデータを取得できない
 
-**根本原因**:
-1. `property_details`レコードが`property_listings`より先に作成された
-2. 旧Phase 4.7は「存在しない」レコードのみを同期していた
-3. AA13407は`property_details`に既に存在していたため、同期対象外になった
-4. しかし、`recommended_comments`は空のままだった
+---
 
-**解決策**（2026年1月30日実装）:
-- Phase 4.7を改善して、**コメントデータが空のレコードも更新対象にする**
-- `recommended_comments`が空の物件も自動的に同期される
+## 📊 対象物件数の目安
 
-### 修正されたコード
+**全物件数**: 約1,500件
 
-**ファイル**: `backend/src/services/EnhancedAutoSyncService.ts`
+**業務依頼シートにspreadsheet_urlがある物件**: 約150-200件
 
-**修正内容**:
+**自動同期対象（コメントデータが空）**: 約50-100件（初回のみ、以降は新規物件のみ）
+
+**推定時間**: 約3-7分（1物件あたり2秒 × 50-100件）
+
+**APIクォータ使用量**:
+- 業務依頼シート読み取り: 1回/60分（キャッシュ）
+- 個別物件スプレッドシート読み取り: 同期対象物件数分
+
+---
+
+## 🛠️ 手動同期（必要な場合のみ）
+
+通常は自動同期で十分ですが、緊急時や大量の物件を一度に同期したい場合は手動で実行できます。
+
+### 方法1: 全物件コメント同期スクリプト
+
+```bash
+# クォータ確認
+npx ts-node backend/check-google-sheets-quota.ts
+
+# 同期実行
+npx ts-node backend/sync-all-property-comments.ts
+```
+
+### 方法2: 個別物件の同期
+
 ```typescript
-// 修正前: 存在しないレコードのみを同期
-const missingPropertyNumbers: string[] = [];
-for (const propertyNumber of propertyListingsNumbers) {
-  if (!propertyDetailsNumbers.has(propertyNumber)) {
-    missingPropertyNumbers.push(propertyNumber);
-  }
-}
+import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 
-// 修正後: 存在しないレコード + コメントが空のレコードを同期
-const missingPropertyNumbers: string[] = [];
-for (const propertyNumber of propertyListingsNumbers) {
-  // property_detailsに存在しない、またはコメントデータが空の場合は同期対象
-  if (!propertyDetailsNumbers.has(propertyNumber) || emptyCommentsPropertyNumbers.has(propertyNumber)) {
-    missingPropertyNumbers.push(propertyNumber);
-  }
-}
-
-// 🚨 重要: property_aboutは物件リストスプレッドシートのBQ列から取得
-// AthomeSheetSyncServiceではなく、PropertyService.getPropertyAbout()を使用
-const { PropertyService } = await import('./PropertyService');
-const propertyService = new PropertyService();
-const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
-
-if (propertyAbout) {
-  await this.supabase
-    .from('property_details')
-    .update({ property_about: propertyAbout })
-    .eq('property_number', propertyNumber);
-  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
-}
+const athomeService = new AthomeSheetSyncService();
+await athomeService.syncPropertyComments('AA13501', 'land');
 ```
 
 ---
 
-## ✅ 自動同期が正常に動作しているか確認する方法
+## 📝 関連ファイル
 
-### 方法1: ログを確認
-
-```bash
-# Vercel Dashboardでログを確認
-# または
-npx ts-node backend/check-auto-sync-logs.ts
-```
-
-**正常なログ例**:
-```
-📝 Phase 4.7: Property Details Sync
-📊 Total properties in property_listings: 150
-📊 Total properties in property_details: 148
-📊 Properties with empty comments: 2
-🆕 Properties to sync (missing or empty comments): 4
-✅ AA13407: Synced comments from spreadsheet
-✅ AA13407: Synced property_about from BQ column
-✅ AA13408: Synced comments from spreadsheet
-✅ AA13408: Synced property_about from BQ column
-✅ Property details sync completed: 4 synced, 0 failed
-```
-
-### 方法2: データベースを確認
-
-```bash
-# 特定の物件のコメントデータを確認
-npx ts-node backend/check-<property-number>-comments.ts
-```
+| ファイル | 役割 |
+|---------|------|
+| `backend/src/services/EnhancedAutoSyncService.ts` | 自動同期サービス（Phase 4.6, 4.7を含む） |
+| `backend/src/services/AthomeSheetSyncService.ts` | Athomeシート同期サービス |
+| `backend/src/services/PropertyDetailsService.ts` | 物件詳細サービス |
+| `backend/sync-all-property-comments.ts` | 全物件コメント同期スクリプト（手動実行用） |
+| `backend/check-google-sheets-quota.ts` | Google Sheets APIクォータ確認スクリプト |
 
 ---
 
-## 🚫 絶対にやってはいけないこと
+## ✅ チェックリスト
 
-### ❌ 間違い1: 手動同期を忘れる
+新規物件を追加する際は、以下を確認：
 
-**旧ルール（廃止）**:
-```
-新規物件追加時は、必ずAthomeSheetSyncServiceでコメントデータを手動同期する
-```
-
-**新ルール（現在）**:
-```
-自動同期サービスが5分ごとにコメントデータを同期するため、手動同期は不要
-```
-
-### ❌ 間違い2: Phase 4.7を無効化する
-
-Phase 4.7を無効化すると、コメントデータが同期されなくなります。
-
-### ❌ 間違い3: コメントデータが空のレコードを無視する
-
-修正前のPhase 4.7は、コメントデータが空のレコードを無視していました。
-修正後は、コメントデータが空のレコードも同期対象になります。
+- [ ] `property_listings`テーブルに物件が追加されているか？（Phase 4.6で自動）
+- [ ] コメント同期が必要な場合、業務依頼シート（スプレッドシート）に`spreadsheet_url`（D列）が登録されているか？
+- [ ] 個別物件スプレッドシートに`athome`シートが存在するか？
+- [ ] 自動同期が有効になっているか？（通常は有効）
+- [ ] 5分以内に自動同期が実行されるのを待つ、または手動で同期を実行
 
 ---
 
-## 📋 チェックリスト
+## 🎯 AA13527-2の場合
 
-### 新規物件追加時
+### 現在の状況（修正後）
+- ✅ `property_listings`テーブルに追加済み（Phase 4.6で同期）
+- ✅ 業務依頼シートにスプレッドシートURL存在
+- ✅ コメント同期の対象になる（Phase 4.7で自動同期）
 
-- [ ] `property_listings`に物件が追加されているか確認
-- [ ] 5分後に`property_details`にコメントデータが同期されているか確認
-- [ ] 同期されていない場合、ログを確認してエラーがないか確認
-
-### コメントデータが表示されない場合
-
-1. [ ] `property_details`テーブルにレコードが存在するか確認
-2. [ ] `recommended_comments`が空でないか確認
-3. [ ] 空の場合、次回の自動同期（5分後）で同期されるか確認
-4. [ ] 同期されない場合、ログを確認してエラーがないか確認
-
----
-
-## 🔧 トラブルシューティング
-
-### 問題1: コメントデータが5分経っても同期されない
-
-**確認事項**:
-1. 自動同期サービスが正常に動作しているか？
-2. 個別物件スプレッドシートに`athome`シートが存在するか？
-3. `athome`シートの正しいセル位置にデータが入力されているか？
-4. 業務依頼シートに個別物件スプレッドシートのURLが登録されているか？
-
-**解決策**:
-```bash
-# 手動で同期を実行（緊急時のみ）
-npx ts-node backend/sync-<property-number>-comments.ts
-```
-
-### 問題2: パノラマURLが同期されない
-
-**原因**: 個別物件スプレッドシートの`athome`シートの`N1`セルにURLが入力されていない
-
-**解決策**: スプレッドシートの`N1`セルにパノラマURLを入力する
-
-### 問題3: 「こちらの物件について」（property_about）が同期されない
-
-**原因**: 物件リストスプレッドシートのBQ列（●内覧前伝達事項）にデータが入力されていない
-
-**⚠️ 注意**: 
-- ❌ athomeシートを確認しても意味がない（取得元が違う）
-- ✅ 物件リストスプレッドシートのBQ列を確認する
-
-**解決策**: 
-1. 物件リストスプレッドシートのBQ列（●内覧前伝達事項）にデータを入力
-2. 5分後に自動同期される
-3. 緊急時は手動同期スクリプトを実行:
-   ```bash
-   npx ts-node backend/sync-<property-number>-property-about.ts
-   ```
-
----
-
-## 📊 自動同期のタイミング
-
-| フェーズ | 内容 | タイミング |
-|---------|------|-----------|
-| Phase 1 | 売主追加同期 | 5分ごと |
-| Phase 2 | 売主更新同期 | 5分ごと |
-| Phase 3 | 売主削除同期 | 5分ごと |
-| Phase 4.5 | 物件リスト更新同期 | 5分ごと |
-| Phase 4.6 | 新規物件追加同期 | 5分ごと |
-| **Phase 4.7** | **property_details同期（コメントデータ）** | **5分ごと** |
+### コメント同期の実行
+- 次回の自動同期（5分以内）で自動的に実行される
+- または手動で同期を実行可能
 
 ---
 
 ## まとめ
 
-**コメントデータの自動同期**:
+**物件リスト同期（Phase 4.6）**:
+- スプレッドシート「物件」シートの**全ての物件**を同期
+- `atbb_status`に関係なく同期
+- `work_tasks`の有無に関係なく同期
 
-1. ✅ **自動同期サービスが5分ごとにコメントデータを同期する**
-2. ✅ **`property_details`に存在しない物件を同期する**
-3. ✅ **`recommended_comments`が空の物件も同期する**（2026年1月30日改善）
-4. ✅ **`property_about`も自動同期する**（2026年1月30日追加）
-5. ✅ **手動同期は不要**
+**コメント同期（Phase 4.7）**:
+- 業務依頼シート（スプレッドシート）に`spreadsheet_url`がある物件のみを同期
+- 個別物件スプレッドシートの`athome`シートからコメントを取得
+- **work_tasksテーブルへの依存を解消**（2026年2月3日修正）
+- 業務依頼シートのデータを60分間キャッシュしてAPIクォータを節約
 
-**🚨 最重要：取得元の違い**:
-
-| フィールド | 取得元 | 取得方法 |
-|-----------|--------|---------|
-| お気に入り文言 | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
-| アピールポイント | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
-| パノラマURL | 個別物件スプレッドシートのathomeシート | `AthomeSheetSyncService` |
-| **こちらの物件について** | **物件リストスプレッドシートのBQ列** | **`PropertyService.getPropertyAbout()`** |
-
-**このルールを徹底することで、コメントデータの同期漏れを完全に防止できます。**
+**このルールを徹底することで、無駄な同期処理を防ぎ、効率的にコメントデータを同期できます。**
 
 ---
 
-**最終更新日**: 2026年1月30日  
-**作成理由**: AA13407のコメントデータ同期問題を防ぐため  
-**更新履歴**: 
-- 2026年1月30日: Phase 4.7を改善して、コメントデータが空のレコードも同期対象にする
-- 2026年1月30日: Phase 4.7に`property_about`の自動同期を追加（物件リストスプレッドシートのBQ列から取得）
-- 2026年1月30日: 取得元の違いを明確化（athomeシート vs 物件リストスプレッドシートBQ列）
+**最終更新日**: 2026年2月3日  
+**作成理由**: 全物件を同期しようとして時間がかかりすぎた問題を防ぐため  
+**更新履歴**:
+- 2026年2月3日: **work_tasksテーブルへの依存を解消**、業務依頼シートから直接スプレッドシートURLを取得するように修正、60分間キャッシュを追加
+- 2026年2月3日: 物件リスト同期とコメント同期の違いを明確化、AA13527-2の状況を追加
+- 2026年2月2日: Phase 4.7の自動同期を再有効化、work_tasksフィルターを追加

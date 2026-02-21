@@ -73,6 +73,10 @@ export class BuyerColumnMapper {
       return this.parseDatetime(value);
     }
     
+    if (type === 'time') {
+      return this.parseTime(value);
+    }
+    
     if (type === 'number') {
       return this.parseNumber(value);
     }
@@ -104,7 +108,30 @@ export class BuyerColumnMapper {
    * 日付文字列をパース
    */
   private parseDate(value: any): string | null {
-    if (!value) return null;
+    if (!value || value === '') return null;
+    
+    // Excelシリアル値（数値）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > 30000 && numValue < 60000) {
+      try {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + numValue * 24 * 60 * 60 * 1000);
+        
+        // 日付が有効範囲内かチェック（1900-01-01 ～ 2100-12-31）
+        const year = date.getFullYear();
+        if (year < 1900 || year > 2100) {
+          console.warn(`⚠️  Invalid year from Excel serial: ${year} (serial: ${numValue})`);
+          return null;
+        }
+        
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (error: any) {
+        console.warn(`⚠️  Failed to parse Excel serial value: ${numValue} (${error.message})`);
+        return null;
+      }
+    }
     
     const str = String(value).trim();
     if (!str) return null;
@@ -123,12 +150,14 @@ export class BuyerColumnMapper {
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
-    // MM/DD (年が省略されている場合は現在の年を使用)
+    // MM/DD (年が省略されている場合は前年を使用)
+    // 理由: スプレッドシートで年が省略されている場合、通常は前年のデータ
     const match3 = str.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
     if (match3) {
       const [, month, day] = match3;
       const currentYear = new Date().getFullYear();
-      return `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      const previousYear = currentYear - 1; // 前年を使用
+      return `${previousYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
 
     return null;
@@ -138,7 +167,28 @@ export class BuyerColumnMapper {
    * 日時文字列をパース
    */
   private parseDatetime(value: any): string | null {
-    if (!value) return null;
+    if (!value || value === '') return null;
+    
+    // Excelシリアル値（数値）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > 30000 && numValue < 60000) {
+      try {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + numValue * 24 * 60 * 60 * 1000);
+        
+        // 日付が有効範囲内かチェック（1900-01-01 ～ 2100-12-31）
+        const year = date.getFullYear();
+        if (year < 1900 || year > 2100) {
+          console.warn(`⚠️  Invalid year from Excel serial: ${year} (serial: ${numValue})`);
+          return null;
+        }
+        
+        return date.toISOString();
+      } catch (error: any) {
+        console.warn(`⚠️  Failed to parse Excel serial value: ${numValue} (${error.message})`);
+        return null;
+      }
+    }
     
     const str = String(value).trim();
     if (!str) return null;
@@ -170,6 +220,49 @@ export class BuyerColumnMapper {
 
     const num = parseFloat(str);
     return isNaN(num) ? null : num;
+  }
+
+  /**
+   * 時間文字列をパース（Excelシリアル値対応）
+   * Excelの時間シリアル値: 0.625 = 15:00 (15/24時間)
+   */
+  private parseTime(value: any): string | null {
+    if (!value || value === '') return null;
+    
+    // Excelシリアル値（0～1の小数）の場合
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue >= 0 && numValue < 1) {
+      try {
+        // 24時間 × シリアル値で時間を計算
+        const totalMinutes = Math.round(numValue * 24 * 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      } catch (error: any) {
+        console.warn(`⚠️  Failed to parse Excel time serial value: ${numValue} (${error.message})`);
+        return null;
+      }
+    }
+    
+    const str = String(value).trim();
+    if (!str) return null;
+
+    // HH:mm or H:mm 形式
+    const match = str.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const [, hour, minute] = match;
+      return `${hour.padStart(2, '0')}:${minute}`;
+    }
+
+    // HH:mm:ss 形式（秒は無視）
+    const match2 = str.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+    if (match2) {
+      const [, hour, minute] = match2;
+      return `${hour.padStart(2, '0')}:${minute}`;
+    }
+
+    return null;
   }
 
   /**

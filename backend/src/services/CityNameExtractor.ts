@@ -12,21 +12,7 @@ export class CityNameExtractor {
 
     const normalizedAddress = address.trim();
 
-    // パターン1: 都道府県 + 市区町村 (例: "大分県大分市...")
-    const pattern1 = /([^\s]+?[都道府県])([^\s]+?[市区町村])/;
-    const match1 = normalizedAddress.match(pattern1);
-    if (match1) {
-      return match1[2]; // 市区町村部分を返す
-    }
-
-    // パターン2: 市区町村のみ (例: "大分市...")
-    const pattern2 = /^([^\s]+?[市区町村])/;
-    const match2 = normalizedAddress.match(pattern2);
-    if (match2) {
-      return match2[1];
-    }
-
-    // パターン3: 特定の市名を直接検索
+    // パターン3: 特定の市名を直接検索（最優先）
     const knownCities = [
       '大分市',
       '別府市',
@@ -48,6 +34,21 @@ export class CityNameExtractor {
       if (normalizedAddress.includes(city)) {
         return city;
       }
+    }
+
+    // パターン1: 都道府県 + 市区町村 (例: "大分県大分市...")
+    const pattern1 = /([^\s]+?[都道府県])([^\s]+?[市区町村])/;
+    const match1 = normalizedAddress.match(pattern1);
+    if (match1) {
+      return match1[2]; // 市区町村部分を返す
+    }
+
+    // パターン2: 市区町村のみ (例: "大分市...", "別府市...")
+    // 市区町村の後に続く文字が「市区町村」でないことを確認
+    const pattern2 = /^([^\s]+?[市区町村])(?![市区町村])/;
+    const match2 = normalizedAddress.match(pattern2);
+    if (match2) {
+      return match2[1];
     }
 
     return null;

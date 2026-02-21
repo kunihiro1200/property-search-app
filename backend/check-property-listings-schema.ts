@@ -1,47 +1,55 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-dotenv.config({ path: '.env.local' });
+// .envファイルを読み込み
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function checkSchema() {
+async function checkPropertyListingsSchema() {
   console.log('🔍 Checking property_listings table schema...\n');
 
-  // 1. CC105のデータを取得（全カラム）
-  const { data, error } = await supabase
-    .from('property_listings')
-    .select('*')
-    .eq('property_number', 'CC105')
-    .single();
+  try {
+    // property_listingsテーブルから1件取得してカラムを確認
+    const { data, error } = await supabase
+      .from('property_listings')
+      .select('*')
+      .limit(1);
 
-  if (error) {
-    console.error('❌ Error:', error);
-    return;
+    if (error) {
+      console.error('❌ Error fetching property_listings:', error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('⚠️ No data found in property_listings table');
+      return;
+    }
+
+    const columns = Object.keys(data[0]);
+    console.log(`✅ Found ${columns.length} columns in property_listings table:\n`);
+
+    // 重要なカラムをチェック
+    const requiredColumns = ['pet_allowed', 'property_about'];
+    
+    console.log('📋 Required columns check:');
+    for (const col of requiredColumns) {
+      const exists = columns.includes(col);
+      console.log(`  ${exists ? '✅' : '❌'} ${col}: ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+    }
+
+    console.log('\n📋 All columns:');
+    columns.sort().forEach(col => {
+      console.log(`  - ${col}`);
+    });
+
+  } catch (err) {
+    console.error('❌ Error:', err);
   }
-
-  console.log('📊 CC105 data (all columns):');
-  console.log(JSON.stringify(data, null, 2));
-
-  console.log('\n🔑 Available keys:');
-  Object.keys(data).forEach(key => {
-    console.log(`  - ${key}: ${typeof data[key]} = ${data[key]}`);
-  });
-
-  console.log('\n💰 Price-related fields:');
-  const priceFields = Object.keys(data).filter(key => 
-    key.toLowerCase().includes('price') || 
-    key.toLowerCase().includes('sales') ||
-    key.toLowerCase().includes('listing')
-  );
-  priceFields.forEach(key => {
-    console.log(`  - ${key}: ${data[key]}`);
-  });
-
-  console.log('\n✨ Check completed!');
 }
 
-checkSchema().catch(console.error);
+checkPropertyListingsSchema();

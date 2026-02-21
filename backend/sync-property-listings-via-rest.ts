@@ -91,11 +91,13 @@ async function syncPropertyListingsViaRest() {
       for (const property of batch) {
         try {
           // Update via REST API
+          // ⚠️ 重要: storage_locationは手動更新ボタンで管理されるため、自動同期から除外
+          // CC6などの物件で手動設定したathome公開フォルダURLが上書きされないようにする
           const { error } = await supabase
             .from('property_listings')
             .update({
               atbb_status: property.atbb_status,
-              storage_location: property.storage_location,
+              // storage_location: property.storage_location, // 手動更新のため除外
               public_url: property.public_url,
               seller_name: property.seller_name,
               address: property.address,
@@ -104,6 +106,7 @@ async function syncPropertyListingsViaRest() {
               building_area: property.building_area,
               property_type: property.property_type,
               status: property.status,
+              distribution_date: property.distribution_date, // 配信日を追加
               updated_at: new Date().toISOString()
             })
             .eq('property_number', property.property_number);

@@ -41,6 +41,7 @@ import emailRoutes from './routes/emails';
 import activityLogRoutes from './routes/activityLogs';
 import followUpRoutes from './routes/followUps';
 import appointmentRoutes from './routes/appointments';
+import buyerAppointmentRoutes from './routes/buyer-appointments';
 import summarizeRoutes from './routes/summarize';
 import googleCalendarRoutes from './routes/googleCalendar';
 import employeeRoutes from './routes/employees';
@@ -68,7 +69,11 @@ import publicInquiriesRoutes from './routes/publicInquiries';
 import propertyListingSyncRoutes from './routes/propertyListingSync';
 import geocodeRoutes from './routes/geocode';
 import urlRedirectRoutes from './routes/urlRedirect';
+import smsRoutes from './routes/sms';
+import messageTemplateRoutes from './routes/message-templates';
+import staffRoutes from './routes/staff';
 import { activityLogger } from './middleware/activityLogger';
+import { authenticate } from './middleware/auth';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -314,6 +319,28 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
 });
 
 // Routes
+// 短縮URLリダイレクト（最優先 - 他のルートより前に定義）
+app.get('/p/:propertyNumber', (req, res) => {
+  const { propertyNumber } = req.params;
+  
+  // バリデーション: 物件番号の形式チェック（例: AA9831, AA13501-2）
+  const propertyNumberPattern = /^[A-Z]{2}\d{4,5}(-\d+)?$/;
+  if (!propertyNumberPattern.test(propertyNumber)) {
+    return res.status(400).json({
+      error: '無効な物件番号形式です'
+    });
+  }
+  
+  // リダイレクト先URL
+  const redirectUrl = `https://property-site-frontend-kappa.vercel.app/public/properties/${propertyNumber}`;
+  
+  // HTTP 301 Permanent Redirect
+  res.setHeader('Location', redirectUrl);
+  res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1年間キャッシュ
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains'); // HSTS
+  res.status(301).end();
+});
+
 // 認証ルート（ローカルと本番の両方に対応）
 app.use('/auth', authSupabaseRoutes);
 app.use('/api/auth', authSupabaseRoutes);  // 本番環境用
@@ -323,13 +350,15 @@ app.use('/properties', propertyRoutes);
 app.use('/api/sellers', valuationRoutes);
 app.use('/api/sellers', emailRoutes);
 app.use('/api/emails', emailRoutes);  // 画像添付機能用の追加ルート
+app.use('/api/sms', smsRoutes);  // SMS送信機能
 app.use('/api/sellers', followUpRoutes);
 app.use('/appointments', appointmentRoutes);
-app.use('/activity-logs', activityLogRoutes);
+app.use('/api/buyer-appointments', buyerAppointmentRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 app.use('/summarize', summarizeRoutes);
 app.use('/api/auth/google/calendar', googleCalendarRoutes);
-app.use('/employees', employeeRoutes);
-app.use('/chat-notifications', chatNotificationRoutes);
+app.use('/api/employees', employeeRoutes);
+app.use('/api/chat-notifications', chatNotificationRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/sync', syncRoutes);
@@ -337,13 +366,16 @@ app.use('/cache', cacheRoutes);
 app.use('/api/drive', driveRoutes);
 app.use('/api/work-tasks', workTaskRoutes);
 app.use('/api/property-listings', propertyListingRoutes);
-app.use('/api/buyers', buyerRoutes);
+// 買主ルートに認証ミドルウェアを適用（アクティビティログ記録のため）
+app.use('/api/buyers', authenticate, buyerRoutes);
 app.use('/api', viewingResultRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/validation', validationRoutes);
 app.use('/api/sellers', sellerRecoveryRoutes);
 app.use('/api/inquiry-response', inquiryResponseRoutes);
 app.use('/api/email-templates', emailTemplateRoutes);
+app.use('/api/message-templates', messageTemplateRoutes);
+app.use('/api/staff', staffRoutes);
 app.use('/api/gmail', gmailRoutes);
 app.use('/api/shared-items', sharedItemsRoutes); // 共有アイテムAPI（認証不要）
 app.use('/api/public/inquiries', publicInquiriesRoutes); // 公開物件問い合わせAPI（認証不要）

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export interface BuyerSummary {
   id: string;
+  buyer_id: string;
   buyer_number: string;
   name: string;
   phone_number: string;
@@ -11,6 +12,7 @@ export interface BuyerSummary {
   inquiry_confidence: string;
   reception_date: string;
   latest_viewing_date: string | null;
+  viewing_time: string | null;
   next_call_date: string | null;
 }
 
@@ -47,7 +49,8 @@ export class BuyerLinkageService {
         const { count, error } = await this.supabase
           .from('buyers')
           .select('*', { count: 'exact', head: true })
-          .ilike('property_number', `%${propNum}%`);
+          .ilike('property_number', `%${propNum}%`)
+          .is('deleted_at', null);  // 削除済み買主を除外
 
         if (error) {
           console.error(`Failed to count buyers for property ${propNum}:`, error);
@@ -81,7 +84,7 @@ export class BuyerLinkageService {
       let query = this.supabase
         .from('buyers')
         .select(`
-          id,
+          buyer_id,
           buyer_number,
           name,
           phone_number,
@@ -90,9 +93,11 @@ export class BuyerLinkageService {
           inquiry_confidence,
           reception_date,
           latest_viewing_date,
+          viewing_time,
           next_call_date
         `)
         .ilike('property_number', `%${propertyNumber}%`)
+        .is('deleted_at', null)  // 削除済み買主を除外
         .order(sortBy, { ascending: sortOrder === 'asc' });
 
       if (limit) {
@@ -105,7 +110,13 @@ export class BuyerLinkageService {
         throw new Error(`Failed to fetch buyers for property: ${error.message}`);
       }
 
-      return data || [];
+      // buyer_idをidとしても返す（後方互換性のため）
+      const buyersWithId = (data || []).map(buyer => ({
+        ...buyer,
+        id: buyer.buyer_id
+      }));
+
+      return buyersWithId;
     } catch (error) {
       console.error(`Failed to get buyers for property ${propertyNumber}:`, error);
       return [];
@@ -121,7 +132,8 @@ export class BuyerLinkageService {
         .from('buyers')
         .select('property_number')
         .in('inquiry_confidence', ['A', 'S', 'A+', 'S+'])
-        .not('property_number', 'is', null);
+        .not('property_number', 'is', null)
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to fetch high confidence properties: ${error.message}`);
@@ -152,7 +164,8 @@ export class BuyerLinkageService {
       const { count, error } = await this.supabase
         .from('buyers')
         .select('*', { count: 'exact', head: true })
-        .ilike('property_number', `%${propertyNumber}%`);
+        .ilike('property_number', `%${propertyNumber}%`)
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to count buyers: ${error.message}`);
@@ -174,7 +187,8 @@ export class BuyerLinkageService {
         .from('buyers')
         .select('*', { count: 'exact', head: true })
         .ilike('property_number', `%${propertyNumber}%`)
-        .in('inquiry_confidence', ['A', 'S', 'A+', 'S+']);
+        .in('inquiry_confidence', ['A', 'S', 'A+', 'S+'])
+        .is('deleted_at', null);  // 削除済み買主を除外
 
       if (error) {
         throw new Error(`Failed to check high confidence buyers: ${error.message}`);
