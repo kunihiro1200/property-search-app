@@ -1,9 +1,12 @@
 // 業務管理システム用の認証確認専用エンドポイント
 // Vercelサーバーレス関数として独立して動作
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { AuthService } from '../src/services/AuthService.supabase';
+import { createClient } from '@supabase/supabase-js';
 
-const authService = new AuthService();
+// Supabaseクライアントを直接初期化
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORSヘッダーを設定
@@ -55,7 +58,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const token = authHeader.substring(7);
-    const employee = await authService.validateSession(token);
+    
+    // トークンを検証してユーザー情報を取得
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: 'Invalid or expired authentication token',
+          retryable: false,
+        },
+      });
+      return;
+    }
+    
+    // 社員情報を取得
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+    
+    if (employeeError || !employee) {
+      res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: 'Employee record not found',
+          retryable: false,
+        },
+      });
+      return;
+    }
     
     res.status(200).json(employee);
   } catch (error) {

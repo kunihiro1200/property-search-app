@@ -1,10 +1,12 @@
 // 業務管理システム用の認証コールバック専用エンドポイント
 // Vercelサーバーレス関数として独立して動作
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { AuthService } from '../src/services/AuthService.supabase';
-import { supabaseClient } from '../src/config/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-const authService = new AuthService();
+// Supabaseクライアントを直接初期化
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORSヘッダーを設定
@@ -70,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // Supabase Authでセッションを設定してユーザー情報を取得
-    const { data: { user }, error } = await supabaseClient.auth.setSession({
+    const { data: { user }, error } = await supabase.auth.setSession({
       access_token,
       refresh_token: refresh_token || '',
     });
@@ -125,11 +127,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('🔵 Creating/getting employee record...');
     }
     
-    const employee = await authService.getOrCreateEmployee(
-      user.id,
-      user.email,
-      user.user_metadata
-    );
+    // employeesテーブルから社員情報を取得
+    let { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (employeeError && employeeError.code !== 'PGRST116') {
+      // PGRST116 = レコードが見つからない（これは正常）
+      console.error('❌ Employee fetch error:', employeeError);
+      throw new Error(`社員情報の取得に失敗しました: ${employeeError.message}`);
+    }
+
+    // 社員レコードが存在しない場合は作成
+    if (!employee) {
+      const { data: newEmployee, error: createError } = await supabase
+        .from('employees')
+        .insert({
+          auth_user_id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('❌ Employee creation error:', createError);
+        throw new Error(`社員レコードの作成に失敗しました: ${createError.message}`);
+      }
+
+      employee = newEmployee;
+    }
 
     if (isDev) {
       console.log('✅ Employee record created/retrieved:', {
