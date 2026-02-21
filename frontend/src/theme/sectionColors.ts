@@ -19,6 +19,7 @@ export const SECTION_COLORS = {
   },
   task: {
     main: '#f57c00',        // オレンジ色（メイン）
+    light: '#ffb74d',       // 明るいオレンジ
     dark: '#e65100',        // 濃いオレンジ色（ホバー時）
     contrastText: '#ffffff', // 白色（テキスト）
   },
