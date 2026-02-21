@@ -238,7 +238,6 @@ export default function WorkTasksPage() {
                   <TableCell>媒介締め日</TableCell>
                   <TableCell>媒介完了</TableCell>
                   <TableCell>媒介備考</TableCell>
-                  <TableCell>ステータス</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -250,13 +249,12 @@ export default function WorkTasksPage() {
                   </TableRow>
                 ) : paginatedTasks.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} align="center">
+                    <TableCell colSpan={9} align="center">
                       業務データが見つかりませんでした
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedTasks.map((task) => {
-                    const status = task.sidebar_category || calculateTaskStatus(task);
                     return (
                       <TableRow 
                         key={task.id} 
@@ -281,16 +279,6 @@ export default function WorkTasksPage() {
                         <TableCell>{formatDate(task.mediation_deadline)}</TableCell>
                         <TableCell>{task.mediation_completed || '-'}</TableCell>
                         <TableCell>{task.mediation_notes || '-'}</TableCell>
-                        <TableCell>
-                          {status && (
-                            <Chip 
-                              label={status} 
-                              size="small" 
-                              color={status.includes('未') || status.includes('要') ? 'warning' : 'default'}
-                              sx={{ maxWidth: 200, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                            />
-                          )}
-                        </TableCell>
                       </TableRow>
                     );
                   })

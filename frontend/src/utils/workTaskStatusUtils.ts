@@ -231,31 +231,37 @@ export const calculateTaskStatus = (task: WorkTask): string => {
 // ステータスカテゴリ定義
 export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
   const statusCounts: Record<string, number> = {};
-  
+  const statusLabels: Record<string, string> = {};
+
   // 各タスクのステータスを計算してカウント
   tasks.forEach(task => {
-    const status = calculateTaskStatus(task);
+    // バックエンドから返されたsidebar_categoryを優先的に使用
+    const status = (task as any).sidebar_category || calculateTaskStatus(task);
     // ステータスの先頭部分でグループ化（日付や担当者を除く）
     const statusKey = getStatusKey(status);
     if (statusKey) {
       statusCounts[statusKey] = (statusCounts[statusKey] || 0) + 1;
+      // 最初に見つかったステータスのラベルを保存（日付付き）
+      if (!statusLabels[statusKey]) {
+        statusLabels[statusKey] = extractCategoryLabel(status);
+      }
     }
   });
 
   // カテゴリ定義（順序付き）
-  const categoryDefinitions: { key: string; label: string; matchPrefix: string }[] = [
-    { key: 'sales_contract_confirm', label: '売買契約　営業確認中', matchPrefix: '売買契約　営業確認中' },
-    { key: 'sales_contract_input', label: '売買契約 入力待ち', matchPrefix: '売買契約 入力待ち' },
-    { key: 'site_registration_request', label: 'サイト登録依頼してください', matchPrefix: 'サイト登録依頼してください' },
-    { key: 'settlement_chat_pending', label: '決済完了チャット送信未', matchPrefix: '決済完了チャット送信未' },
-    { key: 'payment_pending', label: '入金確認未', matchPrefix: '入金確認未' },
-    { key: 'ledger_required', label: '要台帳作成', matchPrefix: '要台帳作成' },
-    { key: 'sales_contract_binding', label: '売買契約 製本待ち', matchPrefix: '売買契約 製本待ち' },
-    { key: 'sales_contract_unrequested', label: '売買契約 依頼未', matchPrefix: '売買契約 依頼未' },
-    { key: 'site_delivery_pending', label: 'サイト依頼済み納品待ち', matchPrefix: 'サイト依頼済み納品待ち' },
-    { key: 'site_registration_check', label: 'サイト登録要確認', matchPrefix: 'サイト登録要確認' },
-    { key: 'mediation_deadline', label: '媒介作成_締日', matchPrefix: '媒介作成_締日' },
-    { key: 'on_hold', label: '保留', matchPrefix: '保留' },
+  const categoryDefinitions: { key: string; defaultLabel: string; matchPrefix: string }[] = [
+    { key: 'sales_contract_confirm', defaultLabel: '売買契約　営業確認中', matchPrefix: '売買契約　営業確認中' },
+    { key: 'sales_contract_input', defaultLabel: '売買契約 入力待ち', matchPrefix: '売買契約 入力待ち' },
+    { key: 'site_registration_request', defaultLabel: 'サイト登録依頼してください', matchPrefix: 'サイト登録依頼してください' },
+    { key: 'settlement_chat_pending', defaultLabel: '決済完了チャット送信未', matchPrefix: '決済完了チャット送信未' },
+    { key: 'payment_pending', defaultLabel: '入金確認未', matchPrefix: '入金確認未' },
+    { key: 'ledger_required', defaultLabel: '要台帳作成', matchPrefix: '要台帳作成' },
+    { key: 'sales_contract_binding', defaultLabel: '売買契約 製本待ち', matchPrefix: '売買契約 製本待ち' },
+    { key: 'sales_contract_unrequested', defaultLabel: '売買契約 依頼未', matchPrefix: '売買契約 依頼未' },
+    { key: 'site_delivery_pending', defaultLabel: 'サイト依頼済み納品待ち', matchPrefix: 'サイト依頼済み納品待ち' },
+    { key: 'site_registration_check', defaultLabel: 'サイト登録要確認', matchPrefix: 'サイト登録要確認' },
+    { key: 'mediation_deadline', defaultLabel: '媒介作成_締日', matchPrefix: '媒介作成_締日' },
+    { key: 'on_hold', defaultLabel: '保留', matchPrefix: '保留' },
   ];
 
   // 件数が0より大きいカテゴリのみ返す
@@ -273,9 +279,12 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
     if (count > 0) {
       categories.push({
         key: def.key,
-        label: def.label,
+        label: statusLabels[def.key] || def.defaultLabel, // 日付付きラベルを使用
         count,
-        filter: (task: WorkTask) => calculateTaskStatus(task).startsWith(def.matchPrefix),
+        filter: (task: WorkTask) => {
+          const status = (task as any).sidebar_category || calculateTaskStatus(task);
+          return status.startsWith(def.matchPrefix);
+        },
       });
     }
   });
@@ -304,10 +313,26 @@ const getStatusKey = (status: string): string => {
 // タスクをステータスでフィルタリング
 export const filterTasksByStatus = (tasks: WorkTask[], statusKey: string): WorkTask[] => {
   if (statusKey === 'all') return tasks;
-  
+
   return tasks.filter(task => {
     const status = calculateTaskStatus(task);
     const taskStatusKey = getStatusKey(status);
     return taskStatusKey === statusKey;
   });
+};
+
+// カテゴリーラベルから日付と担当者を含む部分を抽出
+const extractCategoryLabel = (status: string): string => {
+  // 日付や担当者を含む完全なラベルを返す
+  // 例: "売買契約 製本待ち 2/19 和" → "売買契約 製本待ち 2/19" （担当者は除く）
+  // 例: "サイト登録依頼してください 2/16" → "サイト登録依頼してください 2/16"
+  
+  // 担当者名（1文字）を除去するパターン
+  // 最後にスペース+1文字がある場合は除去
+  const match = status.match(/^(.+?)\s+[^\s]$/);
+  if (match) {
+    return match[1];
+  }
+
+  return status;
 };
