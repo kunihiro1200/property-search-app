@@ -21,23 +21,34 @@ const supabase = createClient(
 //   }
 // });
 
-// GoogleSheetsClientを直接初期化
-const sheetsClient = new GoogleSheetsClient({
-  spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
-  sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
-  serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-});
+// GoogleSheetsClientを遅延初期化（環境変数が設定されていない場合のエラーを防ぐ）
+let sheetsClient: GoogleSheetsClient | null = null;
 
-// 認証を実行（同期的に待つ）
+function getSheetsClient(): GoogleSheetsClient {
+  if (!sheetsClient) {
+    if (!process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID) {
+      throw new Error('GOOGLE_SHEETS_BUYER_SPREADSHEET_ID is not set');
+    }
+    sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+      sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+    });
+  }
+  return sheetsClient;
+}
+
+// 認証を遅延実行（エンドポイントが呼ばれた時に実行）
 let isAuthenticated = false;
-sheetsClient.authenticate()
-  .then(() => {
+
+async function ensureAuthenticated() {
+  if (!isAuthenticated) {
+    const client = getSheetsClient();
+    await client.authenticate();
     isAuthenticated = true;
     console.log('[publicInquiries] GoogleSheetsClient authenticated successfully');
-  })
-  .catch(error => {
-    console.error('[publicInquiries] GoogleSheetsClient認証エラー:', error);
-  });
+  }
+}
 
 // Validation schema for inquiry form
 const inquirySchema = z.object({
@@ -144,12 +155,8 @@ router.post(
       // 直接買主リストに転記（property_inquiriesテーブルをバイパス）
       try {
         // GoogleSheetsClientの認証を確認
-        if (!isAuthenticated) {
-          console.error('[publicInquiries] GoogleSheetsClient not authenticated yet');
-          // 認証を再試行
-          await sheetsClient.authenticate();
-          isAuthenticated = true;
-        }
+        await ensureAuthenticated();
+        const sheetsClient = getSheetsClient();
 
         console.log('[publicInquiries] Reading all rows from buyer sheet...');
         // 買主番号を採番
