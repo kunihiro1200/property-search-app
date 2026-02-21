@@ -275,7 +275,6 @@ app.use('/api/sync', syncRoutes);
 app.use('/cache', cacheRoutes);
 app.use('/api/drive', driveRoutes);
 app.use('/api/work-tasks', workTaskRoutes);
-app.use('/api/shared-items', sharedItemsRoutes);
 app.use('/api/property-listings', propertyListingRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api', viewingResultRoutes);
@@ -285,6 +284,7 @@ app.use('/api/sellers', sellerRecoveryRoutes);
 app.use('/api/inquiry-response', inquiryResponseRoutes);
 app.use('/api/email-templates', emailTemplateRoutes);
 app.use('/api/gmail', gmailRoutes);
+app.use('/api/shared-items', sharedItemsRoutes); // 共有アイテムAPI（認証不要）
 app.use('/api/public/inquiries', publicInquiriesRoutes); // 公開物件問い合わせAPI（認証不要）
 app.use('/api/public', publicPropertiesRoutes); // 公開物件サイト用API（認証不要なので先に登録）
 app.use('/api/geocode', geocodeRoutes); // ジオコーディング座標保存API（認証不要）
