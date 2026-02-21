@@ -235,6 +235,11 @@ const isTodayOrAfter = (dateStr: string | Date | undefined | null): boolean => {
  * @returns 訪問予定対象かどうか
  */
 export const isVisitScheduled = (seller: Seller | any): boolean => {
+  // sellerがundefinedまたはnullの場合は早期リターン
+  if (!seller) {
+    return false;
+  }
+  
   if (!hasVisitAssignee(seller)) {
     return false;
   }
@@ -260,6 +265,11 @@ export const isVisitScheduled = (seller: Seller | any): boolean => {
  * @returns 訪問済み対象かどうか
  */
 export const isVisitCompleted = (seller: Seller | any): boolean => {
+  // sellerがundefinedまたはnullの場合は早期リターン
+  if (!seller) {
+    return false;
+  }
+  
   if (!hasVisitAssignee(seller)) {
     return false;
   }
@@ -343,6 +353,11 @@ export const getAssignedNoVisitDateLabel = (seller: Seller | any): string => {
  * @returns 当日TEL（担当）対象かどうか
  */
 export const isTodayCallAssigned = (seller: Seller | any): boolean => {
+  // sellerがundefinedまたはnullの場合は早期リターン
+  if (!seller) {
+    return false;
+  }
+  
   // 営担がない場合は対象外
   if (!hasVisitAssignee(seller)) {
     return false;
@@ -442,6 +457,11 @@ const hasContactInfo = (seller: Seller | any): boolean => {
  * Requirements: 1.2
  */
 export const isTodayCall = (seller: Seller | any): boolean => {
+  // sellerがundefinedまたはnullの場合は早期リターン
+  if (!seller) {
+    return false;
+  }
+  
   // 営担に入力がある売主は当日TELから除外（訪問日の有無に関係なく）
   if (hasVisitAssignee(seller)) {
     return false;
