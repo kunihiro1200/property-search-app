@@ -95,8 +95,8 @@ export const useAuthStore = create<AuthState>()(
       }
 
       // バックエンドにトークンを送信して社員情報を取得
-      console.log('🔵 Calling backend /auth/callback...');
-      const response = await api.post('/auth/callback', {
+      console.log('🔵 Calling backend /api/auth/callback...');
+      const response = await api.post('/api/auth/callback', {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
       });
