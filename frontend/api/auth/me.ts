@@ -52,10 +52,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     // 社員情報を取得
+    // auth_user_idカラムが存在しない場合はemailで検索
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
       .select('*')
-      .eq('auth_user_id', user.id)
+      .eq('email', user.email)
       .single();
     
     if (employeeError || !employee) {

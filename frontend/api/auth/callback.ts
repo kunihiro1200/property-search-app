@@ -79,10 +79,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // employeesテーブルから社員情報を取得
+    // auth_user_idカラムが存在しない場合はemailで検索
     let { data: employee, error: employeeError } = await supabase
       .from('employees')
       .select('*')
-      .eq('auth_user_id', user.id)
+      .eq('email', user.email)
       .single();
 
     if (employeeError && employeeError.code !== 'PGRST116') {
@@ -95,7 +96,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: newEmployee, error: createError } = await supabase
         .from('employees')
         .insert({
-          auth_user_id: user.id,
           email: user.email,
           name: user.user_metadata?.full_name || user.email,
         })
