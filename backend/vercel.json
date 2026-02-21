@@ -46,6 +46,14 @@
       "destination": "/api/redirect"
     },
     {
+      "source": "/api/auth/callback",
+      "destination": "/api/auth/callback"
+    },
+    {
+      "source": "/api/auth/me",
+      "destination": "/api/auth/me"
+    },
+    {
       "source": "/api/test-env",
       "destination": "/api/test-env"
     },
