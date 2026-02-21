@@ -1,115 +1,67 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
   Box,
   Typography,
   Paper,
-  Grid,
   TextField,
   Button,
-  CircularProgress,
-  Alert,
+  Grid,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import api from '../services/api';
-import PageNavigation from '../components/PageNavigation';
 import { SECTION_COLORS } from '../theme/sectionColors';
 
 interface SharedItem {
   id: string;
-  item_number: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  priority: string | null;
-  status: string | null;
-  assignee: string | null;
-  due_date: string | null;
-  completed_date: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+  [key: string]: any;
+}
+
+interface Staff {
+  name: string;
+  is_normal: boolean;
 }
 
 export default function SharedItemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const sharedItemsColor = SECTION_COLORS.sharedItems;
-  
   const [item, setItem] = useState<SharedItem | null>(null);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id && id !== 'new') {
-      fetchSharedItem();
-    } else {
-      // 新規作成の場合
-      setItem({
-        id: '',
-        item_number: '',
-        title: '',
-        description: null,
-        category: null,
-        priority: null,
-        status: null,
-        assignee: null,
-        due_date: null,
-        completed_date: null,
-        notes: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-      setLoading(false);
-    }
+    fetchItem();
+    fetchStaff();
   }, [id]);
 
-  const fetchSharedItem = async () => {
+  const fetchItem = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/shared-items/${id}`);
-      setItem(response.data);
+      const response = await api.get('/api/shared-items');
+      const items = response.data.data || [];
+      const foundItem = items.find((i: SharedItem) => i.id === id);
+      
+      setItem(foundItem || null);
     } catch (error) {
       console.error('Failed to fetch shared item:', error);
-      setError('共有データの取得に失敗しました');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!item) return;
-
+  const fetchStaff = async () => {
     try {
-      setSaving(true);
-      setError(null);
-      setSuccessMessage(null);
-
-      if (id === 'new') {
-        // 新規作成
-        await api.post('/api/shared-items', item);
-        setSuccessMessage('共有データを作成しました');
-        setTimeout(() => navigate('/shared-items'), 1500);
-      } else {
-        // 更新
-        await api.put(`/api/shared-items/${id}`, item);
-        setSuccessMessage('共有データを更新しました');
-        await fetchSharedItem();
-      }
+      const response = await api.get('/api/shared-items/staff');
+      setStaff(response.data.data || []);
     } catch (error) {
-      console.error('Failed to save shared item:', error);
-      setError('保存に失敗しました');
-    } finally {
-      setSaving(false);
+      console.error('Failed to fetch staff:', error);
     }
   };
 
-  const handleChange = (field: keyof SharedItem, value: any) => {
-    if (!item) return;
-    setItem({ ...item, [field]: value });
+  const handleBack = () => {
+    navigate('/shared-items');
   };
 
   // 日付フォーマット関数（バックエンドで既に変換済みなのでそのまま返す）
@@ -120,162 +72,364 @@ export default function SharedItemDetailPage() {
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Container maxWidth="md" sx={{ py: 3 }}>
+        <Typography>読み込み中...</Typography>
       </Container>
     );
   }
 
   if (!item) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="error">共有データが見つかりませんでした</Alert>
+      <Container maxWidth="md" sx={{ py: 3 }}>
+        <Typography>データが見つかりませんでした</Typography>
+        <Button onClick={handleBack} sx={{ mt: 2 }}>
+          戻る
+        </Button>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight="bold" sx={{ color: sharedItemsColor.main }}>
-          {id === 'new' ? '新規共有項目' : `共有詳細: ${item.item_number}`}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+    <Container maxWidth="md" sx={{ py: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
-            variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/shared-items')}
+            onClick={handleBack}
+            sx={{ color: sharedItemsColor.main }}
           >
             戻る
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={saving}
-            sx={{
-              bgcolor: sharedItemsColor.main,
-              '&:hover': { bgcolor: sharedItemsColor.dark },
-            }}
-          >
-            {saving ? '保存中...' : '保存'}
-          </Button>
+          <Typography variant="h5" fontWeight="bold" sx={{ color: sharedItemsColor.main }}>
+            共有詳細
+          </Typography>
         </Box>
+        <Button
+          variant="contained"
+          sx={{
+            bgcolor: sharedItemsColor.main,
+            color: '#fff',
+            '&:hover': {
+              bgcolor: sharedItemsColor.dark,
+            },
+          }}
+        >
+          保存
+        </Button>
       </Box>
-
-      <PageNavigation />
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
 
       <Paper sx={{ p: 3 }}>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="項目番号"
-              value={item.item_number || ''}
-              onChange={(e) => handleChange('item_number', e.target.value)}
-              disabled={id !== 'new'}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="タイトル"
-              value={item.title || ''}
-              onChange={(e) => handleChange('title', e.target.value)}
-              required
-            />
-          </Grid>
-
+          {/* タイトル */}
           <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              タイトル *
+            </Typography>
             <TextField
               fullWidth
-              label="説明"
-              value={item.description || ''}
-              onChange={(e) => handleChange('description', e.target.value)}
+              value={item['タイトル'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: sharedItemsColor.main,
+                  color: sharedItemsColor.main,
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                },
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: `${sharedItemsColor.light}15`,
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 内容 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              内容
+            </Typography>
+            <TextField
+              fullWidth
               multiline
               rows={4}
+              value={item['内容'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: sharedItemsColor.dark,
+                  color: sharedItemsColor.dark,
+                  fontWeight: 500,
+                  fontSize: '1rem',
+                },
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: `${sharedItemsColor.light}15`,
+                }
+              }}
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="カテゴリ"
-              value={item.category || ''}
-              onChange={(e) => handleChange('category', e.target.value)}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="優先度"
-              value={item.priority || ''}
-              onChange={(e) => handleChange('priority', e.target.value)}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="ステータス"
-              value={item.status || ''}
-              onChange={(e) => handleChange('status', e.target.value)}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="担当者"
-              value={item.assignee || ''}
-              onChange={(e) => handleChange('assignee', e.target.value)}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="期限"
-              type="date"
-              value={formatDateForInput(item.due_date)}
-              onChange={(e) => handleChange('due_date', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="完了日"
-              type="date"
-              value={formatDateForInput(item.completed_date)}
-              onChange={(e) => handleChange('completed_date', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
+          {/* 共有日 */}
           <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              共有日
+            </Typography>
             <TextField
               fullWidth
-              label="備考"
-              value={item.notes || ''}
-              onChange={(e) => handleChange('notes', e.target.value)}
+              type="date"
+              value={item['共有日'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 共有できていない */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              共有できていない
+            </Typography>
+            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {staff.map((s, index) => {
+                // イニシャルを取得（名前の最初の1文字）
+                const initial = s.name.charAt(0);
+                
+                // このスタッフが「共有できていない」リストに含まれているか確認
+                const notSharedList = item['共有できていない'] ? 
+                  item['共有できていない'].split(',').map((n: string) => n.trim()) : 
+                  [];
+                const isNotShared = notSharedList.includes(s.name);
+                
+                return (
+                  <Button
+                    key={index}
+                    variant={isNotShared ? 'contained' : 'outlined'}
+                    sx={{
+                      minWidth: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      bgcolor: isNotShared ? sharedItemsColor.main : 'transparent',
+                      color: isNotShared ? '#fff' : sharedItemsColor.main,
+                      borderColor: sharedItemsColor.main,
+                      '&:hover': {
+                        bgcolor: isNotShared ? sharedItemsColor.dark : `${sharedItemsColor.light}30`,
+                      },
+                    }}
+                  >
+                    {initial}
+                  </Button>
+                );
+              })}
+            </Box>
+          </Grid>
+
+          {/* 確認日 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              確認日
+            </Typography>
+            <TextField
+              fullWidth
+              type="date"
+              value={item['確認日'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* PDF1-4 */}
+          {[1, 2, 3, 4].map((num) => (
+            <Grid item xs={12} key={`pdf${num}`}>
+              <Typography variant="caption" color="text.secondary">
+                PDF{num}
+              </Typography>
+              <Box
+                sx={{
+                  mt: 1,
+                  p: 3,
+                  border: '2px dashed #ddd',
+                  borderRadius: 1,
+                  textAlign: 'center',
+                  bgcolor: '#fafafa',
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  📄
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
+
+          {/* 画像1-4 */}
+          {[1, 2, 3, 4].map((num) => (
+            <Grid item xs={12} key={`image${num}`}>
+              <Typography variant="caption" color="text.secondary">
+                画像 {num}
+              </Typography>
+              <Box
+                sx={{
+                  mt: 1,
+                  p: 3,
+                  border: '2px dashed #ddd',
+                  borderRadius: 1,
+                  textAlign: 'center',
+                  bgcolor: '#fafafa',
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  📷
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
+
+          {/* URL */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              URL
+            </Typography>
+            <TextField
+              fullWidth
+              value={item['URL'] || 'http://'}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* ID */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              ID *
+            </Typography>
+            <TextField
+              fullWidth
+              value={item['ID'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 日付 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              日付
+            </Typography>
+            <TextField
+              fullWidth
+              type="date"
+              value={formatDateForInput(item['日付'])}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 入力者 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              入力者
+            </Typography>
+            <TextField
+              fullWidth
+              value={item['入力者'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 共有場 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              共有場 *
+            </Typography>
+            <TextField
+              fullWidth
+              value={item['共有場'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 項目 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              項目 *
+            </Typography>
+            <TextField
+              fullWidth
+              value={item['項目'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
+            />
+          </Grid>
+
+          {/* 打ち合わせ内容 */}
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">
+              打ち合わせ内容
+            </Typography>
+            <TextField
+              fullWidth
               multiline
-              rows={4}
+              rows={3}
+              value={item['打ち合わせ内容'] || ''}
+              disabled
+              sx={{ 
+                mt: 1,
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: '#000',
+                  color: '#000',
+                }
+              }}
             />
           </Grid>
         </Grid>
