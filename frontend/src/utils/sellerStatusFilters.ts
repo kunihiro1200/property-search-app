@@ -2,6 +2,7 @@
  * Seller Status Filter Utility Functions
  * 
  * 売主リストのサイドバーステータスフィルター用のユーティリティ関数
+ * UTF-8 encoding fix for Vercel deployment
  * 
  * 【サイドバーステータス定義】
  * 
