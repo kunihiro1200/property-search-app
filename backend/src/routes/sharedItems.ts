@@ -53,9 +53,24 @@ router.get('/categories', async (req: Request, res: Response) => {
  */
 router.get('/staff', async (req: Request, res: Response) => {
   try {
-    await ensureInitialized();
-    const staff = await sharedItemsService.getNormalStaff();
-    res.json({ data: staff });
+    // 従業員テーブルから通常スタッフを取得
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    const { data: staff, error } = await supabase
+      .from('employees')
+      .select('name, is_normal')
+      .eq('is_normal', true)
+      .order('name');
+    
+    if (error) {
+      throw error;
+    }
+    
+    res.json({ data: staff || [] });
   } catch (error: any) {
     console.error('Failed to fetch staff:', error);
     res.status(500).json({
