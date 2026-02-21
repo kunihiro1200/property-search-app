@@ -4,13 +4,20 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabaseクライアントを直接初期化
 // サーバーレス関数ではVITE_プレフィックスなしの環境変数を使用
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+// フォールバックとしてVITE_プレフィックス付きも試す
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase credentials:', {
     hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey
+    hasKey: !!supabaseAnonKey,
+    env: {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+      SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+      VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
+    }
   });
 }
 
