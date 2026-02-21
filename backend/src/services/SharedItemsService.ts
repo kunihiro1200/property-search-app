@@ -1,5 +1,4 @@
 import { GoogleSheetsClient, SheetRow } from './GoogleSheetsClient';
-import { StaffService } from './StaffService';
 
 export interface SharedItem {
   id: string;
@@ -29,7 +28,6 @@ export interface Staff {
  */
 export class SharedItemsService {
   private sheetsClient: GoogleSheetsClient;
-  private staffService: StaffService;
 
   constructor() {
     this.sheetsClient = new GoogleSheetsClient({
@@ -39,7 +37,6 @@ export class SharedItemsService {
       serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       privateKey: process.env.GOOGLE_PRIVATE_KEY,
     });
-    this.staffService = new StaffService();
   }
 
   /**
@@ -75,11 +72,6 @@ export class SharedItemsService {
    */
   async create(item: Partial<SharedItem>): Promise<SharedItem> {
     try {
-      // 行番号が2以上であることを検証
-      if (item.id && parseInt(item.id) < 2) {
-        throw new Error('Cannot modify header row. Row index must be 2 or greater.');
-      }
-
       await this.sheetsClient.appendRow(item as SheetRow);
       return item as SharedItem;
     } catch (error: any) {
@@ -93,11 +85,11 @@ export class SharedItemsService {
    */
   async update(id: string, updates: Partial<SharedItem>): Promise<SharedItem> {
     try {
-      const rowIndex = parseInt(id);
+      // IDから行番号を検索
+      const rowIndex = await this.sheetsClient.findRowByColumn('ID', id);
       
-      // 行番号が2以上であることを検証
-      if (rowIndex < 2) {
-        throw new Error('Cannot modify header row. Row index must be 2 or greater.');
+      if (!rowIndex) {
+        throw new Error(`ID ${id} が見つかりません`);
       }
 
       await this.sheetsClient.updateRow(rowIndex, updates as SheetRow);
@@ -168,38 +160,16 @@ export class SharedItemsService {
   }
 
   /**
-   * 通常スタッフ取得（通常="true"のスタッフ）
-   */
-  async getNormalStaff(): Promise<Staff[]> {
-    try {
-      const allStaff = await this.staffService.getAllStaff();
-      
-      // 通常="true"のスタッフのみをフィルタリング
-      const normalStaff = allStaff
-        .filter(staff => staff['通常'] === 'true' || staff['通常'] === true)
-        .map(staff => ({
-          name: (staff['姓名'] as string) || (staff['氏名'] as string) || (staff['名前'] as string) || '',
-          is_normal: true,
-        }));
-      
-      return normalStaff;
-    } catch (error: any) {
-      console.error('Failed to fetch normal staff:', error);
-      throw new Error('スタッフ情報の取得に失敗しました');
-    }
-  }
-
-  /**
    * スタッフ確認追加
    * S列「共有できていない」にスタッフ名を追加
    */
   async addStaffConfirmation(itemId: string, staffName: string): Promise<void> {
     try {
-      const rowIndex = parseInt(itemId);
+      // IDから行番号を検索
+      const rowIndex = await this.sheetsClient.findRowByColumn('ID', itemId);
       
-      // 行番号が2以上であることを検証
-      if (rowIndex < 2) {
-        throw new Error('Cannot modify header row. Row index must be 2 or greater.');
+      if (!rowIndex) {
+        throw new Error(`ID ${itemId} が見つかりません`);
       }
 
       await this.sheetsClient.updateRow(rowIndex, {
@@ -217,11 +187,11 @@ export class SharedItemsService {
    */
   async markStaffConfirmed(itemId: string, staffName: string): Promise<void> {
     try {
-      const rowIndex = parseInt(itemId);
+      // IDから行番号を検索
+      const rowIndex = await this.sheetsClient.findRowByColumn('ID', itemId);
       
-      // 行番号が2以上であることを検証
-      if (rowIndex < 2) {
-        throw new Error('Cannot modify header row. Row index must be 2 or greater.');
+      if (!rowIndex) {
+        throw new Error(`ID ${itemId} が見つかりません`);
       }
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式
@@ -291,8 +261,11 @@ export class SharedItemsService {
       formattedRow['確認日'] = this.formatDate(formattedRow['確認日'] as string);
     }
     
+    // A列のIDを使用（存在しない場合は行番号をフォールバック）
+    const id = formattedRow['ID'] ? String(formattedRow['ID']) : rowIndex.toString();
+    
     return {
-      id: rowIndex.toString(),
+      id,
       sharing_location: (formattedRow['共有場'] as string) || '',
       sharing_date: formattedRow['共有日'] as string || null,
       staff_not_shared: (formattedRow['共有できていない'] as string) || null,
