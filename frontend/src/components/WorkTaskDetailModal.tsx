@@ -101,7 +101,7 @@ interface WorkTaskData {
 const ASSIGNEE_OPTIONS = ['K', 'Y', 'I', '生', 'U', 'R', '久', 'H'];
 
 export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onUpdate }: WorkTaskDetailModalProps) {
-  const workTaskColor = SECTION_COLORS.workTask;
+  const workTaskColor = SECTION_COLORS.task;
   const [tabIndex, setTabIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
