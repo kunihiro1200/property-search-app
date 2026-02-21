@@ -10,23 +10,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/test-env.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/simple-test.ts",
-      "use": "@vercel/node"
-    },
-    {
       "src": "api/redirect.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/auth-callback.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/auth-me.ts",
       "use": "@vercel/node"
     },
     {
@@ -44,22 +28,6 @@
     {
       "source": "/p/:propertyNumber",
       "destination": "/api/redirect"
-    },
-    {
-      "source": "/api/auth/callback",
-      "destination": "/api/auth-callback"
-    },
-    {
-      "source": "/api/auth/me",
-      "destination": "/api/auth-me"
-    },
-    {
-      "source": "/api/test-env",
-      "destination": "/api/test-env"
-    },
-    {
-      "source": "/api/simple-test",
-      "destination": "/api/simple-test"
     },
     {
       "source": "/api/(.*)",

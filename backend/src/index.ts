@@ -33,6 +33,7 @@ import supabase from './config/supabase';
 import redisClient, { connectRedis } from './config/redis';
 import authRoutes from './routes/auth';
 import authSupabaseRoutes from './routes/auth.supabase';
+import authManagementRoutes from './routes/auth'; // 業務管理システム用認証ルート
 import sellerRoutes from './routes/sellers';
 import sellersManagementRoutes from './routes/sellersManagement';
 import propertyRoutes from './routes/properties';
@@ -343,7 +344,7 @@ app.get('/p/:propertyNumber', (req, res) => {
 
 // 認証ルート（ローカルと本番の両方に対応）
 app.use('/auth', authSupabaseRoutes);
-app.use('/api/auth', authSupabaseRoutes);  // 本番環境用
+app.use('/api/auth', authManagementRoutes);  // 業務管理システム用認証ルート（優先）
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/sellers', sellersManagementRoutes);
 app.use('/properties', propertyRoutes);

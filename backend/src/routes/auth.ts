@@ -1,191 +1,210 @@
+// 業務管理システム用の認証ルート
 import { Router, Request, Response } from 'express';
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { AuthService } from '../services/AuthService';
-import { authenticate } from '../middleware/auth';
+import { supabaseClient } from '../config/supabase';
 
 const router = Router();
-const authService = new AuthService();
 
-// Google OAuth設定
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      callbackURL: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback',
-    },
-    (accessToken, refreshToken, profile, done) => {
-      // プロフィール情報を返す
-      return done(null, profile);
-    }
-  )
-);
-
-/**
- * Google OAuth認証開始
- */
-router.get(
-  '/google',
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false,
-  })
-);
-
-/**
- * Google OAuth コールバック
- */
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/login?error=auth_failed' }),
-  async (req: Request, res: Response) => {
-    try {
-      const profile = req.user as any;
-      
-      console.log('📝 Google profile received:', {
-        id: profile.id,
-        email: profile.emails?.[0]?.value,
-        name: profile.displayName,
-      });
-
-      // Google認証後の処理
-      const authResult = await authService.loginWithGoogle({
-        id: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName,
-      });
-
-      console.log('✅ Login successful for:', profile.emails[0].value);
-
-      // フロントエンドにリダイレクト（トークンをクエリパラメータで渡す）
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      res.redirect(
-        `${frontendUrl}/auth/callback?token=${authResult.sessionToken}&refresh=${authResult.refreshToken}`
-      );
-    } catch (error: any) {
-      console.error('❌ Google callback error:', {
-        message: error.message,
-        stack: error.stack,
-      });
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      res.redirect(`${frontendUrl}/login?error=auth_failed`);
-    }
-  }
-);
-
-/**
- * ログアウト
- */
-router.post('/logout', authenticate, async (req: Request, res: Response) => {
+// 認証コールバック
+router.post('/callback', async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      await authService.logout(token);
+    const { access_token, refresh_token } = req.body;
+
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (isDev) {
+      console.log('🔵 /auth/callback called');
+      console.log('🔵 Has access_token:', !!access_token);
+      console.log('🔵 Has refresh_token:', !!refresh_token);
     }
 
-    res.json({ message: 'Logged out successfully' });
+    if (!access_token) {
+      console.error('❌ No access token provided');
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'アクセストークンが必要です',
+          retryable: false,
+        },
+      });
+    }
+
+    // トークンからユーザー情報を取得
+    if (isDev) {
+      console.log('🔵 Verifying token with Supabase...');
+    }
+    
+    // Supabase Authでセッションを設定してユーザー情報を取得
+    const { data: { user }, error } = await supabaseClient.auth.setSession({
+      access_token,
+      refresh_token: refresh_token || '',
+    });
+
+    if (isDev) {
+      console.log('🔵 Session result:', { 
+        hasUser: !!user, 
+        userId: user?.id,
+        userEmail: user?.email,
+        error: error?.message 
+      });
+    }
+
+    if (error) {
+      console.error('❌ Supabase session error:', error.message);
+      return res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: `認証エラー: ${error.message}`,
+          retryable: false,
+        },
+      });
+    }
+
+    if (!user) {
+      console.error('❌ No user found in session');
+      return res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: '無効なアクセストークンです',
+          retryable: false,
+        },
+      });
+    }
+
+    if (!user.email) {
+      console.error('❌ User has no email');
+      return res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'ユーザーのメールアドレスが取得できません',
+          retryable: false,
+        },
+      });
+    }
+
+    // 社員レコードを取得または作成
+    if (isDev) {
+      console.log('🔵 Creating/getting employee record...');
+    }
+    
+    // employeesテーブルから社員情報を取得
+    let { data: employee, error: employeeError } = await supabaseClient
+      .from('employees')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (employeeError && employeeError.code !== 'PGRST116') {
+      // PGRST116 = レコードが見つからない（これは正常）
+      console.error('❌ Employee fetch error:', employeeError);
+      throw new Error(`社員情報の取得に失敗しました: ${employeeError.message}`);
+    }
+
+    // 社員レコードが存在しない場合は作成
+    if (!employee) {
+      const { data: newEmployee, error: createError } = await supabaseClient
+        .from('employees')
+        .insert({
+          auth_user_id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('❌ Employee creation error:', createError);
+        throw new Error(`社員レコードの作成に失敗しました: ${createError.message}`);
+      }
+
+      employee = newEmployee;
+    }
+
+    if (isDev) {
+      console.log('✅ Employee record created/retrieved:', {
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+      });
+    }
+
+    res.status(200).json({
+      employee,
+      access_token,
+      refresh_token,
+    });
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error('❌ Auth callback error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : '認証に失敗しました';
+    
     res.status(500).json({
       error: {
-        code: 'LOGOUT_ERROR',
-        message: 'Failed to logout',
+        code: 'AUTH_ERROR',
+        message: errorMessage,
         retryable: true,
       },
     });
   }
 });
 
-/**
- * トークンリフレッシュ
- */
-router.post('/refresh', async (req: Request, res: Response) => {
+// 認証確認
+router.get('/me', async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Refresh token is required',
+          code: 'AUTH_ERROR',
+          message: 'No authentication token provided',
           retryable: false,
         },
       });
     }
 
-    const authResult = await authService.refreshToken(refreshToken);
-
-    res.json({
-      sessionToken: authResult.sessionToken,
-      refreshToken: authResult.refreshToken,
-      expiresAt: authResult.expiresAt,
-    });
+    const token = authHeader.substring(7);
+    
+    // トークンを検証してユーザー情報を取得
+    const { data: { user }, error } = await supabaseClient.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: 'Invalid or expired authentication token',
+          retryable: false,
+        },
+      });
+    }
+    
+    // 社員情報を取得
+    const { data: employee, error: employeeError } = await supabaseClient
+      .from('employees')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+    
+    if (employeeError || !employee) {
+      return res.status(401).json({
+        error: {
+          code: 'AUTH_ERROR',
+          message: 'Employee record not found',
+          retryable: false,
+        },
+      });
+    }
+    
+    res.status(200).json(employee);
   } catch (error) {
-    console.error('Token refresh error:', error);
+    console.error('Get me error:', error);
     res.status(401).json({
       error: {
         code: 'AUTH_ERROR',
-        message: 'Invalid refresh token',
+        message: 'Invalid or expired authentication token',
         retryable: false,
       },
     });
   }
-});
-
-/**
- * Supabase Auth コールバック（フロントエンドから呼ばれる）
- */
-router.post('/callback', async (req: Request, res: Response) => {
-  try {
-    const { access_token, refresh_token } = req.body;
-
-    console.log('📝 Supabase callback received:', {
-      hasAccessToken: !!access_token,
-      hasRefreshToken: !!refresh_token,
-    });
-
-    if (!access_token) {
-      return res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Access token is required',
-          retryable: false,
-        },
-      });
-    }
-
-    // Supabaseトークンから社員情報を取得
-    const authResult = await authService.loginWithSupabaseToken(access_token);
-
-    console.log('✅ Supabase login successful for:', authResult.employee.email);
-
-    res.json({
-      employee: authResult.employee,
-      sessionToken: access_token,
-      refreshToken: refresh_token,
-    });
-  } catch (error: any) {
-    console.error('❌ Supabase callback error:', {
-      message: error.message,
-      stack: error.stack,
-    });
-    res.status(401).json({
-      error: {
-        code: 'AUTH_ERROR',
-        message: error.message || 'Authentication failed',
-        retryable: false,
-      },
-    });
-  }
-});
-
-/**
- * 現在のユーザー情報取得
- */
-router.get('/me', authenticate, (req: Request, res: Response) => {
-  res.json(req.employee);
 });
 
 export default router;
