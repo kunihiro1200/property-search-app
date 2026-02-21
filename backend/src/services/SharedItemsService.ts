@@ -235,16 +235,68 @@ export class SharedItemsService {
   }
 
   /**
+   * 日付フォーマット関数（YYYY-MM-DD形式に変換）
+   */
+  private formatDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+    
+    try {
+      // 既にYYYY-MM-DD形式の場合はそのまま返す
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+      
+      // YYYY/M/D または YYYY/MM/DD 形式の場合
+      if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      // 数値（Excelシリアル値）の場合
+      const numValue = Number(dateStr);
+      if (!isNaN(numValue) && numValue > 0) {
+        // Excelシリアル値を日付に変換（1900年1月1日を基準）
+        const excelEpoch = new Date(1900, 0, 1);
+        const date = new Date(excelEpoch.getTime() + (numValue - 2) * 24 * 60 * 60 * 1000);
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+      }
+      
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * 行データをSharedItemに変換
    */
   private mapRowToItem(row: SheetRow, rowIndex: number): SharedItem {
+    // 日付フィールドを変換
+    const formattedRow = { ...row };
+    
+    // 日付フィールドを変換
+    if (formattedRow['日付']) {
+      formattedRow['日付'] = this.formatDate(formattedRow['日付'] as string);
+    }
+    if (formattedRow['共有日']) {
+      formattedRow['共有日'] = this.formatDate(formattedRow['共有日'] as string);
+    }
+    if (formattedRow['確認日']) {
+      formattedRow['確認日'] = this.formatDate(formattedRow['確認日'] as string);
+    }
+    
     return {
       id: rowIndex.toString(),
-      sharing_location: (row['共有場'] as string) || '',
-      sharing_date: (row['共有日'] as string) || null,
-      staff_not_shared: (row['共有できていない'] as string) || null,
-      confirmation_date: (row['確認日'] as string) || null,
-      ...row,
+      sharing_location: (formattedRow['共有場'] as string) || '',
+      sharing_date: formattedRow['共有日'] as string || null,
+      staff_not_shared: (formattedRow['共有できていない'] as string) || null,
+      confirmation_date: formattedRow['確認日'] as string || null,
+      ...formattedRow,
     };
   }
 }

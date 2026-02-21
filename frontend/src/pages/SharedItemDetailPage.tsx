@@ -112,6 +112,12 @@ export default function SharedItemDetailPage() {
     setItem({ ...item, [field]: value });
   };
 
+  // 日付フォーマット関数（バックエンドで既に変換済みなのでそのまま返す）
+  const formatDateForInput = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    return dateStr;
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
@@ -245,7 +251,7 @@ export default function SharedItemDetailPage() {
               fullWidth
               label="期限"
               type="date"
-              value={item.due_date ? item.due_date.split('T')[0] : ''}
+              value={formatDateForInput(item.due_date)}
               onChange={(e) => handleChange('due_date', e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
@@ -256,7 +262,7 @@ export default function SharedItemDetailPage() {
               fullWidth
               label="完了日"
               type="date"
-              value={item.completed_date ? item.completed_date.split('T')[0] : ''}
+              value={formatDateForInput(item.completed_date)}
               onChange={(e) => handleChange('completed_date', e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
