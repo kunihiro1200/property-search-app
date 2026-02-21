@@ -250,17 +250,17 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
 
   // カテゴリ定義（順序付き）
   const categoryDefinitions: { key: string; defaultLabel: string; matchPrefix: string }[] = [
-    { key: 'sales_contract_confirm', defaultLabel: '売買契約　営業確認中', matchPrefix: '売買契約　営業確認中' },
-    { key: 'sales_contract_input', defaultLabel: '売買契約 入力待ち', matchPrefix: '売買契約 入力待ち' },
+    { key: 'mediation_deadline', defaultLabel: '媒介作成_締日', matchPrefix: '媒介作成_締日' },
     { key: 'site_registration_request', defaultLabel: 'サイト登録依頼してください', matchPrefix: 'サイト登録依頼してください' },
+    { key: 'site_delivery_pending', defaultLabel: 'サイト依頼済み納品待ち', matchPrefix: 'サイト依頼済み納品待ち' },
+    { key: 'site_registration_check', defaultLabel: 'サイト登録要確認', matchPrefix: 'サイト登録要確認' },
+    { key: 'sales_contract_unrequested', defaultLabel: '売買契約 依頼未', matchPrefix: '売買契約 依頼未' },
+    { key: 'sales_contract_input', defaultLabel: '売買契約 入力待ち', matchPrefix: '売買契約 入力待ち' },
+    { key: 'sales_contract_binding', defaultLabel: '売買契約 製本待ち', matchPrefix: '売買契約 製本待ち' },
+    { key: 'sales_contract_confirm', defaultLabel: '売買契約　営業確認中', matchPrefix: '売買契約　営業確認中' },
     { key: 'settlement_chat_pending', defaultLabel: '決済完了チャット送信未', matchPrefix: '決済完了チャット送信未' },
     { key: 'payment_pending', defaultLabel: '入金確認未', matchPrefix: '入金確認未' },
     { key: 'ledger_required', defaultLabel: '要台帳作成', matchPrefix: '要台帳作成' },
-    { key: 'sales_contract_binding', defaultLabel: '売買契約 製本待ち', matchPrefix: '売買契約 製本待ち' },
-    { key: 'sales_contract_unrequested', defaultLabel: '売買契約 依頼未', matchPrefix: '売買契約 依頼未' },
-    { key: 'site_delivery_pending', defaultLabel: 'サイト依頼済み納品待ち', matchPrefix: 'サイト依頼済み納品待ち' },
-    { key: 'site_registration_check', defaultLabel: 'サイト登録要確認', matchPrefix: 'サイト登録要確認' },
-    { key: 'mediation_deadline', defaultLabel: '媒介作成_締日', matchPrefix: '媒介作成_締日' },
     { key: 'on_hold', defaultLabel: '保留', matchPrefix: '保留' },
   ];
 
