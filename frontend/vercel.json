@@ -10,18 +10,21 @@
       "runtime": "@vercel/node@3"
     }
   },
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/auth/callback",
-      "destination": "/api/auth-callback"
+      "src": "/api/auth/callback",
+      "dest": "/api/auth-callback"
     },
     {
-      "source": "/api/auth/me",
-      "destination": "/api/auth-me"
+      "src": "/api/auth/me",
+      "dest": "/api/auth-me"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "framework": "vite"
