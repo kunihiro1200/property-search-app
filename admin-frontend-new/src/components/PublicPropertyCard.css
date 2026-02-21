@@ -1,0 +1,155 @@
+.property-card {
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.property-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(255, 193, 7, 0.2);
+  border: 2px solid var(--color-primary);
+}
+
+.property-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Image Container */
+.property-card-image-container {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  background: var(--color-bg-light);
+}
+
+.property-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.property-card:hover .property-card-image {
+  transform: scale(1.05);
+}
+
+/* Image Overlay */
+.property-card-image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Property Type Badge */
+.property-type-badge {
+  position: absolute !important;
+  top: var(--space-lg) !important;
+  left: var(--space-lg) !important;
+  z-index: 10 !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: var(--font-weight-semibold) !important;
+  border-radius: var(--radius-full) !important;
+  padding: var(--space-xs) var(--space-md) !important;
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Card Content */
+.property-card-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2xl);
+}
+
+/* Price */
+.property-price {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-sm);
+  font-family: var(--font-numeric);
+}
+
+/* Address */
+.property-address {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xl);
+  line-height: var(--line-height-relaxed);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Features */
+.property-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: auto;
+}
+
+.property-feature {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.property-feature-icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+/* Responsive Styles */
+@media (max-width: 600px) {
+  .property-card-image-container {
+    height: 200px;
+  }
+
+  .property-card-content {
+    padding: var(--space-xl);
+  }
+
+  .property-price {
+    font-size: var(--font-size-xl);
+  }
+
+  .property-type-badge {
+    top: var(--space-md);
+    left: var(--space-md);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .property-card,
+  .property-card-image {
+    transition: none;
+  }
+
+  .property-card:hover {
+    transform: none;
+  }
+
+  .property-card:hover .property-card-image {
+    transform: none;
+  }
+}

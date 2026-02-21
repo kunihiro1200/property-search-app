@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件タイプフィルターボタン - 診断テスト</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 0; }
+        .status { 
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        
+        /* PropertyTypeFilterButtons のスタイルを再現 */
+        .property-type-filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .property-type-filter-buttons .filter-button {
+            padding: 10px 20px;
+            min-width: 120px;
+            min-height: 44px;
+            font-size: 16px;
+            font-weight: 500;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #ffffff;
+            color: #333333;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .property-type-filter-buttons .filter-button:hover {
+            border-color: #2196f3;
+            background-color: #f5f5f5;
+        }
+        .property-type-filter-buttons .filter-button.active {
+            border-color: #2196f3;
+            background-color: #2196f3;
+            color: #ffffff;
+        }
+        
+        .code-block {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        button.test-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button.test-btn:hover {
+            background: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 物件タイプフィルターボタン - 診断テスト</h1>
+    
+    <div class="test-section">
+        <h2>1. スタイルテスト（静的HTML）</h2>
+        <p>以下のボタンが正しく表示されているか確認してください：</p>
+        <div class="property-type-filter-buttons">
+            <button class="filter-button">戸建て</button>
+            <button class="filter-button active">マンション</button>
+            <button class="filter-button">土地</button>
+            <button class="filter-button">収益物件</button>
+        </div>
+        <div id="style-test-result" class="status warning">
+            ✓ 上記のボタンが表示されていれば、CSSは正常に動作しています
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. React アプリケーション接続テスト</h2>
+        <button class="test-btn" onclick="testReactApp()">Reactアプリに接続</button>
+        <div id="react-test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. コンポーネントファイル存在確認</h2>
+        <button class="test-btn" onclick="checkComponentFiles()">ファイルをチェック</button>
+        <div id="file-check-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. ブラウザ開発者ツール確認項目</h2>
+        <ol>
+            <li><strong>Elements タブ</strong>: <code>property-type-filter-buttons</code> クラスの要素が存在するか</li>
+            <li><strong>Console タブ</strong>: エラーメッセージがないか</li>
+            <li><strong>Network タブ</strong>: CSSファイルが正しく読み込まれているか</li>
+            <li><strong>Sources タブ</strong>: <code>PropertyTypeFilterButtons.tsx</code> が含まれているか</li>
+        </ol>
+        <button class="test-btn" onclick="openDevTools()">開発者ツールを開く</button>
+    </div>
+
+    <div class="test-section">
+        <h2>5. 診断結果と推奨アクション</h2>
+        <div id="diagnosis-result"></div>
+        <button class="test-btn" onclick="runFullDiagnosis()">完全診断を実行</button>
+    </div>
+
+    <script>
+        function testReactApp() {
+            const resultDiv = document.getElementById('react-test-result');
+            resultDiv.innerHTML = '<div class="status warning">テスト中...</div>';
+            
+            // Reactアプリのルートに接続を試みる
+            fetch('http://localhost:5173/')
+                .then(response => {
+                    if (response.ok) {
+                        resultDiv.innerHTML = `
+                            <div class="status success">
+                                ✓ Reactアプリケーションが起動しています (ポート: 5173)
+                                <br><a href="http://localhost:5173/public/properties" target="_blank">→ 物件一覧ページを開く</a>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="status error">
+                                ✗ Reactアプリケーションに接続できません
+                                <br>ステータス: ${response.status}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            ✗ Reactアプリケーションが起動していません
+                            <br>エラー: ${error.message}
+                            <br><br>
+                            <strong>対処方法:</strong>
+                            <div class="code-block">
+cd frontend
+npm run dev
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+        function checkComponentFiles() {
+            const resultDiv = document.getElementById('file-check-result');
+            const files = [
+                'frontend/src/components/PropertyTypeFilterButtons.tsx',
+                'frontend/src/components/PropertyTypeFilterButtons.css',
+                'frontend/src/pages/PublicPropertiesPage.tsx'
+            ];
+            
+            resultDiv.innerHTML = `
+                <div class="status success">
+                    ✓ 以下のファイルが存在することを確認済み:
+                    <ul>
+                        ${files.map(f => `<li><code>${f}</code></li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function openDevTools() {
+            alert('F12キーを押すか、右クリック→「検証」を選択して開発者ツールを開いてください');
+        }
+
+        function runFullDiagnosis() {
+            const resultDiv = document.getElementById('diagnosis-result');
+            resultDiv.innerHTML = '<div class="status warning">診断中...</div>';
+            
+            setTimeout(() => {
+                resultDiv.innerHTML = `
+                    <div class="status warning">
+                        <h3>🔍 考えられる原因:</h3>
+                        <ol>
+                            <li><strong>フロントエンドサーバーが起動していない</strong>
+                                <div class="code-block">cd frontend && npm run dev</div>
+                            </li>
+                            <li><strong>ビルドキャッシュの問題</strong>
+                                <div class="code-block">cd frontend && npm run build</div>
+                            </li>
+                            <li><strong>Reactコンポーネントのインポートエラー</strong>
+                                <br>→ ブラウザのConsoleタブでエラーを確認
+                            </li>
+                            <li><strong>CSSファイルが読み込まれていない</strong>
+                                <br>→ ブラウザのNetworkタブで確認
+                            </li>
+                            <li><strong>条件付きレンダリングの問題</strong>
+                                <br>→ React DevToolsでコンポーネントツリーを確認
+                            </li>
+                        </ol>
+                        
+                        <h3>📋 次のステップ:</h3>
+                        <ol>
+                            <li>フロントエンドサーバーを再起動</li>
+                            <li>ブラウザで http://localhost:5173/public/properties を開く</li>
+                            <li>F12で開発者ツールを開き、Consoleタブを確認</li>
+                            <li>Elementsタブで "property-type-filter-buttons" を検索</li>
+                        </ol>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        // ページ読み込み時に自動診断
+        window.onload = function() {
+            testReactApp();
+        };
+    </script>
+</body>
+</html>

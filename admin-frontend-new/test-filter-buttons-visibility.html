@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件タイプフィルターボタン - 表示テスト</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #2196f3;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #1976d2;
+        }
+        
+        .code-block {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        /* 実際のコンポーネントのCSSを再現 */
+        .property-type-filter-buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .property-type-filter-buttons .filter-button {
+            padding: 8px 16px;
+            min-height: 36px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            background-color: #ffffff;
+            color: #333333;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            white-space: nowrap;
+        }
+
+        .property-type-filter-buttons .filter-button:hover {
+            border-color: #2196f3;
+            background-color: #f5f5f5;
+        }
+
+        .property-type-filter-buttons .filter-button.active {
+            border-color: #2196f3;
+            background-color: #2196f3;
+            color: #ffffff;
+        }
+        
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 物件タイプフィルターボタン - 表示テスト</h1>
+    
+    <div class="test-section">
+        <h2>1. このページでのテスト表示</h2>
+        <p>以下は、実際のコンポーネントと同じCSSを使用したボタンです:</p>
+        
+        <div class="property-type-filter-buttons">
+            <button class="filter-button">戸建て</button>
+            <button class="filter-button">マンション</button>
+            <button class="filter-button">土地</button>
+            <button class="filter-button active">収益物件</button>
+        </div>
+        
+        <div class="info-box">
+            <strong>✅ 上記のボタンが横並びで表示されていますか？</strong>
+            <ul>
+                <li><strong>はい</strong> → CSSは正しく動作しています。実際のページでキャッシュの問題がある可能性があります。</li>
+                <li><strong>いいえ</strong> → ブラウザの互換性の問題がある可能性があります。</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 実際のページの状態確認</h2>
+        <p>以下のボタンをクリックして、実際のページの状態を確認してください:</p>
+        
+        <div class="action-buttons">
+            <button onclick="openActualPage()">📱 実際のページを開く</button>
+            <button onclick="runDiagnostics()">🔧 診断スクリプトを実行</button>
+            <button onclick="showClearCacheInstructions()">🗑️ キャッシュクリア方法を表示</button>
+        </div>
+        
+        <div id="diagnostics-result" style="margin-top: 20px;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 推奨される解決手順</h2>
+        <ol>
+            <li><strong>ハードリロード</strong>を実行
+                <div class="code-block">Windows/Linux: Ctrl + Shift + R
+Mac: Cmd + Shift + R</div>
+            </li>
+            <li><strong>ブラウザキャッシュをクリア</strong>
+                <div class="code-block">Ctrl + Shift + Delete (Mac: Cmd + Shift + Delete)
+→ 「キャッシュされた画像とファイル」を選択
+→ 「データを削除」</div>
+            </li>
+            <li><strong>開発サーバーを再起動</strong>
+                <div class="code-block">cd frontend
+npm run dev</div>
+            </li>
+            <li><strong>ブラウザを完全に閉じて再起動</strong></li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 技術的な詳細</h2>
+        <p><strong>コンポーネントの実装状況:</strong></p>
+        <ul>
+            <li>✅ PropertyTypeFilterButtons.tsx - 正しく実装されています</li>
+            <li>✅ PropertyTypeFilterButtons.css - 正しく実装されています</li>
+            <li>✅ PublicPropertiesPage.tsx - 正しく配置されています</li>
+            <li>✅ インポート文 - 正しく記述されています</li>
+        </ul>
+        
+        <p><strong>期待される表示位置:</strong></p>
+        <div class="code-block">ページ構造:
+├─ ヘッダー
+│  ├─ タイトル「物件一覧」
+│  ├─ 検索バー
+│  └─ 「物件を絞り込む」セクション
+│     ├─ 価格帯フィルター
+│     ├─ 【物件タイプフィルターボタン】← ここに表示されるはずです
+│     └─ 築年数フィルター
+└─ 物件一覧</div>
+    </div>
+    
+    <script>
+        function openActualPage() {
+            const url = 'http://localhost:5173/public/properties';
+            window.open(url, '_blank');
+            
+            const result = document.getElementById('diagnostics-result');
+            result.innerHTML = `
+                <div class="status success">
+                    ✅ 新しいタブで実際のページを開きました。<br>
+                    ボタンが表示されているか確認してください。
+                </div>
+            `;
+        }
+        
+        function runDiagnostics() {
+            const result = document.getElementById('diagnostics-result');
+            result.innerHTML = `
+                <div class="status warning">
+                    📋 診断スクリプトを実行するには:<br><br>
+                    1. <a href="http://localhost:5173/public/properties" target="_blank">実際のページ</a>を開く<br>
+                    2. F12 で開発者ツールを開く<br>
+                    3. 「Console」タブを選択<br>
+                    4. 以下のファイルの内容をコピー&ペースト:<br>
+                    <code>frontend/diagnose-filter-buttons-console.js</code><br>
+                    5. Enter を押して実行
+                </div>
+            `;
+        }
+        
+        function showClearCacheInstructions() {
+            const result = document.getElementById('diagnostics-result');
+            result.innerHTML = `
+                <div class="status warning">
+                    🗑️ ブラウザキャッシュのクリア方法:<br><br>
+                    <strong>Chrome / Edge:</strong><br>
+                    1. Ctrl + Shift + Delete (Mac: Cmd + Shift + Delete)<br>
+                    2. 「キャッシュされた画像とファイル」にチェック<br>
+                    3. 「データを削除」をクリック<br><br>
+                    
+                    <strong>Firefox:</strong><br>
+                    1. Ctrl + Shift + Delete (Mac: Cmd + Shift + Delete)<br>
+                    2. 「キャッシュ」にチェック<br>
+                    3. 「今すぐ消去」をクリック<br><br>
+                    
+                    <strong>Safari:</strong><br>
+                    1. Cmd + Option + E<br>
+                    2. または「開発」→「キャッシュを空にする」
+                </div>
+            `;
+        }
+        
+        // ページ読み込み時にテスト
+        window.addEventListener('load', function() {
+            const buttons = document.querySelectorAll('.property-type-filter-buttons .filter-button');
+            if (buttons.length === 4) {
+                console.log('✅ テストページのボタンは正しく表示されています');
+                
+                // ボタンの位置を確認
+                const firstRect = buttons[0].getBoundingClientRect();
+                const lastRect = buttons[3].getBoundingClientRect();
+                const isHorizontal = Math.abs(firstRect.top - lastRect.top) < 5;
+                
+                if (isHorizontal) {
+                    console.log('✅ ボタンは横並びになっています');
+                } else {
+                    console.warn('⚠️ ボタンが縦並びになっています');
+                }
+            } else {
+                console.error('❌ ボタンの数が正しくありません');
+            }
+        });
+    </script>
+</body>
+</html>

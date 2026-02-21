@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物件カードバッジ診断</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .warning {
+            border-left-color: #ff9800;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .badge-preview {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 物件カードバッジ診断ツール</h1>
+        
+        <div class="section">
+            <h2>1. APIレスポンス確認</h2>
+            <button onclick="checkAPI()">APIをチェック</button>
+            <div id="api-result"></div>
+        </div>
+
+        <div class="section">
+            <h2>2. 物件タイプマッピング確認</h2>
+            <button onclick="checkTypeMapping()">マッピングをチェック</button>
+            <div id="mapping-result"></div>
+        </div>
+
+        <div class="section">
+            <h2>3. DOM要素確認</h2>
+            <button onclick="checkDOM()">DOMをチェック</button>
+            <div id="dom-result"></div>
+        </div>
+
+        <div class="section">
+            <h2>4. CSS確認</h2>
+            <button onclick="checkCSS()">CSSをチェック</button>
+            <div id="css-result"></div>
+        </div>
+    </div>
+
+    <script>
+        async function checkAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<p>チェック中...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/public/properties?limit=5');
+                const data = await response.json();
+                
+                let html = '<div class="result">';
+                html += `<p><strong>取得件数:</strong> ${data.properties.length}</p>`;
+                html += '<p><strong>物件タイプ:</strong></p><ul>';
+                
+                const typeCounts = {};
+                data.properties.forEach(prop => {
+                    typeCounts[prop.property_type] = (typeCounts[prop.property_type] || 0) + 1;
+                });
+                
+                Object.entries(typeCounts).forEach(([type, count]) => {
+                    html += `<li>${type}: ${count}件</li>`;
+                });
+                
+                html += '</ul>';
+                html += '<p><strong>サンプルデータ:</strong></p>';
+                html += '<pre>' + JSON.stringify(data.properties[0], null, 2) + '</pre>';
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error"><p>エラー: ${error.message}</p></div>`;
+            }
+        }
+
+        function checkTypeMapping() {
+            const resultDiv = document.getElementById('mapping-result');
+            
+            const typeConfigs = {
+                'detached_house': { label: '一戸建て', color: '#8B5CF6', bgColor: '#EDE9FE' },
+                'apartment': { label: 'マンション', color: '#EC4899', bgColor: '#FCE7F3' },
+                'land': { label: '土地', color: '#14B8A6', bgColor: '#CCFBF1' },
+                'other': { label: 'その他', color: '#6B7280', bgColor: '#F3F4F6' },
+            };
+            
+            let html = '<div class="result">';
+            html += '<p><strong>物件タイプマッピング:</strong></p>';
+            
+            Object.entries(typeConfigs).forEach(([key, config]) => {
+                html += `<div class="badge-preview" style="background-color: ${config.bgColor}; color: ${config.color};">`;
+                html += `${config.label} (${key})`;
+                html += '</div>';
+            });
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+
+        function checkDOM() {
+            const resultDiv = document.getElementById('dom-result');
+            
+            // 公開物件ページを開いているか確認
+            if (window.location.pathname.includes('/public/properties')) {
+                const badges = document.querySelectorAll('.property-type-badge');
+                const cards = document.querySelectorAll('.property-card');
+                
+                let html = '<div class="result">';
+                html += `<p><strong>物件カード数:</strong> ${cards.length}</p>`;
+                html += `<p><strong>バッジ要素数:</strong> ${badges.length}</p>`;
+                
+                if (badges.length === 0) {
+                    html += '<p class="warning">⚠️ バッジ要素が見つかりません！</p>';
+                } else {
+                    html += '<p><strong>バッジの内容:</strong></p><ul>';
+                    badges.forEach((badge, i) => {
+                        const text = badge.textContent;
+                        const styles = window.getComputedStyle(badge);
+                        html += `<li>バッジ ${i + 1}: "${text}" (display: ${styles.display}, visibility: ${styles.visibility}, opacity: ${styles.opacity})</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                html += '</div>';
+                resultDiv.innerHTML = html;
+            } else {
+                resultDiv.innerHTML = '<div class="result warning"><p>⚠️ このツールは公開物件ページ (http://localhost:5173/public/properties) で実行してください</p></div>';
+            }
+        }
+
+        function checkCSS() {
+            const resultDiv = document.getElementById('css-result');
+            
+            // CSSルールを確認
+            const styleSheets = Array.from(document.styleSheets);
+            let foundRules = [];
+            
+            try {
+                styleSheets.forEach(sheet => {
+                    try {
+                        const rules = Array.from(sheet.cssRules || []);
+                        rules.forEach(rule => {
+                            if (rule.selectorText && rule.selectorText.includes('property-type-badge')) {
+                                foundRules.push({
+                                    selector: rule.selectorText,
+                                    cssText: rule.cssText
+                                });
+                            }
+                        });
+                    } catch (e) {
+                        // CORS制限でアクセスできないスタイルシートはスキップ
+                    }
+                });
+                
+                let html = '<div class="result">';
+                if (foundRules.length === 0) {
+                    html += '<p class="error">❌ .property-type-badge のCSSルールが見つかりません！</p>';
+                } else {
+                    html += `<p><strong>見つかったCSSルール:</strong> ${foundRules.length}件</p>`;
+                    foundRules.forEach(rule => {
+                        html += '<pre>' + rule.cssText + '</pre>';
+                    });
+                }
+                html += '</div>';
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error"><p>エラー: ${error.message}</p></div>`;
+            }
+        }
+
+        // ページ読み込み時に自動実行
+        window.addEventListener('load', () => {
+            console.log('診断ツールが読み込まれました');
+            console.log('各ボタンをクリックして診断を実行してください');
+        });
+    </script>
+</body>
+</html>
