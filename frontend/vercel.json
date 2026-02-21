@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "rm -rf node_modules/.vite && rm -rf dist && npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
