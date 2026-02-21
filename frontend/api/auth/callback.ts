@@ -2,26 +2,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabaseクライアントを直接初期化
-// サーバーレス関数ではVITE_プレフィックスなしの環境変数を使用
-// フォールバックとしてVITE_プレフィックス付きも試す
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
+// Supabase認証情報を直接定義（環境変数が読み込めない問題の根本的な解決）
+const SUPABASE_URL = 'https://krxhrbtlgfjzsseegaqq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyeGhyYnRsZ2ZqenNzZWVnYXFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMjE0MTEsImV4cCI6MjA3ODU5NzQxMX0.xoa5SRDXziVFK0c-uiKgHWCE_b5l4iqqLRSJzgv2cBc';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase credentials:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey,
-    env: {
-      SUPABASE_URL: !!process.env.SUPABASE_URL,
-      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-      SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
-      VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
-    }
-  });
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POSTリクエストのみ許可
