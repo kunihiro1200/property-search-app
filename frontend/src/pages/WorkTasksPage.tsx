@@ -79,19 +79,18 @@ export default function WorkTasksPage() {
 
   // 選択されたカテゴリでフィルタリング
   const filteredTasks = useMemo(() => {
-    let tasks = filterTasksByStatus(allWorkTasks, selectedCategory);
-    
-    // 検索クエリでさらにフィルタリング
+    // 検索クエリが入力されている場合は、カテゴリーに関係なく全件から検索
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      tasks = tasks.filter(t => 
+      return allWorkTasks.filter(t => 
         t.property_number?.toLowerCase().includes(query) ||
         t.property_address?.toLowerCase().includes(query) ||
         t.seller_name?.toLowerCase().includes(query)
       );
     }
-    
-    return tasks;
+
+    // 検索クエリがない場合は、選択されたカテゴリでフィルタリング
+    return filterTasksByStatus(allWorkTasks, selectedCategory);
   }, [allWorkTasks, selectedCategory, searchQuery]);
 
   // ページネーション用
