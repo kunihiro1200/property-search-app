@@ -6,10 +6,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/main.ts",
-      "use": "@vercel/node"
-    },
-    {
       "src": "api/redirect.ts",
       "use": "@vercel/node"
     },
@@ -47,11 +43,11 @@
     },
     {
       "source": "/api/(.*)",
-      "destination": "/api/main"
+      "destination": "/api/index"
     },
     {
       "source": "/auth/(.*)",
-      "destination": "/api/main"
+      "destination": "/api/index"
     },
     {
       "source": "/(.*)",
