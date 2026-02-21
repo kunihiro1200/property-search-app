@@ -1,14 +1,14 @@
 {
   "version": 2,
+  "env": {
+    "TS_NODE_TRANSPILE_ONLY": "true"
+  },
   "builds": [
     {
       "src": "src/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**"],
-        "typescript": {
-          "transpileOnly": true
-        }
+        "includeFiles": ["src/**"]
       }
     }
   ],
