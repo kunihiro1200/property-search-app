@@ -231,7 +231,7 @@ export const calculateTaskStatus = (task: WorkTask): string => {
 // ステータスカテゴリ定義
 export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
   const statusCounts: Record<string, number> = {};
-  const statusLabels: Record<string, string> = {};
+  const statusDates: Record<string, Set<string>> = {}; // 各カテゴリの日付を収集
 
   // 各タスクのステータスを計算してカウント
   tasks.forEach(task => {
@@ -241,9 +241,14 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
     const statusKey = getStatusKey(status);
     if (statusKey) {
       statusCounts[statusKey] = (statusCounts[statusKey] || 0) + 1;
-      // 最初に見つかったステータスのラベルを保存（日付付き）
-      if (!statusLabels[statusKey]) {
-        statusLabels[statusKey] = extractCategoryLabel(status);
+      
+      // 日付を抽出してSetに追加
+      if (!statusDates[statusKey]) {
+        statusDates[statusKey] = new Set();
+      }
+      const dateMatch = status.match(/(\d{1,2}\/\d{1,2})/);
+      if (dateMatch) {
+        statusDates[statusKey].add(dateMatch[1]);
       }
     }
   });
@@ -277,9 +282,22 @@ export const getStatusCategories = (tasks: WorkTask[]): StatusCategory[] => {
   categoryDefinitions.forEach(def => {
     const count = statusCounts[def.key] || 0;
     if (count > 0) {
+      // 全ての日付を結合してラベルに追加
+      const dates = statusDates[def.key];
+      let label = def.defaultLabel;
+      if (dates && dates.size > 0) {
+        const sortedDates = Array.from(dates).sort((a, b) => {
+          const [aMonth, aDay] = a.split('/').map(Number);
+          const [bMonth, bDay] = b.split('/').map(Number);
+          if (aMonth !== bMonth) return aMonth - bMonth;
+          return aDay - bDay;
+        });
+        label = `${def.defaultLabel} ${sortedDates.join(', ')}`;
+      }
+      
       categories.push({
         key: def.key,
-        label: statusLabels[def.key] || def.defaultLabel, // 日付付きラベルを使用
+        label,
         count,
         filter: (task: WorkTask) => {
           const status = (task as any).sidebar_category || calculateTaskStatus(task);

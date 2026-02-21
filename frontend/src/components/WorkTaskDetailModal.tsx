@@ -186,6 +186,18 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
 
   const hasChanges = Object.keys(editedData).length > 0;
 
+  // 物件番号をクリップボードにコピー
+  const handleCopyPropertyNumber = async () => {
+    if (!propertyNumber) return;
+    try {
+      await navigator.clipboard.writeText(propertyNumber);
+      setSnackbar({ open: true, message: '物件番号をコピーしました', severity: 'success' });
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      setSnackbar({ open: true, message: 'コピーに失敗しました', severity: 'error' });
+    }
+  };
+
   // 編集可能テキストフィールド
   const EditableField = ({ label, field, type = 'text' }: { label: string; field: string; type?: string }) => (
     <Grid container spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
@@ -222,6 +234,21 @@ export default function WorkTaskDetailModal({ open, onClose, propertyNumber, onU
               <Link href={getValue(field)} target="_blank" rel="noopener" sx={{ whiteSpace: 'nowrap' }}>開く</Link>
             )}
           </Box>
+        ) : field === 'property_number' ? (
+          <Typography
+            variant="body2"
+            onClick={handleCopyPropertyNumber}
+            sx={{
+              cursor: 'pointer',
+              py: 1,
+              '&:hover': {
+                color: 'primary.main',
+                textDecoration: 'underline',
+              }
+            }}
+          >
+            {getValue(field) || ''}
+          </Typography>
         ) : (
           <TextField
             size="small"

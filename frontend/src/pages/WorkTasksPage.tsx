@@ -18,8 +18,9 @@ import {
   ListItemButton,
   ListItemText,
   Badge,
+  IconButton,
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import api from '../services/api';
 import WorkTaskDetailModal from '../components/WorkTaskDetailModal';
 import { WorkTask, getStatusCategories, filterTasksByStatus, calculateTaskStatus } from '../utils/workTaskStatusUtils';
@@ -245,6 +246,19 @@ export default function WorkTasksPage() {
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setPage(0);
+                      }}
+                    >
+                      <ClearIcon />
+                    </IconButton>
                   </InputAdornment>
                 ),
               }}
