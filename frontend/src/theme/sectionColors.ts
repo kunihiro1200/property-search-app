@@ -22,4 +22,10 @@ export const SECTION_COLORS = {
     dark: '#e65100',        // 濃いオレンジ色（ホバー時）
     contrastText: '#ffffff', // 白色（テキスト）
   },
+  sharedItems: {
+    main: '#ff6f00',        // オレンジベース（濃いめ）
+    light: '#ff9e40',       // 明るいオレンジ
+    dark: '#c43e00',        // 濃いオレンジ（ホバー時）
+    contrastText: '#ffffff', // 白色（テキスト）
+  },
 };

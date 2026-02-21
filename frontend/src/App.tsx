@@ -15,6 +15,8 @@ import EmployeeCalendarStatusPage from './pages/EmployeeCalendarStatusPage';
 import WorkTasksPage from './pages/WorkTasksPage';
 import PropertyListingsPage from './pages/PropertyListingsPage';
 import PropertyListingDetailPage from './pages/PropertyListingDetailPage';
+import SharedItemsPage from './pages/SharedItemsPage';
+import SharedItemDetailPage from './pages/SharedItemDetailPage';
 import BuyersPage from './pages/BuyersPage';
 import NewBuyerPage from './pages/NewBuyerPage';
 import BuyerDetailPage from './pages/BuyerDetailPage';
@@ -127,6 +129,22 @@ function App() {
         element={
           <ProtectedRoute>
             <WorkTasksPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shared-items"
+        element={
+          <ProtectedRoute>
+            <SharedItemsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shared-items/:id"
+        element={
+          <ProtectedRoute>
+            <SharedItemDetailPage />
           </ProtectedRoute>
         }
       />

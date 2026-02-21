@@ -6,6 +6,7 @@ import {
   Home as HomeIcon,
   Assignment as AssignmentIcon,
   Public as PublicIcon,
+  Share as ShareIcon,
 } from '@mui/icons-material';
 
 export default function PageNavigation() {
@@ -17,6 +18,7 @@ export default function PageNavigation() {
     { path: '/buyers', label: '買主リスト', icon: <PeopleIcon /> },
     { path: '/property-listings', label: '物件リスト', icon: <ShoppingCartIcon /> },
     { path: '/work-tasks', label: '業務依頼', icon: <AssignmentIcon /> },
+    { path: '/shared-items', label: '共有', icon: <ShareIcon /> },
   ];
 
   const handlePublicSiteClick = () => {
