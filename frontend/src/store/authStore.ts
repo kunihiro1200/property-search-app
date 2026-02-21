@@ -83,20 +83,16 @@ export const useAuthStore = create<AuthState>()(
       console.log('🔵 handleAuthCallback called');
       console.log('🔵 Current URL:', window.location.href);
       
-      // URLからハッシュフラグメントまたはクエリパラメータを確認
+      // URLからハッシュフラグメントを確認（Supabase Authはハッシュフラグメントでトークンを返す）
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const queryParams = new URLSearchParams(window.location.search);
-      
-      const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-      const code = queryParams.get('code'); // PKCE Flow用
-      const errorParam = hashParams.get('error') || queryParams.get('error');
-      const errorDescription = hashParams.get('error_description') || queryParams.get('error_description');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const errorParam = hashParams.get('error');
+      const errorDescription = hashParams.get('error_description');
 
-      console.log('🔵 URL params:', {
+      console.log('🔵 Hash params:', {
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
-        hasCode: !!code,
         error: errorParam,
         errorDescription,
       });
@@ -106,35 +102,19 @@ export const useAuthStore = create<AuthState>()(
         throw new Error(errorDescription || errorParam);
       }
 
-      let session;
-
-      // PKCE Flow: codeがある場合
-      if (code && !accessToken) {
-        console.log('🔵 Using PKCE flow with code...');
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        
-        if (exchangeError) {
-          throw new Error(`コード交換エラー: ${exchangeError.message}`);
-        }
-        
-        session = data.session;
-      } else {
-        // Implicit Flow: セッションを取得
-        console.log('🔵 Using Implicit flow...');
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw new Error(`セッション取得エラー: ${sessionError.message}`);
-        }
-        
-        session = currentSession;
-      }
-
-      console.log('🔵 Session:', { 
+      // Supabase Authからセッションを取得
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('🔵 Supabase session:', {
         hasSession: !!session,
         hasAccessToken: !!session?.access_token,
         hasRefreshToken: !!session?.refresh_token,
+        error: sessionError?.message
       });
+
+      if (sessionError) {
+        throw new Error(`セッション取得エラー: ${sessionError.message}`);
+      }
 
       if (!session) {
         throw new Error('有効なセッションが見つかりません。もう一度ログインしてください。');
