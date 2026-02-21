@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from '../src/services/AthomeSheetSyncService';
 import { BuyerService } from '../src/services/BuyerService';
 import publicPropertiesRoutes from '../src/routes/publicProperties';
+import authSupabaseRoutes from '../src/routes/auth.supabase'; // 業務管理システム用の認証ルート
 
 const app = express();
 
@@ -66,12 +67,18 @@ function convertPropertyTypeToEnglish(japaneseType: string | null | undefined): 
 }
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS設定（業務管理システムと物件公開サイトの両方をサポート）
 app.use(cors({
-  origin: '*', // 公開サイトなので全てのオリジンを許可
-  credentials: false,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: true, // リクエストのOriginヘッダーをそのまま許可
+  credentials: true, // 認証に必要なクッキーやヘッダーを許可
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24時間
 }));
 app.use(compression());
 app.use(morgan('dev'));
@@ -1919,6 +1926,16 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
     });
   }
 });
+
+// 業務管理システム用の認証ルート（物件公開サイトには影響なし）
+import authSupabaseRoutes from '../src/routes/auth.supabase';
+
+// OPTIONSリクエストを明示的に処理（プリフライトリクエスト対応）
+app.options('/api/auth/*', (req, res) => {
+  res.status(200).end();
+});
+
+app.use('/api/auth', authSupabaseRoutes);
 
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
