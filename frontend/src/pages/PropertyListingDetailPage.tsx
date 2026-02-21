@@ -34,7 +34,6 @@ import EditableSection from '../components/EditableSection';
 import GmailDistributionButton from '../components/GmailDistributionButton';
 import DistributionAreaField from '../components/DistributionAreaField';
 import EditableUrlField from '../components/EditableUrlField';
-import MessageTemplateDialog from '../components/MessageTemplateDialog';
 import AssigneeChatSender from '../components/AssigneeChatSender';
 import PropertySidebarStatus from '../components/PropertySidebarStatus';
 import { SECTION_COLORS } from '../theme/sectionColors';
@@ -152,7 +151,6 @@ export default function PropertyListingDetailPage() {
   const [workTaskData, setWorkTaskData] = useState<WorkTaskData | null>(null);
   const [retrievingStorageUrl, setRetrievingStorageUrl] = useState(false);
   const [isCalculatingAreas, setIsCalculatingAreas] = useState(false);
-  const [messageTemplateDialogOpen, setMessageTemplateDialogOpen] = useState(false);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [staffData, setStaffData] = useState<{
     name?: string;
@@ -780,24 +778,6 @@ export default function PropertyListingDetailPage() {
                     '&:hover': {
                       borderColor: '#1b5e20',
                       backgroundColor: '#2e7d3208',
-                    },
-                  }}
-                >
-                  売主
-                </Button>
-              )}
-              {data.seller_email && (
-                <Button
-                  variant="outlined"
-                  size="medium"
-                  onClick={() => setMessageTemplateDialogOpen(true)}
-                  startIcon={<EmailIcon />}
-                  sx={{
-                    borderColor: '#1976d2',
-                    color: '#1976d2',
-                    '&:hover': {
-                      borderColor: '#115293',
-                      backgroundColor: '#1976d208',
                     },
                   }}
                 >
@@ -2195,62 +2175,6 @@ ${propertyDetailUrl}
           </Box>
         </Grid>
       </Grid>
-
-      {/* メッセージテンプレートダイアログ */}
-      {data?.seller_email && (
-        <MessageTemplateDialog
-          open={messageTemplateDialogOpen}
-          onClose={() => setMessageTemplateDialogOpen(false)}
-          recipientEmail={data.seller_email}
-          propertyNumber={data.property_number}
-          propertyData={{
-            property_number: data.property_number,
-            address: data.address,
-            display_address: data.display_address,
-            price: data.price,
-            seller_name: data.seller_name,
-            seller_contact: data.seller_contact,
-            property_type: data.property_type,
-            land_area: data.land_area,
-            building_area: data.building_area,
-            structure: data.structure,
-            construction_year_month: data.construction_year_month,
-            floor_plan: data.floor_plan,
-            owner_info: data.owner_info,
-            sales_assignee: data.sales_assignee,
-          }}
-          staffData={staffData || undefined}
-          onSendSuccess={async (templateType: string, subject: string, body: string) => {
-            // メール送信成功時にコミュニケーション履歴を記録
-            try {
-              const { supabase } = await import('../config/supabase');
-              const { data: { user } } = await supabase.auth.getUser();
-              
-              if (user?.email) {
-                await api.post('/api/activity-logs', {
-                  action: 'email',
-                  targetType: 'property_seller',
-                  targetId: data.property_number,
-                  metadata: {
-                    seller_name: data.seller_name,
-                    seller_email: data.seller_email,
-                    property_number: data.property_number,
-                    property_address: data.address || data.display_address,
-                    template_type: templateType,
-                    subject: subject,
-                    body: body,
-                  },
-                });
-                // 履歴を再取得
-                fetchCommunicationHistory();
-              }
-            } catch (error) {
-              console.error('Failed to log email:', error);
-              // エラーでもメール送信は成功しているので、エラーメッセージは表示しない
-            }
-          }}
-        />
-      )}
 
       <Snackbar
         open={snackbar.open}
