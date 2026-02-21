@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // 環境変数からAPI URLを取得（本番環境ではVITE_API_URLを使用）
 const API_BASE_URL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'development' ? 'http://localhost:3001' : ''
+  import.meta.env.MODE === 'development' 
+    ? 'http://localhost:3001' 
+    : 'https://baikyaku-property-site3.vercel.app' // フォールバック: 本番環境のバックエンドURL
 );
 
 // デバッグ用ログ
