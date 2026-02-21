@@ -96,29 +96,23 @@ const initializeConnections = async () => {
 // Middleware
 app.use(helmet());
 
-// CORS設定を動的に構築
-const allowedOrigins = [
-  'http://localhost:5173', 
-  'http://localhost:5174', 
-  'http://localhost:5175',
-  'http://localhost:3000',
-  'https://property-site-frontend-kappa.vercel.app',
-  'https://baikyaku-property-site3.vercel.app',
-  'https://new-admin-management-system.vercel.app',
-  'https://new-admin-management-system-v2.vercel.app'
-];
-
-console.log('🔒 CORS allowed origins:', allowedOrigins);
-
-app.use(cors({
-  origin: (origin, callback) => {
+// CORS設定 - 本番環境では全てのVercelドメインを許可
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // originがundefinedの場合（同一オリジンリクエスト）は許可
     if (!origin) {
       return callback(null, true);
     }
     
-    // 許可されたオリジンリストに含まれているか確認
-    if (allowedOrigins.includes(origin)) {
+    // 許可するオリジンのパターン
+    const allowedPatterns = [
+      /^http:\/\/localhost:\d+$/,  // localhost
+      /^https:\/\/.*\.vercel\.app$/,  // 全てのVercelドメイン
+    ];
+    
+    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+    
+    if (isAllowed) {
       console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
@@ -129,7 +123,9 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' })); // 画像付きメール対応のため制限を増やす
