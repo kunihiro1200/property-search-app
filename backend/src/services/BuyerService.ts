@@ -17,6 +17,7 @@ export interface BuyerQueryOptions {
   dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  includeDeleted?: boolean; // 削除済み買主を含めるかどうか
 }
 
 export interface SyncResult {
@@ -93,6 +94,7 @@ export class BuyerService {
       dateTo,
       sortBy = 'reception_date',
       sortOrder = 'desc',
+      includeDeleted = false, // デフォルトで削除済みを除外
     } = options;
 
     const offset = (page - 1) * limit;
@@ -100,6 +102,11 @@ export class BuyerService {
     let query = this.supabase
       .from('buyers')
       .select('*', { count: 'exact' });
+
+    // 削除済みを除外（デフォルト）
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
 
     // 検索
     if (search) {
@@ -124,10 +131,13 @@ export class BuyerService {
 
     // ソート（受付日が空欄のものは一番後ろに配置）
     // nullsFirst: false で NULL値を最後に配置
-    query = query.order(sortBy, { 
-      ascending: sortOrder === 'asc',
-      nullsFirst: false 
-    });
+    // 受付日が同じ場合は買主番号の降順でソート
+    query = query
+      .order(sortBy, { 
+        ascending: sortOrder === 'asc',
+        nullsFirst: false 
+      })
+      .order('buyer_number', { ascending: false }); // 買主番号の降順（新しい順）
 
     // ページネーション
     query = query.range(offset, offset + limit - 1);
@@ -138,11 +148,14 @@ export class BuyerService {
       throw new Error(`Failed to fetch buyers: ${error.message}`);
     }
 
+    // 各買主に物件情報を追加（一括取得で最適化）
+    const buyersWithPropertyInfo = await this.addPropertyInfoToBuyers(data || []);
+
     const total = count || 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: data || [],
+      data: buyersWithPropertyInfo,
       total,
       page,
       limit,
@@ -151,13 +164,71 @@ export class BuyerService {
   }
 
   /**
-   * IDで買主を取得
+   * 買主リストに物件情報を追加（一括取得で最適化）
+   */
+  private async addPropertyInfoToBuyers(buyers: any[]): Promise<any[]> {
+    if (buyers.length === 0) {
+      return [];
+    }
+
+    // 全買主の最初の物件番号を収集
+    const propertyNumbers = new Set<string>();
+    const buyerPropertyMap = new Map<string, string>(); // buyer_number -> property_number
+
+    buyers.forEach(buyer => {
+      if (buyer.property_number) {
+        const propertyNumberList = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+        if (propertyNumberList.length > 0) {
+          const firstPropertyNumber = propertyNumberList[0];
+          propertyNumbers.add(firstPropertyNumber);
+          buyerPropertyMap.set(buyer.buyer_number, firstPropertyNumber);
+        }
+      }
+    });
+
+    // 物件情報を一括取得
+    let propertyInfoMap = new Map<string, any>();
+    if (propertyNumbers.size > 0) {
+      const { data: properties } = await this.supabase
+        .from('property_listings')
+        .select('property_number, address, display_address, property_type, atbb_status')
+        .in('property_number', Array.from(propertyNumbers));
+      
+      if (properties) {
+        properties.forEach(property => {
+          propertyInfoMap.set(property.property_number, property);
+        });
+      }
+    }
+
+    // 買主に物件情報を追加
+    return buyers.map(buyer => {
+      const propertyNumber = buyerPropertyMap.get(buyer.buyer_number);
+      if (propertyNumber) {
+        const property = propertyInfoMap.get(propertyNumber);
+        if (property) {
+          return {
+            ...buyer,
+            property_address: property.display_address || property.address,
+            property_type: property.property_type,
+            atbb_status: property.atbb_status,
+          };
+        }
+      }
+      return buyer;
+    });
+  }
+
+  /**
+   * IDで買主を取得（buyer_id）
+   * 注意: このメソッドはbuyer_id（文字列型のUUID）で検索します。
+   * 買主番号で検索する場合は getByBuyerNumber() を使用してください。
    */
   async getById(id: string): Promise<any | null> {
     const { data, error } = await this.supabase
       .from('buyers')
       .select('*')
-      .eq('id', id)
+      .eq('buyer_id', id)
       .single();
 
     if (error) {
@@ -173,13 +244,20 @@ export class BuyerService {
   /**
    * 買主番号で買主を取得
    */
-  async getByBuyerNumber(buyerNumber: string): Promise<any | null> {
-    console.log(`[BuyerService.getByBuyerNumber] buyerNumber=${buyerNumber}`);
-    const { data, error } = await this.supabase
+  async getByBuyerNumber(buyerNumber: string, includeDeleted: boolean = false): Promise<any | null> {
+    console.log(`[BuyerService.getByBuyerNumber] buyerNumber=${buyerNumber}, includeDeleted=${includeDeleted}`);
+    
+    let query = this.supabase
       .from('buyers')
       .select('*')
-      .eq('buyer_number', buyerNumber)
-      .single();
+      .eq('buyer_number', buyerNumber);
+
+    // 削除済みを除外（デフォルト）
+    if (!includeDeleted) {
+      query = query.is('deleted_at', null);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       console.log(`[BuyerService.getByBuyerNumber] error:`, error);
@@ -201,6 +279,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .select('id, buyer_number, name, phone_number, email, property_number, latest_status, initial_assignee')
+      .is('deleted_at', null) // 削除済みを除外
       .or(
         `buyer_number.ilike.%${query}%,name.ilike.%${query}%,phone_number.ilike.%${query}%,property_number.ilike.%${query}%`
       )
@@ -215,31 +294,477 @@ export class BuyerService {
 
   /**
    * 買主に紐づく物件リストを取得
+   * 
+   * 取得元:
+   * 1. buyers.property_number（初回問い合わせ物件）
+   * 
+   * 注意: inquiry_historyテーブルは現在存在しないため、
+   * buyers.property_numberのみから物件を取得します。
+   * 
+   * @param buyerNumber - 買主番号（主キー）
    */
-  async getLinkedProperties(buyerId: string): Promise<any[]> {
-    // まず買主を取得
-    const buyer = await this.getById(buyerId);
-    if (!buyer || !buyer.property_number) {
+  async getLinkedProperties(buyerNumber: string): Promise<any[]> {
+    const propertyNumbersSet = new Set<string>();
+
+    // buyers.property_number から物件番号を取得
+    const buyer = await this.getByBuyerNumber(buyerNumber);
+    if (!buyer) {
+      console.log(`[BuyerService.getLinkedProperties] Buyer not found: ${buyerNumber}`);
+      return [];
+    }
+
+    if (buyer.property_number) {
+      const propertyNumbers = buyer.property_number
+        .split(',')
+        .map((n: string) => n.trim())
+        .filter((n: string) => n);
+      
+      console.log(`[BuyerService.getLinkedProperties] Found property numbers from buyer.property_number:`, propertyNumbers);
+      propertyNumbers.forEach(pn => propertyNumbersSet.add(pn));
+    }
+
+    // 物件番号が1つもない場合は空配列を返す
+    if (propertyNumbersSet.size === 0) {
+      console.log(`[BuyerService.getLinkedProperties] No property numbers found for buyer ${buyerNumber}`);
       return [];
     }
 
     // 物件番号で物件リストを検索
-    const propertyNumbers = buyer.property_number.split(',').map((n: string) => n.trim()).filter((n: string) => n);
+    const propertyNumbers = Array.from(propertyNumbersSet);
+    console.log(`[BuyerService.getLinkedProperties] Fetching properties:`, propertyNumbers);
     
-    if (propertyNumbers.length === 0) {
-      return [];
-    }
-
     const { data, error } = await this.supabase
       .from('property_listings')
       .select('*')
       .in('property_number', propertyNumbers);
 
     if (error) {
+      console.error(`[BuyerService.getLinkedProperties] Error fetching properties:`, error);
       throw new Error(`Failed to fetch linked properties: ${error.message}`);
     }
 
+    console.log(`[BuyerService.getLinkedProperties] Found ${data?.length || 0} properties`);
     return data || [];
+  }
+
+  /**
+   * 近隣物件を取得
+   * 条件：
+   * - 種別：基準物件と同じ種別（戸建て、マンション等）
+   * - 町名：基準物件と同じ市区町村+町名（例：大分市明野）
+   * - 価格帯：基準物件の価格に応じた範囲
+   * - ステータス：atbb_statusに"公開中"、"公開前"、または"非公開（配信メールのみ）"が含まれる
+   * 
+   * 拡張機能：
+   * - 距離ベース検索（半径3km以内）
+   * - 配信エリアベース検索（共通エリア番号）
+   */
+  async getNearbyProperties(propertyNumber: string): Promise<{
+    baseProperty: any;
+    nearbyProperties: any[];
+    searchMethods?: {
+      location: number;
+      distance: number;
+      distribution_area: number;
+      total: number;
+    };
+  }> {
+    // 基準物件を取得
+    const { data: baseProperty, error: baseError } = await this.supabase
+      .from('property_listings')
+      .select('*')
+      .eq('property_number', propertyNumber)
+      .single();
+
+    if (baseError || !baseProperty) {
+      throw new Error(`Base property not found: ${propertyNumber}`);
+    }
+
+    // 共通フィルタを準備
+    const { minPrice, maxPrice } = this.calculatePriceRange(baseProperty.price || 0);
+    const commonFilters = {
+      minPrice,
+      maxPrice,
+      propertyType: baseProperty.property_type || '',
+      excludePropertyNumber: propertyNumber
+    };
+
+    console.log('[BuyerService.getNearbyProperties] Search criteria:', {
+      propertyNumber,
+      price: baseProperty.price,
+      priceRange: `${minPrice} - ${maxPrice}`,
+      propertyType: commonFilters.propertyType,
+    });
+
+    // 3つの検索方法を並列実行
+    const [locationResults, distanceResults, distributionAreaResults] = await Promise.all([
+      this.searchByLocation(baseProperty, commonFilters),
+      this.searchByDistance(baseProperty, commonFilters),
+      this.searchByDistributionArea(baseProperty, commonFilters)
+    ]);
+
+    console.log('[BuyerService.getNearbyProperties] Search results:', {
+      location: locationResults.length,
+      distance: distanceResults.length,
+      distribution_area: distributionAreaResults.length
+    });
+
+    // 結果を統合
+    const mergedResults = this.mergeResults(
+      locationResults,
+      distanceResults,
+      distributionAreaResults
+    );
+
+    // ソート
+    const sortedResults = this.sortResults(mergedResults);
+
+    console.log('[BuyerService.getNearbyProperties] Total unique properties:', sortedResults.length);
+
+    return {
+      baseProperty,
+      nearbyProperties: sortedResults,
+      searchMethods: {
+        location: locationResults.length,
+        distance: distanceResults.length,
+        distribution_area: distributionAreaResults.length,
+        total: sortedResults.length
+      }
+    };
+  }
+
+  /**
+   * 価格帯を計算
+   */
+  private calculatePriceRange(price: number): { minPrice: number; maxPrice: number } {
+    if (price < 10000000) {
+      // 1000万円未満
+      return { minPrice: 0, maxPrice: 9999999 };
+    } else if (price < 30000000) {
+      // 1000万～2999万円
+      return { minPrice: 10000000, maxPrice: 29999999 };
+    } else if (price < 50000000) {
+      // 3000万～4999万円
+      return { minPrice: 30000000, maxPrice: 49999999 };
+    } else {
+      // 5000万円以上
+      return { minPrice: 50000000, maxPrice: 999999999 };
+    }
+  }
+
+  /**
+   * 2点間の距離を計算（Haversine公式）
+   * @param lat1 地点1の緯度
+   * @param lng1 地点1の経度
+   * @param lat2 地点2の緯度
+   * @param lng2 地点2の経度
+   * @returns 距離（km、小数点第1位まで）
+   */
+  private calculateDistance(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
+    const R = 6371; // 地球の半径（km）
+    
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLng = this.toRadians(lng2 - lng1);
+    
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+      Math.cos(this.toRadians(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    
+    return Math.round(distance * 10) / 10; // 小数点第1位まで
+  }
+
+  /**
+   * 度をラジアンに変換
+   */
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * 配信エリア番号をパース
+   * @param distributionAreas カンマ区切りの配信エリア番号（例："①,②,③"）
+   * @returns 配信エリア番号の配列
+   */
+  private parseDistributionAreas(distributionAreas: string | null | undefined): string[] {
+    if (!distributionAreas || distributionAreas.trim() === '') {
+      return [];
+    }
+    
+    return distributionAreas
+      .split(',')
+      .map(area => area.trim())
+      .filter(area => area.length > 0);
+  }
+
+  /**
+   * 2つの配列の共通要素を検出
+   */
+  private findCommonAreas(areas1: string[], areas2: string[]): string[] {
+    return areas1.filter(area => areas2.includes(area));
+  }
+
+  /**
+   * 住所から市区町村と町名を抽出
+   */
+  private extractCityAndTown(address: string): { city: string; town: string } {
+    let city = '';
+    let town = '';
+    
+    // 大分市、別府市などを抽出
+    const cityMatch = address.match(/(大分市|別府市|由布市|日出町|杵築市|国東市|豊後高田市|宇佐市|中津市|日田市|竹田市|豊後大野市|臼杵市|津久見市|佐伯市)/);
+    if (cityMatch) {
+      city = cityMatch[1];
+      
+      // 市区町村の後の町名を抽出
+      let afterCity = address.substring(address.indexOf(city) + city.length);
+      
+      // 「大字」を除外
+      afterCity = afterCity.replace(/^大字/, '');
+      
+      // 町名を抽出（最初の漢字部分、「字」以降は除外）
+      const townMatch = afterCity.match(/^([^\d\-\s]+)/);
+      if (townMatch) {
+        let extractedTown = townMatch[1];
+        // 「字」以降を除外（例：「挾間町北方字和尚」→「挾間町北方」）
+        const aざIndex = extractedTown.indexOf('字');
+        if (aざIndex !== -1) {
+          extractedTown = extractedTown.substring(0, aざIndex);
+        }
+        town = extractedTown;
+      }
+    }
+    
+    return { city, town };
+  }
+
+  /**
+   * 所在地ベース検索
+   */
+  private async searchByLocation(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 住所から市区町村と町名を抽出
+    const { city, town } = this.extractCityAndTown(baseProperty.address || '');
+    
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
+    }
+    
+    // 町名条件
+    if (city && town) {
+      query = query.ilike('address', `%${city}${town}%`);
+    } else if (city) {
+      query = query.ilike('address', `%${city}%`);
+    }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // マッチ情報を追加
+    return (data || []).map(property => ({
+      ...property,
+      matched_by: ['location']
+    }));
+  }
+
+  /**
+   * 距離ベース検索（半径3km以内）
+   */
+  private async searchByDistance(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 基準物件に座標データがない場合は空配列を返す
+    if (!baseProperty.latitude || !baseProperty.longitude) {
+      console.log('[searchByDistance] Base property has no coordinates');
+      return [];
+    }
+    
+    // 座標データがある物件を全て取得（共通フィルタ適用）
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
+    }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // 距離を計算してフィルタリング
+    const RADIUS_KM = 3;
+    const baseLat = parseFloat(baseProperty.latitude);
+    const baseLng = parseFloat(baseProperty.longitude);
+    
+    const propertiesWithDistance = (data || [])
+      .map(property => {
+        const distance = this.calculateDistance(
+          baseLat,
+          baseLng,
+          parseFloat(property.latitude),
+          parseFloat(property.longitude)
+        );
+        return {
+          ...property,
+          distance_km: distance,
+          matched_by: ['distance']
+        };
+      })
+      .filter(property => property.distance_km <= RADIUS_KM);
+    
+    console.log('[searchByDistance] Found properties within 3km:', propertiesWithDistance.length);
+    
+    return propertiesWithDistance;
+  }
+
+  /**
+   * 配信エリアベース検索
+   */
+  private async searchByDistributionArea(
+    baseProperty: any,
+    commonFilters: { minPrice: number; maxPrice: number; propertyType: string; excludePropertyNumber: string }
+  ): Promise<any[]> {
+    // 基準物件に配信エリアがない場合は空配列を返す
+    if (!baseProperty.distribution_areas || baseProperty.distribution_areas.trim() === '') {
+      console.log('[searchByDistributionArea] Base property has no distribution areas');
+      return [];
+    }
+    
+    // 基準物件の配信エリア番号を配列に変換
+    const baseAreas = this.parseDistributionAreas(baseProperty.distribution_areas);
+    
+    if (baseAreas.length === 0) {
+      return [];
+    }
+    
+    console.log('[searchByDistributionArea] Base property areas:', baseAreas);
+    
+    // 配信エリアがある物件を全て取得（共通フィルタ適用）
+    let query = this.supabase
+      .from('property_listings')
+      .select('*')
+      .neq('property_number', commonFilters.excludePropertyNumber)
+      .gte('price', commonFilters.minPrice)
+      .lte('price', commonFilters.maxPrice)
+      .not('distribution_areas', 'is', null);
+    
+    // 種別条件
+    if (commonFilters.propertyType) {
+      query = query.eq('property_type', commonFilters.propertyType);
+    }
+    
+    // ステータス条件
+    query = query.or('atbb_status.ilike.%公開中%,atbb_status.ilike.%公開前%,atbb_status.ilike.%非公開（配信メールのみ）%');
+    
+    const { data } = await query;
+    
+    // 共通エリアがある物件をフィルタリング
+    const propertiesWithCommonAreas = (data || [])
+      .map(property => {
+        const propertyAreas = this.parseDistributionAreas(property.distribution_areas);
+        const commonAreas = this.findCommonAreas(baseAreas, propertyAreas);
+        
+        return {
+          ...property,
+          common_areas: commonAreas,
+          matched_by: ['distribution_area']
+        };
+      })
+      .filter(property => property.common_areas.length > 0);
+    
+    console.log('[searchByDistributionArea] Found properties with common areas:', propertiesWithCommonAreas.length);
+    
+    return propertiesWithCommonAreas;
+  }
+
+  /**
+   * 検索結果を統合
+   */
+  private mergeResults(
+    locationResults: any[],
+    distanceResults: any[],
+    distributionAreaResults: any[]
+  ): any[] {
+    // 物件番号をキーとしたMapを作成
+    const propertyMap = new Map<string, any>();
+    
+    // 所在地ベースの結果を追加
+    locationResults.forEach(property => {
+      propertyMap.set(property.property_number, property);
+    });
+    
+    // 距離ベースの結果を追加（既存の場合はmatched_byとdistance_kmを追加）
+    distanceResults.forEach(property => {
+      const existing = propertyMap.get(property.property_number);
+      if (existing) {
+        existing.matched_by.push('distance');
+        existing.distance_km = property.distance_km;
+      } else {
+        propertyMap.set(property.property_number, property);
+      }
+    });
+    
+    // 配信エリアベースの結果を追加（既存の場合はmatched_byとcommon_areasを追加）
+    distributionAreaResults.forEach(property => {
+      const existing = propertyMap.get(property.property_number);
+      if (existing) {
+        existing.matched_by.push('distribution_area');
+        existing.common_areas = property.common_areas;
+      } else {
+        propertyMap.set(property.property_number, property);
+      }
+    });
+    
+    return Array.from(propertyMap.values());
+  }
+
+  /**
+   * 検索結果をソート
+   */
+  private sortResults(properties: any[]): any[] {
+    return properties.sort((a, b) => {
+      // 配信日で降順ソート
+      if (a.distribution_date && b.distribution_date) {
+        const dateCompare = new Date(b.distribution_date).getTime() - new Date(a.distribution_date).getTime();
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+      }
+      
+      // 配信日が同じ場合は物件番号で降順ソート
+      return b.property_number.localeCompare(a.property_number);
+    });
   }
 
   /**
@@ -325,10 +850,142 @@ export class BuyerService {
     const newBuyer = {
       ...buyerData,
       buyer_number: buyerNumber,
-      db_created_at: new Date().toISOString(),
-      db_updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
+    // 問合せ物件番号が指定されている場合、物件情報を取得して自動設定
+    if (newBuyer.property_number) {
+      try {
+        console.log('[BuyerService.create] property_number detected, fetching property info');
+        const firstPropertyNumber = newBuyer.property_number.split(',')[0].trim();
+        
+        const { data: property, error: propertyError } = await this.supabase
+          .from('property_listings')
+          .select('property_type, price, distribution_areas')
+          .eq('property_number', firstPropertyNumber)
+          .single();
+        
+        if (!propertyError && property) {
+          // データベースの英語値を日本語に変換
+          const propertyTypeMap: Record<string, string> = {
+            'land': '土地',
+            'detached_house': '戸建',
+            'apartment': 'マンション',
+          };
+          
+          const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+          
+          // 希望種別を設定（既存の値がない場合のみ）
+          if (!newBuyer.desired_property_type) {
+            newBuyer.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService.create] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
+          
+          // 物件情報から価格帯とエリアを自動設定
+          const { InquiryHearingParser } = await import('./InquiryHearingParser');
+          const parser = new InquiryHearingParser();
+          const parsedFromProperty = parser.parseFromPropertyInfo(
+            {
+              price: property.price,
+              distribution_areas: property.distribution_areas,
+              property_type: property.property_type
+            },
+            newBuyer.desired_property_type || japanesePropertyType
+          );
+          
+          const propertyInfoUpdatedAt = new Date();
+          
+          // 価格帯を設定（既存の値がない場合のみ）
+          if (parsedFromProperty.price_range_house !== undefined && !newBuyer.price_range_house) {
+            newBuyer.price_range_house = parsedFromProperty.price_range_house;
+            newBuyer.price_range_house_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_house from property: ${parsedFromProperty.price_range_house}`);
+          }
+          
+          if (parsedFromProperty.price_range_apartment !== undefined && !newBuyer.price_range_apartment) {
+            newBuyer.price_range_apartment = parsedFromProperty.price_range_apartment;
+            newBuyer.price_range_apartment_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_apartment from property: ${parsedFromProperty.price_range_apartment}`);
+          }
+          
+          if (parsedFromProperty.price_range_land !== undefined && !newBuyer.price_range_land) {
+            newBuyer.price_range_land = parsedFromProperty.price_range_land;
+            newBuyer.price_range_land_updated_at = propertyInfoUpdatedAt.toISOString();
+            console.log(`[BuyerService.create] Auto-set price_range_land from property: ${parsedFromProperty.price_range_land}`);
+          }
+          
+          // 希望エリアを設定（既存の値がない場合のみ）
+          if (parsedFromProperty.desired_area !== undefined && !newBuyer.desired_area) {
+            newBuyer.desired_area = parsedFromProperty.desired_area;
+            console.log(`[BuyerService.create] Auto-set desired_area from property: ${parsedFromProperty.desired_area}`);
+          }
+        }
+      } catch (error) {
+        console.error('[BuyerService.create] Failed to fetch property info:', error);
+        // エラーが発生しても買主作成は継続
+      }
+    }
+
+    // 問合せ時ヒアリングが入力されている場合、自動パース処理を実行
+    if (newBuyer.inquiry_hearing) {
+      console.log('[BuyerService.create] inquiry_hearing detected, starting auto-parse');
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(newBuyer.inquiry_hearing, newBuyer.desired_property_type);
+        console.log('[BuyerService.create] Parsed result:', parsed);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期を設定（既存の値がない場合のみ）
+        if (parsed.desired_timing !== undefined && !newBuyer.desired_timing) {
+          newBuyer.desired_timing = parsed.desired_timing;
+          newBuyer.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set desired_timing: ${parsed.desired_timing}`);
+        }
+        
+        // 駐車場希望台数を設定（既存の値がない場合のみ）
+        if (parsed.parking_spaces !== undefined && !newBuyer.parking_spaces) {
+          newBuyer.parking_spaces = parsed.parking_spaces;
+          newBuyer.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set parking_spaces: ${parsed.parking_spaces}`);
+        }
+        
+        // 価格帯を設定（既存の値がない場合のみ - クイックボタンで入力された値を優先）
+        if (parsed.price_range_house !== undefined && !newBuyer.price_range_house) {
+          newBuyer.price_range_house = parsed.price_range_house;
+          newBuyer.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_house: ${parsed.price_range_house}`);
+        }
+        
+        if (parsed.price_range_apartment !== undefined && !newBuyer.price_range_apartment) {
+          newBuyer.price_range_apartment = parsed.price_range_apartment;
+          newBuyer.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_apartment: ${parsed.price_range_apartment}`);
+        }
+        
+        if (parsed.price_range_land !== undefined && !newBuyer.price_range_land) {
+          newBuyer.price_range_land = parsed.price_range_land;
+          newBuyer.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+          console.log(`[BuyerService.create] Auto-set price_range_land: ${parsed.price_range_land}`);
+        }
+        
+        // 希望エリアを設定（既存の値がない場合のみ - クイックボタンで入力された値を優先）
+        if (parsed.desired_area !== undefined && !newBuyer.desired_area) {
+          newBuyer.desired_area = parsed.desired_area;
+          console.log(`[BuyerService.create] Auto-set desired_area: ${parsed.desired_area}`);
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        newBuyer.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        console.error('[BuyerService.create] Failed to parse inquiry hearing:', error);
+        // エラーが発生しても買主作成は継続
+      }
+    }
+
+    // データベースに保存
     const { data, error } = await this.supabase
       .from('buyers')
       .insert(newBuyer)
@@ -339,46 +996,293 @@ export class BuyerService {
       throw new Error(`Failed to create buyer: ${error.message}`);
     }
 
+    // スプレッドシートに同期
+    try {
+      await this.initSyncServices();
+      
+      if (this.writeService && this.columnMapper) {
+        console.log(`[BuyerService] Syncing new buyer ${buyerNumber} to spreadsheet`);
+        
+        // データベースのフィールド名をスプレッドシートのカラム名にマッピング
+        const mappedData: Record<string, any> = {};
+        for (const [dbField, value] of Object.entries(data)) {
+          const sheetColumn = this.columnMapper.getSpreadsheetColumnName(dbField);
+          if (sheetColumn) {
+            mappedData[sheetColumn] = value;
+          }
+        }
+        
+        // スプレッドシートに新規行を追加
+        const result = await this.writeService.appendBuyerRow(mappedData);
+        
+        if (result.success) {
+          console.log(`[BuyerService] Successfully synced new buyer ${buyerNumber} to spreadsheet`);
+        } else {
+          console.error(`[BuyerService] Failed to sync new buyer to spreadsheet:`, result.error);
+        }
+      }
+    } catch (syncError: any) {
+      console.error(`[BuyerService] Failed to sync new buyer to spreadsheet:`, syncError);
+      // 同期エラーでもデータベースには保存されているので続行
+    }
+
     return data;
   }
 
   /**
-   * 買主番号を自動生成（最新の番号+1）
+   * 次の買主番号を取得（公開メソッド）
+   */
+  async getNextBuyerNumber(): Promise<string> {
+    return this.generateBuyerNumber();
+  }
+
+  /**
+   * 買主番号を自動生成（スプレッドシートとデータベースの最大値+1）
    */
   private async generateBuyerNumber(): Promise<string> {
-    // 最新の買主番号を取得
-    const { data, error } = await this.supabase
-      .from('buyers')
-      .select('buyer_number')
-      .order('buyer_number', { ascending: false })
-      .limit(1);
+    let maxFromSheet = 0;
+    let maxFromDb = 0;
 
-    if (error) {
-      throw new Error(`Failed to generate buyer number: ${error.message}`);
+    // スプレッドシートから最大値を取得
+    try {
+      // 同期サービスを初期化
+      await this.initSyncServices();
+      
+      if (this.writeService) {
+        // スプレッドシートから全データを取得
+        const sheetsClient = (this.writeService as any).sheetsClient;
+        const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
+        
+        // 5行目から最終行までのデータを取得（E列：買主番号）
+        const range = `${sheetName}!E5:E`;
+        
+        console.log('[generateBuyerNumber] Fetching buyer numbers from spreadsheet:', {
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID,
+          range,
+        });
+        
+        const response = await sheetsClient.sheets.spreadsheets.values.get({
+          spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+          range: range,
+        });
+        
+        const rows = response.data.values || [];
+        
+        // 空欄ではない行から数値の買主番号のみを抽出
+        const buyerNumbers: number[] = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          
+          // 行が空、またはA列が空の場合
+          if (!row || !row[0] || row[0].trim() === '') {
+            continue;
+          }
+          
+          const value = row[0].trim();
+          const num = parseInt(value, 10);
+          
+          if (!isNaN(num)) {
+            buyerNumbers.push(num);
+          }
+        }
+        
+        if (buyerNumbers.length > 0) {
+          maxFromSheet = Math.max(...buyerNumbers);
+          console.log('[generateBuyerNumber] Max from spreadsheet:', maxFromSheet);
+        }
+      }
+    } catch (error: any) {
+      console.error('[generateBuyerNumber] Error fetching from spreadsheet:', error);
     }
 
-    if (!data || data.length === 0) {
-      // 最初の買主番号
-      return '1';
+    // データベースから最大値を取得
+    try {
+      const { data, error: dbError } = await this.supabase
+        .from('buyers')
+        .select('buyer_number')
+        .order('buyer_number', { ascending: false })
+        .limit(1);
+
+      if (!dbError && data && data.length > 0) {
+        const latestNumber = parseInt(data[0].buyer_number, 10);
+        if (!isNaN(latestNumber)) {
+          maxFromDb = latestNumber;
+          console.log('[generateBuyerNumber] Max from database:', maxFromDb);
+        }
+      }
+    } catch (error: any) {
+      console.error('[generateBuyerNumber] Error fetching from database:', error);
     }
 
-    // 最新の番号を取得して+1
-    const latestNumber = parseInt(data[0].buyer_number, 10);
-    if (isNaN(latestNumber)) {
-      throw new Error('Invalid buyer number format');
-    }
-
-    return String(latestNumber + 1);
+    // 両方の最大値を比較して、より大きい方+1を返す
+    const maxNumber = Math.max(maxFromSheet, maxFromDb);
+    const nextNumber = String(maxNumber + 1);
+    
+    console.log('[generateBuyerNumber] Generated next buyer number:', {
+      maxFromSheet,
+      maxFromDb,
+      maxNumber,
+      nextNumber,
+    });
+    
+    return nextNumber;
   }
 
   /**
    * 買主情報を更新
+   * @param buyerNumber - 買主番号（主キー）
    */
-  async update(id: string, updateData: Partial<any>, userId?: string, userEmail?: string): Promise<any> {
+  async update(buyerNumber: string, updateData: Partial<any>, userId?: string, userEmail?: string): Promise<any> {
     // 存在確認
-    const existing = await this.getById(id);
+    const existing = await this.getByBuyerNumber(buyerNumber);
     if (!existing) {
       throw new Error('Buyer not found');
+    }
+
+    // 問合せ時ヒアリングが更新される場合、自動パース処理を実行
+    if (updateData.inquiry_hearing !== undefined) {
+      console.log('[BuyerService] inquiry_hearing update detected, starting auto-parse');
+      console.log('[BuyerService] inquiry_hearing value:', updateData.inquiry_hearing);
+      
+      // 希望種別が未設定の場合、問合せ物件番号から物件種別を取得して自動設定
+      let desiredPropertyType = existing.desired_property_type;
+      if (!desiredPropertyType && existing.property_number) {
+        try {
+          console.log('[BuyerService] desired_property_type is empty, fetching from property_number');
+          const firstPropertyNumber = existing.property_number.split(',')[0].trim();
+          
+          const { data: property, error: propertyError } = await this.supabase
+            .from('property_listings')
+            .select('property_type')
+            .eq('property_number', firstPropertyNumber)
+            .single();
+          
+          if (!propertyError && property && property.property_type) {
+            // データベースの英語値を日本語に変換
+            const propertyTypeMap: Record<string, string> = {
+              'land': '土地',
+              'detached_house': '戸建',
+              'apartment': 'マンション',
+            };
+            
+            const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+            desiredPropertyType = japanesePropertyType;
+            updateData.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
+        } catch (error) {
+          console.error('[BuyerService] Failed to fetch property type:', error);
+          // エラーが発生してもパース処理は継続
+        }
+      }
+      
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, desiredPropertyType);
+        console.log('[BuyerService] Parsed result:', parsed);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期の上書き判定
+        if (parsed.desired_timing !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_timing',
+            existing.desired_timing,
+            existing.desired_timing_updated_at ? new Date(existing.desired_timing_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_timing = parsed.desired_timing;
+            updateData.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced desired_timing: ${parsed.desired_timing}`);
+          }
+        }
+        
+        // 駐車場希望台数の上書き判定
+        if (parsed.parking_spaces !== undefined) {
+          if (parser.shouldOverwrite(
+            'parking_spaces',
+            existing.parking_spaces,
+            existing.parking_spaces_updated_at ? new Date(existing.parking_spaces_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.parking_spaces = parsed.parking_spaces;
+            updateData.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Auto-synced parking_spaces: ${parsed.parking_spaces}`);
+          }
+        }
+        
+        // 価格帯の処理：希望種別に応じて適切なフィールドのみに設定し、他はクリア
+        const hasPriceRange = parsed.price_range_house !== undefined || 
+                             parsed.price_range_apartment !== undefined || 
+                             parsed.price_range_land !== undefined;
+        
+        if (hasPriceRange) {
+          // 価格帯（戸建）の処理
+          if (parsed.price_range_house !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_house',
+              existing.price_range_house,
+              existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_house = parsed.price_range_house;
+              updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            }
+          } else {
+            // 戸建の価格帯が設定されていない場合はクリア
+            updateData.price_range_house = null;
+            updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Cleared price_range_house (not applicable for this property type)`);
+          }
+          
+          // 価格帯（マンション）の処理
+          if (parsed.price_range_apartment !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_apartment',
+              existing.price_range_apartment,
+              existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_apartment = parsed.price_range_apartment;
+              updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            }
+          } else {
+            // マンションの価格帯が設定されていない場合はクリア
+            updateData.price_range_apartment = null;
+            updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Cleared price_range_apartment (not applicable for this property type)`);
+          }
+          
+          // 価格帯（土地）の処理
+          if (parsed.price_range_land !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_land',
+              existing.price_range_land,
+              existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_land = parsed.price_range_land;
+              updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            }
+          } else {
+            // 土地の価格帯が設定されていない場合はクリア
+            updateData.price_range_land = null;
+            updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService] Cleared price_range_land (not applicable for this property type)`);
+          }
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        updateData.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        // パースエラーが発生しても、問合せ時ヒアリングの保存は継続
+        console.error('[BuyerService] Failed to parse inquiry hearing:', error);
+      }
     }
 
     // 更新不可フィールドを除外
@@ -387,17 +1291,22 @@ export class BuyerService {
     
     for (const key in updateData) {
       if (!protectedFields.includes(key)) {
-        allowedData[key] = updateData[key];
+        // 日付フィールドの空文字列をnullに変換
+        if ((key === 'reception_date' || key === 'next_call_date' || key === 'latest_viewing_date') && updateData[key] === '') {
+          allowedData[key] = null;
+        } else {
+          allowedData[key] = updateData[key];
+        }
       }
     }
 
     // 更新タイムスタンプを追加
-    allowedData.db_updated_at = new Date().toISOString();
+    allowedData.updated_at = new Date().toISOString();
 
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('id', id)
+      .eq('buyer_number', buyerNumber)
       .select()
       .single();
 
@@ -408,11 +1317,11 @@ export class BuyerService {
     // Log audit trail for each changed field
     if (userId && userEmail) {
       for (const key in allowedData) {
-        if (key !== 'db_updated_at' && existing[key] !== allowedData[key]) {
+        if (key !== 'updated_at' && existing[key] !== allowedData[key]) {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
-              id,
+              existing.buyer_id || buyerNumber, // buyer_idがあればそれを使用、なければbuyer_number
               key,
               existing[key],
               allowedData[key],
@@ -432,7 +1341,7 @@ export class BuyerService {
 
   /**
    * 買主情報を更新し、スプレッドシートに同期
-   * @param id 買主ID
+   * @param buyerNumber - 買主番号（主キー）
    * @param updateData 更新データ
    * @param userId ユーザーID
    * @param userEmail ユーザーメール
@@ -440,7 +1349,7 @@ export class BuyerService {
    * @returns 更新結果と同期ステータス
    */
   async updateWithSync(
-    id: string,
+    buyerNumber: string,
     updateData: Partial<any>,
     userId?: string,
     userEmail?: string,
@@ -450,25 +1359,173 @@ export class BuyerService {
     await this.initSyncServices();
 
     // 存在確認
-    const existing = await this.getById(id);
+    const existing = await this.getByBuyerNumber(buyerNumber);
     if (!existing) {
       throw new Error('Buyer not found');
     }
 
-    const buyerNumber = existing.buyer_number;
+    // 問合せ時ヒアリングが更新される場合、自動パース処理を実行
+    if (updateData.inquiry_hearing !== undefined) {
+      console.log('[BuyerService.updateWithSync] inquiry_hearing update detected, starting auto-parse');
+      console.log('[BuyerService.updateWithSync] inquiry_hearing value:', updateData.inquiry_hearing);
+      
+      // 希望種別が未設定の場合、問合せ物件番号から物件種別を取得して自動設定
+      let desiredPropertyType = existing.desired_property_type;
+      if (!desiredPropertyType && existing.property_number) {
+        try {
+          console.log('[BuyerService.updateWithSync] desired_property_type is empty, fetching from property_number');
+          const firstPropertyNumber = existing.property_number.split(',')[0].trim();
+          
+          const { data: property, error: propertyError } = await this.supabase
+            .from('property_listings')
+            .select('property_type')
+            .eq('property_number', firstPropertyNumber)
+            .single();
+          
+          if (!propertyError && property && property.property_type) {
+            // データベースの英語値を日本語に変換
+            const propertyTypeMap: Record<string, string> = {
+              'land': '土地',
+              'detached_house': '戸建',
+              'apartment': 'マンション',
+            };
+            
+            const japanesePropertyType = propertyTypeMap[property.property_type] || property.property_type;
+            desiredPropertyType = japanesePropertyType;
+            updateData.desired_property_type = japanesePropertyType;
+            console.log(`[BuyerService.updateWithSync] Auto-set desired_property_type: ${japanesePropertyType}`);
+          }
+        } catch (error) {
+          console.error('[BuyerService.updateWithSync] Failed to fetch property type:', error);
+          // エラーが発生してもパース処理は継続
+        }
+      }
+      
+      try {
+        const { InquiryHearingParser } = await import('./InquiryHearingParser');
+        const parser = new InquiryHearingParser();
+        const parsed = parser.parseInquiryHearing(updateData.inquiry_hearing, desiredPropertyType);
+        console.log('[BuyerService.updateWithSync] Parsed result:', parsed);
+        
+        const inquiryHearingUpdatedAt = new Date();
+        
+        // 希望時期の上書き判定
+        if (parsed.desired_timing !== undefined) {
+          if (parser.shouldOverwrite(
+            'desired_timing',
+            existing.desired_timing,
+            existing.desired_timing_updated_at ? new Date(existing.desired_timing_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.desired_timing = parsed.desired_timing;
+            updateData.desired_timing_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced desired_timing: ${parsed.desired_timing}`);
+          }
+        }
+        
+        // 駐車場希望台数の上書き判定
+        if (parsed.parking_spaces !== undefined) {
+          if (parser.shouldOverwrite(
+            'parking_spaces',
+            existing.parking_spaces,
+            existing.parking_spaces_updated_at ? new Date(existing.parking_spaces_updated_at) : null,
+            inquiryHearingUpdatedAt
+          )) {
+            updateData.parking_spaces = parsed.parking_spaces;
+            updateData.parking_spaces_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Auto-synced parking_spaces: ${parsed.parking_spaces}`);
+          }
+        }
+        
+        // 価格帯の処理：希望種別に応じて適切なフィールドのみに設定し、他はクリア
+        const hasPriceRange = parsed.price_range_house !== undefined || 
+                             parsed.price_range_apartment !== undefined || 
+                             parsed.price_range_land !== undefined;
+        
+        if (hasPriceRange) {
+          // 価格帯（戸建）の処理
+          if (parsed.price_range_house !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_house',
+              existing.price_range_house,
+              existing.price_range_house_updated_at ? new Date(existing.price_range_house_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_house = parsed.price_range_house;
+              updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_house: ${parsed.price_range_house}`);
+            }
+          } else {
+            // 戸建の価格帯が設定されていない場合はクリア
+            updateData.price_range_house = null;
+            updateData.price_range_house_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_house (not applicable for this property type)`);
+          }
+          
+          // 価格帯（マンション）の処理
+          if (parsed.price_range_apartment !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_apartment',
+              existing.price_range_apartment,
+              existing.price_range_apartment_updated_at ? new Date(existing.price_range_apartment_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_apartment = parsed.price_range_apartment;
+              updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_apartment: ${parsed.price_range_apartment}`);
+            }
+          } else {
+            // マンションの価格帯が設定されていない場合はクリア
+            updateData.price_range_apartment = null;
+            updateData.price_range_apartment_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_apartment (not applicable for this property type)`);
+          }
+          
+          // 価格帯（土地）の処理
+          if (parsed.price_range_land !== undefined) {
+            if (parser.shouldOverwrite(
+              'price_range_land',
+              existing.price_range_land,
+              existing.price_range_land_updated_at ? new Date(existing.price_range_land_updated_at) : null,
+              inquiryHearingUpdatedAt
+            )) {
+              updateData.price_range_land = parsed.price_range_land;
+              updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+              console.log(`[BuyerService.updateWithSync] Auto-synced price_range_land: ${parsed.price_range_land}`);
+            }
+          } else {
+            // 土地の価格帯が設定されていない場合はクリア
+            updateData.price_range_land = null;
+            updateData.price_range_land_updated_at = inquiryHearingUpdatedAt.toISOString();
+            console.log(`[BuyerService.updateWithSync] Cleared price_range_land (not applicable for this property type)`);
+          }
+        }
+        
+        // 問合せ時ヒアリングの最終更新日時を設定
+        updateData.inquiry_hearing_updated_at = inquiryHearingUpdatedAt.toISOString();
+      } catch (error) {
+        // パースエラーが発生しても、問合せ時ヒアリングの保存は継続
+        console.error('[BuyerService.updateWithSync] Failed to parse inquiry hearing:', error);
+      }
+    }
 
     // 更新不可フィールドを除外
-    const protectedFields = ['id', 'db_created_at', 'synced_at', 'buyer_number'];
+    const protectedFields = ['buyer_id', 'created_at', 'synced_at', 'buyer_number'];
     const allowedData: any = {};
     
     for (const key in updateData) {
       if (!protectedFields.includes(key)) {
-        allowedData[key] = updateData[key];
+        // 日付フィールドの空文字列をnullに変換
+        if ((key === 'reception_date' || key === 'next_call_date' || key === 'latest_viewing_date') && updateData[key] === '') {
+          allowedData[key] = null;
+        } else {
+          allowedData[key] = updateData[key];
+        }
       }
     }
 
     // 更新タイムスタンプを追加
-    allowedData.db_updated_at = new Date().toISOString();
+    allowedData.updated_at = new Date().toISOString();
 
     // 競合チェック（forceオプションがない場合、かつ前回同期済みの場合のみ）
     // last_synced_at がない場合は、まだ一度も同期されていないため競合チェックをスキップ
@@ -513,7 +1570,7 @@ export class BuyerService {
     const { data, error } = await this.supabase
       .from('buyers')
       .update(allowedData)
-      .eq('id', id)
+      .eq('buyer_number', buyerNumber)
       .select()
       .single();
 
@@ -542,7 +1599,7 @@ export class BuyerService {
           await this.supabase
             .from('buyers')
             .update({ last_synced_at: new Date().toISOString() })
-            .eq('id', id);
+            .eq('buyer_number', buyerNumber);
 
           syncResult = {
             success: true,
@@ -604,11 +1661,11 @@ export class BuyerService {
     // 監査ログを記録（sync_status付き）
     if (userId && userEmail) {
       for (const key in allowedData) {
-        if (key !== 'db_updated_at' && existing[key] !== allowedData[key]) {
+        if (key !== 'updated_at' && existing[key] !== allowedData[key]) {
           try {
             await AuditLogService.logFieldUpdate(
               'buyer',
-              id,
+              existing.buyer_id || buyerNumber, // buyer_idがあればそれを使用、なければbuyer_number
               key,
               existing[key],
               allowedData[key],
@@ -759,7 +1816,7 @@ export class BuyerService {
   } | null> {
     const { data, error } = await this.supabase
       .from('buyers')
-      .select('buyer_id, buyer_number, property_number, reception_date, inquiry_source, latest_status')
+      .select('id, buyer_number, property_number, reception_date, inquiry_source, latest_status')
       .eq('buyer_number', buyerNumber)
       .single();
 
@@ -776,7 +1833,7 @@ export class BuyerService {
       inquiryDate: data.reception_date,
       inquirySource: data.inquiry_source,
       status: data.latest_status,
-      buyerId: data.buyer_id
+      buyerId: data.id
     };
   }
 
@@ -846,7 +1903,13 @@ export class BuyerService {
    * @param buyerId - The buyer ID
    * @returns Array of inquiry history items with property details
    */
-  async getInquiryHistory(buyerId: string): Promise<Array<{
+  /**
+   * Get inquiry history for buyer detail page
+   * Returns all property inquiries associated with current and past buyer numbers
+   * @param buyerNumber - The buyer number
+   * @returns Array of inquiry history items with property details
+   */
+  async getInquiryHistory(buyerNumber: string): Promise<Array<{
     buyerNumber: string;
     propertyNumber: string;
     propertyAddress: string;
@@ -855,10 +1918,27 @@ export class BuyerService {
     propertyId: string;
     propertyListingId: string;
   }>> {
-    // Get the buyer
-    const buyer = await this.getById(buyerId);
+    return this.getInquiryHistoryByBuyerNumberInternal(buyerNumber);
+  }
+
+  /**
+   * Get inquiry history by buyer number (internal method)
+   * @param buyerNumber - The buyer number
+   * @returns Array of inquiry history items with property details
+   */
+  private async getInquiryHistoryByBuyerNumberInternal(buyerNumber: string): Promise<Array<{
+    buyerNumber: string;
+    propertyNumber: string;
+    propertyAddress: string;
+    inquiryDate: string;
+    status: 'current' | 'past';
+    propertyId: string;
+    propertyListingId: string;
+  }>> {
+    // Get the buyer by buyer_number
+    const buyer = await this.getByBuyerNumber(buyerNumber);
     if (!buyer) {
-      throw new Error(`Buyer not found: ${buyerId}`);
+      throw new Error(`Buyer not found: ${buyerNumber}`);
     }
 
     // Collect all property numbers from current buyer
@@ -874,7 +1954,11 @@ export class BuyerService {
       const currentPropertyNumbers = buyer.property_number
         .split(',')
         .map((n: string) => n.trim())
-        .filter((n: string) => n);
+        .filter((n: string) => n)
+        // 物件番号のパターンのみを抽出（AA, BB, CC, DD, EE, FF, GG, HH, II, JJ, KK, LL, MM, NN, OO, PP, QQ, RR, SS, TT, UU, VV, WW, XX, YY, ZZ で始まる番号）
+        // 完全一致のみ（先頭から末尾まで）
+        // 異常に長い文字列（100文字以上）はスキップ
+        .filter((n: string) => n.length < 100 && /^[A-Z]{2}\d+(-\d+)?$/.test(n));
       
       currentPropertyNumbers.forEach((propNum: string) => {
         allPropertyNumbers.push(propNum);
@@ -901,7 +1985,11 @@ export class BuyerService {
         const pastPropertyNumbers = pastBuyer.property_number
           .split(',')
           .map((n: string) => n.trim())
-          .filter((n: string) => n);
+          .filter((n: string) => n)
+          // 物件番号のパターンのみを抽出
+          // 完全一致のみ（先頭から末尾まで）
+          // 異常に長い文字列（100文字以上）はスキップ
+          .filter((n: string) => n.length < 100 && /^[A-Z]{2}\d+(-\d+)?$/.test(n));
         
         pastPropertyNumbers.forEach((propNum: string) => {
           allPropertyNumbers.push(propNum);
@@ -925,13 +2013,14 @@ export class BuyerService {
     const { data: properties, error } = await this.supabase
       .from('property_listings')
       .select(`
-        id,
         property_number,
         address
       `)
       .in('property_number', uniquePropertyNumbers);
 
     if (error) {
+      console.error('[getInquiryHistoryByBuyerNumberInternal] Supabase error:', error);
+      console.error('[getInquiryHistoryByBuyerNumberInternal] uniquePropertyNumbers:', uniquePropertyNumbers);
       throw new Error(`Failed to fetch inquiry history: ${error.message}`);
     }
 
@@ -948,8 +2037,8 @@ export class BuyerService {
         propertyAddress: property.address || '',
         inquiryDate: buyerInfo?.inquiryDate || '',
         status: buyerInfo?.status || 'current',
-        propertyId: property.id,
-        propertyListingId: property.id,
+        propertyId: property.property_number,  // property_numberを使用
+        propertyListingId: property.property_number,  // property_numberを使用
       };
     });
 
@@ -962,4 +2051,901 @@ export class BuyerService {
 
     return history;
   }
+
+  /**
+   * 配信エリア番号に該当する買主を取得（買主候補と同じ条件でフィルタリング）
+   * @param areaNumbers - エリア番号の配列（例: ["①", "②", "③", "㊵"]）
+   * @param propertyType - 物件種別（オプション）
+   * @param salesPrice - 売出価格（オプション）
+   * @returns 該当する買主のリスト
+   */
+  async getBuyersByAreas(
+    areaNumbers: string[],
+    propertyType?: string | null,
+    salesPrice?: number | null
+  ): Promise<any[]> {
+    if (!areaNumbers || areaNumbers.length === 0) {
+      return [];
+    }
+
+    console.log(`[BuyerService.getBuyersByAreas] Searching for buyers in areas:`, areaNumbers);
+    console.log(`[BuyerService.getBuyersByAreas] Property type:`, propertyType);
+    console.log(`[BuyerService.getBuyersByAreas] Sales price:`, salesPrice);
+
+    // パフォーマンス最適化：最大取得件数を制限
+    const MAX_BUYERS = 100; // 最大100件まで取得（パフォーマンス改善）
+
+    const { data, error } = await this.supabase
+      .from('buyers')
+      .select(`
+        buyer_number,
+        name,
+        latest_status,
+        latest_viewing_date,
+        inquiry_confidence,
+        inquiry_source,
+        distribution_type,
+        distribution_areas,
+        broker_inquiry,
+        desired_area,
+        desired_property_type,
+        price_range_house,
+        price_range_apartment,
+        price_range_land,
+        reception_date,
+        email,
+        phone_number,
+        inquiry_hearing,
+        viewing_result_follow_up,
+        property_number
+      `)
+      .is('deleted_at', null) // 削除済みを除外
+      .order('reception_date', { ascending: false, nullsFirst: false }) // 受付日の新しい順
+      .limit(MAX_BUYERS);
+
+    if (error) {
+      console.error(`[BuyerService.getBuyersByAreas] Error:`, error);
+      throw new Error(`Failed to fetch buyers by areas: ${error.message}`);
+    }
+
+    const allBuyers = data || [];
+    console.log(`[BuyerService.getBuyersByAreas] Fetched ${allBuyers.length} buyers from database`);
+
+    // BuyerCandidateServiceと同じ条件でフィルタリング
+    const filteredBuyers = this.filterBuyerCandidates(
+      allBuyers,
+      areaNumbers,
+      propertyType,
+      salesPrice
+    );
+
+    console.log(`[BuyerService.getBuyersByAreas] After filtering: ${filteredBuyers.length} buyers`);
+
+    // ソート: 1. reception_date DESC (newest first), 2. inquiry_confidence DESC (A > B > C > D)
+    const sortedBuyers = this.sortBuyersByDateAndConfidence(filteredBuyers);
+
+    console.log(`[BuyerService.getBuyersByAreas] After sorting: ${sortedBuyers.length} buyers`);
+    
+    // distribution_areasを配列に変換（文字列の場合）
+    // 注意: データベースではdesired_areaカラムに希望エリアが入っている
+    const buyersWithParsedAreas = sortedBuyers.map(buyer => ({
+      ...buyer,
+      distribution_areas: this.parseDistributionAreas(buyer.distribution_areas || buyer.desired_area)
+    }));
+    
+    // 物件番号を収集（重複を除外）
+    const propertyNumbers = Array.from(
+      new Set(
+        buyersWithParsedAreas
+          .map(buyer => buyer.property_number)
+          .filter(pn => pn)
+      )
+    );
+    
+    // 物件情報を一括取得（N+1問題を回避）
+    let propertyMap = new Map<string, any>();
+    if (propertyNumbers.length > 0) {
+      console.log(`[BuyerService.getBuyersByAreas] Fetching ${propertyNumbers.length} properties in bulk`);
+      
+      const { data: properties, error } = await this.supabase
+        .from('property_listings')
+        .select('property_number, address, property_type, price, sales_price')
+        .in('property_number', propertyNumbers);
+      
+      if (!error && properties) {
+        properties.forEach(property => {
+          propertyMap.set(property.property_number, property);
+        });
+        console.log(`[BuyerService.getBuyersByAreas] Fetched ${properties.length} properties`);
+      } else if (error) {
+        console.error(`[BuyerService.getBuyersByAreas] Failed to fetch properties:`, error);
+      }
+    }
+    
+    // 買主に物件情報を追加
+    const buyersWithPropertyInfo = buyersWithParsedAreas.map(buyer => {
+      const property = buyer.property_number ? propertyMap.get(buyer.property_number) : null;
+      
+      return {
+        ...buyer,
+        property_address: property?.address || null,
+        inquiry_property_type: property?.property_type || null,
+        inquiry_price: property?.price || property?.sales_price || null
+      };
+    });
+    
+    return buyersWithPropertyInfo;
+  }
+  
+  /**
+   * distribution_areasを配列に変換
+   * @param distributionAreas - 配信エリア（文字列または配列）
+   * @returns 配信エリアの配列
+   */
+  private parseDistributionAreas(distributionAreas: any): string[] {
+    if (!distributionAreas) {
+      return [];
+    }
+    
+    // 既に配列の場合はそのまま返す
+    if (Array.isArray(distributionAreas)) {
+      return distributionAreas;
+    }
+    
+    // 文字列の場合はパース
+    if (typeof distributionAreas === 'string') {
+      // カンマ区切りまたはスペース区切りで分割
+      return distributionAreas
+        .split(/[,\s]+/)
+        .map(area => area.trim())
+        .filter(area => area.length > 0);
+    }
+    
+    return [];
+  }
+
+  /**
+   * 買主候補をフィルタリング（BuyerCandidateServiceと同じロジック）
+   */
+  private filterBuyerCandidates(
+    buyers: any[],
+    propertyAreaNumbers: string[],
+    propertyType?: string | null,
+    salesPrice?: number | null
+  ): any[] {
+    return buyers.filter(buyer => {
+      // 1. 除外条件の評価（早期リターン）
+      if (this.shouldExcludeBuyer(buyer)) {
+        return false;
+      }
+
+      // 2. 最新状況/問合せ時確度フィルタ
+      if (!this.matchesStatus(buyer)) {
+        return false;
+      }
+
+      // 3. エリアフィルタ
+      if (!this.matchesAreaCriteria(buyer, propertyAreaNumbers)) {
+        return false;
+      }
+
+      // 4. 種別フィルタ（物件種別が指定されている場合のみ）
+      if (propertyType && !this.matchesPropertyTypeCriteria(buyer, propertyType)) {
+        return false;
+      }
+
+      // 5. 価格帯フィルタ（売出価格が指定されている場合のみ）
+      if (salesPrice && !this.matchesPriceCriteria(buyer, salesPrice, propertyType)) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * 買主を受付日と確度でソート
+   * 1. reception_date DESC (newest first, nulls last)
+   * 2. inquiry_confidence DESC (A > B > C > D > E > F > ... > null)
+   */
+  private sortBuyersByDateAndConfidence(buyers: any[]): any[] {
+    return buyers.sort((a, b) => {
+      // 1. reception_date DESC (newest first, nulls last)
+      // nullの場合は0（最も古い日付）として扱い、最後に配置
+      const dateA = a.reception_date ? new Date(a.reception_date).getTime() : 0;
+      const dateB = b.reception_date ? new Date(b.reception_date).getTime() : 0;
+      
+      if (dateA !== dateB) {
+        // DESC order: 新しい日付が先に来る（2026 > 2025）
+        return dateB - dateA;
+      }
+
+      // 2. inquiry_confidence DESC (A > B > C > D)
+      const confidenceA = (a.inquiry_confidence || '').trim().toUpperCase();
+      const confidenceB = (b.inquiry_confidence || '').trim().toUpperCase();
+      
+      // 確度の優先順位を定義
+      const confidenceOrder: { [key: string]: number } = {
+        'A': 1,
+        'B': 2,
+        'C': 3,
+        'D': 4,
+        'E': 5,
+        'F': 6,
+        'G': 7,
+        'H': 8,
+        'I': 9,
+        'J': 10,
+      };
+      
+      const orderA = confidenceOrder[confidenceA] || 999; // 未定義は最後
+      const orderB = confidenceOrder[confidenceB] || 999;
+      
+      return orderA - orderB; // ASC (A first)
+    });
+  }
+
+  /**
+   * 買主を除外すべきかどうかを判定
+   */
+  private shouldExcludeBuyer(buyer: any): boolean {
+    // デバッグログ（買主4370の場合のみ）
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370の除外チェック開始`);
+    }
+    
+    // 1. 業者問合せは除外
+    if (this.isBusinessInquiry(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 業者問合せのため除外`);
+      }
+      return true;
+    }
+
+    // 2. 希望エリアと希望種別が両方空欄の場合は除外
+    if (!this.hasMinimumCriteria(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 最低限の条件を満たしていないため除外`);
+      }
+      return true;
+    }
+
+    // 3. 配信種別が「要」でない場合は除外
+    if (!this.hasDistributionRequired(buyer)) {
+      if (buyer.buyer_number === '4370') {
+        console.log(`[DEBUG] 買主4370: 配信種別が「要」ではないため除外`);
+      }
+      return true;
+    }
+
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370: 除外されない（全ての条件をクリア）`);
+    }
+    
+    return false;
+  }
+
+  /**
+   * 業者問合せかどうかを判定
+   */
+  private isBusinessInquiry(buyer: any): boolean {
+    const inquirySource = (buyer.inquiry_source || '').trim();
+    const distributionType = (buyer.distribution_type || '').trim();
+    const brokerInquiry = (buyer.broker_inquiry || '').trim();
+
+    // 問合せ元が「業者問合せ」
+    if (inquirySource === '業者問合せ' || inquirySource.includes('業者')) {
+      return true;
+    }
+
+    // 配信種別が「業者問合せ」
+    if (distributionType === '業者問合せ' || distributionType.includes('業者')) {
+      return true;
+    }
+
+    // 業者問合せフラグに値がある場合
+    if (brokerInquiry && brokerInquiry !== '' && brokerInquiry !== '0' && brokerInquiry.toLowerCase() !== 'false') {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 最低限の希望条件を持っているかを判定
+   */
+  private hasMinimumCriteria(buyer: any): boolean {
+    const desiredArea = (buyer.desired_area || '').trim();
+    const desiredPropertyType = (buyer.desired_property_type || '').trim();
+
+    // 希望エリアまたは希望種別のいずれかが入力されていればtrue
+    return desiredArea !== '' || desiredPropertyType !== '';
+  }
+
+  /**
+   * 配信種別が「要」かどうかを判定
+   */
+  private hasDistributionRequired(buyer: any): boolean {
+    const distributionType = (buyer.distribution_type || '').trim();
+    
+    // デバッグログ（買主4370の場合のみ）
+    if (buyer.buyer_number === '4370') {
+      console.log(`[DEBUG] 買主4370の配信種別チェック:`);
+      console.log(`  distribution_type: "${buyer.distribution_type}"`);
+      console.log(`  trim後: "${distributionType}"`);
+      console.log(`  判定結果: ${distributionType === '要' ? '✅ 要' : '❌ 要ではない'}`);
+    }
+    
+    return distributionType === '要';
+  }
+
+  /**
+   * 最新状況によるフィルタリング
+   */
+  private matchesStatus(buyer: any): boolean {
+    const latestStatus = (buyer.latest_status || '').trim();
+
+    // 買付、買、D、またはEを含む場合は除外
+    if (latestStatus.includes('買付') || latestStatus.includes('買') || latestStatus.includes('D') || latestStatus.includes('E')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * エリア条件によるフィルタリング
+   */
+  private matchesAreaCriteria(buyer: any, propertyAreaNumbers: string[]): boolean {
+    const desiredArea = (buyer.desired_area || '').trim();
+
+    // 希望エリアが空欄の場合は条件を満たす
+    if (!desiredArea) {
+      return true;
+    }
+
+    // 物件の配信エリアが空欄の場合は条件を満たさない
+    if (propertyAreaNumbers.length === 0) {
+      return false;
+    }
+
+    // 買主の希望エリアを抽出
+    const buyerAreaNumbers = this.extractAreaNumbers(desiredArea);
+
+    // 1つでも合致すれば条件を満たす
+    return propertyAreaNumbers.some(area => buyerAreaNumbers.includes(area));
+  }
+
+  /**
+   * 種別条件によるフィルタリング
+   */
+  private matchesPropertyTypeCriteria(buyer: any, propertyType: string | null): boolean {
+    const desiredType = (buyer.desired_property_type || '').trim();
+
+    // 希望種別が「指定なし」の場合は条件を満たす
+    if (desiredType === '指定なし') {
+      return true;
+    }
+
+    // 希望種別が空欄の場合は条件を満たさない
+    if (!desiredType) {
+      return false;
+    }
+
+    // 物件種別が空欄の場合は条件を満たさない
+    if (!propertyType) {
+      return false;
+    }
+
+    // データベースの英語値を日本語に変換
+    const propertyTypeMap: Record<string, string> = {
+      'land': '土地',
+      'detached_house': '戸建',
+      'apartment': 'マンション',
+    };
+    
+    const japanesePropertyType = propertyTypeMap[propertyType] || propertyType;
+
+    // 種別の正規化と比較
+    const normalizedPropertyType = this.normalizePropertyType(japanesePropertyType);
+    const normalizedDesiredTypes = desiredType.split(/[,、\s]+/).map((t: string) => this.normalizePropertyType(t));
+
+    // デバッグログ（買主6767の場合のみ）
+    if (buyer.buyer_number === '6767') {
+      console.log(`[DEBUG] 買主6767の種別フィルタリング:`);
+      console.log(`  物件種別（元）: ${propertyType}`);
+      console.log(`  物件種別（日本語）: ${japanesePropertyType}`);
+      console.log(`  物件種別（正規化）: ${normalizedPropertyType}`);
+      console.log(`  買主希望種別（元）: ${desiredType}`);
+      console.log(`  買主希望種別（正規化）: ${JSON.stringify(normalizedDesiredTypes)}`);
+    }
+
+    // いずれかの希望種別が物件種別と合致すれば条件を満たす
+    const isMatch = normalizedDesiredTypes.some((dt: string) => 
+      dt === normalizedPropertyType || 
+      normalizedPropertyType.includes(dt) ||
+      dt.includes(normalizedPropertyType)
+    );
+
+    // デバッグログ（買主6767の場合のみ）
+    if (buyer.buyer_number === '6767') {
+      console.log(`  マッチング結果: ${isMatch ? '✅ マッチ' : '❌ マッチしない'}`);
+    }
+
+    return isMatch;
+  }
+
+  /**
+   * 価格帯条件によるフィルタリング
+   */
+  private matchesPriceCriteria(
+    buyer: any,
+    salesPrice: number | null,
+    propertyType: string | null
+  ): boolean {
+    // 物件価格が空欄の場合は条件を満たす
+    if (!salesPrice) {
+      return true;
+    }
+
+    // データベースの英語値を日本語に変換
+    const propertyTypeMap: Record<string, string> = {
+      'land': '土地',
+      'detached_house': '戸建',
+      'apartment': 'マンション',
+    };
+    
+    const japanesePropertyType = propertyTypeMap[propertyType || ''] || propertyType;
+
+    // 物件種別に応じた価格帯フィールドを選択
+    let priceRange: string | null = null;
+    const normalizedType = this.normalizePropertyType(japanesePropertyType || '');
+
+    if (normalizedType === '戸建' || normalizedType.includes('戸建')) {
+      priceRange = buyer.price_range_house;
+    } else if (normalizedType === 'マンション' || normalizedType.includes('マンション')) {
+      priceRange = buyer.price_range_apartment;
+    } else if (normalizedType === '土地' || normalizedType.includes('土地')) {
+      priceRange = buyer.price_range_land;
+    }
+
+    // 価格帯が空欄の場合は条件を満たす
+    if (!priceRange || !priceRange.trim()) {
+      return true;
+    }
+
+    // 価格帯をパースして範囲チェック
+    const { min, max } = this.parsePriceRange(priceRange);
+    return salesPrice >= min && salesPrice <= max;
+  }
+
+  /**
+   * エリア番号を抽出
+   */
+  private extractAreaNumbers(areaString: string): string[] {
+    const circledNumbers = areaString.match(/[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯㊵㊶]/g) || [];
+    return circledNumbers;
+  }
+
+  /**
+   * 種別を正規化
+   */
+  private normalizePropertyType(type: string): string {
+    const normalized = type.trim()
+      .replace(/中古/g, '')
+      .replace(/新築/g, '')
+      .replace(/一戸建て/g, '戸建')
+      .replace(/一戸建/g, '戸建')
+      .replace(/戸建て/g, '戸建')
+      .replace(/分譲/g, '')
+      .trim();
+    return normalized;
+  }
+
+  /**
+   * 価格帯をパース
+   */
+  private parsePriceRange(priceRange: string): { min: number; max: number } {
+    let min = 0;
+    let max = Number.MAX_SAFE_INTEGER;
+
+    const cleanedRange = priceRange
+      .replace(/,/g, '')
+      .replace(/円/g, '')
+      .replace(/万/g, '0000')
+      .replace(/億/g, '00000000')
+      .trim();
+
+    // 範囲パターン
+    const rangeMatch = cleanedRange.match(/(\d+)?\s*[〜～\-]\s*(\d+)?/);
+    if (rangeMatch) {
+      if (rangeMatch[1]) {
+        min = parseInt(rangeMatch[1], 10);
+      }
+      if (rangeMatch[2]) {
+        max = parseInt(rangeMatch[2], 10);
+      }
+      return { min, max };
+    }
+
+    // 以上/以下パターン
+    const aboveMatch = cleanedRange.match(/(\d+)\s*以上/);
+    if (aboveMatch) {
+      min = parseInt(aboveMatch[1], 10);
+      return { min, max };
+    }
+
+    const belowMatch = cleanedRange.match(/(\d+)\s*以下/);
+    if (belowMatch) {
+      max = parseInt(belowMatch[1], 10);
+      return { min, max };
+    }
+
+    // 単一値パターン
+    const singleMatch = cleanedRange.match(/^(\d+)$/);
+    if (singleMatch) {
+      const value = parseInt(singleMatch[1], 10);
+      min = value * 0.8;
+      max = value * 1.2;
+      return { min, max };
+    }
+
+    return { min, max };
+  }
+
+  /**
+   * 全買主を取得し、各買主のステータスを算出
+   * @returns 買主リスト（calculated_statusフィールド付き）
+   */
+  async getBuyersWithStatus(options: BuyerQueryOptions = {}): Promise<PaginatedResult<any>> {
+    try {
+      // BuyerStatusCalculatorをインポート
+      const { calculateBuyerStatus, calculateBuyerStatusComplete } = await import('./BuyerStatusCalculator');
+      
+      // 買主リストを取得
+      const result = await this.getAll(options);
+      
+      // 各買主のステータスを算出
+      const buyersWithStatus = result.data.map(buyer => {
+        try {
+          // まずPriority 1-16を評価
+          let statusResult = calculateBuyerStatus(buyer);
+          
+          // Priority 1-16で一致しなければPriority 17-37を評価
+          if (!statusResult.status || statusResult.priority === 0) {
+            statusResult = calculateBuyerStatusComplete(buyer);
+          }
+          
+          return {
+            ...buyer,
+            calculated_status: statusResult.status,
+            status_priority: statusResult.priority,
+            status_color: statusResult.color
+          };
+        } catch (error) {
+          // ステータス算出エラー時はデフォルト値を返す
+          console.error(`[BuyerService.getBuyersWithStatus] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+          return {
+            ...buyer,
+            calculated_status: '',
+            status_priority: 999,
+            status_color: '#9E9E9E'
+          };
+        }
+      });
+      
+      return {
+        ...result,
+        data: buyersWithStatus
+      };
+    } catch (error) {
+      console.error('[BuyerService.getBuyersWithStatus] Error:', error);
+      throw new Error(`Failed to get buyers with status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * ステータスごとの買主数をカウント
+   * @returns ステータスカテゴリーの配列
+   */
+  async getStatusCategories(): Promise<Array<{
+    status: string;
+    count: number;
+    priority: number;
+    color: string;
+  }>> {
+    try {
+      // BuyerStatusCalculatorとステータス定義をインポート
+      const { calculateBuyerStatus, calculateBuyerStatusComplete } = await import('./BuyerStatusCalculator');
+      const { STATUS_DEFINITIONS } = await import('../config/buyer-status-definitions');
+      
+      // 全買主を取得（ページネーションなし、削除済みを除外）
+      // Supabaseのデフォルト制限（1000件）を回避するために、全件取得
+      let allBuyers: any[] = [];
+      let fetchPage = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data, error, count } = await this.supabase
+          .from('buyers')
+          .select('*', { count: 'exact' })
+          .is('deleted_at', null)
+          .range(fetchPage * pageSize, (fetchPage + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('[BuyerService.getStatusCategories] Database error:', error);
+          throw new Error(`Failed to fetch buyers for status categories: ${error.message}`);
+        }
+        
+        if (data && data.length > 0) {
+          allBuyers = allBuyers.concat(data);
+          fetchPage++;
+          hasMore = data.length === pageSize; // 1000件取得できた場合は次のページがある可能性
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`[BuyerService.getStatusCategories] Fetched ${allBuyers.length} buyers total`);
+      
+      // ステータスごとのカウントマップ
+      const statusCountMap = new Map<string, number>();
+      
+      // 各買主のステータスを算出してカウント
+      (allBuyers || []).forEach(buyer => {
+        try {
+          // まずPriority 1-16を評価
+          let statusResult = calculateBuyerStatus(buyer);
+          
+          // Priority 1-16で一致しなければPriority 17-37を評価
+          if (!statusResult.status || statusResult.priority === 0) {
+            statusResult = calculateBuyerStatusComplete(buyer);
+          }
+          
+          const status = statusResult.status || ''; // 空文字列の場合もカウント
+          
+          statusCountMap.set(status, (statusCountMap.get(status) || 0) + 1);
+        } catch (error) {
+          // ステータス算出エラー時は空文字列としてカウント
+          console.error(`[BuyerService.getStatusCategories] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+          statusCountMap.set('', (statusCountMap.get('') || 0) + 1);
+        }
+      });
+      
+      // ステータスカテゴリーの配列を作成
+      const categories: Array<{
+        status: string;
+        count: number;
+        priority: number;
+        color: string;
+      }> = [];
+      
+      // 実際に算出されたステータスをすべて収集
+      statusCountMap.forEach((count, status) => {
+        if (count === 0) return; // カウントが0のステータスはスキップ
+        
+        // STATUS_DEFINITIONSから定義を検索
+        const definition = STATUS_DEFINITIONS.find(d => d.status === status);
+        
+        if (definition) {
+          // 定義が見つかった場合
+          categories.push({
+            status: definition.status,
+            count,
+            priority: definition.priority,
+            color: definition.color
+          });
+        } else {
+          // 動的に生成されたステータス（担当カテゴリーなど）
+          let priority = 999; // デフォルト優先度
+          let color = '#66ccff'; // デフォルト色（水色）
+          
+          // ステータス名から優先度と色を推測
+          if (status.startsWith('⑯当日TEL（') && status.endsWith('）')) {
+            // ⑯当日TEL（担当者名）
+            priority = 7;
+            color = '#cc0000'; // 濃い赤
+          } else if (status.startsWith('担当(') && status.endsWith(')次電日空欄')) {
+            // 担当(担当者名)次電日空欄
+            priority = 17;
+            color = '#ccccff'; // 非常に薄い青
+          } else if (status.startsWith('担当(') && status.endsWith(')')) {
+            // 担当(担当者名)
+            priority = 24;
+            color = '#66ccff'; // 水色
+          } else if (status === '') {
+            // 該当なし
+            priority = 999;
+            color = '#9E9E9E'; // グレー
+          }
+          
+          categories.push({
+            status,
+            count,
+            priority,
+            color
+          });
+        }
+      });
+      
+      // 優先順位でソート（昇順）
+      categories.sort((a, b) => a.priority - b.priority);
+      
+      return categories;
+    } catch (error) {
+      console.error('[BuyerService.getStatusCategories] Error:', error);
+      throw new Error(`Failed to get status categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 特定のステータスに該当する買主を取得
+   * @param status - ステータス文字列
+   * @param options - クエリオプション
+   * @returns 該当する買主のリスト
+   */
+  async getBuyersByStatus(
+    status: string,
+    options: BuyerQueryOptions = {}
+  ): Promise<PaginatedResult<any>> {
+    try {
+      // BuyerStatusCalculatorをインポート
+      const { calculateBuyerStatus } = await import('./BuyerStatusCalculator');
+      
+      // 全買主を取得（ページネーションなし - フィルタリング後にページネーション、削除済みを除外）
+      // Supabaseのデフォルト制限（1000件）を回避するために、全件取得
+      let allBuyers: any[] = [];
+      let fetchPage = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data, error } = await this.supabase
+          .from('buyers')
+          .select('*')
+          .is('deleted_at', null)
+          .range(fetchPage * pageSize, (fetchPage + 1) * pageSize - 1);
+        
+        if (error) {
+          console.error('[BuyerService.getBuyersByStatus] Database error:', error);
+          throw new Error(`Failed to fetch buyers by status: ${error.message}`);
+        }
+        
+        if (data && data.length > 0) {
+          allBuyers = allBuyers.concat(data);
+          fetchPage++;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`[BuyerService.getBuyersByStatus] Fetched ${allBuyers.length} buyers total for status filtering`);
+      
+      // ステータスでフィルタリング
+      const filteredBuyers = (allBuyers || [])
+        .map(buyer => {
+          try {
+            const statusResult = calculateBuyerStatus(buyer);
+            return {
+              ...buyer,
+              calculated_status: statusResult.status,
+              status_priority: statusResult.priority,
+              status_color: statusResult.color
+            };
+          } catch (error) {
+            // ステータス算出エラー時はデフォルト値を返す
+            console.error(`[BuyerService.getBuyersByStatus] Error calculating status for buyer ${buyer.buyer_number}:`, error);
+            return {
+              ...buyer,
+              calculated_status: '',
+              status_priority: 999,
+              status_color: '#9E9E9E'
+            };
+          }
+        })
+        .filter(buyer => buyer.calculated_status === status);
+      
+      // ページネーション
+      const {
+        page = 1,
+        limit = 50,
+        sortBy = 'reception_date',
+        sortOrder = 'desc'
+      } = options;
+      
+      const offset = (page - 1) * limit;
+      const total = filteredBuyers.length;
+      const totalPages = Math.ceil(total / limit);
+      
+      // ソート
+      filteredBuyers.sort((a, b) => {
+        const aValue = a[sortBy];
+        const bValue = b[sortBy];
+        
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+      
+      // ページネーション適用
+      const paginatedData = filteredBuyers.slice(offset, offset + limit);
+      
+      // 物件情報を追加
+      const paginatedDataWithPropertyInfo = await this.addPropertyInfoToBuyers(paginatedData);
+      
+      return {
+        data: paginatedDataWithPropertyInfo,
+        total,
+        page,
+        limit,
+        totalPages
+      };
+    } catch (error) {
+      console.error('[BuyerService.getBuyersByStatus] Error:', error);
+      throw new Error(`Failed to get buyers by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 買主を削除（物理削除）
+   * @param buyerNumber - 買主番号（主キー）
+   * @param userId - ユーザーID（監査ログ用、オプション）
+   * @param userEmail - ユーザーメール（監査ログ用、オプション）
+   * @returns 削除された買主データ
+   */
+  async delete(
+    buyerNumber: string,
+    userId?: string,
+    userEmail?: string
+  ): Promise<any> {
+    console.log(`[BuyerService.delete] Deleting buyer: ${buyerNumber}`);
+
+    // 存在確認
+    const existing = await this.getByBuyerNumber(buyerNumber);
+    if (!existing) {
+      throw new Error('Buyer not found');
+    }
+
+    // 監査ログを記録（オプション）
+    if (userId && userEmail) {
+      try {
+        await AuditLogService.logFieldUpdate(
+          'buyer',
+          existing.buyer_id || buyerNumber,
+          'deleted',
+          'false',
+          'true',
+          userId,
+          userEmail
+        );
+      } catch (auditError) {
+        console.error('[BuyerService.delete] Failed to create audit log:', auditError);
+        // 監査ログのエラーは無視して削除を継続
+      }
+    }
+
+    // データベースから物理削除
+    const { data, error } = await this.supabase
+      .from('buyers')
+      .delete()
+      .eq('buyer_number', buyerNumber)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[BuyerService.delete] Failed to delete buyer: ${error.message}`);
+      throw new Error(`Failed to delete buyer: ${error.message}`);
+    }
+
+    console.log(`[BuyerService.delete] Successfully deleted buyer: ${buyerNumber}`);
+    return data;
+  }
 }
+
