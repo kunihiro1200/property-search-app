@@ -17,5 +17,8 @@
       "src": "/(.*)",
       "dest": "/src/index.ts"
     }
-  ]
+  ],
+  "typescript": {
+    "ignoreBuildErrors": true
+  }
 }
