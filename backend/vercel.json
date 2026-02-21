@@ -42,6 +42,10 @@
   ],
   "rewrites": [
     {
+      "source": "/p/:propertyNumber",
+      "destination": "/api/redirect"
+    },
+    {
       "source": "/api/auth/callback",
       "destination": "/api/auth-callback"
     },
@@ -56,10 +60,6 @@
     {
       "source": "/api/simple-test",
       "destination": "/api/simple-test"
-    },
-    {
-      "source": "/p/:propertyNumber",
-      "destination": "/api/redirect"
     },
     {
       "source": "/api/(.*)",
