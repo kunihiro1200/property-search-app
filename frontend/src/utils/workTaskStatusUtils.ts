@@ -333,7 +333,8 @@ export const filterTasksByStatus = (tasks: WorkTask[], statusKey: string): WorkT
   if (statusKey === 'all') return tasks;
 
   return tasks.filter(task => {
-    const status = calculateTaskStatus(task);
+    // バックエンドから返されたsidebar_categoryを優先的に使用
+    const status = (task as any).sidebar_category || calculateTaskStatus(task);
     const taskStatusKey = getStatusKey(status);
     return taskStatusKey === statusKey;
   });
