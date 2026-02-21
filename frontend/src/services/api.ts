@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// 環境変数が正しく読み込まれないため、直接指定
-const API_BASE_URL = 'http://localhost:3001';
+// 環境変数からAPI URLを取得（本番環境ではVITE_API_URLを使用）
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'development' ? 'http://localhost:3001' : ''
+);
 
 // デバッグ用ログ
 console.log('🔍 [api] Environment:', {
