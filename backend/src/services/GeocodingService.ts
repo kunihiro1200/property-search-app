@@ -7,14 +7,18 @@ export interface Coordinates {
 }
 
 export class GeocodingService {
-  private apiKey: string;
   private baseUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_MAPS_API_KEY || '';
-    if (!this.apiKey) {
+    // 環境変数の読み込みはメソッド内で行う（lazy initialization）
+  }
+
+  private getApiKey(): string {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || '';
+    if (!apiKey) {
       console.warn('[GeocodingService] GOOGLE_MAPS_API_KEY is not set');
     }
+    return apiKey;
   }
 
   /**
@@ -23,7 +27,8 @@ export class GeocodingService {
    * @returns 座標（緯度・経度）
    */
   async geocodeAddress(address: string): Promise<Coordinates | null> {
-    if (!this.apiKey) {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
       console.error('[GeocodingService] API key is not configured');
       return null;
     }
@@ -39,7 +44,7 @@ export class GeocodingService {
       const response = await axios.get(this.baseUrl, {
         params: {
           address: address,
-          key: this.apiKey,
+          key: apiKey,
           language: 'ja', // 日本語
         },
         timeout: 10000, // 10秒タイムアウト
