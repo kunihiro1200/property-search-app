@@ -84,7 +84,13 @@ export class WorkTaskService {
       return [];
     }
 
-    return data as WorkTaskData[];
+    // 各タスクにサイドバーカテゴリーを追加
+    const tasksWithCategory = (data as WorkTaskData[]).map(task => ({
+      ...task,
+      sidebar_category: this.calculateSidebarCategory(task),
+    }));
+
+    return tasksWithCategory;
   }
 
   /**
@@ -135,6 +141,171 @@ export class WorkTaskService {
     }
 
     return count || 0;
+  }
+
+  /**
+   * サイドバーカテゴリーを計算（AppSheet式を再現）
+   * 表示順序に従って条件をチェック
+   */
+  calculateSidebarCategory(task: WorkTaskData): string {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 日付をDateオブジェクトに変換するヘルパー
+    const parseDate = (dateStr: string | null | undefined): Date | null => {
+      if (!dateStr) return null;
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    // 日付をM/D形式でフォーマット
+    const formatDate = (dateStr: string | null | undefined): string => {
+      if (!dateStr) return '';
+      const date = parseDate(dateStr);
+      if (!date) return '';
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    };
+
+    // 空白チェック
+    const isBlank = (value: any): boolean => {
+      return value === null || value === undefined || value === '';
+    };
+
+    const isNotBlank = (value: any): boolean => {
+      return !isBlank(value);
+    };
+
+    const settlementDate = parseDate(task.settlement_date);
+    const salesContractDeadline = parseDate(task.sales_contract_deadline);
+    const bindingScheduledDate = parseDate(task.binding_scheduled_date);
+    const siteRegistrationDeadline = parseDate(task.site_registration_deadline);
+    const siteRegistrationDueDate = parseDate(task.site_registration_due_date);
+
+    // 条件1: 売買契約確認 = "確認中"
+    if (task.sales_contract_confirmed === '確認中') {
+      return `売買契約　営業確認中${formatDate(task.sales_contract_deadline)}`;
+    }
+
+    // 条件2: 売買契約 入力待ち
+    if (
+      isNotBlank(task.sales_contract_deadline) &&
+      isBlank(task.binding_scheduled_date) &&
+      isBlank(task.on_hold) &&
+      isBlank(task.binding_completed) &&
+      (isBlank(task.settlement_date) || (settlementDate && settlementDate >= today)) &&
+      (isNotBlank(task.hirose_request_sales) || isNotBlank(task.cw_request_sales) || isNotBlank(task.employee_contract_creation)) &&
+      isBlank(task.accounting_confirmed) &&
+      (isBlank(task.cw_completion_email_sales) || isBlank(task.work_completion_chat_hirose))
+    ) {
+      return `売買契約 入力待ち ${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
+    }
+
+    // 条件3: サイト登録依頼してください
+    if (
+      isBlank(task.site_registration_requestor) &&
+      isBlank(task.on_hold) &&
+      isBlank(task.distribution_date) &&
+      isBlank(task.publish_scheduled_date) &&
+      isNotBlank(task.site_registration_deadline) &&
+      isBlank(task.sales_contract_deadline)
+    ) {
+      return `サイト登録依頼してください ${formatDate(task.site_registration_deadline)}`;
+    }
+
+    // 条件4: 決済完了チャット送信未
+    if (
+      settlementDate && settlementDate <= today &&
+      settlementDate >= new Date('2025-05-26') &&
+      isNotBlank(task.settlement_date) &&
+      isBlank(task.settlement_completed_chat) &&
+      isNotBlank(task.sales_contract_deadline)
+    ) {
+      return '決済完了チャット送信未';
+    }
+
+    // 条件5: 入金確認未
+    if (
+      isNotBlank(task.settlement_completed_chat) &&
+      (isBlank(task.accounting_confirmed) || task.accounting_confirmed === '未') &&
+      isNotBlank(task.sales_contract_deadline)
+    ) {
+      return '入金確認未';
+    }
+
+    // 条件6: 要台帳作成
+    if (
+      isBlank(task.ledger_created) &&
+      isBlank(task.on_hold) &&
+      isNotBlank(task.settlement_date) &&
+      settlementDate && settlementDate < today &&
+      isNotBlank(task.sales_contract_deadline)
+    ) {
+      return '要台帳作成';
+    }
+
+    // 条件7: サイト依頼済み納品待ち（売買契約 製本待ちより前に配置）
+    if (
+      isBlank(task.site_registration_confirmation_request_date) &&
+      isBlank(task.sales_contract_deadline) &&
+      isNotBlank(task.site_registration_deadline) &&
+      task.site_registration_confirmed !== '完了' &&
+      siteRegistrationDeadline && siteRegistrationDeadline >= new Date('2025-10-30')
+    ) {
+      return `サイト依頼済み納品待ち ${formatDate(task.site_registration_due_date)}`;
+    }
+
+    // 条件8: 売買契約 製本待ち
+    if (
+      isNotBlank(task.sales_contract_deadline) &&
+      isNotBlank(task.binding_scheduled_date) &&
+      task.sales_contract_confirmed === '確認OK' &&
+      isBlank(task.on_hold) &&
+      isBlank(task.binding_completed)
+    ) {
+      return `売買契約 製本待ち ${formatDate(task.binding_scheduled_date)} ${task.sales_contract_assignee || ''}`;
+    }
+
+    // 条件9: 売買契約 依頼未
+    if (
+      isNotBlank(task.sales_contract_deadline) &&
+      isBlank(task.binding_scheduled_date) &&
+      isBlank(task.binding_completed) &&
+      (isBlank(task.settlement_date) || (settlementDate && settlementDate >= today)) &&
+      isBlank(task.accounting_confirmed) &&
+      isBlank(task.on_hold) &&
+      isBlank(task.hirose_request_sales) &&
+      isBlank(task.cw_request_sales)
+    ) {
+      return `売買契約 依頼未 締日${formatDate(task.sales_contract_deadline)} ${task.sales_contract_assignee || ''}`;
+    }
+
+    // 条件10: サイト登録要確認
+    if (
+      isNotBlank(task.site_registration_confirmation_request_date) &&
+      isBlank(task.site_registration_confirmed)
+    ) {
+      return `サイト登録要確認 ${formatDate(task.site_registration_deadline)}`;
+    }
+
+    // 条件11: 媒介作成_締日
+    if (
+      isBlank(task.mediation_completed) &&
+      isNotBlank(task.mediation_deadline) &&
+      isBlank(task.distribution_date) &&
+      isBlank(task.sales_contract_deadline) &&
+      isBlank(task.on_hold)
+    ) {
+      return `媒介作成_締日（${formatDate(task.mediation_deadline)}`;
+    }
+
+    // 条件12: 保留
+    if (isNotBlank(task.on_hold)) {
+      return '保留';
+    }
+
+    // デフォルト: 空文字
+    return '';
   }
 
   /**
