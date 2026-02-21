@@ -202,12 +202,7 @@
       "cadastral_map_sales_input",
       "road_dimensions",
       "property_type",
-      "review_count",
-      "seller_name_field",
-      "buyer_name_field",
-      "loan_field",
-      "financial_institution",
-      "delivery_scheduled"
+      "review_count"
     ],
     "browser_to_spreadsheet": [
       "mediation_creator",
@@ -254,7 +249,6 @@
       "settlement_completed_chat",
       "property_assignee_chat",
       "accounting_confirmed",
-      "sales_materials_drive",
       "kunihiro_chat",
       "yamamoto_chat",
       "ura_chat",
@@ -289,12 +283,10 @@
       "work_completed_comment",
       "cw_request_sales",
       "hirose_completed_chat_sales",
-      "cw_completed_chat_sales",
       "cw_completed_email_sales",
       "hirose_floor_plan_stored_comment",
       "completed_comment_sales",
       "invoice_stamped",
-      "property_related_documents",
       "review_seller",
       "review_buyer",
       "wall_core_area_input",
@@ -309,11 +301,6 @@
       "pre_request_check",
       "cw_person"
     ],
-    "bidirectional": [
-      "seller_email",
-      "seller_phone",
-      "buyer_email",
-      "buyer_phone"
-    ]
+    "bidirectional": []
   }
 }
