@@ -103,7 +103,8 @@ app.use(cors({
     'http://localhost:3000',  // バックエンド自身も追加
     'https://property-site-frontend-kappa.vercel.app',  // 本番環境フロントエンド
     'https://baikyaku-property-site3.vercel.app',  // 本番環境バックエンド
-    'https://new-admin-management-system.vercel.app'  // 社内管理システムフロントエンド
+    'https://new-admin-management-system.vercel.app',  // 社内管理システムフロントエンド（旧）
+    'https://new-admin-management-system-v2.vercel.app'  // 社内管理システムフロントエンド（新）
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
