@@ -12,7 +12,7 @@
       "src": "backend/api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/api/src/**", "backend/src/**"]
+        "includeFiles": ["backend/api/src/**"]
       }
     }
   ],
