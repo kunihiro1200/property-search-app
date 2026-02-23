@@ -3,18 +3,23 @@ import path from 'path';
 import fs from 'fs';
 
 // 最初に環境変数を読み込む（Vercel環境では.envファイルは存在しない）
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-  console.log('📁 Loading .env from:', envPath);
-  const result = dotenv.config({ path: envPath });
+try {
+  const envPath = path.resolve(__dirname, '../.env');
+  if (fs.existsSync(envPath)) {
+    console.log('📁 Loading .env from:', envPath);
+    const result = dotenv.config({ path: envPath });
 
-  if (result.error) {
-    console.error('❌ Error loading .env file:', result.error);
+    if (result.error) {
+      console.error('❌ Error loading .env file:', result.error);
+    } else {
+      console.log('✅ .env file loaded successfully');
+    }
   } else {
-    console.log('✅ .env file loaded successfully');
+    console.log('ℹ️  .env file not found (running in Vercel environment)');
   }
-} else {
-  console.log('ℹ️  .env file not found (running in Vercel environment)');
+} catch (error) {
+  console.error('⚠️ Error checking .env file:', error);
+  console.log('ℹ️  Continuing without .env file (using environment variables)');
 }
 
 // 環境変数のログ出力（デバッグ用）
