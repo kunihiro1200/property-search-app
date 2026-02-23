@@ -23,7 +23,7 @@ const supabase = createClient(
 
 // GoogleSheetsClientを直接初期化
 const sheetsClient = new GoogleSheetsClient({
-  spreadsheetId: process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID!,
+  spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
   sheetName: process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト',
   serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
 });

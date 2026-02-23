@@ -1,15 +1,24 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// 最初に環境変数を読み込む
+// 最初に環境変数を読み込む（Vercel環境では.envファイルは存在しない）
 const envPath = path.resolve(__dirname, '../.env');
-console.log('📁 Loading .env from:', envPath);
-const result = dotenv.config({ path: envPath });
+if (fs.existsSync(envPath)) {
+  console.log('📁 Loading .env from:', envPath);
+  const result = dotenv.config({ path: envPath });
 
-if (result.error) {
-  console.error('❌ Error loading .env file:', result.error);
+  if (result.error) {
+    console.error('❌ Error loading .env file:', result.error);
+  } else {
+    console.log('✅ .env file loaded successfully');
+  }
 } else {
-  console.log('✅ .env file loaded successfully');
+  console.log('ℹ️  .env file not found (running in Vercel environment)');
+}
+
+// 環境変数のログ出力（デバッグ用）
+if (process.env.NODE_ENV !== 'production') {
   console.log('🔑 All environment variables starting with GMAIL:');
   Object.keys(process.env)
     .filter(key => key.startsWith('GMAIL'))
