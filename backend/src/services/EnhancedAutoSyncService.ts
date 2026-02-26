@@ -1870,7 +1870,16 @@ export class EnhancedAutoSyncService {
     
     try {
       // Phase 1: 追加同期 - 不足売主を検出して追加（最優先）
+      // 環境変数チェック：売主同期を有効にするか
+      const isSellerSyncEnabled = process.env.SELLER_SYNC_ENABLED !== 'false';
+      console.log('🔍 SELLER_SYNC_ENABLED:', process.env.SELLER_SYNC_ENABLED);
+      console.log('🔍 isSellerSyncEnabled:', isSellerSyncEnabled);
+
+      if (isSellerSyncEnabled) {
+
+
       console.log('📥 Phase 1: Seller Addition Sync');
+
       const missingSellers = await this.detectMissingSellers();
       
       let additionResult = {
@@ -1931,6 +1940,10 @@ export class EnhancedAutoSyncService {
       } else {
         console.log('\n⏭️  Phase 3: Seller Deletion Sync (Disabled)');
       }
+      } else {
+        console.log('\n⏭️  Phase 1-3: Seller Sync (Disabled by SELLER_SYNC_ENABLED=false)');
+      }
+
 
       // Phase 4: 作業タスク同期（既存）
       console.log('\n📋 Phase 4: Work Task Sync');
