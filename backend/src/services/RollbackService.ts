@@ -48,13 +48,12 @@ export class RollbackService {
 
       // スナップショットを保存
       const { data: snapshot, error: insertError } = await this.supabase
-        .from('seller_snapshots')
-        .insert({
-          seller_count: sellerCount,
-          description,
-          snapshot_data: sellers,
-          created_at: new Date().toISOString(),
-        })
+  .from('seller_snapshots')
+  .insert({
+    seller_count: sellerCount,
+    description,
+    snapshot_data: sellers,
+  })
         .select('id, created_at, seller_count, description')
         .single();
 
@@ -109,11 +108,11 @@ export class RollbackService {
       }
 
       // ログを開始
-      const logId = await this.logger.startSyncLog('manual', undefined, {
-        operation: 'rollback',
-        snapshotId,
-        targetCount: snapshotData.length,
-      });
+     await this.logger.startSyncLog('manual', undefined, {
+  operation: 'rollback',
+  snapshotId,
+  targetCount: snapshotData.length,
+});
 
       // トランザクション的に処理
       // 1. 現在のデータを削除
@@ -138,9 +137,7 @@ export class RollbackService {
       const duration = Date.now() - startTime;
 
       // ログを完了
-      await this.logger.completeSyncLog(logId, 'success', snapshotData.length);
-
-      return {
+    return {
         success: true,
         restoredCount: snapshotData.length,
         duration,

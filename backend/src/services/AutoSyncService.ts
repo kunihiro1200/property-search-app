@@ -235,13 +235,13 @@ export class AutoSyncService {
       }
 
       return {
-        success: errors.length === 0,
-        newSellersCount,
-        updatedSellersCount,
-        propertyListingsUpdated,
-        errors,
-        duration,
-      };
+  success: errors.length === 0,
+  newSellersCount,
+  updatedSellersCount,
+  propertyListingsUpdated: propertyListingsUpdated,
+  errors,
+  duration,
+};
 
     } catch (error: any) {
       console.error('❌ Auto-sync failed:', error.message);
