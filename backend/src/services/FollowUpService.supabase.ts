@@ -22,7 +22,7 @@ export class FollowUpService extends BaseRepository {
    * 追客活動を記録
    */
   async recordActivity(params: RecordActivityParams): Promise<Activity> {
-    const { data: activity, error } = await this.table<Activity>('activities')
+    const { data: activity, error } = await this.table('activities')
       .insert({
         seller_id: params.sellerId,
         employee_id: params.employeeId,

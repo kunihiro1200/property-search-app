@@ -47,7 +47,7 @@ export class RollbackService {
       const sellerCount = sellers?.length || 0;
 
       // スナップショットを保存
-      const { data: snapshot, error: insertError } = await this.supabase
+     const { data: snapshot, error: insertError } = await this.supabase
   .from('seller_snapshots')
   .insert({
     seller_count: sellerCount,
@@ -220,10 +220,10 @@ export class RollbackService {
       cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
       const { data: deleted, error } = await this.supabase
-        .from('seller_snapshots')
-        .delete()
-        .lt('created_at', cutoffDate.toISOString())
-        .select('id');
+  .from('seller_snapshots')
+  .delete()
+  .lt('created_at', cutoffDate.toISOString())
+  .select('id');
 
       if (error) {
         throw new Error(`Failed to cleanup snapshots: ${error.message}`);
