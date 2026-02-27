@@ -8,8 +8,24 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "../src/**/*.ts"
+    "index.ts",
+    "src/services/PropertyListingService.ts",
+    "src/services/PropertyImageService.ts",
+    "src/services/GoogleDriveService.ts",
+    "src/services/PropertyDetailsService.ts",
+    "src/services/PropertyService.ts",
+    "src/services/PanoramaUrlService.ts",
+    "src/services/GoogleSheetsClient.ts",
+    "src/services/AthomeSheetSyncService.ts",
+    "src/services/PropertyListingSyncService.ts",
+    "src/services/GeocodingService.ts",
+    "src/services/CityNameExtractor.ts",
+    "src/services/PropertyDistributionAreaCalculator.ts",
+    "src/services/AthomeDataService.ts",
+    "src/services/FavoriteCommentService.ts",
+    "src/services/RecommendedCommentService.ts",
+    "src/config/supabase.ts",
+    "src/repositories/BaseRepository.ts"
   ],
   "exclude": [
     "node_modules",
