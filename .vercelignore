@@ -58,3 +58,9 @@ backend/sync-*.ts
 backend/fix-*.ts
 backend/*.bat
 backend/*.sh
+
+# Compiled JS files (use TypeScript source directly)
+backend/api/index.js
+backend/api/public.js
+backend/api/cron-sync.js
+backend/api/check-env.js
