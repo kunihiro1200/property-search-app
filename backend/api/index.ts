@@ -15,7 +15,7 @@ import { PropertyService } from '../src/services/PropertyService';
 import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from '../src/services/AthomeSheetSyncService';
-import publicPropertiesRoutes from '../src/routes/publicProperties';
+
 
 const app = express();
 
@@ -1821,10 +1821,18 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
 app.post('/api/cron-property-sync', async (req, res) => {
   try {
     // Cron Secretの検証
+    // Vercel Cron Jobは Authorization ヘッダーを送らないため、
+    // x-vercel-cron ヘッダーまたは Authorization ヘッダーのどちらかを許可
     const authHeader = req.headers['authorization'];
+    const vercelCronHeader = req.headers['x-vercel-cron'];
     const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+
+    // Vercel Cron Jobからのリクエスト（x-vercel-cronヘッダーあり）は認証スキップ
+    // または Authorization: Bearer <secret> で認証
+    const isVercelCron = vercelCronHeader === '1';
+    const isAuthorized = !cronSecret || isVercelCron || authHeader === `Bearer ${cronSecret}`;
+
+    if (!isAuthorized) {
       console.error('❌ Unauthorized cron request');
       return res.status(401).json({ error: 'Unauthorized' });
     }
