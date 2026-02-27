@@ -1824,7 +1824,7 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
 });
 
 // Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
-app.post('/api/cron-property-sync', async (req, res) => {
+app.get('/api/cron-property-sync', async (req, res) => {
   try {
     // Cron Secretの検証
     // Vercel Cron Jobは Authorization ヘッダーを送らないため、
