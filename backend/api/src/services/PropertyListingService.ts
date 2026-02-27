@@ -313,7 +313,7 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' });
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
