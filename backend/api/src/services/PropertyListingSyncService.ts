@@ -13,8 +13,8 @@
  * - 手動実行
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { GoogleSheetsClient } from '../../../src/services/GoogleSheetsClient';
-import { PropertyImageService } from '../../../src/services/PropertyImageService';
+import { GoogleSheetsClient } from './GoogleSheetsClient';
+import { PropertyImageService } from './PropertyImageService';
 
 export interface PropertyListingSyncResult {
   success: boolean;

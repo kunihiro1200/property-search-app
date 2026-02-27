@@ -1,4 +1,4 @@
-// Redis互換インターフェース
+// Redis compatible interface
 interface RedisLike {
   get(key: string): Promise<string | null>;
   setEx(key: string, seconds: number, value: string): Promise<string | null>;
@@ -6,7 +6,7 @@ interface RedisLike {
   keys(pattern: string): Promise<string[]>;
 }
 
-// メモリ内セッションストア（Vercel環境ではRedisが利用できないためメモリストアを使用）
+// In-memory session store (Redis not available in Vercel environment)
 class MemoryStore implements RedisLike {
   private store: Map<string, { value: string; expiresAt: number }> = new Map();
 
@@ -37,17 +37,16 @@ class MemoryStore implements RedisLike {
   }
 
   async keys(pattern: string): Promise<string[]> {
-    // 簡易的なパターンマッチング（*のみサポート）
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    const regexStr = '^' + pattern.replace(/\*/g, '.*') + '$';
+    const regex = new RegExp(regexStr);
     return Array.from(this.store.keys()).filter(key => regex.test(key));
   }
 }
 
-// メモリストアを使用（Vercel環境ではRedisが利用できない）
 const memoryStore = new MemoryStore();
 
 export const connectRedis = async () => {
-  console.log('ℹ️ Using in-memory session store (Redis not available in Vercel)');
+  console.log('Using in-memory session store (Redis not available in Vercel)');
 };
 
 export const getRedisClient = (): RedisLike => {
