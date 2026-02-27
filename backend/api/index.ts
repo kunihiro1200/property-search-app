@@ -590,6 +590,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 
     // PropertyImageServiceを使用して画像を取得
     const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(), // GoogleDriveServiceインスタンスを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -680,6 +681,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
 
     // PropertyImageServiceを使用してキャッシュをクリア
     const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(), // GoogleDriveServiceインスタンスを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -730,6 +732,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
 
     // PropertyImageServiceを使用して全キャッシュをクリア
     const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(), // GoogleDriveServiceインスタンスを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -858,6 +861,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
     
     // 画像を取得（Google Drive）- キャッシュをバイパス
     const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(), // GoogleDriveServiceインスタンスを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -967,6 +971,7 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
     
     // PropertyImageServiceのインスタンスを作成
     const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(), // GoogleDriveServiceインスタンスを注入
       60, // cacheTTLMinutes
       parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
       parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
@@ -1327,9 +1332,10 @@ app.post('/api/public/inquiries', async (req, res) => {
       await sheetsClient.authenticate();
       console.log('[Inquiry API] Authentication completed successfully');
       
-      // 最後の行だけを取得（高速）
-      console.log('[Inquiry API] Calling getLastRow()...');
-      const lastRow = await sheetsClient.getLastRow();
+      // 全行を取得して最後の行を使用
+      console.log('[Inquiry API] Calling readAll()...');
+      const allRows = await sheetsClient.readAll();
+      const lastRow = allRows.length > 0 ? allRows[allRows.length - 1] : null;
       
       console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
       
