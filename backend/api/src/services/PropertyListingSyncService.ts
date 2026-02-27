@@ -15,6 +15,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { PropertyImageService } from './PropertyImageService';
+import { GoogleDriveService } from './GoogleDriveService';
 
 export interface PropertyListingSyncResult {
   success: boolean;
@@ -38,7 +39,7 @@ export class PropertyListingSyncService {
 
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
-    this.propertyImageService = new PropertyImageService();
+    this.propertyImageService = new PropertyImageService(new GoogleDriveService());
   }
 
   /**
