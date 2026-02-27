@@ -611,7 +611,9 @@ export class PropertyService {
   async retrieveStorageUrl(propertyNumber: string): Promise<string | null> {
     try {
       const { PropertyImageService } = await import('./PropertyImageService.js');
-      const propertyImageService = new PropertyImageService();
+      const { GoogleDriveService } = await import('./GoogleDriveService.js');
+      const driveService = new GoogleDriveService();
+      const propertyImageService = new PropertyImageService(driveService);
       
       const folderUrl = await propertyImageService.getImageFolderUrl(propertyNumber);
       
