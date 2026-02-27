@@ -2,23 +2,27 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/src/index.ts",
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build"
+    },
+    {
+      "src": "backend/api/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/cron-sync",
-      "dest": "/backend/api/cron-sync.ts"
+      "src": "/api/(.*)",
+      "dest": "/backend/api/index.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "/backend/src/index.ts"
+      "dest": "/frontend/index.html"
     }
   ],
   "crons": [
     {
-      "path": "/api/cron-sync",
+      "path": "/api/cron-property-sync",
       "schedule": "*/10 * * * *"
     }
   ]

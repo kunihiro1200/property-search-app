@@ -1817,6 +1817,47 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
   }
 });
 
+// Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
+app.post('/api/cron-property-sync', async (req, res) => {
+  try {
+    // Cron Secretの検証
+    const authHeader = req.headers['authorization'];
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      console.error('❌ Unauthorized cron request');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    console.log('🔄 [Cron] Starting property listing sync...');
+    
+    const { getPropertyListingSyncService } = await import('../src/services/PropertyListingSyncService');
+    const syncService = getPropertyListingSyncService();
+    await syncService.initialize();
+    
+    const result = await syncService.runFullSync('scheduled');
+    
+    console.log(`✅ [Cron] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}`);
+    
+    res.json({
+      success: true,
+      result: {
+        totalProcessed: result.totalProcessed,
+        successfullyAdded: result.successfullyAdded,
+        successfullyUpdated: result.successfullyUpdated,
+        failed: result.failed,
+        duration: result.endTime.getTime() - result.startTime.getTime(),
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ [Cron] Property sync failed:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
