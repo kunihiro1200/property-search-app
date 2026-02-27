@@ -331,6 +331,7 @@ export class PropertyListingSyncService {
             google_map_url: String(row['GoogleMap'] || ''),
             current_status: String(row['●現況'] || ''),
             delivery: String(row['引渡し'] || ''),
+            distribution_date: row['配信日【公開）'] ? String(row['配信日【公開）']) : null,
             updated_at: new Date().toISOString(),
           };
 
