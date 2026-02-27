@@ -1,4 +1,4 @@
-// 公開物件サイト専用のエントリーポイント
+﻿// 公開物件サイト専用のエントリーポイント
 // Force cache clear: 2026-01-31 17:00 - Restore working state
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
@@ -7,14 +7,14 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import { createClient } from '@supabase/supabase-js';
-import { PropertyListingService } from '../src/services/PropertyListingService';
-import { PropertyImageService } from '../src/services/PropertyImageService';
-import { GoogleDriveService } from '../src/services/GoogleDriveService';
-import { PropertyDetailsService } from '../src/services/PropertyDetailsService';
-import { PropertyService } from '../src/services/PropertyService';
-import { PanoramaUrlService } from '../src/services/PanoramaUrlService';
-import { GoogleSheetsClient } from '../src/services/GoogleSheetsClient';
-import { AthomeSheetSyncService } from '../src/services/AthomeSheetSyncService';
+import { PropertyListingService } from './src/services/PropertyListingService';
+import { PropertyImageService } from './src/services/PropertyImageService';
+import { GoogleDriveService } from './src/services/GoogleDriveService';
+import { PropertyDetailsService } from './src/services/PropertyDetailsService';
+import { PropertyService } from './src/services/PropertyService';
+import { PanoramaUrlService } from './src/services/PanoramaUrlService';
+import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
+import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 
 
 const app = express();
@@ -1839,7 +1839,7 @@ app.post('/api/cron-property-sync', async (req, res) => {
     
     console.log('🔄 [Cron] Starting property listing sync...');
     
-    const { getPropertyListingSyncService } = await import('../src/services/PropertyListingSyncService');
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
