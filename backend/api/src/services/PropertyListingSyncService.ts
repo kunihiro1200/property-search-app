@@ -331,7 +331,15 @@ export class PropertyListingSyncService {
             google_map_url: String(row['GoogleMap'] || ''),
             current_status: String(row['●現況'] || ''),
             delivery: String(row['引渡し'] || ''),
-            distribution_date: row['配信日【公開）'] ? String(row['配信日【公開）']) : null,
+            distribution_date: (() => {
+              // 複数のカラム名を試す（文字コードの違いに対応）
+              const val = row['配信日【公開）'] || row['配信日【公開)'] || row['配信日(公開)'] || row['配信日（公開）'] || null;
+              if (result.totalProcessed <= 3) {
+                const distKeys = Object.keys(row).filter((k: string) => k.includes('配信') || k.includes('公開'));
+                console.log(`🔍 [DEBUG] ${propertyNumber} distribution keys:`, JSON.stringify(distKeys), 'value:', val);
+              }
+              return val ? String(val) : null;
+            })(),
             updated_at: new Date().toISOString(),
           };
 
