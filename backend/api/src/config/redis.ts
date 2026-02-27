@@ -1,8 +1,3 @@
-import { createClient, RedisClientType } from 'redis';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 // Redis互換インターフェース
 interface RedisLike {
   get(key: string): Promise<string | null>;
@@ -11,7 +6,7 @@ interface RedisLike {
   keys(pattern: string): Promise<string[]>;
 }
 
-// メモリ内セッションストア（Redisが利用できない場合のフォールバック）
+// メモリ内セッションストア（Vercel環境ではRedisが利用できないためメモリストアを使用）
 class MemoryStore implements RedisLike {
   private store: Map<string, { value: string; expiresAt: number }> = new Map();
 
@@ -48,81 +43,21 @@ class MemoryStore implements RedisLike {
   }
 }
 
-// RedisClientTypeをRedisLikeに適合させるラッパー
-class RedisClientWrapper implements RedisLike {
-  constructor(private client: any) {} // 型チェックをスキップ
-
-  async get(key: string): Promise<string | null> {
-    const result = await this.client.get(key);
-    return result as string | null;
-  }
-
-  async setEx(key: string, seconds: number, value: string): Promise<string | null> {
-    await this.client.setEx(key, seconds, value);
-    return null;
-  }
-
-  async del(key: string): Promise<number> {
-    const result = await this.client.del(key);
-    return result as number;
-  }
-
-  async keys(pattern: string): Promise<string[]> {
-    const result = await this.client.keys(pattern);
-    return result as string[];
-  }
-}
-
-let redisClient: RedisLike;
-let isRedisConnected = false;
-
-const initRedis = async () => {
-  try {
-    const client = createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
-      socket: {
-        connectTimeout: 2000,
-        reconnectStrategy: false, // 再接続を無効化
-      },
-    });
-
-    // エラーハンドラーを先に設定（接続前）
-    client.on('error', () => {
-      // エラーは無視（フォールバックを使用）
-    });
-
-    await Promise.race([
-      client.connect(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), 2000)
-      ),
-    ]);
-    
-    console.log('✅ Redis connected');
-    isRedisConnected = true;
-    redisClient = new RedisClientWrapper(client);
-  } catch (error) {
-    console.warn('⚠️ Redis not available, using in-memory session store');
-    redisClient = new MemoryStore();
-    isRedisConnected = false;
-  }
-};
+// メモリストアを使用（Vercel環境ではRedisが利用できない）
+const memoryStore = new MemoryStore();
 
 export const connectRedis = async () => {
-  await initRedis();
+  console.log('ℹ️ Using in-memory session store (Redis not available in Vercel)');
 };
 
 export const getRedisClient = (): RedisLike => {
-  if (!redisClient) {
-    throw new Error('Redis client not initialized. Call connectRedis() first.');
-  }
-  return redisClient;
+  return memoryStore;
 };
 
 export default {
-  get: async (key: string): Promise<string | null> => getRedisClient().get(key),
+  get: async (key: string): Promise<string | null> => memoryStore.get(key),
   setEx: async (key: string, seconds: number, value: string): Promise<string | null> => 
-    getRedisClient().setEx(key, seconds, value),
-  del: async (key: string): Promise<number> => getRedisClient().del(key),
-  keys: async (pattern: string): Promise<string[]> => getRedisClient().keys(pattern),
+    memoryStore.setEx(key, seconds, value),
+  del: async (key: string): Promise<number> => memoryStore.del(key),
+  keys: async (pattern: string): Promise<string[]> => memoryStore.keys(pattern),
 };
