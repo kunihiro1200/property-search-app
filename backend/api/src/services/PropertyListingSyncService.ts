@@ -221,6 +221,7 @@ export class PropertyListingSyncService {
                 google_map_url: String(row['GoogleMap'] || ''),
                 current_status: String(row['●現況'] || ''),
                 delivery: String(row['引渡し'] || ''),
+                distribution_date: row['配信日【公開）'] ? String(row['配信日【公開）']) : null,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               });
@@ -257,13 +258,17 @@ export class PropertyListingSyncService {
             ? parseFloat(String(row['売出価格']).replace(/,/g, ''))
             : null;
 
-          // atbb_status・価格のみ更新（他のフィールドは触らない）
+          // distribution_date を取得（カラム名: 配信日【公開））
+          const distVal = row['配信日【公開）'] || null;
+
+          // atbb_status・価格・配信日を更新
           const { error: updateError } = await this.supabase
             .from('property_listings')
             .update({
               atbb_status: atbbStatus,
               sales_price: salesPrice,
               listing_price: listingPrice,
+              distribution_date: distVal ? String(distVal) : null,
               updated_at: new Date().toISOString(),
             })
             .eq('property_number', propertyNumber);
