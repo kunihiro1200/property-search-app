@@ -180,10 +180,9 @@ export class AthomeSheetSyncService {
         // 個別物件スプレッドシートのIDを取得
         const spreadsheetId = await this.getIndividualSpreadsheetId(propertyNumber);
         if (!spreadsheetId) {
-          console.error(`[AthomeSheetSyncService] Spreadsheet ID not found for ${propertyNumber}`);
-          
-          // スプレッドシートIDが見つからない場合はリトライしない
-          return false;
+          const errMsg = `Spreadsheet ID not found for ${propertyNumber} - check GYOMU_LIST_SPREADSHEET_ID env var and that the property exists in 業務依頼 sheet`;
+          console.error(`[AthomeSheetSyncService] ${errMsg}`);
+          throw new Error(errMsg);
         }
 
         // Athomeシートからコメントデータを取得

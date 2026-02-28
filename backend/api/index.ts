@@ -1689,10 +1689,17 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
       });
     }
     
-    const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
-      propertyNumber,
-      englishPropertyType
-    );
+    let syncSuccess = false;
+    let syncError = '';
+    try {
+      syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+        propertyNumber,
+        englishPropertyType
+      );
+    } catch (syncErr: any) {
+      syncError = syncErr.message;
+      console.error(`[Manual Sync] ❌ Exception during sync for ${propertyNumber}:`, syncErr.message);
+    }
     
     if (syncSuccess) {
       console.log(`[Manual Sync] ✅ Successfully synced comments for ${propertyNumber}`);
@@ -1705,7 +1712,7 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
       console.error(`[Manual Sync] ❌ Failed to sync comments for ${propertyNumber}`);
       res.status(500).json({
         success: false,
-        error: 'Failed to sync comments from spreadsheet',
+        error: syncError || 'Failed to sync comments from spreadsheet',
         propertyNumber
       });
     }
