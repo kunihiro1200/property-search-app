@@ -1849,7 +1849,7 @@ app.get('/api/cron-property-sync', async (req, res) => {
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
     
-    const result = await syncService.runFullSync('scheduled');
+    const result = await syncService.runScheduledSync();
     
     console.log(`✅ [Cron] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}`);
     
