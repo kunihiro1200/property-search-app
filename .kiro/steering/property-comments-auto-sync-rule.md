@@ -78,6 +78,56 @@ inclusion: manual
 - Phase 4.7を改善して、**コメントデータが空のレコードも更新対象にする**
 - `recommended_comments`が空の物件も自動的に同期される
 
+### 問題: athomeシート名の末尾スペースによるコメント同期失敗（2026年2月）
+
+**症状**: 物件詳細ページでお気に入り文言・アピールポイント・パノラマURLが表示されない
+
+**エラーメッセージ**:
+```
+Unable to parse range: athome!B150
+```
+
+**根本原因**:
+- `AthomeSheetSyncService.fetchCommentsFromAthomeSheet` でシート名を `'athome'` と固定していた
+- 実際のスプレッドシートのシート名は `'athome '`（末尾にスペース）など、スペースの有無が物件によって異なる
+- Google Sheets APIはシート名が完全一致しないと `Unable to parse range` エラーを返す
+
+**解決策**（2026年2月実装）:
+- `getActualSheetName` プライベートメソッドを追加
+- スプレッドシートのシート一覧を取得し、`trim().toLowerCase() === 'athome'` でマッチング
+- スペースあり・なし・大文字小文字の違いに関係なく正しいシート名を取得できるようになった
+
+**修正ファイル**: `backend/api/src/services/AthomeSheetSyncService.ts`
+
+**修正内容**:
+```typescript
+// 追加したメソッド
+private async getActualSheetName(spreadsheetId: string): Promise<string> {
+  const metadata = await this.sheets.spreadsheets.get({ spreadsheetId });
+  const sheets = metadata.data.sheets || [];
+  const sheetNames: string[] = sheets.map((s: any) => s.properties?.title || '');
+  
+  // 'athome'（大文字小文字・前後スペース無視）にマッチするシート名を探す
+  const matched = sheetNames.find(name => name.trim().toLowerCase() === 'athome');
+  if (matched) return matched;
+  
+  throw new Error(`Sheet 'athome' not found. Available: ${sheetNames.join(', ')}`);
+}
+
+// 修正前
+const sheetName = 'athome';
+
+// 修正後
+const sheetName = await this.getActualSheetName(spreadsheetId);
+```
+
+**教訓**:
+- ✅ スプレッドシートのシート名は固定文字列で決め打ちしない
+- ✅ シート名は動的に取得して `trim()` でスペースを除去してからマッチングする
+- ✅ 新しいシート名を使う場合は必ず `getActualSheetName` パターンを使用する
+
+---
+
 ### 修正されたコード
 
 **ファイル**: `backend/src/services/EnhancedAutoSyncService.ts`
@@ -269,9 +319,10 @@ npx ts-node backend/sync-<property-number>-comments.ts
 
 ---
 
-**最終更新日**: 2026年1月30日  
+**最終更新日**: 2026年2月28日  
 **作成理由**: AA13407のコメントデータ同期問題を防ぐため  
 **更新履歴**: 
+- 2026年2月28日: athomeシート名の末尾スペース問題と解決策を追加（getActualSheetNameメソッド）
 - 2026年1月30日: Phase 4.7を改善して、コメントデータが空のレコードも同期対象にする
 - 2026年1月30日: Phase 4.7に`property_about`の自動同期を追加（物件リストスプレッドシートのBQ列から取得）
 - 2026年1月30日: 取得元の違いを明確化（athomeシート vs 物件リストスプレッドシートBQ列）
