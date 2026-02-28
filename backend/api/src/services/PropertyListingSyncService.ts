@@ -15,6 +15,20 @@ import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { PropertyImageService } from './PropertyImageService';
 import { GoogleDriveService } from './GoogleDriveService';
 
+/**
+ * 配信日の文字列をパースして有効な日付文字列またはnullを返す
+ * 「なし」「不要」「予定」などの無効な値はnullとして扱う
+ */
+function parseDistributionDate(value: any): string | null {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (!str) return null;
+  // 日付として有効かチェック（YYYY/MM/DD または YYYY-MM-DD 形式）
+  const datePattern = /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/;
+  if (!datePattern.test(str)) return null;
+  return str;
+}
+
 export interface PropertyListingSyncResult {
   success: boolean;
   startTime: Date;
@@ -221,7 +235,7 @@ export class PropertyListingSyncService {
                 google_map_url: String(row['GoogleMap'] || ''),
                 current_status: String(row['●現況'] || ''),
                 delivery: String(row['引渡し'] || ''),
-                distribution_date: row['配信日【公開）'] ? String(row['配信日【公開）']) : null,
+                distribution_date: parseDistributionDate(row['配信日【公開）'] || row['配信日【公開 ）'] || null),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               });
@@ -259,7 +273,7 @@ export class PropertyListingSyncService {
             : null;
 
           // distribution_date を取得（カラム名: 配信日【公開））
-          const distVal = row['配信日【公開）'] || null;
+          const distVal = parseDistributionDate(row['配信日【公開）'] || row['配信日【公開 ）'] || null);
 
           // atbb_status・価格・配信日を更新
           const { error: updateError } = await this.supabase
@@ -413,12 +427,14 @@ export class PropertyListingSyncService {
           }
 
           // distribution_date: 複数のカラム名を試す（文字コードの違いに対応）
-          const distVal =
+          const distVal = parseDistributionDate(
             row['配信日【公開）'] ||
+            row['配信日【公開 ）'] ||
             row['配信日【公開)'] ||
             row['配信日(公開)'] ||
             row['配信日（公開）'] ||
-            null;
+            null
+          );
 
           // デバッグ: 最初の3件は配信日カラム名を出力
           if (result.totalProcessed <= 3) {
