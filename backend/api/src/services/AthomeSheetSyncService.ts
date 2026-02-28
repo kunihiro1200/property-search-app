@@ -1,6 +1,7 @@
 // Athomeシートからコメントデータを同期するサービス
 import { google } from 'googleapis';
 import { PropertyDetailsService } from './PropertyDetailsService';
+import { GyomuListService } from './GyomuListService';
 
 /**
  * 物件種別に応じたセル位置マッピング
@@ -31,6 +32,7 @@ export interface AthomeCommentData {
 export class AthomeSheetSyncService {
   private sheets: any;
   private propertyDetailsService: PropertyDetailsService;
+  private gyomuListService: GyomuListService;
 
   constructor() {
     // Vercel環境では環境変数から、ローカル環境ではファイルから認証情報を取得
@@ -53,43 +55,30 @@ export class AthomeSheetSyncService {
     
     this.sheets = google.sheets({ version: 'v4', auth });
     this.propertyDetailsService = new PropertyDetailsService();
+    this.gyomuListService = new GyomuListService();
   }
 
   /**
    * 業務リストから個別物件スプレッドシートのIDを取得
+   * GyomuListServiceを使用してカラム名で正確に取得する
    */
   private async getIndividualSpreadsheetId(propertyNumber: string): Promise<string | null> {
     try {
-      const gyomuListSpreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
-      if (!gyomuListSpreadsheetId) {
-        console.error('[AthomeSheetSyncService] GYOMU_LIST_SPREADSHEET_ID not found in environment');
+      const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
+      
+      if (!gyomuData || !gyomuData.spreadsheetUrl) {
+        console.log(`[AthomeSheetSyncService] Spreadsheet URL not found for ${propertyNumber}`);
         return null;
       }
 
-      // 業務リストの「業務依頼」シートから物件番号で検索
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: gyomuListSpreadsheetId,
-        range: '業務依頼!A:D', // A列（物件番号）からD列（スプシURL）まで
-      });
-
-      const rows = response.data.values || [];
-      
-      // 物件番号で検索（A列）
-      for (const row of rows) {
-        if (row[0] === propertyNumber) {
-          const spreadsheetUrl = row[3]; // D列（スプシURL）
-          if (spreadsheetUrl) {
-            // URLからスプレッドシートIDを抽出
-            const match = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            if (match) {
-              console.log(`[AthomeSheetSyncService] Found spreadsheet ID for ${propertyNumber}: ${match[1]}`);
-              return match[1];
-            }
-          }
-        }
+      // URLからスプレッドシートIDを抽出
+      const match = gyomuData.spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        console.log(`[AthomeSheetSyncService] Found spreadsheet ID for ${propertyNumber}: ${match[1]}`);
+        return match[1];
       }
 
-      console.log(`[AthomeSheetSyncService] Spreadsheet URL not found for ${propertyNumber}`);
+      console.log(`[AthomeSheetSyncService] Could not extract spreadsheet ID from URL for ${propertyNumber}: ${gyomuData.spreadsheetUrl}`);
       return null;
     } catch (error: any) {
       console.error(`[AthomeSheetSyncService] Error getting spreadsheet ID for ${propertyNumber}:`, error.message);
