@@ -2024,6 +2024,51 @@ app.post('/api/admin/debug-sync-comments/:propertyNumber', async (req, res) => {
   }
 });
 
+// デバッグ用：スプレッドシートのシート名一覧を返すエンドポイント
+app.get('/api/admin/debug-sheet-names/:propertyNumber', async (req, res) => {
+  const { propertyNumber } = req.params;
+  
+  try {
+    const { GyomuListService } = await import('./src/services/GyomuListService');
+    const gyomuListService = new GyomuListService();
+    const gyomuData = await gyomuListService.getByPropertyNumber(propertyNumber);
+    
+    if (!gyomuData || !gyomuData.spreadsheetUrl) {
+      return res.json({ success: false, error: 'Spreadsheet URL not found' });
+    }
+    
+    const match = gyomuData.spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const spreadsheetId = match ? match[1] : null;
+    
+    if (!spreadsheetId) {
+      return res.json({ success: false, error: 'Could not extract spreadsheet ID' });
+    }
+    
+    // Google Sheets APIでシート名一覧を取得
+    const { google } = await import('googleapis');
+    let credentials;
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+      credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      if (credentials.private_key) {
+        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+      }
+    }
+    
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheetNames = metadata.data.sheets?.map(s => s.properties?.title) || [];
+    
+    return res.json({ success: true, spreadsheetId, sheetNames });
+  } catch (error: any) {
+    return res.json({ success: false, error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
