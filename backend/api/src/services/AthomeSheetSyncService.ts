@@ -148,11 +148,7 @@ export class AthomeSheetSyncService {
       };
     } catch (error: any) {
       console.error(`[AthomeSheetSyncService] Error fetching comments from ${spreadsheetId}:`, error.message);
-      return {
-        favoriteComment: null,
-        recommendedComments: [],
-        panoramaUrl: null,
-      };
+      throw error;
     }
   }
 
