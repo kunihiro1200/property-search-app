@@ -413,6 +413,7 @@ export class PropertyListingService {
       // 配信日（公開）の最新日順に並べ替え
       query = query
         .order('distribution_date', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
       const { data, error, count } = await query;
