@@ -87,13 +87,47 @@ export class AthomeSheetSyncService {
   }
 
   /**
+   * スプレッドシートから実際のathomeシート名を取得
+   * スペースの有無・大文字小文字を無視してマッチング
+   */
+  private async getActualSheetName(spreadsheetId: string): Promise<string> {
+    try {
+      const metadata = await this.sheets.spreadsheets.get({ spreadsheetId });
+      const sheets = metadata.data.sheets || [];
+      const sheetNames: string[] = sheets.map((s: any) => s.properties?.title || '');
+      
+      console.log(`[AthomeSheetSyncService] Available sheets: ${sheetNames.join(', ')}`);
+      
+      // 'athome'（大文字小文字・前後スペース無視）にマッチするシート名を探す
+      const matched = sheetNames.find(name => name.trim().toLowerCase() === 'athome');
+      
+      if (matched) {
+        console.log(`[AthomeSheetSyncService] Found sheet name: "${matched}"`);
+        return matched;
+      }
+      
+      // マッチしない場合はエラーをthrow
+      console.error(`[AthomeSheetSyncService] Sheet 'athome' not found. Available: ${sheetNames.join(', ')}`);
+      throw new Error(`Sheet 'athome' not found in spreadsheet ${spreadsheetId}. Available sheets: ${sheetNames.join(', ')}`);
+    } catch (error: any) {
+      if (error.message.includes('Sheet \'athome\' not found')) {
+        throw error;
+      }
+      console.error(`[AthomeSheetSyncService] Error getting sheet names:`, error.message);
+      // メタデータ取得に失敗した場合はデフォルト値を使用
+      return 'athome';
+    }
+  }
+
+  /**
    * Athomeシートからコメントデータを取得
    */
   async fetchCommentsFromAthomeSheet(
     spreadsheetId: string,
     propertyType: 'land' | 'detached_house' | 'apartment'
   ): Promise<AthomeCommentData> {
-    const sheetName = 'athome';
+    // 実際のシート名を動的に取得（スペースの有無に対応）
+    const sheetName = await this.getActualSheetName(spreadsheetId);
     const cellPositions = CELL_MAPPING[propertyType];
 
     if (!cellPositions) {
