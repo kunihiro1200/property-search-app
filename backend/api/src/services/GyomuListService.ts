@@ -20,12 +20,9 @@ export class GyomuListService {
   private cacheTimestamp: number = 0;
   
   constructor() {
-    const spreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID;
+    // PropertyListingServiceと同じフォールバック値を使用
+    const spreadsheetId = process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g';
     const sheetName = process.env.GYOMU_LIST_SHEET_NAME || '業務依頼';
-    
-    if (!spreadsheetId) {
-      throw new Error('GYOMU_LIST_SPREADSHEET_ID is not set in environment variables');
-    }
     
     this.sheetsClient = new GoogleSheetsClient({
       spreadsheetId,
