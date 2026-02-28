@@ -1823,6 +1823,88 @@ app.post('/api/admin/sync-comments-batch', async (req, res) => {
   }
 });
 
+// distribution_date バッチ更新エンドポイント（手動実行用）
+// offset パラメータで分割実行可能（例: ?offset=0&limit=200）
+app.get('/api/admin/sync-distribution-dates', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const offset = parseInt(req.query.offset as string) || 0;
+    const limit = parseInt(req.query.limit as string) || 200;
+
+    console.log(`🔄 [SyncDistDate] Starting batch offset=${offset} limit=${limit}...`);
+
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+    const syncService = getPropertyListingSyncService();
+    await syncService.initialize();
+
+    // スプレッドシートから全行取得
+    const sheetsClient = (syncService as any).propertyListSheetsClient;
+    if (!sheetsClient) throw new Error('SheetsClient not initialized');
+    const allRows = await sheetsClient.readAll();
+    const nonEmptyRows = allRows.filter((row: any) => {
+      const pn = row['物件番号'];
+      return pn && String(pn).trim() !== '';
+    });
+
+    const totalRows = nonEmptyRows.length;
+    const batchRows = nonEmptyRows.slice(offset, offset + limit);
+
+    console.log(`📊 Total rows: ${totalRows}, processing ${batchRows.length} rows (offset=${offset})`);
+
+    let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const row of batchRows) {
+      const propertyNumber = String(row['物件番号'] || '').trim();
+      if (!propertyNumber) continue;
+
+      const distVal = row['配信日【公開）'] || null;
+
+      try {
+        const { error } = await supabase
+          .from('property_listings')
+          .update({
+            distribution_date: distVal ? String(distVal) : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('property_number', propertyNumber);
+
+        if (error) throw error;
+        updated++;
+      } catch (err: any) {
+        failed++;
+        errors.push(`${propertyNumber}: ${err.message}`);
+      }
+    }
+
+    const hasMore = offset + limit < totalRows;
+
+    console.log(`✅ [SyncDistDate] Done: updated=${updated}, failed=${failed}, hasMore=${hasMore}`);
+
+    res.json({
+      success: true,
+      offset,
+      limit,
+      totalRows,
+      processed: batchRows.length,
+      updated,
+      failed,
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
+      errors: errors.slice(0, 10),
+    });
+  } catch (error: any) {
+    console.error('❌ [SyncDistDate] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
 app.get('/api/cron-property-sync', async (req, res) => {
   try {
