@@ -296,10 +296,11 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
     // UUIDか物件番号かを判定（UUIDは36文字のハイフン付き形式）
     const isUuid = propertyIdentifier.length === 36 && propertyIdentifier.includes('-');
     
-    // データベースから物件詳細を取得（atbb_statusでフィルタリングしない）
+    // データベースから物件詳細を取得（atbb_statusでフィルタリングしない、非表示物件は除外）
     let query = supabase
       .from('property_listings')
-      .select('*');
+      .select('*')
+      .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
     
     if (isUuid) {
       query = query.eq('id', propertyIdentifier);
