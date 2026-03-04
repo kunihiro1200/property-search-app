@@ -1638,6 +1638,155 @@ export class EnhancedAutoSyncService {
    * Phase 4.7: property_details同期を実行
    * property_listingsに存在するがproperty_detailsに存在しない物件を検出して同期
    */
+  /**
+   * Phase 4.8: スプレッドシートから削除された物件を非表示にする同期
+   * - DBにあってスプレッドシートにない物件 → is_hidden = true
+   * - スプレッドシートに再登録された物件（is_hidden=true） → is_hidden = false
+   */
+  async syncHiddenPropertyListings(): Promise<{
+    success: boolean;
+    hidden: number;
+    restored: number;
+    failed: number;
+    duration_ms: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      console.log('🙈 Starting hidden property listings sync...');
+
+      // 1. 物件リストスプレッドシートから全物件番号を取得
+      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+      const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
+      const PROPERTY_LIST_SHEET_NAME = '物件';
+
+      const sheetsConfig = {
+        spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
+        sheetName: PROPERTY_LIST_SHEET_NAME,
+        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      };
+
+      const sheetsClient = new GoogleSheetsClient(sheetsConfig);
+      await sheetsClient.authenticate();
+      const spreadsheetData = await sheetsClient.readAll();
+
+      const spreadsheetPropertyNumbers = new Set<string>();
+      for (const row of spreadsheetData) {
+        const propertyNumber = String(row['物件番号'] || '').trim();
+        if (propertyNumber) {
+          spreadsheetPropertyNumbers.add(propertyNumber);
+        }
+      }
+
+      console.log(`📊 Spreadsheet properties: ${spreadsheetPropertyNumbers.size}`);
+
+      // 2. DBの property_listings から全物件番号と is_hidden フラグを取得（ページネーション対応）
+      const dbProperties: Array<{ property_number: string; is_hidden: boolean }> = [];
+      const pageSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await this.supabase
+          .from('property_listings')
+          .select('property_number, is_hidden')
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          throw new Error(`Failed to read property_listings: ${error.message}`);
+        }
+
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          for (const property of data) {
+            if (property.property_number) {
+              dbProperties.push({
+                property_number: property.property_number,
+                is_hidden: property.is_hidden ?? false,
+              });
+            }
+          }
+          offset += pageSize;
+          if (data.length < pageSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      console.log(`📊 Database properties: ${dbProperties.length}`);
+
+      // 3. DBにあってスプレッドシートにない物件 → is_hidden = true
+      const toHide = dbProperties
+        .filter(p => !spreadsheetPropertyNumbers.has(p.property_number) && !p.is_hidden)
+        .map(p => p.property_number);
+
+      // 4. スプレッドシートに再登録された物件（is_hidden=true） → is_hidden = false
+      const toRestore = dbProperties
+        .filter(p => spreadsheetPropertyNumbers.has(p.property_number) && p.is_hidden)
+        .map(p => p.property_number);
+
+      console.log(`🙈 Properties to hide: ${toHide.length}`);
+      console.log(`👁️  Properties to restore: ${toRestore.length}`);
+
+      let hidden = 0;
+      let restored = 0;
+      let failed = 0;
+
+      // 非表示にする
+      for (const propertyNumber of toHide) {
+        try {
+          const { error } = await this.supabase
+            .from('property_listings')
+            .update({ is_hidden: true })
+            .eq('property_number', propertyNumber);
+
+          if (error) {
+            console.error(`❌ Failed to hide ${propertyNumber}: ${error.message}`);
+            failed++;
+          } else {
+            console.log(`🙈 Hidden: ${propertyNumber}`);
+            hidden++;
+          }
+        } catch (err: any) {
+          console.error(`❌ ${propertyNumber}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      // 再表示する
+      for (const propertyNumber of toRestore) {
+        try {
+          const { error } = await this.supabase
+            .from('property_listings')
+            .update({ is_hidden: false })
+            .eq('property_number', propertyNumber);
+
+          if (error) {
+            console.error(`❌ Failed to restore ${propertyNumber}: ${error.message}`);
+            failed++;
+          } else {
+            console.log(`👁️  Restored: ${propertyNumber}`);
+            restored++;
+          }
+        } catch (err: any) {
+          console.error(`❌ ${propertyNumber}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      const duration_ms = Date.now() - startTime;
+      console.log(`✅ Hidden property sync completed: ${hidden} hidden, ${restored} restored, ${failed} failed`);
+
+      return { success: failed === 0, hidden, restored, failed, duration_ms };
+
+    } catch (error: any) {
+      const duration_ms = Date.now() - startTime;
+      console.error('❌ Hidden property sync failed:', error.message);
+      return { success: false, hidden: 0, restored: 0, failed: 1, duration_ms };
+    }
+  }
+
   async syncMissingPropertyDetails(): Promise<{
     success: boolean;
     synced: number;
@@ -2031,6 +2180,35 @@ export class EnhancedAutoSyncService {
         // エラーでも処理を継続
       }
 
+      // Phase 4.8: スプレッドシートから削除された物件の非表示同期
+      console.log('\n🙈 Phase 4.8: Hidden Property Listings Sync');
+      let hiddenPropertySyncResult = {
+        hidden: 0,
+        restored: 0,
+        failed: 0,
+        duration_ms: 0,
+      };
+
+      try {
+        const hpResult = await this.syncHiddenPropertyListings();
+        hiddenPropertySyncResult = {
+          hidden: hpResult.hidden,
+          restored: hpResult.restored,
+          failed: hpResult.failed,
+          duration_ms: hpResult.duration_ms,
+        };
+
+        if (hpResult.hidden > 0 || hpResult.restored > 0) {
+          console.log(`✅ Hidden property sync: ${hpResult.hidden} hidden, ${hpResult.restored} restored`);
+        } else {
+          console.log('✅ No property listing changes to hide/restore');
+        }
+      } catch (error: any) {
+        console.error('⚠️  Hidden property sync error:', error.message);
+        hiddenPropertySyncResult.failed = 1;
+        // エラーでも処理を継続
+      }
+
       const endTime = new Date();
       const totalDurationMs = endTime.getTime() - startTime.getTime();
 
@@ -2039,7 +2217,8 @@ export class EnhancedAutoSyncService {
       if (additionResult.failed > 0 || 
           deletionResult.failedToDelete > 0 || 
           propertyListingUpdateResult.failed > 0 ||
-          newPropertyAdditionResult.failed > 0) {
+          newPropertyAdditionResult.failed > 0 ||
+          hiddenPropertySyncResult.failed > 0) {
         status = 'partial_success';
       }
       if (additionResult.successfullyAdded === 0 && 
@@ -2070,6 +2249,8 @@ export class EnhancedAutoSyncService {
       console.log(`   Property Listings Updated: ${propertyListingUpdateResult.updated}`);
       console.log(`   New Properties Added: ${newPropertyAdditionResult.added}`);
       console.log(`   Property Details Synced: ${propertyDetailsSyncResult.synced}`);
+      console.log(`   Properties Hidden: ${hiddenPropertySyncResult.hidden}`);
+      console.log(`   Properties Restored: ${hiddenPropertySyncResult.restored}`);
       console.log(`   Manual Review: ${deletionResult.requiresManualReview}`);
       console.log(`   Duration: ${(totalDurationMs / 1000).toFixed(2)}s`);
 

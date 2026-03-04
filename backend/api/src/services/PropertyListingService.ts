@@ -313,7 +313,8 @@ export class PropertyListingService {
       // すべての物件を取得（atbb_statusフィルターを削除）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' });
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' })
+        .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -579,7 +580,8 @@ export class PropertyListingService {
       // 新しいカラムを除外してSELECT（スキーマキャッシュ問題を回避）
       let query = this.supabase
         .from('property_listings')
-        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at');
+        .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
+        .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
       
       // UUIDまたはproperty_numberで検索
       if (isUUID) {
@@ -645,6 +647,7 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
         .eq('property_number', propertyNumber)
+        .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
         .single();
       
       if (error) {
@@ -731,6 +734,7 @@ export class PropertyListingService {
       const { data, error } = await this.supabase
         .from('property_listings')
         .select('id, atbb_status')
+        .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
         .order('created_at', { ascending: false });
       
       if (error) {
