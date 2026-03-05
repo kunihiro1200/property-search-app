@@ -339,11 +339,16 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
       }
     }
 
+    // 🔧 FIX: sales_price または listing_price から price を計算して付与
+    // 詳細ページAPIは select('*') の結果をそのまま返すため price フィールドが存在しない。
+    // 一覧ページAPIと同様に sales_price || listing_price を計算して付与する。
+    const price = property.sales_price || property.listing_price || undefined;
     res.json({ 
       success: true, 
       property: {
         ...property,
-        images
+        images,
+        ...(price !== undefined ? { price } : {})
       }
     });
   } catch (error: any) {
