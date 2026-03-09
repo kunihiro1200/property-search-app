@@ -382,7 +382,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     const startTime = Date.now();
     
     const [dbDetails, settlementDate] = await Promise.all([
-      // PropertyDetailsServiceを使用（静的インポート）
+      // PropertyDetailsServiceを使用（DBから即座に取得、同期処理は行わない）
       (async () => {
         try {
           const propertyDetailsService = new PropertyDetailsService();
@@ -394,76 +394,16 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             has_property_about: !!details.property_about
           });
           
-          // コメントデータがnullまたは空の場合、Athomeシートから自動同期
-          // recommended_commentsが空配列の場合も再同期する（過去の間違ったデータを修正）
+          // コメントデータが空かどうかをフラグとして返す（同期はフロントエンドから非同期で行う）
           const needsSync = !details.favorite_comment || 
                            !details.recommended_comments || 
                            (Array.isArray(details.recommended_comments) && details.recommended_comments.length === 0);
           
           if (needsSync) {
-            console.log(`[Complete API] Comment data is missing or empty, syncing from Athome sheet...`);
-            console.log(`[Complete API] Current state:`, {
-              has_favorite_comment: !!details.favorite_comment,
-              has_recommended_comments: !!details.recommended_comments,
-              recommended_comments_length: Array.isArray(details.recommended_comments) ? details.recommended_comments.length : 'N/A'
-            });
-            try {
-              const athomeSheetSyncService = new AthomeSheetSyncService();
-              // 日本語の物件種別を英語に変換
-              const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
-              console.log(`[Complete API] Property type conversion: "${property.property_type}" -> "${englishPropertyType}"`);
-              
-              if (!englishPropertyType) {
-                console.error(`[Complete API] Invalid property type: "${property.property_type}"`);
-              } else {
-                const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
-                  property.property_number,
-                  englishPropertyType
-                );
-              
-              if (syncSuccess) {
-                console.log(`[Complete API] Successfully synced comments from Athome sheet`);
-                // 同期後のデータを再取得
-                const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-                console.log(`[Complete API] Updated details:`, {
-                  has_favorite_comment: !!updatedDetails.favorite_comment,
-                  has_recommended_comments: !!updatedDetails.recommended_comments,
-                  has_athome_data: !!updatedDetails.athome_data,
-                  has_property_about: !!updatedDetails.property_about
-                });
-                
-                // property_aboutがまだnullの場合、物件スプレッドシートから取得
-                if (!updatedDetails.property_about) {
-                  console.log(`[Complete API] property_about is still null, fetching from property spreadsheet...`);
-                  try {
-                    const propertyService = new PropertyService();
-                    const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
-                    
-                    if (propertyAbout) {
-                      await propertyDetailsService.upsertPropertyDetails(property.property_number, {
-                        property_about: propertyAbout
-                      });
-                      console.log(`[Complete API] Successfully synced property_about from property spreadsheet`);
-                      updatedDetails.property_about = propertyAbout;
-                    } else {
-                      console.log(`[Complete API] property_about not found in property spreadsheet`);
-                    }
-                  } catch (propertyAboutError: any) {
-                    console.error(`[Complete API] Error syncing property_about:`, propertyAboutError.message);
-                  }
-                }
-                
-                return updatedDetails;
-              } else {
-                console.error(`[Complete API] Failed to sync comments from Athome sheet`);
-              }
-              }
-            } catch (syncError: any) {
-              console.error(`[Complete API] Error syncing comments:`, syncError.message);
-            }
+            console.log(`[Complete API] Comment data is missing or empty (needsSync=true). Frontend will trigger async sync.`);
           }
           
-          return details;
+          return { ...details, needsSync };
         } catch (error: any) {
           console.error(`[Complete API] Error calling PropertyDetailsService:`, error);
           return {
@@ -471,7 +411,8 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
             favorite_comment: null,
             recommended_comments: null,
             athome_data: null,
-            property_about: null
+            property_about: null,
+            needsSync: true,
           };
         }
       })(),
@@ -533,6 +474,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       settlementDate,
       propertyAbout: dbDetails.property_about,
       panoramaUrl,
+      needsSync: dbDetails.needsSync || false, // フロントエンドが非同期同期をトリガーするためのフラグ
     });
     
   } catch (error: any) {
@@ -546,6 +488,69 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       message: 'Failed to fetch complete property data',
       error: error.message 
     });
+  }
+});
+
+// コメントデータをAthomeシートから同期（非同期トリガー用）
+app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`[Sync Comments API] Triggered for: ${id}`);
+    
+    const property = await propertyListingService.getPublicPropertyById(id);
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    
+    const propertyDetailsService = new PropertyDetailsService();
+    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+    
+    if (!englishPropertyType) {
+      return res.status(400).json({ success: false, message: `Invalid property type: ${property.property_type}` });
+    }
+    
+    const athomeSheetSyncService = new AthomeSheetSyncService();
+    const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+      property.property_number,
+      englishPropertyType
+    );
+    
+    if (!syncSuccess) {
+      return res.json({ success: false, message: 'Sync failed' });
+    }
+    
+    // 同期後のデータを取得
+    const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
+    
+    // property_aboutがまだnullの場合、物件スプレッドシートから取得
+    if (!updatedDetails.property_about) {
+      try {
+        const propertyService = new PropertyService();
+        const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
+        if (propertyAbout) {
+          await propertyDetailsService.upsertPropertyDetails(property.property_number, {
+            property_about: propertyAbout
+          });
+          updatedDetails.property_about = propertyAbout;
+        }
+      } catch (err: any) {
+        console.error(`[Sync Comments API] Error syncing property_about:`, err.message);
+      }
+    }
+    
+    console.log(`[Sync Comments API] Sync complete for ${property.property_number}`);
+    
+    res.json({
+      success: true,
+      favoriteComment: updatedDetails.favorite_comment,
+      recommendedComments: updatedDetails.recommended_comments,
+      athomeData: updatedDetails.athome_data,
+      propertyAbout: updatedDetails.property_about,
+    });
+  } catch (error: any) {
+    console.error('[Sync Comments API] Error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -183,6 +183,38 @@ const PublicPropertyDetailPage: React.FC = () => {
           setPanoramaUrl(response.data.panoramaUrl);
           console.log('Panorama URL loaded from /complete:', response.data.panoramaUrl);
         }
+        
+        // コメントデータが空の場合、バックグラウンドで同期をトリガー（UIをブロックしない）
+        if (response.data?.needsSync) {
+          console.log(`[publicProperty:"${property?.property_number || id}"] needsSync=true, triggering background sync...`);
+          publicApi.post(`/api/public/properties/${id}/sync-comments`)
+            .then((syncResponse) => {
+              if (syncResponse.data?.success) {
+                console.log(`[publicProperty:"${property?.property_number || id}"] Background sync complete, updating state`);
+                setCompleteData((prev: any) => ({
+                  ...prev,
+                  favoriteComment: syncResponse.data.favoriteComment,
+                  recommendedComments: syncResponse.data.recommendedComments,
+                  athomeData: syncResponse.data.athomeData,
+                  propertyAbout: syncResponse.data.propertyAbout,
+                  needsSync: false,
+                }));
+                if (syncResponse.data.athomeData && Array.isArray(syncResponse.data.athomeData)) {
+                  const athome = syncResponse.data.athomeData;
+                  let newPanoramaUrl = null;
+                  if (athome.length > 1 && athome[1]) {
+                    newPanoramaUrl = athome[1];
+                  } else if (athome[0] && typeof athome[0] === 'string' && athome[0].includes('vrpanorama.athome.jp')) {
+                    newPanoramaUrl = athome[0];
+                  }
+                  if (newPanoramaUrl) setPanoramaUrl(newPanoramaUrl);
+                }
+              }
+            })
+            .catch((syncError) => {
+              console.warn(`[publicProperty:"${property?.property_number || id}"] Background sync failed:`, syncError);
+            });
+        }
       } catch (error) {
         console.error(`[publicProperty:"${property?.property_number || id}"] Failed to fetch complete data:`, error);
       }
