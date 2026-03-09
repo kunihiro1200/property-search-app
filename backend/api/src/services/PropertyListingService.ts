@@ -465,15 +465,14 @@ export class PropertyListingService {
               let storageLocation = property.storage_location;
               
               // storage_locationが空の場合、業務リストから取得
-              // ⚠️ 一覧取得時はGoogle Sheets APIクォータ超過を防ぐため無効化
-              // storage_locationはcronで同期済みのため、一覧取得時の業務依頼シートへのAPIコールは不要
-              // if (!storageLocation && property.property_number) {
-              //   console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
-              //   storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
-              //   if (storageLocation) {
-              //     console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
-              //   }
-              // }
+              // キャッシュ（5分間）を使用するためAPIクォータへの影響は最小限
+              if (!storageLocation && property.property_number) {
+                console.log(`[PropertyListingService] storage_location is empty for ${property.property_number}, fetching from 業務リスト（業務依頼）`);
+                storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
+                if (storageLocation) {
+                  console.log(`[PropertyListingService] Found storage_url in 業務リスト（業務依頼）: ${storageLocation}`);
+                }
+              }
               
               // 1. image_urlがある場合はそれを使用
               if (property.image_url) {
