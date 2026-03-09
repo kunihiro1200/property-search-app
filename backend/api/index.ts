@@ -1073,6 +1073,53 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
   }
 });
 
+// フォルダサムネイルエンドポイント（フォルダの最初の画像を返す）
+// 一覧ページの遅延取得用 - Google Drive APIをブラウザ表示時に呼ぶことでVercelタイムアウトを回避
+app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
+  try {
+    const { folderId } = req.params;
+    console.log(`🖼️ [FolderThumbnail] Fetching first image from folder: ${folderId}`);
+
+    const propertyImageService = new PropertyImageService(
+      new GoogleDriveService(),
+      60,
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+
+    // フォルダURLを組み立てて画像一覧を取得
+    const storageUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
+
+    if (!result.images || result.images.length === 0) {
+      console.log(`[FolderThumbnail] No images found in folder: ${folderId}`);
+      return res.status(404).json({ error: 'No images found' });
+    }
+
+    // 最初の画像のファイルIDを取得してリダイレクト
+    const firstImage = result.images[0];
+    const fileId = firstImage.id;
+    console.log(`[FolderThumbnail] Redirecting to first image: ${fileId}`);
+
+    // 画像データを直接取得して返す
+    const driveService = new GoogleDriveService();
+    const imageData = await driveService.getImageData(fileId);
+
+    res.set({
+      'Content-Type': imageData.mimeType,
+      'Content-Length': imageData.size,
+      'Cache-Control': 'public, max-age=86400',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.send(imageData.buffer);
+    console.log(`✅ [FolderThumbnail] Served image ${fileId} from folder ${folderId}`);
+  } catch (error: any) {
+    console.error('❌ [FolderThumbnail] Error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to fetch folder thumbnail' });
+  }
+});
+
 // 画像プロキシエンドポイント（Google Driveの画像をバックエンド経由で取得）
 // サムネイル用
 app.get('/api/public/images/:fileId/thumbnail', async (req, res) => {

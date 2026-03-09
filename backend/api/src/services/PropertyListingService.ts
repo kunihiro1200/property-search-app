@@ -508,19 +508,26 @@ export class PropertyListingService {
                   modifiedTime: new Date().toISOString()
                 }];
               }
-              // 2. storage_locationがある場合はGoogle Driveから取得
+              // 2. storage_locationがある場合はフォルダIDからプロキシURLを生成（Google Drive APIを呼ばない）
+              // Vercelのサーバーレス関数タイムアウト（10秒）を回避するため、
+              // 一覧ページでは遅延取得URLを返し、ブラウザが画像表示時にAPIを呼ぶ
               else if (storageLocation) {
-                console.log(`[PropertyListingService] Fetching images from Google Drive for ${property.property_number}`);
-                
-                // PropertyImageServiceを使用して画像オブジェクトを取得
-                const imageResult = await this.propertyImageService.getImagesFromStorageUrl(storageLocation);
-                
-                if (imageResult.images.length > 0) {
-                  // 最初の画像のみを使用
-                  images = [imageResult.images[0]];
-                  console.log(`[PropertyListingService] Got image for ${property.property_number}: ${images[0].thumbnailUrl}`);
+                const folderIdMatch = storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                if (folderIdMatch) {
+                  const folderId = folderIdMatch[1];
+                  const thumbnailUrl = `/api/public/folder-thumbnail/${folderId}`;
+                  images = [{
+                    id: folderId,
+                    name: 'Property Image',
+                    thumbnailUrl,
+                    fullImageUrl: thumbnailUrl,
+                    mimeType: 'image/jpeg',
+                    size: 0,
+                    modifiedTime: new Date().toISOString()
+                  }];
+                  console.log(`[PropertyListingService] Generated folder-thumbnail URL for ${property.property_number}: ${thumbnailUrl}`);
                 } else {
-                  console.log(`[PropertyListingService] No images found for ${property.property_number}`);
+                  console.log(`[PropertyListingService] Could not extract folder ID from storage_location: ${storageLocation}`);
                 }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
