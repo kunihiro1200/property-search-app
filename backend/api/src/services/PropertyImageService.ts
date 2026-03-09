@@ -352,18 +352,16 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ Environment Contract準拠: BACKEND_URLを使用（NODE_ENV分岐禁止）
-    // フロントエンドとバックエンドは常に別オリジン（ローカルでも5173と3000）
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-    
+    // Vercel環境ではフロントエンドとバックエンドが同一オリジンのため相対URLを使用
+    // BACKEND_URL環境変数への依存を排除し、環境に関わらず正しいURLを生成する
     return driveFiles.map(file => ({
       id: file.id,
       name: file.name,
       // サムネイルURLはプロキシ経由で提供（CORS対策）
       // 注意: Google DriveのファイルIDをそのまま使用
-      thumbnailUrl: `${baseUrl}/api/public/images/${file.id}/thumbnail`,
-      // フル画像URLもGoogle Driveから直接取得
-      fullImageUrl: `${baseUrl}/api/public/images/${file.id}`,
+      thumbnailUrl: `/api/public/images/${file.id}/thumbnail`,
+      // フル画像URLもプロキシ経由で提供
+      fullImageUrl: `/api/public/images/${file.id}`,
       mimeType: file.mimeType,
       size: file.size,
       modifiedTime: file.modifiedTime,
@@ -449,10 +447,9 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ Environment Contract準拠: BACKEND_URLを使用
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+      // 相対URLを使用（Vercel環境ではフロントエンドとバックエンドが同一オリジン）
       return cachedEntry.images.length > 0 
-        ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
+        ? [`/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
     }
 
@@ -492,9 +489,8 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ Environment Contract準拠: BACKEND_URLを使用
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-      return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
+      // ✅ 相対URLを使用（Vercel環境ではフロントエンドとバックエンドが同一オリジン）
+      return [`/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);
       console.error(`[PropertyImageService] Error details:`, error);
