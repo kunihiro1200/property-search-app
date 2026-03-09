@@ -34,10 +34,4 @@
       "dest": "/frontend/index.html"
     }
   ],
-  "crons": [
-    {
-      "path": "/api/cron-property-sync",
-      "schedule": "*/10 * * * *"
-    }
-  ]
 }
