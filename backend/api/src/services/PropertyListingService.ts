@@ -481,18 +481,29 @@ export class PropertyListingService {
                 
                 // image_urlからファイルIDを抽出（プロキシURL形式の場合）
                 // 例: https://property-site-frontend-kappa.vercel.app/api/public/images/1pvY-mO6ZfOuK3uwaXcfNfYhv1z5_nmWL/thumbnail
+                // 例: http://localhost:3000/api/public/images/1pvY-mO6ZfOuK3uwaXcfNfYhv1z5_nmWL/thumbnail（古い形式）
                 let fileId = 'legacy';
                 const proxyUrlMatch = property.image_url.match(/\/api\/public\/images\/([^\/]+)\/thumbnail/);
                 if (proxyUrlMatch) {
                   fileId = proxyUrlMatch[1];
                 }
                 
+                // プロキシURL形式の場合は相対URLに変換（絶対URLのホスト部分を除去）
+                // Vercel環境ではフロントエンドとバックエンドが同一オリジンのため相対URLを使用
+                // これにより localhost:3000 や古い絶対URLの問題を解消する
+                const thumbnailUrl = proxyUrlMatch
+                  ? `/api/public/images/${fileId}/thumbnail`
+                  : property.image_url;  // 外部URLの場合はそのまま使用
+                const fullImageUrl = proxyUrlMatch
+                  ? `/api/public/images/${fileId}`
+                  : property.image_url;  // 外部URLの場合はそのまま使用
+                
                 // image_urlをオブジェクト形式に変換
                 images = [{
                   id: fileId,
                   name: 'Property Image',
-                  thumbnailUrl: property.image_url,
-                  fullImageUrl: property.image_url,
+                  thumbnailUrl,
+                  fullImageUrl,
                   mimeType: 'image/jpeg',
                   size: 0,
                   modifiedTime: new Date().toISOString()
