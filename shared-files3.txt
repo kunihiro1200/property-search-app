@@ -1,0 +1,15 @@
+﻿abb622e: .config.kiro、check-shared-items-headers.ts、design.md、requirements.md、SharedItemDetailPage.tsx、sharedItems.ts、SharedItemsPage.tsx、SharedItemsService.ts、tasks.md、test-shared-items-api.ts
+3c42adc: SharedItemDetailPage.tsx、SharedItemsService.ts
+414b9e2: check-shared-items-headers.ts、test-shared-items-api.ts
+f3ae229: SharedItemDetailPage.tsx、SharedItemsPage.tsx
+7a9d000: SharedItemsService.ts
+a28eeac: check-shared-items-headers.ts、sharedItems.ts、test-shared-items-api.ts
+91c07a0: SharedItemDetailPage.tsx、SharedItemsPage.tsx
+40e3b26: SharedItemDetailPage.tsx、SharedItemsService.ts
+b559113: SharedItemsService.ts
+7de6d64: sharedItems.ts
+efc707b: SharedItemsPage.tsx、SharedItemsService.ts
+05336f2: SharedItemDetailPage.tsx、SharedItemsService.ts
+ce8c25a: SharedItemsService.ts、test-shared-items-fetch.ts、test-shared-items-headers.ts
+9bc2677: SharedItemsService.ts
+24e98b4: SharedItemDetailPage.tsx、SharedItemsPage.tsx

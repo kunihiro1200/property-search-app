@@ -1,29 +1,29 @@
-name: Periodic Sync
+name: Periodic Full Sync
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'  # 30分ごとに実行
   workflow_dispatch: # 手動実行も可能
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Call sync endpoint
+      - name: Call full sync endpoint
         run: |
           response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST "${{ secrets.BACKEND_URL }}/api/sync/manual" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -X POST "${{ secrets.BACKEND_URL }}/api/sync/trigger-async" \
             -H "Content-Type: application/json" \
-            --max-time 120)
+            --max-time 30)
 
           echo "HTTP Status: $response"
           echo "Response body:"
           cat /tmp/response.json
 
           if [ "$response" != "200" ]; then
-            echo "❌ Sync failed with status $response"
+            echo "❌ Sync trigger failed with status $response"
             exit 1
           fi
 
-          echo "✅ Sync completed successfully"
+          echo "✅ Full sync triggered successfully"

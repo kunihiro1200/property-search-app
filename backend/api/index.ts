@@ -2019,6 +2019,38 @@ app.get('/api/cron-property-sync', async (req, res) => {
   }
 });
 
+// GASから呼び出される物件同期トリガーエンドポイント
+// PropertyListingSyncService.runScheduledSync() を実行する
+app.post('/api/sync/trigger', async (req, res) => {
+  try {
+    console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS');
+
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+    const syncService = getPropertyListingSyncService();
+    await syncService.initialize();
+
+    const result = await syncService.runScheduledSync();
+
+    console.log(`✅ [Sync Trigger] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}`);
+
+    res.json({
+      success: result.success,
+      totalProcessed: result.totalProcessed,
+      successfullyAdded: result.successfullyAdded,
+      successfullyUpdated: result.successfullyUpdated,
+      failed: result.failed,
+      duration: result.endTime.getTime() - result.startTime.getTime(),
+      syncedAt: result.endTime.toISOString(),
+    });
+  } catch (error: any) {
+    console.error('❌ [Sync Trigger] Property sync failed:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);

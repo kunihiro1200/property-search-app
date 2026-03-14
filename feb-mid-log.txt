@@ -1,0 +1,67 @@
+﻿2026-02-20 Add: Public property site architecture steering document
+2026-02-20 Fix: Add .js extensions to ESM imports in PropertyListingService
+2026-02-20 Fix: PropertyImageService constructor calls - add GoogleDriveService parameter and fix GoogleSheetsClient.getLastRow
+2026-02-20 Fix: Add .js extensions to ESM imports in backend/api for Vercel deployment
+2026-02-19 Fix: Replace dynamic imports with static imports in PropertyListingService for Vercel
+2026-02-19 Fix: Remove backend/vercel.json to use root vercel.json only
+2026-02-19 Remove rootDir from backend/api/tsconfig.json to fix TypeScript errors
+2026-02-19 Fix includeFiles in vercel.json to include backend/api/src
+2026-02-19 Fix import paths in backend/api/index.ts and copy AthomeSheetSyncService
+2026-02-19 Fix Vercel build: Add installCommand and tsconfig for api directory
+2026-02-19 Add package.json to api directory for Vercel dependency resolution
+2026-02-19 Fix: Remove dotenv import from supabase.ts for Vercel compatibility
+2026-02-19 Enhanced error logging for AA12649 image endpoint - include errorCode, errorStatus, errorDetails
+2026-02-19 Add detailed error logging for Google Drive API errors (AA12649 debug)
+2026-02-19 Fix: Restore backend/api/index.ts from working commit (fc6f146)
+2026-02-19 Fix: Restore working vercel.json configuration with includeFiles for backend/src
+2026-02-19 fix: Add lazy initialization for Redis client to handle Vercel serverless environment
+2026-02-19 fix: Deploy backend/src/index.ts directly instead of backend/api/index.ts to resolve dependency issues
+2026-02-19 fix: Relax TypeScript strict mode in backend/api to allow compilation with ../src imports
+2026-02-19 fix: Add missing dependencies (redis, pg, p-queue, p-retry, zod) to backend/api/package.json and fix buildCommand
+2026-02-19 Fix: Revert import paths to ../src/ and update vercel.json to include parent directory
+2026-02-19 Add: tsconfig.json for backend/api TypeScript configuration
+2026-02-19 Fix: Add redis and uuid dependencies to backend/api/package.json
+2026-02-19 Add: package.json for backend/api Vercel deployment
+2026-02-19 Fix: Correct import paths for Vercel deployment (../ to ./)
+2026-02-19 Add vercel.json for backend/api routing configuration
+2026-02-19 Add detailed logging and error handling to Google Drive API calls
+2026-02-19 Fix: Inject GoogleDriveService singleton into PropertyImageService
+2026-02-19 Add detailed logging to GoogleDriveService initialization for debugging
+2026-02-19 Fix: Use GoogleDriveService singleton to improve error handling
+2026-02-19 Add /api/test-env endpoint to debug GOOGLE_SERVICE_ACCOUNT_JSON
+2026-02-19 Fix: Convert image_url to object format in public property API (backend/api)
+2026-02-19 Fix: Extract file ID from image_url proxy URL for images array
+2026-02-19 Fix: Improve Base64 detection - try JSON parse first, then Base64 decode
+2026-02-19 Fix: Auto-decode Base64 encoded GOOGLE_SERVICE_ACCOUNT_JSON
+2026-02-19 Fix: Throw error when GOOGLE_SERVICE_ACCOUNT_JSON is not configured
+2026-02-19 Add detailed GOOGLE_SERVICE_ACCOUNT_JSON validation logging
+2026-02-19 Fix: Add gyomu list cache to avoid Google Sheets API quota errors
+2026-02-19 Fix: Allow /u/0/ in Google Drive folder URLs for storage_location validation
+2026-02-19 Fix: Re-fetch storage_location from gyomu list if existing DB value is not a valid URL format
+2026-02-19 Fix: Validate storage_location URL format before using from gyomu list
+2026-02-19 Fix: Get storage_location from gyomu list CO column first, then fallback to Google Drive search
+2026-02-19 Revert: Restore simple storage_location logic (existing DB value or Google Drive search)
+2026-02-19 Fix: Get storage_location from gyomu list CO column instead of property list spreadsheet
+2026-02-19 Fix: Get storage_location from spreadsheet '菫晏ｭ伜ｴ謇' column first, then fallback to Google Drive search
+2026-02-19 Fix: Implement batch processing for property listings sync to avoid timeout
+2026-02-19 Fix: Process all properties in sync (not just last 100)
+2026-02-19 Fix: Update Google Service Account to koukaibukkennsaito project
+2026-02-19 fix: Google Sheets authentication with GoogleAuth instead of JWT
+2026-02-19 Add detailed debug logs for JSON parsing and private_key format
+2026-02-18 Debug: Add detailed authentication method logging
+2026-02-18 Debug: Change console.log to console.error for Vercel logging
+2026-02-18 Add debug endpoint to check environment variables in Vercel
+2026-02-18 Add detailed debug logs for Google Sheets authentication
+2026-02-18 Add Base64 decode test script for Google Service Account JSON
+2026-02-18 Debug: Add logging for private_key format
+2026-02-18 Fix: Properly detect and decode Base64 encoded GOOGLE_SERVICE_ACCOUNT_JSON
+2026-02-18 Fix: Add support for GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY env vars
+2026-02-18 Fix: Remove serviceAccountKeyPath from PropertyListingSyncService to use GOOGLE_SERVICE_ACCOUNT_JSON in Vercel
+2026-02-18 Fix: Update GOOGLE_SERVICE_ACCOUNT_JSON environment variable
+2026-02-18 Fix: Restore vercel.json and .env.production to working state (8551bd4)
+2026-02-18 Fix: Use GoogleAuth instead of JWT for Google Sheets authentication
+2026-02-18 Revert: Restore working vercel.json from b06435f (simple config)
+2026-02-18 Fix: Remove outputDirectory from vercel.json (Root Directory is set to frontend)
+2026-02-18 Revert: Restore original vercel.json configuration
+2026-02-18 Fix: Update Vercel build config to use correct distDir path
+2026-02-18 Force redeploy: Trigger Vercel rebuild for image display fix

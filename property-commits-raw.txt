@@ -1,0 +1,69 @@
+﻿483211fbf5dead98885446805f6aaea654aad80d Merge restore-feb-13-14 branch into main
+0e3c419a15d0e7e748cb167d39970567cd704580 fix: PropertySidebarStatus縺ｮ繧､繝ｳ繝昴・繝医お繝ｩ繝ｼ繧剃ｿｮ豁｣
+676b21369fea58e43344cbb6cf6da85f69276003 fix: MessageTemplateDialog縺ｮ繧､繝ｳ繝昴・繝医お繝ｩ繝ｼ繧剃ｿｮ豁｣
+ee08999c56ba94bd2ff954501d6f8d387335ec53 feat: 2026-02-15縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ・art 1: UI謾ｹ蝟・∵･ｭ蜍吶Μ繧ｹ繝域ｩ溯・霑ｽ蜉・・f63400eb67b32d3f90b0643da252c0799b044ffc Fix: Extract file ID from image_url proxy URL for images array
+64a9e657965324e0b50987a8fd667c5ddde287a3 style: 迚ｩ莉ｶ繝ｪ繧ｹ繝医・繝ｼ繧ｸ縺ｮ繧ｿ繧､繝医Ν縺ｫ髱定牡繧定ｿｽ蜉縺励※繧ｹ繧ｿ繧､繝ｫ繧堤ｵｱ荳
+012a5a791aba4fa8b32dde72d40bc25ab93eb0b9 feat: 讀懃ｴ｢繝舌・縺ｮ笘薙・繧ｿ繝ｳ繧貞・蜉帙ユ繧ｭ繧ｹ繝医・縺吶＄蜿ｳ縺ｫ驟咲ｽｮ縲∫黄莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｫ繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ繧定ｿｽ蜉
+a755774ffb2d8d7b7fbe2d132db75e8b0b527d96 fix: 螢ｲ雋ｷ萓｡譬ｼ縺ｮ閾ｪ蜍穂ｿ晏ｭ倥ｒ蛛懈ｭ｢縺励∽ｿ晏ｭ倥・繧ｿ繝ｳ縺ｧ遒ｺ螳壹☆繧九ｈ縺・↓菫ｮ豁｣
+12eee5c74322e13b395fcd48160f375674ffaefc fix: Chat騾∽ｿ｡蜀・ｮｹ繧呈隼蝟・ｼ亥､荳九￡萓晞ｼ縺ｫ螟画峩縲∫黄莉ｶ逡ｪ蜿ｷ繧定ｿｽ蜉・・8b4a5c89eb3eba9b2a9584b54deb147995e6d1d0 fix: 邱ｨ髮・Δ繝ｼ繝我ｸｭ繧ゆｺ育ｴ・､荳九￡繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧定｡ｨ遉ｺ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+739f7531eca3d8ff198f92b40e184a1cf1916516 fix: 邱ｨ髮・Δ繝ｼ繝我ｸｭ繧・hat騾∽ｿ｡繝懊ち繝ｳ繧定｡ｨ遉ｺ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+5d249998d6dde50317adc0569165d03b335eb5ed feat: 萓｡譬ｼ諠・ｱ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮChat騾∽ｿ｡讖溯・繧呈隼蝟・149fc76d3cfb7c1f2f04664426c25ca81a81f772 feat: 迚ｩ莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｮ萓｡譬ｼ諠・ｱ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｫ蜊ｳ蛟､荳九￡讖溯・繧定ｿｽ蜉
+822b7dc405b4eb564a8ede31316bbd342d403367 Revert "feat: 迚ｩ莉ｶ繝ｪ繧ｹ繝・I謾ｹ蝟・- 蜊ｳ蛟､荳九￡繝懊ち繝ｳ縲√し繧､繝峨ヰ繝ｼ鬆・ｺ丞､画峩縲∝､荳九￡騾夂衍繝ｭ繧ｰ蠑ｷ蛹・
+40c915772839517abf804dd9e8476549d8756bd0 feat: 迚ｩ莉ｶ繝ｪ繧ｹ繝・I謾ｹ蝟・- 蜊ｳ蛟､荳九￡繝懊ち繝ｳ縲√し繧､繝峨ヰ繝ｼ鬆・ｺ丞､画峩縲∝､荳九￡騾夂衍繝ｭ繧ｰ蠑ｷ蛹・13da29d204118faeeab5124238bb66f3bece7125 蝗ｺ螳夊ｳ・肇遞弱・陦ｨ遉ｺ繧剃ｿｮ豁｣・・1荳・・縺ｨ陦ｨ遉ｺ・峨∵･ｭ閠・∈縺ｮ蟇ｾ蠢懆ｭｦ蜻翫・繝ｼ繧ｯ縺ｮ繝・ヰ繝・げ繝ｭ繧ｰ繧定ｿｽ蜉
+cb0829ee92407d21902ccf79eee56925d3c247ce 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝峨↓讌ｭ閠・∈縺ｮ蟇ｾ蠢懆ｭｦ蜻翫・繝ｼ繧ｯ繧定ｿｽ蜉: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｨ蜷後§繧ｹ繧ｿ繧､繝ｫ縺ｧ陦ｨ遉ｺ
+eef756e7439c77a472e26cb88cc424124b61fd19 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 鮟・牡閭梧勹縺ｮ縺ｿ縺ｫ螟画峩縺励※謨ｰ蟄励ｒ隕九ｄ縺吶￥縲∬ｵ､譁・ｭ励〒蠑ｷ隱ｿ
+d7a20d698160e5eb7e9f7b50cacefb5841888628 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 鮟・牡縺ｨ襍､縺ｮ繧ｹ繝医Λ繧､繝苓レ譎ｯ縺ｧ蜊ｱ髯ｺ繧貞ｼｷ隱ｿ縲∫せ貊・→謠ｺ繧後い繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ霑ｽ蜉
+791af0957e74b83e3b55aa19881bf1629799f4b7 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 譫縺ｪ縺励・螟ｧ縺阪↑襍､蟄励↓螟画峩
+79ca1b9e3b52f0a799d2a1ba2109312c1b036427 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倩｡ｨ遉ｺ縺ｮ菫ｮ豁｣: Excel繧ｷ繝ｪ繧｢繝ｫ蛟､繧呈ｭ｣縺励￥譌･莉倥↓螟画鋤
+0894409487823089dcd780ffc6a96e4178c39745 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ: 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倥ｒ陦ｨ遉ｺ・井ｻ頑律繧医ｊ蠕後・蝣ｴ蜷医・縺ｿ縲∵擲莠ｬ譎る俣・・1972768862ea6dd881b2be47e5e2ea11724887bd 迚ｩ莉ｶ繝ｪ繧ｹ繝域､懃ｴ｢讖溯・縺ｮ菫ｮ豁｣: 讀懃ｴ｢繧ｯ繧ｨ繝ｪ縺ｮ蜑榊ｾ後・遨ｺ逋ｽ繧貞炎髯､縺励※繝槭ャ繝√Φ繧ｰ邊ｾ蠎ｦ繧貞髄荳・f1dfd3ad4528d767668c01df0e18d8717eeff998 讀懃ｴ｢繝輔ぅ繝ｫ繧ｿ繝ｼ縺ｮ繝・ヰ繝・げ繝ｭ繧ｰ霑ｽ蜉: property_number縺ｮ蛟､繧定ｩｳ邏ｰ遒ｺ隱・e9c64e968e0e6e60c44d373c23958fe295cec026 迚ｩ莉ｶ繝ｪ繧ｹ繝・ AA13407縺ｨAA13389縺瑚｡ｨ遉ｺ縺輔ｌ縺ｪ縺・撫鬘後・繝・ヰ繝・げ繝ｭ繧ｰ霑ｽ蜉
+7870c7d9152c2e9654c990e18bff29bfddfab4ab PropertyListingSyncService縺ｮ驥崎､・さ繝ｼ繝牙炎髯､
+b1edf71585e468118c972dc8eb97465229ed9cde 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ繝ｬ繧､繧｢繧ｦ繝域隼蝟・ BB14縺ｮ蜿ｳ髫｣縺ｫ繝懊ち繝ｳ驟咲ｽｮ縲∵園蝨ｨ蝨ｰ陦後ｒ蜑企勁縺励※1谿ｵ縺ｫ邨ｱ蜷・41534954644e253af5f78e50b9501ff32ff7e5e6 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ讖溯・謾ｹ蝟・ Chat騾∽ｿ｡閠・錐菫ｮ豁｣縲ゞI謾ｹ蝟・√さ繝溘Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ縲∬・蜍穂ｿ晏ｭ倥√Γ繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝育ｽｲ蜷肴ｬ・・諡・ｽ楢・ュ蝣ｱ蜿門ｾ・58eba1f72308f962f5f5f9ed4b5cdca11e3f679e feat: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｫ繧ｳ繝溘Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧定ｿｽ蜉
+aa345238d344228555a17a4aada3c7db083b625b feat: 螢ｲ荳ｻ縺ｸ縺ｮ騾｣邨｡繧偵さ繝溘Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ縺ｫ險倬鹸
+4903112c629722fdfc0cbe16e36e75614b9e4f47 refactor: 繝倥ャ繝繝ｼ繝懊ち繝ｳ縺ｮ繝・く繧ｹ繝医ｒ逵∫払縺励※繧ｳ繝ｳ繝代け繝亥喧
+df00f3606cb89cc96ba2422309d1f35efe6fdb3f feat: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｫ螢ｲ荳ｻ縺ｸSMS騾∽ｿ｡繝懊ち繝ｳ繧定ｿｽ蜉
+b1ceb8b0f8e3d242d2ad9f337713ee3f9ebae7cb 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ: 諡・ｽ薙∈Chat騾∽ｿ｡縺ｫ隧ｳ邏ｰ諠・ｱ繧定ｿｽ蜉縲√Γ繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝医・螟画焚鄂ｮ謠帶ｩ溯・繧貞ｮ溯｣・cbb47b5ddfbe01059e175601a03565ea5c343b9f 諡・ｽ薙∈Chat騾∽ｿ｡譎ゅ↓騾∽ｿ｡閠・・迚ｩ莉ｶ諠・ｱ繝ｻ螢ｲ荳ｻ諠・ｱ繝ｻ迚ｩ莉ｶ隧ｳ邏ｰURL繧貞性繧√ｋ繧医≧縺ｫ謾ｹ蝟・a98684c5d6b7e1a93d3c777adf2099365aa01577 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ: 諡・ｽ薙∈Chat騾∽ｿ｡繝懊ち繝ｳ繧偵・繝・ム繝ｼ縺ｫ遘ｻ蜍輔√ユ繝ｳ繝励Ξ繝ｼ繝医・繧ｹ繧ｿ繝・ヵ繧ｵ繝ｼ繝薙せ縺ｫ隱崎ｨｼ諠・ｱ繧定ｿｽ蜉
+e0bb23e6b9ea3fa868611f657407385c12e5f3a1 feat: 繝｡繝・そ繝ｼ繧ｸ繝・Φ繝励Ξ繝ｼ繝域ｩ溯・縺ｨ諡・ｽ薙∈Chat騾∽ｿ｡讖溯・繧貞ｮ溯｣・162847b555aadfaf535c13732e0076f3340cecfd feat: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ繝懊ち繝ｳ驟咲ｽｮ螟画峩縺ｨ繝｡繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝域ｩ溯・霑ｽ蜉
+ac5f70dce0ffdbc1aa80e601816fb8e17eaab9a9 迚ｩ莉ｶ繝ｪ繧ｹ繝郁ｩｳ邏ｰ逕ｻ髱｢縺ｮ繝ｬ繧､繧｢繧ｦ繝域隼蝟・ 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ讓ｪ荳ｦ縺ｳ驟咲ｽｮ縺ｨ繝ｬ繧ｹ繝昴Φ繧ｷ繝門ｯｾ蠢懊∬牡蛻・￠霑ｽ蜉
+608d0a3af7cd92f18461f2a98abd34ecfd88fc5c fix: 莠育ｴ・､荳九￡縺ｮ陦ｨ遉ｺ繧ｿ繧､繝溘Φ繧ｰ繧剃ｺ育ｴ・律縺ｮ0:00・域ｷｱ螟懶ｼ峨↓螟画峩
+c8e972fd4ba0f78b40e9a3e5ac26900304269f59 feat: Vercel Cron Jobs縺ｧ莠育ｴ・､荳九￡騾夂衍繧定・蜍暮∽ｿ｡・倶ｺ育ｴ・・螳ｹ陦ｨ遉ｺ讖溯・
+8556438bc8f5cc209ea6ff81852df103b27b39bf feat: 莠育ｴ・､荳九￡讖溯・縺ｮ螳御ｺ・・繧ｿ繝ｳUI螳溯｣・068e6187f6e324d596dc6bba21e60ebe9024911c fix: 譌･莉倥ヵ繧｣繝ｼ繝ｫ繝峨・繝ｩ繝吶Ν繧偵碁∽ｿ｡譌･縲阪°繧峨御ｺ育ｴ・律縲阪↓螟画峩
+4a288b6c34008857c48babba008368caff52af46 feat: 莠育ｴ・､荳九￡讖溯・繧貞ｮ溯｣・ｼ域欠螳壽律縺ｮ譚ｱ莠ｬ譎る俣9譎ゅ↓騾∽ｿ｡・・edeeeb5535869189864f991a954db06af272eac9 feat: 萓｡譬ｼ諠・ｱ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｫ縺昴・莉悶メ繝｣繝・ヨ騾∽ｿ｡讖溯・繧定ｿｽ蜉
+c19de21e71f54c74c035e5978898c88dd8ee3405 fix: 萓｡譬ｼ螟画峩螻･豁ｴ縺ｮ閾ｪ蜍戊ｿｽ蜉讖溯・繧剃ｿｮ豁｣
+38a8ebd03b2297bd31ecc1b4194989fe977c4a0e feat: 萓｡譬ｼ螟画峩譎ゅ↓蛟､荳九￡螻･豁ｴ繧定・蜍戊ｿｽ蜉縲∝｣ｲ蜃ｺ萓｡譬ｼ繧貞渕譛ｬ諠・ｱ縺ｫ遘ｻ蜍・b5522a3ecc4bf45a29c2be0a754756d72b437a9b feat: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ謾ｹ蝟・9cc5f6b622fc6048dd44c0d8d31f1f8f777f3428 Gmail驟堺ｿ｡讖溯・縺ｮ謾ｹ蝟・→UI蜷台ｸ・75b02849a70b729ade2df522b740555179e9cd65 fix: 雋ｷ荳ｻ閾ｪ蜍募炎髯､縺ｮ隱､讀懷・繧剃ｿｮ豁｣
+381b24d05d6a3ad7af159601b67b74b3a2554b3b feat: 迚ｩ莉ｶ繝ｪ繧ｹ繝医↓繧ｵ繧､繝峨ヰ繝ｼ繧ｹ繝・・繧ｿ繧ｹ讖溯・繧貞ｮ溯｣・0906002ab9dba73ee585b10d61b6f1d5cb6a565f feat: Add sidebar status logic for property list management
+d1b9b09b4e4fce507ece2bc22b6650c7d83420f5 feat(ui): 迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝峨・謇蝨ｨ蝨ｰ縺ｨ菴丞ｱ・｡ｨ遉ｺ縺ｫ繧ｳ繝斐・讖溯・繧定ｿｽ蜉
+cf420b88639dfa1faa01a901c5a62254fe92ce64 迚ｩ莉ｶ繝ｪ繧ｹ繝郁ｩｳ邏ｰ繝壹・繧ｸ縺ｫ髱定牡繝・・繝槭ｒ驕ｩ逕ｨ
+58d986d6cd13d97db846a9ff60cb727e9807210c 迚ｩ莉ｶ隧ｳ邏ｰ繝｢繝ｼ繝繝ｫ縺ｮ蜈ｨ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｫ髱定牡繝倥ャ繝繝ｼ繧定ｿｽ蜉
+599aade818a17c980637f6902047e1601c92f0a0 迚ｩ莉ｶ隧ｳ邏ｰ繝｢繝ｼ繝繝ｫ縺ｮ繝倥ャ繝繝ｼ縺ｨ繧ｿ繝悶ｒ髱定牡縺ｫ邨ｱ荳
+375011544cee22cfa61150aaca04110ec3855385 迚ｩ莉ｶ繝ｪ繧ｹ繝井ｸ隕ｧ繝壹・繧ｸ縺ｨ隧ｳ邏ｰ繝｢繝ｼ繝繝ｫ繧帝搨濶ｲ縺ｫ邨ｱ荳
+a04052fc486e83c30a0e2e043537f55d5f73be7a 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝峨ｒ邱題牡縺ｫ螟画峩
+f26f0516239bd44b462cbacea2c43bd7f38f64a5 Fix: PropertyListingService.getPublicPropertyByNumber縺ｧ逕ｻ蜒上ｒ蜿門ｾ・d99ba23ea4a3d9bbff32ff42d5d5158b4003baf1 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢縺ｮ迚ｩ莉ｶ隧ｳ邏ｰ繧ｫ繝ｼ繝峨・繝ｬ繧､繧｢繧ｦ繝域隼蝟・23621fec4e0745c6a77ea3e99e80bda1d472ab2e 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮUI謾ｹ蝟・ 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ鬆・ｺ丞､画峩縲・蛻励Ξ繧､繧｢繧ｦ繝医∫峡遶九せ繧ｯ繝ｭ繝ｼ繝ｫ縲∫黄莉ｶ諠・ｱ繧ｫ繝ｼ繝画隼蝟・e483ce48abc44093d5a2f1585f0d716894842468 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ謾ｹ蝟・ 迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝画ｩ溯・霑ｽ蜉縺ｨ繝・・繧ｿ讒矩謾ｹ蝟・842eb51bdb077ef3817d8dbb7cde606175993f71 Fix: Prevent null overwrite of property_details when sync errors occur
+ad43891a1dfeb07a13a6aa882920e293bcad137e Fix: Remove JavaScript sort from remaining PropertyListingService files
+16ddf4e8121fb7ba567268f831f4eaed13a2c6cc Fix: Sort properties by distribution_date with NULL values appearing last
+abfb96972aba7a10373aac666fb16658cb5bfe7c Revert distribution_date changes - restore to working state before 2026-01-31
+9f932002b1975dc3decfa3dbb2abfe78d2a58d44 Fix: Add secondary sort by created_at for properties with null distribution_date
+b948ba2dba8055473ffb7bae38938b64c2b6da6c Fix: Exclude storage_location from auto-sync to preserve manual updates
+f161a7059f10848d32cc2ebb71331c3bb2240cfd Optimize: Extend gyomu list cache TTL to 30 minutes and prevent duplicate loading during parallel processing
+267496097780154755c918d68b68a5db9ef937e5 Restore: Complete restore to commit 3f44d8c (working version with fast load and images)
+fcfa773a9586279b3e7909b053b0d6b2ad4ede8b Revert: Restore work_tasks access to show all images in list view (accept slower load time for complete image display)
+5940ac669899fb266b8147f3dae12b07b1c98cff Fix: Skip work_tasks access for properties without storage_location to restore fast initial load (2-3s) - restore commit 2941bbf behavior
+0b6ad24c70e9baffc0d3a054ae5f59fb759782d7 Add: atbb_status classification definition and include '蟆ゆｻｻ蜈ｬ髢句燕' and '荳闊ｬ蜈ｬ髢句燕' in showPublicOnly filter + auto-sync script for all public properties
+b81e436da02b4a97e331875a24ec53554dfd2906 Restore: Revert to commit 38413e1 - restore 讌ｭ蜍吶Μ繧ｹ繝・access to show all images (accept 30s load time)
+2941bbf17655faae8b52db63c914fa1da08e7fa8 Fix: Skip 讌ｭ蜍吶Μ繧ｹ繝・access for properties without storage_location to avoid API quota limit and speed up image loading
+19c38793c8bc5e650cccdb56ad6d64cecd3f7dd5 Clean: Remove temporary investigation and test scripts for property_details sync
+3fa960d19533a53969d91b4ba05c2427a7aeb251 Fix: Pre-load GyomuList cache to avoid Google Sheets API quota exceeded error during property sync
+292a02b6353870ba490a2abc6be6e1a4f2364355 Fix: Apply correct atbb_status whitelist filter (蟆ゆｻｻ蜈ｬ髢倶ｸｭ, 荳闊ｬ蜈ｬ髢倶ｸｭ, 髱槫・髢具ｼ磯・菫｡繝｡繝ｼ繝ｫ縺ｮ縺ｿ・・
+e07e1c14eb2689c22e2735b23054bf37bc1dc892 Fix: Re-enable showPublicOnly filter in PropertyListingService
+79e684039462ee6a81be43379cbe301965d11359 Fix: Sync process now saves athome蜈ｬ髢・folder URL to storage_location
+ea48337189e2ac709f0813b5c2f27956e5a7d02f Fix: Use getImagesFromStorageUrl to get proper image objects with thumbnailUrl and fullImageUrl
+dc05f6a664dd1fcb82a68cb97fba0d7dfdca1e8c Fix: Return image objects with thumbnailUrl instead of plain URLs in PropertyListingService
+0140b4562bb2eadb94b939e2f262537d9ac583a1 Trigger redeploy to apply BACKEND_URL environment variable
+0907510eb99196377e37684c746821ed551a4436 Fix UUID validation in getHiddenImages() for CC24 image display issue
+b73e92412ae3886946df19fc78e74679eb320d3a fix: CC5繝・・繧ｿ繧呈悽逡ｪ迺ｰ蠅・↓謖ｿ蜈･縺励∬｡ｨ遉ｺ蝠城｡後ｒ菫ｮ豁｣
+f238a2b181306396d83bd8d5217b26d1bf5a078c Revert "feat: 隧ｳ邏ｰ逕ｻ髱｢繧貞叉蠎ｧ縺ｫ陦ｨ遉ｺ・医♀豌励↓蜈･繧頑枚險縺ｨ縺翫☆縺吶ａ繝昴う繝ｳ繝医・繝舌ャ繧ｯ繧ｰ繝ｩ繧ｦ繝ｳ繝峨〒蜿門ｾ暦ｼ・
+43d60dc7ae777389f81807cb4ce3c93dbe854212 feat: 隧ｳ邏ｰ逕ｻ髱｢繧貞叉蠎ｧ縺ｫ陦ｨ遉ｺ・医♀豌励↓蜈･繧頑枚險縺ｨ縺翫☆縺吶ａ繝昴う繝ｳ繝医・繝舌ャ繧ｯ繧ｰ繝ｩ繧ｦ繝ｳ繝峨〒蜿門ｾ暦ｼ・df48ded64601e59fba92701d80df960072872d11 perf: increase concurrency limit from 5 to 20 for faster image loading
+9b6f612a2a558ffffc4a8f3768eff5af19957285 fix: restore image display in list view
+8a88953cfb1dfb34abc2040061846b72775bdb34 Fix p-limit ESM import issue by replacing with custom concurrency control
+873de190e65ba03c4d6ddc2e3783ba87d3a2fa64 Fix: p-limit繧貞虚逧・う繝ｳ繝昴・繝医↓螟画峩縺励※Vercel縺ｮES繝｢繧ｸ繝･繝ｼ繝ｫ繧ｨ繝ｩ繝ｼ繧定ｧ｣豎ｺ
+4c110d4d2756c950d6667d93e40abdc744c3dead Fix TypeScript type errors for Vercel deployment
+b798b625efb101704dfa5d6c3ebc0e861c92a8ce Optimize Vite build configuration for Vercel deployment

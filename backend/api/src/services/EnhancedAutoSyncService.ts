@@ -1312,7 +1312,7 @@ export class EnhancedAutoSyncService {
 
   /**
    * 物件リスト更新同期を実行
-   * PropertyListingSyncService.syncUpdatedPropertyListings()を呼び出し
+   * PropertyListingSyncService.runScheduledSync()を呼び出し
    */
   async syncPropertyListingUpdates(): Promise<{
     success: boolean;
@@ -1324,45 +1324,29 @@ export class EnhancedAutoSyncService {
     const startTime = Date.now();
     
     try {
-      console.log('🏢 Starting property listing update sync...');
+      console.log('🏢 Starting property listing sync (scheduled mode)...');
       
-      // PropertyListingSyncServiceを初期化
-      const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+      const { getPropertyListingSyncService } = await import('./PropertyListingSyncService');
+      const syncService = getPropertyListingSyncService();
+      await syncService.initialize();
       
-      // 物件リストスプレッドシート設定
-      const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
-      const PROPERTY_LIST_SHEET_NAME = '物件';
-      
-      const sheetsConfig = {
-        spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
-        sheetName: PROPERTY_LIST_SHEET_NAME,
-        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-      };
-      
-      const sheetsClient = new GoogleSheetsClient(sheetsConfig);
-      await sheetsClient.authenticate();
-      
-      const syncService = new PropertyListingSyncService(sheetsClient);
-      
-      // 更新同期を実行
-      const result = await syncService.syncUpdatedPropertyListings();
+      const result = await syncService.runScheduledSync();
       
       const duration_ms = Date.now() - startTime;
       
-      console.log(`✅ Property listing update sync completed: ${result.updated} updated, ${result.failed} failed`);
+      console.log(`✅ Property listing sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}`);
       
       return {
-        success: result.failed === 0,
-        updated: result.updated,
+        success: result.success,
+        updated: result.successfullyUpdated + result.successfullyAdded,
         failed: result.failed,
         duration_ms,
-        errors: result.errors,
+        errors: result.errors.map(e => ({ property_number: e.propertyNumber, error: e.message })),
       };
       
     } catch (error: any) {
       const duration_ms = Date.now() - startTime;
-      console.error('❌ Property listing update sync failed:', error.message);
+      console.error('❌ Property listing sync failed:', error.message);
       
       return {
         success: false,
@@ -1379,7 +1363,8 @@ export class EnhancedAutoSyncService {
 
   /**
    * Phase 4.6: 新規物件追加同期を実行
-   * PropertyListingSyncService.syncNewProperties()を呼び出し
+   * syncPropertyListingUpdates()と同じく runScheduledSync() を使用
+   * （runScheduledSync は新規追加と更新を両方処理する）
    */
   async syncNewPropertyAddition(): Promise<{
     success: boolean;
@@ -1387,54 +1372,15 @@ export class EnhancedAutoSyncService {
     failed: number;
     duration_ms: number;
   }> {
-    const startTime = Date.now();
-
-    try {
-      console.log('🆕 Starting new property addition sync...');
-
-      // PropertyListingSyncServiceを初期化
-      const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
-      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
-
-      const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
-      const PROPERTY_LIST_SHEET_NAME = '物件';
-
-      const sheetsConfig = {
-        spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
-        sheetName: PROPERTY_LIST_SHEET_NAME,
-        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
-      };
-
-      const sheetsClient = new GoogleSheetsClient(sheetsConfig);
-      await sheetsClient.authenticate();
-
-      const syncService = new PropertyListingSyncService(sheetsClient);
-
-      // 新規物件追加同期を実行
-      const result = await syncService.syncNewProperties();
-
-      const duration_ms = Date.now() - startTime;
-
-      console.log(`✅ New property addition sync completed: ${result.added} added, ${result.failed} failed`);
-
-      return {
-        success: result.failed === 0,
-        added: result.added,
-        failed: result.failed,
-        duration_ms
-      };
-
-    } catch (error: any) {
-      const duration_ms = Date.now() - startTime;
-      console.error('❌ New property addition sync failed:', error.message);
-
-      return {
-        success: false,
-        added: 0,
-        failed: 1,
-        duration_ms
-      };
-    }
+    // runScheduledSync() が新規追加も処理するため、
+    // Phase 4.5 で既に実行済みの場合は重複実行を避けるためスキップ
+    console.log('🆕 Phase 4.6: New property addition is handled by Phase 4.5 (runScheduledSync)');
+    return {
+      success: true,
+      added: 0,
+      failed: 0,
+      duration_ms: 0,
+    };
   }
 
   /**

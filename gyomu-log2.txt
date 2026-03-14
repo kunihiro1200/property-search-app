@@ -1,0 +1,34 @@
+﻿
+2026-02-28 fix: add fallback spreadsheet ID to GyomuListSer
+vice to fix Vercel env
+2026-02-28 fix: use GyomuListService in AthomeSheetSyncServ
+ice to fix spreadsheet URL lookup
+2026-02-28 Fix: Disable getStorageUrlFromWorkTasks in getPu
+blicProperties to prevent Google Sheets API quota exceeded
+2026-02-19 Fix: Add gyomu list cache to avoid Google Sheets
+ API quota errors
+2026-02-19 Fix: Re-fetch storage_location from gyomu list i
+f existing DB value is not a valid URL format
+2026-02-19 Fix: Validate storage_location URL format before
+ using from gyomu list
+2026-02-19 Fix: Get storage_location from gyomu list CO col
+umn first, then fallback to Google Drive search
+2026-02-19 Fix: Get storage_location from gyomu list CO col
+umn instead of property list spreadsheet
+2026-01-29 Fix: Type error in getSpreadsheetUrlFromGyomuLis
+t (convert to string)
+2026-01-26 Optimize: Extend gyomu list cache TTL to 30 minu
+tes and prevent duplicate loading during parallel processin
+g
+2026-01-26 Revert: Restore work_tasks access to show all im
+ages in list view (accept slower load time for complete ima
+ge display)
+2026-01-26 Fix: Skip work_tasks access for properties witho
+ut storage_location to restore fast initial load (2-3s) - r
+estore commit 2941bbf behavior
+2026-01-25 Fix: Update panorama sync scripts to use spreads
+heet URL from gyomu list (new logic)
+2026-01-25 Fix: Pre-load GyomuList cache to avoid Google Sh
+eets API quota exceeded error during property sync
+
+

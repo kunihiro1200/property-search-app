@@ -1,0 +1,1 @@
+﻿2026-02-18 Force redeploy: Trigger Vercel rebuild for image display fix

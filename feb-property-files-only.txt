@@ -1,0 +1,313 @@
+﻿[bd162a5]
+  backend/src/index.ts
+
+[bb31643]
+  backend/src/index.ts
+  backend/src/routes/publicInquiries.ts
+  backend/src/services/PropertyListingSyncProcessor.ts
+
+[0e3c419]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[676b213]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[ee08999]
+  backend/src/services/GoogleSheetsClient.ts
+  backend/src/services/WorkTaskColumnMapper.ts
+  backend/src/services/WorkTaskService.ts
+  frontend/src/components/UnifiedSearchBar.css
+  frontend/src/components/UnifiedSearchBar.tsx
+  frontend/src/components/WorkTaskDetailModal.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/pages/WorkTasksPage.tsx
+
+[1117b62]
+  frontend/src/components/CollapsibleSection.tsx
+  frontend/src/components/NearbyBuyersList.tsx
+  frontend/src/components/PropertyMapSection.tsx
+  frontend/src/components/RichTextCommentEditor.tsx
+  frontend/src/theme/sectionColors.ts
+
+[67bb088]
+  backend/src/services/PropertyListingSyncProcessor.ts
+
+[4c3423c]
+  backend/src/services/GoogleDriveService.ts
+  backend/src/services/PropertyImageService.ts
+
+[f63400e]
+  backend/src/services/PropertyListingService.ts
+
+[d149a82]
+  backend/src/services/GoogleSheetsClient.ts
+
+[f3ae229]
+  backend/src/index.ts
+  backend/src/routes/auth.supabase.ts
+
+[64a9e65]
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[012a5a7]
+  frontend/src/components/UnifiedSearchBar.css
+  frontend/src/components/UnifiedSearchBar.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[a755774]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[5d24999]
+  frontend/src/components/PriceSection.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[822b7dc]
+  frontend/src/components/PriceSection.tsx
+  frontend/src/components/PropertySidebarStatus.tsx
+
+[40c9157]
+  frontend/src/components/PriceSection.tsx
+  frontend/src/components/PropertySidebarStatus.tsx
+
+[13da29d]
+  frontend/src/components/FrequentlyAskedSection.tsx
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/NewBuyerPage.tsx
+
+[cb0829e]
+  frontend/src/components/PropertyInfoCard.tsx
+
+[eef756e]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[d7a20d6]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[791af09]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[79ca1b9]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[0894409]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[1972768]
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[f1dfd3a]
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[e9c64e9]
+  frontend/BLANK_SCREEN_DEBUG.md
+  frontend/DEBUG_INSTRUCTIONS.md
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[7870c7d]
+  backend/src/services/PropertyListingSyncService.ts
+
+[b1edf71]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[4153495]
+  backend/src/routes/emails.ts
+  backend/src/services/EmailService.supabase.ts
+  backend/src/services/EmailService.ts
+  backend/src/services/StaffService.ts
+  frontend/src/components/MessageTemplateDialog.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[58eba1f]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[aa34523]
+  backend/src/routes/activityLogs.ts
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[4903112]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[df00f36]
+  backend/src/index.ts
+  backend/src/routes/staff.ts
+  backend/src/services/StaffService.ts
+  frontend/src/components/MessageTemplateDialog.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/pages/PublicPropertyDetailPage.tsx
+
+[b1ceb8b]
+  frontend/src/components/MessageTemplateDialog.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[cbb47b5]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[a98684c]
+  backend/src/services/MessageTemplateService.ts
+  backend/src/services/StaffService.ts
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[e0bb23e]
+  backend/src/services/MessageTemplateService.ts
+  backend/src/services/StaffService.ts
+  frontend/src/components/AssigneeChatSender.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[162847b]
+  backend/src/index.ts
+  backend/src/routes/message-templates.ts
+  backend/src/services/MessageTemplateService.ts
+  frontend/src/components/MessageTemplateDialog.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[ac5f70d]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[8556438]
+  backend/src/routes/chatNotifications.ts
+  frontend/src/components/PropertySidebarStatus.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[edeeeb5]
+  frontend/src/components/PriceSection.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[c19de21]
+  backend/src/routes/propertyListings.ts
+
+[38a8ebd]
+  backend/src/routes/propertyListings.ts
+  frontend/src/components/PriceSection.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[b5522a3]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[9cc5f6b]
+  backend/src/services/BuyerCandidateService.ts
+  backend/src/services/EnhancedBuyerDistributionService.ts
+  frontend/src/components/DistributionAreaField.tsx
+  frontend/src/components/GmailDistributionButton.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[75b0284]
+  backend/src/services/BuyerCandidateService.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/src/services/GeolocationService.ts
+  frontend/src/App.tsx
+  frontend/src/pages/BuyerCandidateListPage.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/services/api.ts
+
+[381b24d]
+  backend/src/services/PropertyListingService.ts
+  backend/src/services/PropertyListingSyncService.ts
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[0906002]
+  backend/src/config/buyer-status-definitions.ts
+  backend/src/services/BuyerStatusCalculator.ts
+  frontend/src/components/PropertySidebarStatus.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[d1b9b09]
+  frontend/src/components/PropertyInfoCard.tsx
+
+[cf420b8]
+  frontend/src/pages/PropertyListingDetailPage.tsx
+
+[58d986d]
+  frontend/src/components/PropertyListingDetailModal.tsx
+
+[599aade]
+  frontend/src/components/PropertyListingDetailModal.tsx
+
+[3750115]
+  frontend/src/components/PropertyListingDetailModal.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[a04052f]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[f26f051]
+  backend/src/services/PropertyListingService.ts
+
+[d99ba23]
+  frontend/src/components/PropertyInfoCard.tsx
+
+[23621fe]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[e483ce4]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[6ca4d68]
+  backend/src/services/PropertyService.ts
+  backend/src/services/SellerService.supabase.ts
+  frontend/src/pages/CallModePage.tsx
+
+[6d6e3f9]
+  backend/src/routes/sellers.ts
+  backend/src/services/BeppuAreaMappingService.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/CityNameExtractor.ts
+  backend/src/services/OitaCityAreaMappingService.ts
+  backend/src/services/PropertyDistributionAreaCalculator.ts
+  frontend/src/components/NearbyBuyersList.tsx
+
+[5e45e83]
+  frontend/src/components/PropertyMapSection.tsx
+
+[1675689]
+  backend/src/index.ts
+  backend/src/routes/geocoding.ts
+  backend/src/routes/sellers.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/src/services/SellerService.supabase.ts
+  backend/src/types/index.ts
+  frontend/src/components/PropertyMapSection.tsx
+  frontend/src/pages/CallModePage.tsx
+  frontend/src/types/index.ts
+
+[f8ad914]
+  frontend/src/pages/PublicPropertiesPage.tsx
+
+[74e400d]
+  frontend/src/components/PropertyMapView.tsx
+  frontend/src/pages/PublicPropertiesPage.tsx
+
+[b8319f8]
+  frontend/src/components/PropertyMapView.tsx
+  frontend/src/pages/PublicPropertiesPage.tsx
+
+[9565ff7]
+  frontend/src/components/PropertyMapView.tsx
+
+[7da51e3]
+  frontend/src/components/PropertyMapView.tsx
+
+[2254b6b]
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/src/services/SellerService.supabase.ts
+  backend/src/types/index.ts
+  frontend/src/components/SellerStatusSidebar.tsx
+  frontend/src/pages/CallModePage.tsx
+  frontend/src/pages/SellersPage.tsx
+
+[19d5494]
+  backend/src/services/SellerService.supabase.ts
+  frontend/src/components/SellerStatusSidebar.tsx
+  frontend/src/pages/SellersPage.tsx
+
+[44db432]
+  backend/src/services/SellerService.supabase.ts
+  backend/src/types/index.ts
+
+[842eb51]
+  backend/src/services/PropertyListingSyncService.ts
+

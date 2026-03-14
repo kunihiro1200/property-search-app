@@ -1,0 +1,133 @@
+﻿f34c606 chore: remove debug endpoints (debug-sync-comments, debug-sheet-names)
+474c481 docs: add athome sheet name trailing space issue and fix to steering doc
+7590379 fix: dynamically resolve athome sheet name to handle trailing spaces
+aa93115 debug: add sheet names debug endpoint
+155af90 debug: add debug endpoint for comment sync diagnosis
+737825e fix: throw error in fetchCommentsFromAthomeSheet instead of returning empty data
+1dfa47b fix: expose detailed error message in sync-comments endpoint
+95bdbe5 fix: add fallback spreadsheet ID to GyomuListService to fix Vercel env
+b47b3a1 fix: use GyomuListService in AthomeSheetSyncService to fix spreadsheet URL lookup
+3edbaa0 chore: add distribution date debug script and local sync script
+7dae3b7 fix: prioritize correct distribution_date column name (no space)
+a257c24 feat: add sync-distribution-dates batch endpoint
+85f8e4c fix: use runScheduledSync for cron to update all distribution_dates
+513318d fix: sync distribution_date in scheduled sync (column: 驟堺ｿ｡譌･縲仙・髢具ｼ・
+a296d14 fix: add created_at fallback sort when distribution_date is NULL
+eb9215e fix: cron-sync calls runScheduledSync, fix PropertyListingSyncService structure
+48268c0 fix: add distribution_date to SELECT in getPublicProperties for correct sort order
+06bfd9d Fix: Disable getStorageUrlFromWorkTasks in getPublicProperties to prevent Google Sheets API quota exceeded
+60e5f9d debug: add distribution_date column name debug log with fallback patterns
+f7171fc fix: sync distribution_date from spreadsheet for correct sort order
+c8dffb6 fix: change cron endpoint from POST to GET (Vercel Cron sends GET requests)
+58593a9 fix: restore correct frontend routes in vercel.json (/frontend/index.html)
+4391cce fix: Add dotenv to backend/api dependencies
+f65eddd fix: Add GoogleDriveService to PropertyListingSyncService constructor
+4894f34 fix: PropertyImageService constructor and getLastRow() in backend/api/index.ts
+dfcd7b9 fix: restore vercel.json with distDir config and correct static asset routes
+6274b70 fix: repair redis.ts encoding corruption, fix PropertyListingSyncService import paths
+f11abe2 fix: correct SPA fallback path from /frontend/index.html to /index.html
+ba1a1e4 fix: make api tsconfig independent, fix PropertyImageService constructor call
+d5e8102 fix: add filesystem handler to serve static assets correctly
+0e3f454 fix: remove dotenv/redis deps from redis.ts, exclude api from backend tsconfig
+0293fda fix: restrict tsconfig include to only required files, remove dotenv from supabase config
+c8046b6 fix: exclude compiled JS files from Vercel deploy to use TS source
+4b2a894 fix: correct import paths from ../src/ to ./src/ in backend/api/index.ts
+4c396ad fix: remove unused publicPropertiesRoutes import and fix cron auth
+82a09b8 Add cron-property-sync endpoint and fix vercel.json
+7529df3 docs: 蜈ｬ髢狗黄莉ｶ繧ｵ繧､繝・繝・・繧ｿ蜷梧悄繧｢繝ｼ繧ｭ繝・け繝√Ε繝峨く繝･繝｡繝ｳ繝医ｒ霑ｽ蜉
+9e18bd9 Revert: Emergency rollback - fix TypeScript compilation errors
+5f2696f fix: Use SUPABASE_SERVICE_KEY instead of SUPABASE_SERVICE_ROLE_KEY
+9a46ccd fix: Replace SellerStatus.NEW with FOLLOWING_UP
+39f67f2 fix: Resolve all TypeScript build errors for Vercel deployment
+6f1df3c fix: Resolve TypeScript build errors for Vercel deployment
+76511b6 feat: Add Vercel Cron job for property listing sync (10min interval)
+21d4652 feat: Add SELLER_SYNC_ENABLED flag to disable seller sync for public property site
+1bfd620 fix: Remove root vercel.json (public property site config) - use backend/vercel.json only
+0f0f4ec chore: Force Vercel rebuild to clear cache
+bd162a5 fix: Wrap .env loading in try-catch and use dynamic import for p-queue in both backend/src and backend/api
+bb31643 Fix: Vercel迺ｰ蠅・ｯｾ蠢・- .env隱ｭ縺ｿ霎ｼ縺ｿ縺ｨp-queue蜍慕噪繧､繝ｳ繝昴・繝・18b9ff6 fix: Restore backend/api/index.ts to working state (5578997) - public property site entry point
+a834d67 fix: Remove backend/src/** from vercel.json to prevent building internal system code in public site
+aafb178 revert: Restore backend/package.json build scripts to working state (exit 0)
+063af32 revert: Restore vercel.json to working state before internal system changes
+1b76bb4 fix: Include backend dependencies in Vercel build and add public property site protection rules
+35f1a4a fix: Remove backend/vercel.json to use root vercel.json for public property site
+b7a7255 fix: Restore backend/api/index.ts for public property site
+1bd68f8 fix: Skip TypeScript compilation in Vercel build
+2ad0df6 fix: Use ts-node directly in Vercel instead of compiling TypeScript
+0fdde2a fix: Fix backend build script and add Vercel serverless function entry point
+4d31a60 fix: Remove backend/vercel.json and enable TypeScript build for Vercel
+ab8bb35 fix: Add Vercel configuration for backend serverless deployment
+0b137a2 fix: Add new-admin-management-system-v2 URL to CORS allowed origins
+579ea03 fix: Add SPA routing configuration for frontend Vercel project
+159759f Add vercel.json for new-admin-management-system-v2 frontend deployment
+3d5e2a0 Force redeploy: Fix authentication error in production
+30655c5 Clean: Remove unnecessary session summary document
+5f5d9f9 Add: Code modification verification rule steering document (2026-02-22)
+6e8200c Fix: Disable property listings sync cron job (PropertyListingSyncService does not exist)
+7692f0d Add: Public property site architecture steering document
+94de1e4 Fix: Add .js extensions to ESM imports in PropertyListingService
+fc60792 Fix: PropertyImageService constructor calls - add GoogleDriveService parameter and fix GoogleSheetsClient.getLastRow
+54845bb Fix: Add .js extensions to ESM imports in backend/api for Vercel deployment
+dd9cb5a Fix: Replace dynamic imports with static imports in PropertyListingService for Vercel
+d3d70e1 Fix: Remove backend/vercel.json to use root vercel.json only
+a2e4ce0 Remove rootDir from backend/api/tsconfig.json to fix TypeScript errors
+2b13a71 Fix includeFiles in vercel.json to include backend/api/src
+d1926f8 Fix import paths in backend/api/index.ts and copy AthomeSheetSyncService
+3e55ca3 Fix Vercel build: Add installCommand and tsconfig for api directory
+1ff169b Add package.json to api directory for Vercel dependency resolution
+47b1629 Fix: Remove dotenv import from supabase.ts for Vercel compatibility
+9daa0f2 Enhanced error logging for AA12649 image endpoint - include errorCode, errorStatus, errorDetails
+4c3423c Add detailed error logging for Google Drive API errors (AA12649 debug)
+355809c Fix: Restore backend/api/index.ts from working commit (fc6f146)
+c2059bd Fix: Restore working vercel.json configuration with includeFiles for backend/src
+e993795 fix: Add lazy initialization for Redis client to handle Vercel serverless environment
+4d3ad8c fix: Deploy backend/src/index.ts directly instead of backend/api/index.ts to resolve dependency issues
+1678e75 fix: Relax TypeScript strict mode in backend/api to allow compilation with ../src imports
+b92a912 fix: Add missing dependencies (redis, pg, p-queue, p-retry, zod) to backend/api/package.json and fix buildCommand
+4c62311 Fix: Revert import paths to ../src/ and update vercel.json to include parent directory
+ab9bbd9 Add: tsconfig.json for backend/api TypeScript configuration
+0b50923 Fix: Add redis and uuid dependencies to backend/api/package.json
+1198350 Add: package.json for backend/api Vercel deployment
+319ee03 Fix: Correct import paths for Vercel deployment (../ to ./)
+1c02ea3 Add vercel.json for backend/api routing configuration
+46590e0 Add detailed logging and error handling to Google Drive API calls
+48c14ec Fix: Inject GoogleDriveService singleton into PropertyImageService
+05d2c3c Add detailed logging to GoogleDriveService initialization for debugging
+ee42d6f Fix: Use GoogleDriveService singleton to improve error handling
+d4e26a0 Add /api/test-env endpoint to debug GOOGLE_SERVICE_ACCOUNT_JSON
+e3e62d7 Fix: Convert image_url to object format in public property API (backend/api)
+f63400e Fix: Extract file ID from image_url proxy URL for images array
+f900693 Fix: Improve Base64 detection - try JSON parse first, then Base64 decode
+f83373e Fix: Auto-decode Base64 encoded GOOGLE_SERVICE_ACCOUNT_JSON
+6517d53 Fix: Throw error when GOOGLE_SERVICE_ACCOUNT_JSON is not configured
+9c8c9e6 Add detailed GOOGLE_SERVICE_ACCOUNT_JSON validation logging
+22e63f4 Fix: Add gyomu list cache to avoid Google Sheets API quota errors
+7b2c351 Fix: Allow /u/0/ in Google Drive folder URLs for storage_location validation
+76afa9c Fix: Re-fetch storage_location from gyomu list if existing DB value is not a valid URL format
+c2aef0e Fix: Validate storage_location URL format before using from gyomu list
+f1dc01a Fix: Get storage_location from gyomu list CO column first, then fallback to Google Drive search
+dcac7c5 Revert: Restore simple storage_location logic (existing DB value or Google Drive search)
+0618944 Fix: Get storage_location from gyomu list CO column instead of property list spreadsheet
+38a16a6 Fix: Get storage_location from spreadsheet '菫晏ｭ伜ｴ謇' column first, then fallback to Google Drive search
+a89c2ee Fix: Implement batch processing for property listings sync to avoid timeout
+7791dcc Fix: Process all properties in sync (not just last 100)
+1c784da Fix: Update Google Service Account to koukaibukkennsaito project
+d149a82 fix: Google Sheets authentication with GoogleAuth instead of JWT
+6228360 Add detailed debug logs for JSON parsing and private_key format
+b0059c6 Debug: Add detailed authentication method logging
+8e3f09d Debug: Change console.log to console.error for Vercel logging
+fcc373a Add debug endpoint to check environment variables in Vercel
+141fdbf Add detailed debug logs for Google Sheets authentication
+d78a69d Add Base64 decode test script for Google Service Account JSON
+ba39f7d Debug: Add logging for private_key format
+a669ae3 Fix: Properly detect and decode Base64 encoded GOOGLE_SERVICE_ACCOUNT_JSON
+1f5bccd Fix: Add support for GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY env vars
+c1be783 Fix: Remove serviceAccountKeyPath from PropertyListingSyncService to use GOOGLE_SERVICE_ACCOUNT_JSON in Vercel
+e7d0208 Fix: Update GOOGLE_SERVICE_ACCOUNT_JSON environment variable
+fc6f146 Fix: Restore vercel.json and .env.production to working state (8551bd4)
+0557043 Fix: Use GoogleAuth instead of JWT for Google Sheets authentication
+faa314a Revert: Restore working vercel.json from b06435f (simple config)
+0f7aea2 Fix: Remove outputDirectory from vercel.json (Root Directory is set to frontend)
+d67ff2d Revert: Restore original vercel.json configuration
+0d6ff95 Fix: Update Vercel build config to use correct distDir path
+28c6358 Force redeploy: Trigger Vercel rebuild for image display fix

@@ -1,0 +1,49 @@
+﻿[483211f] FILES: PropertyListingService.ts, PropertyListingSyncService.ts, PropertyService.ts, index.ts, PropertyListingService.ts, App.tsx
+[42d547d] FILES: 
+[7c7bea0] FILES: work-task-column-mapping.json
+[22fb47b] FILES: WorkTaskSyncService.ts
+[7e19940] FILES: WorkTaskDetailModal.tsx
+[9c8cdde] FILES: WorkTasksPage.tsx
+[40ae64d] FILES: WorkTasksPage.tsx
+[007b43f] FILES: 
+[3ed2235] FILES: check-work-tasks-schema.ts, work-task-column-mapping.json
+[604fd76] FILES: 
+[21b19da] FILES: WorkTasksPage.tsx
+[7c25dcc] FILES: 
+[7337f4e] FILES: workTaskStatusUtils.ts
+[8109d97] FILES: WorkTaskDetailModal.tsx, WorkTasksPage.tsx, workTaskStatusUtils.ts
+[8fb14d7] FILES: 
+[f3e0741] FILES: WorkTaskService.ts, WorkTasksPage.tsx
+[e8d1068] FILES: 
+[7432261] FILES: WorkTasksPage.tsx
+[33c719b] FILES: WorkTasksPage.tsx, workTaskStatusUtils.ts
+[ee08999] FILES: WorkTaskColumnMapper.ts, WorkTaskService.ts, UnifiedSearchBar.css, UnifiedSearchBar.tsx, WorkTaskDetailModal.tsx, PropertyListingDetailPage.tsx, WorkTasksPage.tsx
+[1f94d6a] FILES: 
+[2dde7e6] FILES: 
+[85a49f5] FILES: check-work-tasks-schema.ts, work-task-column-mapping.json
+[f3ddfce] FILES: work-task-column-mapping.json, WorkTaskSyncService.ts
+[2367cd0] FILES: WorkTasksPage.tsx
+[c7f1095] FILES: check-aa2022-database.ts, check-aa2022-sync.ts, check-aa2022-work-task.ts, check-spreadsheet-aa2022.ts, check-work-tasks-columns.ts, work-task-column-mapping.json, WorkTaskService.ts, WorkTaskDetailModal.tsx
+[77a77bd] FILES: workTaskStatusUtils.ts
+[dad958b] FILES: check-aa12495-sync.ts, check-site-delivery-pending.ts, WorkTaskDetailModal.tsx, WorkTasksPage.tsx, workTaskStatusUtils.ts
+[0a315da] FILES: workTaskStatusUtils.ts
+[746f5ef] FILES: check-aa12495-sync.ts, check-aa13249-dates.ts, WorkTaskService.ts, WorkTasksPage.tsx
+[0320f57] FILES: 
+[fbf2099] FILES: WorkTasksPage.tsx
+[7ff76ab] FILES: WorkTasksPage.tsx, workTaskStatusUtils.ts
+[9733779] FILES: check-aa1821-sidebar.ts, WorkTaskService.ts
+[ea6c8a0] FILES: check-aa1821-sidebar.ts, WorkTaskService.ts
+[06fdd8b] FILES: check-aa1821-sidebar.ts, check-cw-email-fields.ts, WorkTaskService.ts, WorkTasksPage.tsx
+[76f310d] FILES: WorkTaskDetailModal.tsx
+[48263a9] FILES: WorkTaskDetailModal.tsx
+[6a5aee5] FILES: WorkTaskDetailModal.tsx
+[824d97f] FILES: WorkTaskDetailModal.tsx
+[03c3348] FILES: WorkTaskDetailModal.tsx
+[e34e5ca] FILES: WorkTaskDetailModal.tsx
+[7b670cd] FILES: 
+[d262139] FILES: 
+[dde2a50] FILES: WorkTaskDetailModal.tsx
+[aec1b81] FILES: WorkTaskDetailModal.tsx
+[ef2a539] FILES: check-property-type-sync.ts, WorkTaskDetailModal.tsx
+[f7ce445] FILES: check-aa12495-sync.ts, WorkTaskColumnMapper.ts, package-lock.json, PriceReductionCompleteButton.tsx, temp_PriceSection.tsx, temp_current.tsx
+[043386b] FILES: WorkTaskDetailModal.tsx, WorkTaskSection.tsx, WorkTasksPage.tsx
