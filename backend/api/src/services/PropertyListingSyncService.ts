@@ -252,16 +252,14 @@ export class PropertyListingSyncService {
         }
       }
 
-      // ── Phase 2: atbb_status・価格の更新チェック（全件） ────────────
-      console.log('🔄 Phase 2: Updating atbb_status and prices for all rows...');
+      // ── Phase 2: atbb_status・価格の更新チェック（バルクupsert） ────────────
+      console.log('🔄 Phase 2: Bulk upserting atbb_status and prices...');
 
-      for (const row of nonEmptyRows) {
-        const propertyNumber = String(row['物件番号'] || '').trim();
-        if (!propertyNumber) continue;
-
-        result.totalProcessed++;
-
-        try {
+      const BATCH_SIZE = 100;
+      const upsertRows = nonEmptyRows
+        .map(row => {
+          const propertyNumber = String(row['物件番号'] || '').trim();
+          if (!propertyNumber) return null;
           const atbbStatus = String(
             row['atbb成約済み/非公開'] || row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || ''
           );
@@ -271,29 +269,34 @@ export class PropertyListingSyncService {
           const listingPrice = row['売出価格']
             ? parseFloat(String(row['売出価格']).replace(/,/g, ''))
             : null;
-
-          // distribution_date を取得（カラム名: 配信日【公開））
           const distVal = parseDistributionDate(row['配信日【公開）'] || row['配信日【公開 ）'] || null);
+          return {
+            property_number: propertyNumber,
+            atbb_status: atbbStatus,
+            sales_price: salesPrice,
+            listing_price: listingPrice,
+            distribution_date: distVal ? String(distVal) : null,
+            updated_at: new Date().toISOString(),
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
 
-          // atbb_status・価格・配信日を更新
-          const { error: updateError } = await this.supabase
+      result.totalProcessed += upsertRows.length;
+
+      // バッチに分けてupsert
+      for (let i = 0; i < upsertRows.length; i += BATCH_SIZE) {
+        const batch = upsertRows.slice(i, i + BATCH_SIZE);
+        try {
+          const { error: upsertError } = await this.supabase
             .from('property_listings')
-            .update({
-              atbb_status: atbbStatus,
-              sales_price: salesPrice,
-              listing_price: listingPrice,
-              distribution_date: distVal ? String(distVal) : null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('property_number', propertyNumber);
-
-          if (updateError) throw updateError;
-
-          result.successfullyUpdated++;
+            .upsert(batch, { onConflict: 'property_number', ignoreDuplicates: false });
+          if (upsertError) throw upsertError;
+          result.successfullyUpdated += batch.length;
+          console.log(`  ✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: upserted ${batch.length} rows`);
         } catch (error: any) {
-          console.error(`  ❌ Error updating ${propertyNumber}:`, error.message);
-          result.failed++;
-          result.errors.push({ propertyNumber, message: error.message });
+          console.error(`  ❌ Batch upsert error:`, error.message);
+          result.failed += batch.length;
+          result.errors.push({ propertyNumber: `batch_${Math.floor(i / BATCH_SIZE) + 1}`, message: error.message });
         }
       }
 

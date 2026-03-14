@@ -2020,35 +2020,32 @@ app.get('/api/cron-property-sync', async (req, res) => {
 });
 
 // GASから呼び出される物件同期トリガーエンドポイント
-// PropertyListingSyncService.runScheduledSync() を実行する
+// 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
 app.post('/api/sync/trigger', async (req, res) => {
-  try {
-    console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS');
+  const triggeredAt = new Date().toISOString();
+  console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
 
-    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
-    const syncService = getPropertyListingSyncService();
-    await syncService.initialize();
+  // 即座にレスポンスを返す（タイムアウト防止）
+  res.json({
+    success: true,
+    message: 'Sync started in background',
+    triggeredAt,
+  });
 
-    const result = await syncService.runScheduledSync();
+  // バックグラウンドで同期を実行（レスポンス後に処理継続）
+  (async () => {
+    try {
+      const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+      const syncService = getPropertyListingSyncService();
+      await syncService.initialize();
 
-    console.log(`✅ [Sync Trigger] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}`);
+      const result = await syncService.runScheduledSync();
 
-    res.json({
-      success: result.success,
-      totalProcessed: result.totalProcessed,
-      successfullyAdded: result.successfullyAdded,
-      successfullyUpdated: result.successfullyUpdated,
-      failed: result.failed,
-      duration: result.endTime.getTime() - result.startTime.getTime(),
-      syncedAt: result.endTime.toISOString(),
-    });
-  } catch (error: any) {
-    console.error('❌ [Sync Trigger] Property sync failed:', error.message);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
+      console.log(`✅ [Sync Trigger] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}, duration=${result.endTime.getTime() - result.startTime.getTime()}ms`);
+    } catch (error: any) {
+      console.error('❌ [Sync Trigger] Background sync failed:', error.message);
+    }
+  })();
 });
 
 // Error handling middleware
