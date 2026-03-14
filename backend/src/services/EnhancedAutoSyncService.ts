@@ -2018,19 +2018,10 @@ export class EnhancedAutoSyncService {
     }
     
     try {
-      // Phase 1: 追加同期 - 不足売主を検出して追加（最優先）
-      // 環境変数チェック：売主同期を有効にするか
-      const isSellerSyncEnabled = process.env.SELLER_SYNC_ENABLED !== 'false';
-      console.log('🔍 SELLER_SYNC_ENABLED:', process.env.SELLER_SYNC_ENABLED);
-      console.log('🔍 isSellerSyncEnabled:', isSellerSyncEnabled);
+      // Phase 1〜3: 売主同期（SELLER_SYNC_ENABLED=false でスキップ）
+      // ユーザー要件: 売主リスト同期は不要のため、デフォルトで無効化
+      const isSellerSyncEnabled = process.env.SELLER_SYNC_ENABLED === 'true';
 
-      if (isSellerSyncEnabled) {
-
-
-      console.log('📥 Phase 1: Seller Addition Sync');
-
-      const missingSellers = await this.detectMissingSellers();
-      
       let additionResult = {
         totalProcessed: 0,
         successfullyAdded: 0,
@@ -2038,32 +2029,6 @@ export class EnhancedAutoSyncService {
         failed: 0,
       };
 
-      if (missingSellers.length > 0) {
-        const syncResult = await this.syncMissingSellers(missingSellers);
-        additionResult = {
-          totalProcessed: missingSellers.length,
-          successfullyAdded: syncResult.newSellersCount,
-          successfullyUpdated: 0,
-          failed: syncResult.errors.length,
-        };
-      } else {
-        console.log('✅ No missing sellers to sync');
-      }
-
-      // Phase 2: 更新同期 - 既存売主のデータを更新
-      console.log('\n🔄 Phase 2: Seller Update Sync');
-      const updatedSellers = await this.detectUpdatedSellers();
-      
-      if (updatedSellers.length > 0) {
-        const updateResult = await this.syncUpdatedSellers(updatedSellers);
-        additionResult.totalProcessed += updatedSellers.length;
-        additionResult.successfullyUpdated = updateResult.updatedSellersCount;
-        additionResult.failed += updateResult.errors.length;
-      } else {
-        console.log('✅ No sellers to update');
-      }
-
-      // Phase 3: 削除同期 - 削除された売主を検出してソフトデリート
       let deletionResult: DeletionSyncResult = {
         totalDetected: 0,
         successfullyDeleted: 0,
@@ -2077,20 +2042,51 @@ export class EnhancedAutoSyncService {
         durationMs: 0,
       };
 
-      if (this.isDeletionSyncEnabled()) {
-        console.log('\n🗑️  Phase 3: Seller Deletion Sync');
-        const deletedSellers = await this.detectDeletedSellers();
-        
-        if (deletedSellers.length > 0) {
-          deletionResult = await this.syncDeletedSellers(deletedSellers);
+      if (isSellerSyncEnabled) {
+        // Phase 1: 追加同期 - 不足売主を検出して追加
+        console.log('📥 Phase 1: Seller Addition Sync');
+        const missingSellers = await this.detectMissingSellers();
+
+        if (missingSellers.length > 0) {
+          const syncResult = await this.syncMissingSellers(missingSellers);
+          additionResult = {
+            totalProcessed: missingSellers.length,
+            successfullyAdded: syncResult.newSellersCount,
+            successfullyUpdated: 0,
+            failed: syncResult.errors.length,
+          };
         } else {
-          console.log('✅ No deleted sellers to sync');
+          console.log('✅ No missing sellers to sync');
+        }
+
+        // Phase 2: 更新同期 - 既存売主のデータを更新
+        console.log('\n🔄 Phase 2: Seller Update Sync');
+        const updatedSellers = await this.detectUpdatedSellers();
+
+        if (updatedSellers.length > 0) {
+          const updateResult = await this.syncUpdatedSellers(updatedSellers);
+          additionResult.totalProcessed += updatedSellers.length;
+          additionResult.successfullyUpdated = updateResult.updatedSellersCount;
+          additionResult.failed += updateResult.errors.length;
+        } else {
+          console.log('✅ No sellers to update');
+        }
+
+        // Phase 3: 削除同期 - 削除された売主を検出してソフトデリート
+        if (this.isDeletionSyncEnabled()) {
+          console.log('\n🗑️  Phase 3: Seller Deletion Sync');
+          const deletedSellers = await this.detectDeletedSellers();
+
+          if (deletedSellers.length > 0) {
+            deletionResult = await this.syncDeletedSellers(deletedSellers);
+          } else {
+            console.log('✅ No deleted sellers to sync');
+          }
+        } else {
+          console.log('\n⏭️  Phase 3: Seller Deletion Sync (Disabled)');
         }
       } else {
-        console.log('\n⏭️  Phase 3: Seller Deletion Sync (Disabled)');
-      }
-      } else {
-        console.log('\n⏭️  Phase 1-3: Seller Sync (Disabled by SELLER_SYNC_ENABLED=false)');
+        console.log('⏭️  Phase 1-3: Seller Sync skipped (SELLER_SYNC_ENABLED is not "true")');
       }
 
 
