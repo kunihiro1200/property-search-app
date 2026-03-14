@@ -905,9 +905,12 @@ export class PropertyListingSyncService {
   /**
    * Detect new properties that exist in spreadsheet but not in database
    * 
-   * @returns Array of property numbers that need to be added
+   * @returns Object containing new property numbers and spreadsheet row data (to avoid double readAll() calls)
    */
-  async detectNewProperties(): Promise<string[]> {
+  async detectNewProperties(): Promise<{
+    newPropertyNumbers: string[];
+    spreadsheetRows: Map<string, any>;
+  }> {
     if (!this.sheetsClient) {
       throw new Error('GoogleSheetsClient not configured');
     }
@@ -917,6 +920,13 @@ export class PropertyListingSyncService {
     // 1. Read all properties from spreadsheet
     const spreadsheetData = await this.sheetsClient.readAll();
     const spreadsheetPropertyNumbers = new Set<string>();
+
+    // スプレッドシートデータをMapとして保持（syncNewPropertiesで再利用するため）
+    const spreadsheetRows = new Map<string, any>(
+      spreadsheetData
+        .filter(row => String(row['物件番号'] || '').trim() !== '')
+        .map(row => [String(row['物件番号'] || '').trim(), row])
+    );
     
     for (const row of spreadsheetData) {
       const propertyNumber = String(row['物件番号'] || '').trim();
@@ -971,10 +981,14 @@ export class PropertyListingSyncService {
       }
     }
 
-    // Sort by property number
+    // Sort by property number（全プレフィックス形式に対応した汎用ソート）
     newProperties.sort((a, b) => {
-      const numA = parseInt(a.replace('AA', ''), 10);
-      const numB = parseInt(b.replace('AA', ''), 10);
+      const prefixA = a.replace(/[0-9]/g, '');
+      const prefixB = b.replace(/[0-9]/g, '');
+      const numA = parseInt(a.replace(/^[A-Za-z]+/, ''), 10);
+      const numB = parseInt(b.replace(/^[A-Za-z]+/, ''), 10);
+      if (prefixA !== prefixB) return prefixA.localeCompare(prefixB);
+      if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
       return numA - numB;
     });
 
@@ -983,7 +997,7 @@ export class PropertyListingSyncService {
       console.log(`   First few: ${newProperties.slice(0, 5).join(', ')}${newProperties.length > 5 ? '...' : ''}`);
     }
 
-    return newProperties;
+    return { newPropertyNumbers: newProperties, spreadsheetRows };
   }
 
   /**
@@ -1060,8 +1074,8 @@ export class PropertyListingSyncService {
     try {
       console.log('🆕 Starting new property addition sync...');
 
-      // 1. Detect new properties
-      const newPropertyNumbers = await this.detectNewProperties();
+      // 1. Detect new properties（スプレッドシートデータも同時に取得して再利用）
+      const { newPropertyNumbers, spreadsheetRows: spreadsheetMap } = await this.detectNewProperties();
 
       if (newPropertyNumbers.length === 0) {
         console.log('✅ No new properties detected');
@@ -1075,14 +1089,7 @@ export class PropertyListingSyncService {
 
       console.log(`📊 Detected ${newPropertyNumbers.length} new properties`);
 
-      // 2. Get spreadsheet data for new properties
-      const spreadsheetData = await this.sheetsClient!.readAll();
-      const spreadsheetMap = new Map(
-        spreadsheetData.map(row => [
-          String(row['物件番号'] || '').trim(),
-          row
-        ])
-      );
+      // 2. spreadsheetMapはdetectNewProperties()から取得済み（readAll()の二重呼び出しを回避）
 
       // 3. Process in batches
       const BATCH_SIZE = 10;

@@ -2099,56 +2099,83 @@ export class EnhancedAutoSyncService {
       // Note: Work task sync is handled elsewhere
       console.log('✅ Work task sync (handled by existing service)');
 
-      // Phase 4.5: 物件リスト更新同期（新規追加）
+      // Phase 4.5と4.6: 共有GoogleSheetsClientを1回だけ作成してAPIリクエスト数を削減
+      // （クォータ超過対策: 各フェーズが独立してクライアントを作成するとAPIリクエストが増加する）
       console.log('\n🏢 Phase 4.5: Property Listing Update Sync');
       let propertyListingUpdateResult = {
         updated: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
-      try {
-        const plResult = await this.syncPropertyListingUpdates();
-        propertyListingUpdateResult = {
-          updated: plResult.updated,
-          failed: plResult.failed,
-          duration_ms: plResult.duration_ms,
-        };
-        
-        if (plResult.updated > 0) {
-          console.log(`✅ Property listing update sync: ${plResult.updated} updated`);
-        } else {
-          console.log('✅ No property listings to update');
-        }
-      } catch (error: any) {
-        console.error('⚠️  Property listing update sync error:', error.message);
-        propertyListingUpdateResult.failed = 1;
-        // エラーでも次のフェーズに進む
-      }
 
-      // Phase 4.6: 新規物件追加同期（新規追加）
       console.log('\n🆕 Phase 4.6: New Property Addition Sync');
       let newPropertyAdditionResult = {
         added: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
+
       try {
-        const newPropResult = await this.syncNewPropertyAddition();
-        newPropertyAdditionResult = {
-          added: newPropResult.added,
-          failed: newPropResult.failed,
-          duration_ms: newPropResult.duration_ms,
-        };
-        
-        if (newPropResult.added > 0) {
-          console.log(`✅ New property addition sync: ${newPropResult.added} added`);
-        } else {
-          console.log('✅ No new properties to add');
+        const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+        const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
+
+        const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
+        const PROPERTY_LIST_SHEET_NAME = '物件';
+
+        // Phase 4.5と4.6で共有するクライアントを1回だけ作成
+        const sharedSheetsClient = new GoogleSheetsClient({
+          spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
+          sheetName: PROPERTY_LIST_SHEET_NAME,
+          serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+        });
+        await sharedSheetsClient.authenticate();
+        const sharedSyncService = new PropertyListingSyncService(sharedSheetsClient);
+
+        // Phase 4.5: 共有サービスを使用して物件リスト更新同期
+        try {
+          const plStartTime = Date.now();
+          const plResult = await sharedSyncService.syncUpdatedPropertyListings();
+          propertyListingUpdateResult = {
+            updated: plResult.updated,
+            failed: plResult.failed,
+            duration_ms: Date.now() - plStartTime,
+          };
+
+          if (plResult.updated > 0) {
+            console.log(`✅ Property listing update sync: ${plResult.updated} updated`);
+          } else {
+            console.log('✅ No property listings to update');
+          }
+        } catch (error: any) {
+          console.error('⚠️  Property listing update sync error:', error.message);
+          propertyListingUpdateResult.failed = 1;
+          // エラーでも次のフェーズに進む
         }
+
+        // Phase 4.6: 同じ共有サービスを使用して新規物件追加同期（新しいクライアントを作成しない）
+        try {
+          const npStartTime = Date.now();
+          const newPropResult = await sharedSyncService.syncNewProperties();
+          newPropertyAdditionResult = {
+            added: newPropResult.added,
+            failed: newPropResult.failed,
+            duration_ms: Date.now() - npStartTime,
+          };
+
+          if (newPropResult.added > 0) {
+            console.log(`✅ New property addition sync: ${newPropResult.added} added`);
+          } else {
+            console.log('✅ No new properties to add');
+          }
+        } catch (error: any) {
+          console.error('⚠️  New property addition sync error:', error.message);
+          newPropertyAdditionResult.failed = 1;
+          // エラーでも処理を継続
+        }
+
       } catch (error: any) {
-        console.error('⚠️  New property addition sync error:', error.message);
+        console.error('⚠️  Shared GoogleSheetsClient initialization failed:', error.message);
+        propertyListingUpdateResult.failed = 1;
         newPropertyAdditionResult.failed = 1;
         // エラーでも処理を継続
       }
