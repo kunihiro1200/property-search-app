@@ -26,28 +26,16 @@ async function runFullSyncOnce() {
     await syncService.initialize();
     console.log('✅ Sync service initialized\n');
 
-    // 不足している売主を検出
-    console.log('🔍 Detecting missing sellers...');
-    const missingSellers = await syncService.detectMissingSellers();
-    console.log(`📋 Found ${missingSellers.length} missing sellers\n`);
+    // 売主同期はスキップ（物件同期のみ実行）
+    // console.log('🔍 Detecting missing sellers...');
+    // const missingSellers = await syncService.detectMissingSellers();
+    // console.log(`📋 Found ${missingSellers.length} missing sellers\n`);
+    // if (missingSellers.length === 0) {
+    //   console.log('✅ No missing sellers found. Database is up to date!');
+    //   process.exit(0);
+    // }
 
-    if (missingSellers.length === 0) {
-      console.log('✅ No missing sellers found. Database is up to date!');
-      process.exit(0);
-    }
-
-    // 最初の10件を表示
-    console.log('Missing seller numbers (first 10):');
-    missingSellers.slice(0, 10).forEach((sellerNumber, index) => {
-      console.log(`  ${index + 1}. ${sellerNumber}`);
-    });
-    if (missingSellers.length > 10) {
-      console.log(`  ... and ${missingSellers.length - 10} more\n`);
-    } else {
-      console.log('');
-    }
-
-    // フル同期を実行
+    // フル同期を実行（Phase 4.5/4.6の物件同期を含む）
     console.log('🚀 Starting full sync...');
     const startTime = Date.now();
     const result = await syncService.runFullSync('manual');
