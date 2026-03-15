@@ -46,7 +46,9 @@ const PublicPropertiesPage: React.FC = () => {
   const [isLoadingAllProperties, setIsLoadingAllProperties] = useState(false); // 全件取得中フラグ
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   // 初回ロードとフィルターロードを分離
-  const [initialLoading, setInitialLoading] = useState(true);
+  // 詳細画面から戻ってきた場合（sessionStorageに状態がある）はフルスクリーンローディングをスキップ
+  const isReturningFromDetail = useRef(!!sessionStorage.getItem('publicPropertiesNavigationState'));
+  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current);
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -244,6 +246,7 @@ const PublicPropertiesPage: React.FC = () => {
       // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
       setTimeout(() => {
         isRestoringState.current = false;
+        isReturningFromDetail.current = false; // 戻り遷移フラグをリセット（以降はfilterLoadingを使用）
         setIsStateRestored(true);
         console.log('✅ [PublicPropertiesPage] State restoration completed');
       }, 100);
@@ -436,7 +439,8 @@ const PublicPropertiesPage: React.FC = () => {
       console.log('🔄 [fetchProperties] Starting fetch with currentPage:', currentPage);
       
       // 初回ロードかフィルター変更かで異なるローディング状態を設定
-      if (!isInitialLoadDone.current) {
+      // 詳細画面から戻ってきた場合（isReturningFromDetail）はフルスクリーンローディングをスキップ
+      if (!isInitialLoadDone.current && !isReturningFromDetail.current) {
         setInitialLoading(true);
       } else {
         setFilterLoading(true);
