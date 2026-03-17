@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
@@ -40,57 +40,32 @@ import {
   WorkTask,
   PROPERTY_STATUS_DEFINITIONS,
   calculatePropertyStatus,
+  calculateStatusCounts,
+  filterByStatus,
   createWorkTaskMap,
 } from '../utils/propertyListingStatusUtils';
 import { getDisplayStatus } from '../utils/atbbStatusDisplayMapper';
-
-// デバウンス用フック
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debouncedValue;
-}
 
 export default function PropertyListingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // ページネーション・フィルター状態
+  
+  const [allListings, setAllListings] = useState<PropertyListing[]>([]);
+  const [workTasks, setWorkTasks] = useState<WorkTask[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [buyerFilter, setBuyerFilter] = useState<'all' | 'hasBuyers' | 'highConfidence'>('all');
-
-  // データ状態
-  const [listings, setListings] = useState<PropertyListing[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [workTasks, setWorkTasks] = useState<WorkTask[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // サイドバー用カウント（statsエンドポイントから取得）
-  const [assigneeCounts, setAssigneeCounts] = useState<Record<string, number>>({ all: 0 });
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({ all: 0 });
-
-  // 買主関連
-  const [buyerCounts, setBuyerCounts] = useState<Record<string, number>>({});
-  const [highConfidenceProperties, setHighConfidenceProperties] = useState<Set<string>>(new Set());
-
-  // モーダル
   const [selectedPropertyNumber, setSelectedPropertyNumber] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-
-  // チェックボックス選択
+  const [buyerCounts, setBuyerCounts] = useState<Record<string, number>>({});
+  const [highConfidenceProperties, setHighConfidenceProperties] = useState<Set<string>>(new Set());
+  const [buyerFilter, setBuyerFilter] = useState<'all' | 'hasBuyers' | 'highConfidence'>('all');
   const [selectedPropertyNumbers, setSelectedPropertyNumbers] = useState<Set<string>>(new Set());
-
-  // 検索クエリのデバウンス（500ms）
-  const debouncedSearch = useDebounce(searchQuery, 500);
 
   // 状態を復元
   useEffect(() => {
@@ -105,106 +80,167 @@ export default function PropertyListingsPage() {
     }
   }, [location.state]);
 
-  // 物件データをサーバー側でフィルタリング・ページネーションして取得
-  const fetchListings = useCallback(async () => {
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-
-      const params: Record<string, any> = {
-        limit: rowsPerPage,
-        offset: page * rowsPerPage,
-        orderBy: 'created_at',
-        orderDirection: 'desc',
-      };
-
-      if (debouncedSearch.trim()) {
-        params.search = debouncedSearch.trim();
+      
+      // 全件取得（複数回に分けて取得）
+      const allListingsData: PropertyListing[] = [];
+      let offset = 0;
+      const limit = 1000;
+      let hasMore = true;
+      
+      console.log('物件データを取得中...');
+      
+      while (hasMore) {
+        const listingsRes = await api.get('/api/property-listings', {
+          params: { limit, offset, orderBy: 'contract_date', orderDirection: 'desc' },
+        });
+        
+        const fetchedData = listingsRes.data.data || [];
+        allListingsData.push(...fetchedData);
+        
+        console.log(`取得: ${offset + 1}～${offset + fetchedData.length}件 / 合計${listingsRes.data.total}件`);
+        
+        // 次のページがあるかチェック
+        if (fetchedData.length < limit || allListingsData.length >= listingsRes.data.total) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
       }
-      if (selectedAssignee && selectedAssignee !== 'all' && selectedAssignee !== '未設定') {
-        params.salesAssignee = selectedAssignee;
-      }
-
-      const listingsRes = await api.get('/api/property-listings', { params });
-      setListings(listingsRes.data.data || []);
-      setTotalCount(listingsRes.data.total || 0);
+      
+      // 業務依頼データを取得
+      const workTasksRes = await api.get('/api/work-tasks', {
+        params: { limit: 1000, offset: 0 },
+      });
+      
+      setAllListings(allListingsData);
+      setWorkTasks(workTasksRes.data.data || []);
+      
+      console.log('✅ データ取得成功:', {
+        物件数: allListingsData.length,
+        業務依頼数: workTasksRes.data.data?.length || 0,
+      });
     } catch (error) {
-      console.error('Failed to fetch listings:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, selectedAssignee]);
+  };
 
-  // 業務依頼データを初回のみ取得
-  useEffect(() => {
-    const fetchWorkTasks = async () => {
-      try {
-        const res = await api.get('/api/work-tasks', { params: { limit: 1000, offset: 0 } });
-        setWorkTasks(res.data.data || []);
-      } catch (error) {
-        console.error('Failed to fetch work tasks:', error);
-      }
-    };
-    fetchWorkTasks();
-  }, []);
-
-  // サイドバー用カウントを初回のみ取得
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get('/api/property-listings/stats');
-        const { byAssignee, byStatus } = res.data;
-
-        // 担当者カウント
-        const totalAll = Object.values(byAssignee as Record<string, number>).reduce((a, b) => a + b, 0);
-        setAssigneeCounts({ all: totalAll, ...byAssignee });
-
-        // ステータスカウント
-        const totalStatus = Object.values(byStatus as Record<string, number>).reduce((a, b) => a + b, 0);
-        setStatusCounts({ all: totalStatus, ...byStatus });
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  // フィルター・ページ変更時にデータ再取得
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
-
-  // 業務依頼マップ
+  // 業務依頼マップを作成
   const workTaskMap = useMemo(() => createWorkTaskMap(workTasks), [workTasks]);
+
+  // 担当者別カウント
+  const assigneeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: allListings.length };
+    allListings.forEach(listing => {
+      const key = listing.sales_assignee || '未設定';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [allListings]);
+
+  // ステータス別カウント
+  const statusCounts = useMemo(() => {
+    // 簡易修正: すべての物件を表示
+    const counts: Record<string, number> = { all: allListings.length };
+    console.log('Status counts:', counts);
+    return counts;
+  }, [allListings]);
+
+  // フィルタリング
+  const filteredListings = useMemo(() => {
+    let listings = allListings;
+    
+    // 担当者フィルター
+    if (selectedAssignee && selectedAssignee !== 'all') {
+      listings = listings.filter(l => 
+        selectedAssignee === '未設定' 
+          ? !l.sales_assignee 
+          : l.sales_assignee === selectedAssignee
+      );
+    }
+    
+    // ステータスフィルター
+    if (selectedStatus && selectedStatus !== 'all') {
+      listings = filterByStatus(listings, selectedStatus, workTaskMap);
+      console.log(`Status filter: ${selectedStatus}, filtered count: ${listings.length}`);
+    }
+    
+    // 買主フィルター
+    if (buyerFilter === 'hasBuyers') {
+      listings = listings.filter(l => 
+        l.property_number && buyerCounts[l.property_number] > 0
+      );
+    } else if (buyerFilter === 'highConfidence') {
+      listings = listings.filter(l => 
+        l.property_number && highConfidenceProperties.has(l.property_number)
+      );
+    }
+    
+    // 検索フィルター
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      listings = listings.filter(l =>
+        l.property_number?.toLowerCase().includes(query) ||
+        l.address?.toLowerCase().includes(query) ||
+        l.seller_name?.toLowerCase().includes(query) ||
+        l.buyer_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    return listings;
+  }, [allListings, selectedAssignee, selectedStatus, buyerFilter, buyerCounts, highConfidenceProperties, searchQuery, workTaskMap]);
+
+  const paginatedListings = useMemo(() => {
+    const start = page * rowsPerPage;
+    return filteredListings.slice(start, start + rowsPerPage);
+  }, [filteredListings, page, rowsPerPage]);
 
   // 前回取得した物件番号リストを記憶
   const prevPropertyNumbersRef = useRef<string>('');
 
-  // 買主カウントを取得（現在ページの物件のみ）
+  // 買主カウントを取得
   useEffect(() => {
     const fetchBuyerCounts = async () => {
-      const propertyNumbers = listings
+      const propertyNumbers = paginatedListings
         .map(l => l.property_number)
         .filter(Boolean) as string[];
 
       const propertyNumbersKey = propertyNumbers.sort().join(',');
-      if (propertyNumbersKey === prevPropertyNumbersRef.current) return;
+      
+      // 前回と同じ物件リストの場合はスキップ
+      if (propertyNumbersKey === prevPropertyNumbersRef.current) {
+        return;
+      }
+      
       prevPropertyNumbersRef.current = propertyNumbersKey;
 
       if (propertyNumbers.length > 0) {
         try {
           const response = await api.get('/api/property-listings/buyer-counts/batch', {
-            params: { propertyNumbers: propertyNumbers.join(',') },
+            params: { propertyNumbers: propertyNumbers.join(',') }
           });
-          setBuyerCounts(prev => ({ ...prev, ...response.data }));
+          setBuyerCounts(prevCounts => ({
+            ...prevCounts,
+            ...response.data
+          }));
         } catch (error) {
           console.error('Failed to fetch buyer counts:', error);
         }
       }
     };
-    fetchBuyerCounts();
-  }, [listings]);
 
-  // 高確度買主を持つ物件リストを取得（初回のみ）
+    fetchBuyerCounts();
+  }, [paginatedListings]);
+
+  // 高確度買主を持つ物件リストを取得
   useEffect(() => {
     const fetchHighConfidenceProperties = async () => {
       try {
@@ -214,23 +250,23 @@ export default function PropertyListingsPage() {
         console.error('Failed to fetch high confidence properties:', error);
       }
     };
+
     fetchHighConfidenceProperties();
   }, []);
 
-  // 買主フィルターはフロントエンド側で適用（現在ページのデータに対して）
-  const filteredListings = useMemo(() => {
-    let result = listings;
-    if (buyerFilter === 'hasBuyers') {
-      result = result.filter(l => l.property_number && buyerCounts[l.property_number] > 0);
-    } else if (buyerFilter === 'highConfidence') {
-      result = result.filter(l => l.property_number && highConfidenceProperties.has(l.property_number));
-    }
-    return result;
-  }, [listings, buyerFilter, buyerCounts, highConfidenceProperties]);
-
   const handleRowClick = (propertyNumber: string) => {
-    const currentState = { page, rowsPerPage, searchQuery, selectedAssignee, selectedStatus, buyerFilter };
+    // 現在の状態をSession Storageに保存
+    const currentState = {
+      page,
+      rowsPerPage,
+      searchQuery,
+      selectedAssignee,
+      selectedStatus,
+      buyerFilter,
+    };
     sessionStorage.setItem('propertyListState', JSON.stringify(currentState));
+    
+    // 新しいページに遷移
     navigate(`/property-listings/${propertyNumber}`);
   };
 
@@ -247,22 +283,34 @@ export default function PropertyListingsPage() {
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const allNums = new Set(filteredListings.map(l => l.property_number).filter(Boolean) as string[]);
-      setSelectedPropertyNumbers(allNums);
+      const allPropertyNumbers = new Set(
+        paginatedListings
+          .map(l => l.property_number)
+          .filter(Boolean) as string[]
+      );
+      setSelectedPropertyNumbers(allPropertyNumbers);
     } else {
       setSelectedPropertyNumbers(new Set());
     }
   };
 
-  const handleClearSelection = () => setSelectedPropertyNumbers(new Set());
+  const handleClearSelection = () => {
+    setSelectedPropertyNumbers(new Set());
+  };
 
   const selectedProperties = useMemo(() => {
-    return listings.filter(l => l.property_number && selectedPropertyNumbers.has(l.property_number));
-  }, [listings, selectedPropertyNumbers]);
+    return allListings.filter(l => 
+      l.property_number && selectedPropertyNumbers.has(l.property_number)
+    );
+  }, [allListings, selectedPropertyNumbers]);
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-';
-    try { return new Date(dateStr).toLocaleDateString('ja-JP'); } catch { return dateStr; }
+    try {
+      return new Date(dateStr).toLocaleDateString('ja-JP');
+    } catch {
+      return dateStr;
+    }
   };
 
   const formatPrice = (price: number | null | undefined) => {
@@ -276,21 +324,28 @@ export default function PropertyListingsPage() {
     Object.entries(assigneeCounts)
       .filter(([key]) => key !== 'all')
       .sort((a, b) => b[1] - a[1])
-      .forEach(([key, count]) => list.push({ key, label: key, count }));
+      .forEach(([key, count]) => {
+        list.push({ key, label: key, count });
+      });
     return list;
   }, [assigneeCounts]);
 
-  // サイドバー用のステータスリスト
+  // サイドバー用のステータスリスト（件数があるもののみ）
   const statusList = useMemo(() => {
     const list = [{ key: 'all', label: 'All', count: statusCounts.all, color: '#666' }];
     PROPERTY_STATUS_DEFINITIONS.forEach(status => {
       const count = statusCounts[status.key] || 0;
-      if (count > 0) list.push({ key: status.key, label: status.label, count, color: status.color });
+      if (count > 0) {
+        list.push({ key: status.key, label: status.label, count, color: status.color });
+      }
     });
     return list;
   }, [statusCounts]);
 
-  const getRowStatus = (listing: PropertyListing) => calculatePropertyStatus(listing, workTaskMap);
+  // 各行のステータスを取得
+  const getRowStatus = (listing: PropertyListing) => {
+    return calculatePropertyStatus(listing, workTaskMap);
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -298,33 +353,42 @@ export default function PropertyListingsPage() {
         <Typography variant="h5" fontWeight="bold">物件リスト</Typography>
         <PublicSiteButtons />
       </Box>
-
+      
+      {/* ページナビゲーション */}
       <PageNavigation />
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        {/* 左サイドバー */}
+        {/* 左サイドバー - フィルター */}
         <Paper sx={{ width: 220, flexShrink: 0 }}>
           <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
             <Typography variant="subtitle1" fontWeight="bold">買主フィルター</Typography>
           </Box>
           <List dense>
-            {(['all', 'hasBuyers', 'highConfidence'] as const).map((key) => (
-              <ListItemButton
-                key={key}
-                selected={buyerFilter === key}
-                onClick={() => { setBuyerFilter(key); setPage(0); }}
-                sx={{ py: 0.5 }}
-              >
-                <ListItemText
-                  primary={key === 'all' ? 'すべて' : key === 'hasBuyers' ? '買主あり' : '高確度買主あり'}
-                  primaryTypographyProps={{ variant: 'body2' }}
-                />
-              </ListItemButton>
-            ))}
+            <ListItemButton
+              selected={buyerFilter === 'all'}
+              onClick={() => { setBuyerFilter('all'); setPage(0); }}
+              sx={{ py: 0.5 }}
+            >
+              <ListItemText primary="すべて" primaryTypographyProps={{ variant: 'body2' }} />
+            </ListItemButton>
+            <ListItemButton
+              selected={buyerFilter === 'hasBuyers'}
+              onClick={() => { setBuyerFilter('hasBuyers'); setPage(0); }}
+              sx={{ py: 0.5 }}
+            >
+              <ListItemText primary="買主あり" primaryTypographyProps={{ variant: 'body2' }} />
+            </ListItemButton>
+            <ListItemButton
+              selected={buyerFilter === 'highConfidence'}
+              onClick={() => { setBuyerFilter('highConfidence'); setPage(0); }}
+              sx={{ py: 0.5 }}
+            >
+              <ListItemText primary="高確度買主あり" primaryTypographyProps={{ variant: 'body2' }} />
+            </ListItemButton>
           </List>
-
+          
           <Divider />
-
+          
           <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
             <Typography variant="subtitle1" fontWeight="bold">ステータス</Typography>
           </Box>
@@ -336,15 +400,28 @@ export default function PropertyListingsPage() {
                 onClick={() => { setSelectedStatus(item.key === 'all' ? null : item.key); setPage(0); }}
                 sx={{ py: 0.5 }}
               >
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: item.color, mr: 1, flexShrink: 0 }} />
-                <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2', noWrap: true }} sx={{ flex: 1, minWidth: 0 }} />
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: item.color,
+                    mr: 1,
+                    flexShrink: 0,
+                  }}
+                />
+                <ListItemText 
+                  primary={item.label} 
+                  primaryTypographyProps={{ variant: 'body2', noWrap: true }}
+                  sx={{ flex: 1, minWidth: 0 }}
+                />
                 <Badge badgeContent={item.count} color="primary" max={9999} sx={{ ml: 1 }} />
               </ListItemButton>
             ))}
           </List>
-
+          
           <Divider />
-
+          
           <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
             <Typography variant="subtitle1" fontWeight="bold">担当者</Typography>
           </Box>
@@ -378,12 +455,13 @@ export default function PropertyListingsPage() {
             />
           </Paper>
 
+          {/* 上部ページネーション */}
           <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
             <Paper sx={{ flex: 1 }}>
               <TablePagination
                 rowsPerPageOptions={[25, 50, 100]}
                 component="div"
-                count={totalCount}
+                count={filteredListings.length}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={(_, newPage) => setPage(newPage)}
@@ -392,12 +470,25 @@ export default function PropertyListingsPage() {
                 labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}件`}
               />
             </Paper>
-
+            
             {selectedPropertyNumbers.size > 0 && (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Typography variant="body2" color="primary">{selectedPropertyNumbers.size}件選択中</Typography>
-                <Button size="small" startIcon={<ClearAllIcon />} onClick={handleClearSelection}>選択解除</Button>
-                <InquiryResponseButton selectedProperties={selectedProperties} onSuccess={handleClearSelection} />
+                <Typography variant="body2" color="primary">
+                  {selectedPropertyNumbers.size}件選択中
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<ClearAllIcon />}
+                  onClick={handleClearSelection}
+                >
+                  選択解除
+                </Button>
+                <InquiryResponseButton
+                  selectedProperties={selectedProperties}
+                  onSuccess={() => {
+                    handleClearSelection();
+                  }}
+                />
               </Box>
             )}
           </Box>
@@ -408,8 +499,14 @@ export default function PropertyListingsPage() {
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                   <TableCell padding="checkbox">
                     <Checkbox
-                      indeterminate={selectedPropertyNumbers.size > 0 && selectedPropertyNumbers.size < filteredListings.filter(l => l.property_number).length}
-                      checked={filteredListings.filter(l => l.property_number).length > 0 && selectedPropertyNumbers.size === filteredListings.filter(l => l.property_number).length}
+                      indeterminate={
+                        selectedPropertyNumbers.size > 0 &&
+                        selectedPropertyNumbers.size < paginatedListings.filter(l => l.property_number).length
+                      }
+                      checked={
+                        paginatedListings.filter(l => l.property_number).length > 0 &&
+                        selectedPropertyNumbers.size === paginatedListings.filter(l => l.property_number).length
+                      }
                       onChange={handleSelectAll}
                     />
                   </TableCell>
@@ -435,12 +532,12 @@ export default function PropertyListingsPage() {
                   <TableRow>
                     <TableCell colSpan={16} align="center">読み込み中...</TableCell>
                   </TableRow>
-                ) : filteredListings.length === 0 ? (
+                ) : paginatedListings.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={16} align="center">物件データが見つかりませんでした</TableCell>
                   </TableRow>
                 ) : (
-                  filteredListings.map((listing) => {
+                  paginatedListings.map((listing) => {
                     const status = getRowStatus(listing);
                     const isSelected = listing.property_number ? selectedPropertyNumbers.has(listing.property_number) : false;
                     return (
@@ -453,14 +550,18 @@ export default function PropertyListingsPage() {
                           <Checkbox checked={isSelected} />
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
-                          <Typography variant="body2" color="primary" fontWeight="bold">{listing.property_number || '-'}</Typography>
+                          <Typography variant="body2" color="primary" fontWeight="bold">
+                            {listing.property_number || '-'}
+                          </Typography>
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
                           <StatusBadge atbbStatus={listing.atbb_status} size={isMobile ? 'small' : 'small'} />
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>{listing.sales_assignee || '-'}</TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
-                          {listing.property_type && <Chip label={listing.property_type} size="small" />}
+                          {listing.property_type && (
+                            <Chip label={listing.property_type} size="small" />
+                          )}
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)} sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {listing.address || listing.display_address || '-'}
@@ -480,12 +581,26 @@ export default function PropertyListingsPage() {
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>{formatDate(listing.settlement_date)}</TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>{formatPrice(listing.price)}</TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          <PublicUrlCell propertyNumber={listing.property_number} />
+                          <PublicUrlCell
+                            propertyNumber={listing.property_number}
+                          />
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           {listing.storage_location ? (
-                            <Link href={listing.storage_location} target="_blank" rel="noopener noreferrer" underline="hover"
-                              sx={{ fontSize: '0.875rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                            <Link
+                              href={listing.storage_location}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="hover"
+                              sx={{
+                                fontSize: '0.875rem',
+                                maxWidth: 150,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block',
+                              }}
+                            >
                               Google Drive
                             </Link>
                           ) : (
@@ -496,8 +611,19 @@ export default function PropertyListingsPage() {
                           {getDisplayStatus(listing.atbb_status) || '-'}
                         </TableCell>
                         <TableCell onClick={() => listing.property_number && handleRowClick(listing.property_number)}>
-                          <Chip label={status.label} size="small"
-                            sx={{ bgcolor: status.color, color: 'white', maxWidth: 150, '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }} />
+                          <Chip 
+                            label={status.label} 
+                            size="small" 
+                            sx={{ 
+                              bgcolor: status.color, 
+                              color: 'white',
+                              maxWidth: 150,
+                              '& .MuiChip-label': {
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }
+                            }} 
+                          />
                         </TableCell>
                       </TableRow>
                     );
@@ -508,7 +634,7 @@ export default function PropertyListingsPage() {
             <TablePagination
               rowsPerPageOptions={[25, 50, 100]}
               component="div"
-              count={totalCount}
+              count={filteredListings.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={(_, newPage) => setPage(newPage)}
@@ -524,7 +650,7 @@ export default function PropertyListingsPage() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedPropertyNumber(null); }}
         propertyNumber={selectedPropertyNumber}
-        onUpdate={fetchListings}
+        onUpdate={fetchAllData}
       />
     </Container>
   );
