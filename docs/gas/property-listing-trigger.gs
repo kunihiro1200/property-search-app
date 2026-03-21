@@ -11,17 +11,17 @@
  *     間隔: 10分ごと（または任意の間隔）
  *
  * 【呼び出し先】
- *   property-site-frontend.vercel.app の /api/sync/trigger
- *   → PropertyListingSyncService.runScheduledSync() を実行
- *   → 新規物件追加 + atbb_status/価格の更新を含む
+ *   baikyaku-property-site3.vercel.app の /api/sync/trigger
+ *   → EnhancedAutoSyncService.runFullSync() を実行
+ *   → 物件同期 Phase4.5/4.6/4.7 を含む
  *
  * 【注意】
- *   baikyaku-property-site3.vercel.app ではなく
- *   property-site-frontend-kappa.vercel.app を使用すること
- *   （物件同期は backend/api/ 側で実装されているため）
+ *   property-site-frontend-kappa.vercel.app ではなく
+ *   baikyaku-property-site3.vercel.app を使用すること
+ *   （物件同期は backend/src/ 側で実装されているため）
  */
 
-var BACKEND_URL = 'https://property-site-frontend-kappa.vercel.app';
+var BACKEND_URL = 'https://baikyaku-property-site3.vercel.app';
 
 /**
  * 時間ベーストリガーから呼び出す関数
@@ -35,7 +35,7 @@ function runPeriodicSync() {
 /**
  * フル同期APIを呼び出す
  * EnhancedAutoSyncService.runFullSync() を実行する
- * （売主同期 Phase1-3 + 物件同期 Phase4.5/4.6/4.7 を含む）
+ * （物件同期 Phase4.5/4.6/4.7 を含む）
  */
 function triggerFullSync() {
   var url = BACKEND_URL + '/api/sync/trigger';
