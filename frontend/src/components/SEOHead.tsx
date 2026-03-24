@@ -29,7 +29,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   type = 'website',
   keywords = [],
 }) => {
-  const siteName = '不動産物件サイト';
+  const siteName = 'いふうの物件情報サイト';
   const fullTitle = `${title} | ${siteName}`;
   const currentUrl = canonicalUrl || (typeof window !== 'undefined' ? window.location.href : '');
   
