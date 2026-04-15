@@ -2141,6 +2141,34 @@ app.post('/api/sync/trigger', async (req, res) => {
   })();
 });
 
+// 公開物件の座標を保存（詳細ページでGoogle Map URLから取得した座標をDBに保存）
+app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    const { latitude, longitude } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({ success: false, error: 'latitude and longitude are required' });
+    }
+
+    const { error } = await supabase
+      .from('property_listings')
+      .update({ latitude, longitude })
+      .eq('property_number', propertyNumber);
+
+    if (error) {
+      console.error(`[Save Coordinates] Failed to save coordinates for ${propertyNumber}:`, error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    console.log(`[Save Coordinates] Saved coordinates for ${propertyNumber}: (${latitude}, ${longitude})`);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('[Save Coordinates] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err.stack);
