@@ -112,6 +112,7 @@ app.get('/api/debug/service-account', (_req, res) => {
     res.json({
       client_email: keyFile.client_email,
       project_id: keyFile.project_id,
+      private_key_id: keyFile.private_key_id,
       private_key_raw_length: pk.length,
       private_key_after_replace_length: pkAfterReplace.length,
       // private_keyの最初と最後の50文字（セキュリティのため中間は省略）
@@ -127,6 +128,57 @@ app.get('/api/debug/service-account', (_req, res) => {
       starts_with_begin: pkAfterReplace.trimStart().startsWith('-----BEGIN'),
       ends_with_end: pkAfterReplace.trimEnd().endsWith('-----'),
     });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// サービスアカウント実際認証テストエンドポイント
+app.get('/api/debug/auth-test', async (_req, res) => {
+  try {
+    const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (!jsonStr) {
+      return res.json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON not set' });
+    }
+
+    let keyFile: any;
+    try {
+      keyFile = JSON.parse(jsonStr);
+    } catch (e: any) {
+      return res.json({ error: 'JSON parse failed', message: e.message });
+    }
+
+    // private_keyの改行を正規化
+    if (keyFile.private_key) {
+      keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+    }
+
+    // 実際にGoogleAuth認証を試みる
+    const { google } = await import('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      credentials: keyFile,
+      scopes: ['https://www.googleapis.com/auth/drive'],
+    });
+
+    try {
+      const client = await auth.getClient();
+      const tokenResponse = await client.getAccessToken();
+      res.json({
+        success: true,
+        has_token: !!tokenResponse.token,
+        token_type: tokenResponse.res?.data?.token_type,
+        client_email: keyFile.client_email,
+        private_key_id: keyFile.private_key_id,
+      });
+    } catch (authError: any) {
+      res.json({
+        success: false,
+        error: authError.message,
+        error_code: authError.code,
+        client_email: keyFile.client_email,
+        private_key_id: keyFile.private_key_id,
+      });
+    }
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
