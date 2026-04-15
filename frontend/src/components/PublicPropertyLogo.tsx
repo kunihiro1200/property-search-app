@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
-import logoSvg from '../assets/comfortable-tenant-search-logo.svg';
+import logoPng from '../assets/comfortable-tenant-search-logo.png';
 import './PublicPropertyLogo.css';
 
 const PublicPropertyLogo: React.FC = () => {
@@ -25,7 +25,7 @@ const PublicPropertyLogo: React.FC = () => {
       aria-label="株式会社いふうのウェブサイトを開く"
     >
       <img 
-        src={logoSvg} 
+        src={logoPng} 
         alt="comfortable TENANT SEARCH" 
         className="logo-image"
       />
