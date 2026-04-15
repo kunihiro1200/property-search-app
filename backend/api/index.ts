@@ -91,6 +91,47 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// サービスアカウント診断エンドポイント（private_key問題のデバッグ用）
+app.get('/api/debug/service-account', (_req, res) => {
+  try {
+    const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (!jsonStr) {
+      return res.json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON not set' });
+    }
+
+    let keyFile: any;
+    try {
+      keyFile = JSON.parse(jsonStr);
+    } catch (e: any) {
+      return res.json({ error: 'JSON parse failed', message: e.message, first100: jsonStr.substring(0, 100) });
+    }
+
+    const pk: string = keyFile.private_key || '';
+    const pkAfterReplace = pk.replace(/\\n/g, '\n');
+
+    res.json({
+      client_email: keyFile.client_email,
+      project_id: keyFile.project_id,
+      private_key_raw_length: pk.length,
+      private_key_after_replace_length: pkAfterReplace.length,
+      // private_keyの最初と最後の50文字（セキュリティのため中間は省略）
+      private_key_start: pk.substring(0, 50),
+      private_key_end: pk.substring(pk.length - 50),
+      // \\nが含まれているか
+      has_escaped_newlines: pk.includes('\\n'),
+      // 実際の改行が含まれているか
+      has_real_newlines: pk.includes('\n'),
+      // \rが含まれているか
+      has_carriage_return: pk.includes('\r'),
+      // -----BEGIN RSA PRIVATE KEY----- または -----BEGIN PRIVATE KEY----- で始まるか
+      starts_with_begin: pkAfterReplace.trimStart().startsWith('-----BEGIN'),
+      ends_with_end: pkAfterReplace.trimEnd().endsWith('-----'),
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // URL短縮リダイレクト解決エンドポイント
 app.get('/api/url-redirect/resolve', async (req, res) => {
   try {
