@@ -660,16 +660,37 @@ export class GoogleDriveService extends BaseRepository {
    */
   async getImageData(fileId: string): Promise<{ buffer: Buffer; mimeType: string; size: number }> {
     try {
-      const drive = await this.getDriveClient();
+      console.log(`🔍 [getImageData] Starting for fileId: ${fileId}`);
       
-      // ファイルメタデータを取得
+      // 認証クライアントを一度だけ取得してトークンを確保
+      if (!this.serviceAccountAuth) {
+        throw new Error('Google Drive service account is not configured');
+      }
+      const authClient = await this.serviceAccountAuth.getClient();
+      console.log(`✅ [getImageData] Auth client obtained`);
+      
+      // アクセストークンを明示的に取得（キャッシュされたトークンを使用）
+      const tokenResponse = await authClient.getAccessToken();
+      const accessToken = tokenResponse.token;
+      if (!accessToken) {
+        throw new Error('Failed to obtain access token');
+      }
+      console.log(`✅ [getImageData] Access token obtained`);
+      
+      // メタデータとコンテンツを同じ認証クライアントで取得
+      const drive = google.drive({ version: 'v3', auth: authClient });
+      
+      // メタデータを取得
       const metadata = await drive.files.get({
         fileId,
         fields: 'mimeType, size',
         supportsAllDrives: true,
       });
+      const mimeType = metadata.data.mimeType || 'image/jpeg';
+      const size = parseInt(metadata.data.size || '0', 10);
+      console.log(`✅ [getImageData] Metadata obtained: mimeType=${mimeType}, size=${size}`);
 
-      // ファイルデータを取得
+      // ファイルコンテンツをダウンロード（同じauthClientを使用）
       const response = await drive.files.get({
         fileId,
         alt: 'media',
@@ -679,8 +700,7 @@ export class GoogleDriveService extends BaseRepository {
       });
 
       const buffer = Buffer.from(response.data as ArrayBuffer);
-      const mimeType = metadata.data.mimeType || 'image/jpeg';
-      const size = parseInt(metadata.data.size || '0', 10);
+      console.log(`✅ [getImageData] Content downloaded: ${buffer.length} bytes`);
 
       return {
         buffer,
@@ -688,7 +708,12 @@ export class GoogleDriveService extends BaseRepository {
         size
       };
     } catch (error: any) {
-      console.error('Error getting image data:', error.message);
+      console.error(`❌ [getImageData] Error for fileId ${fileId}:`, error.message);
+      console.error(`❌ [getImageData] Error details:`, {
+        code: error.code,
+        status: error.status,
+        errors: error.errors,
+      });
       throw error;
     }
   }
