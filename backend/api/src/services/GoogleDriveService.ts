@@ -152,31 +152,20 @@ export class GoogleDriveService extends BaseRepository {
       const queryParams: any = {
         q: `'${parentId}' in parents and name contains '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
         fields: 'files(id, name)',
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
       };
       
-      // 共有ドライブの場合、まず corpora: 'drive' で試みる
-      // 失敗した場合は corpora: 'allDrives' にフォールバック
+      // 共有ドライブの場合
       if (isSharedDrive && this.parentFolderId) {
+        queryParams.supportsAllDrives = true;
+        queryParams.includeItemsFromAllDrives = true;
         queryParams.corpora = 'drive';
         queryParams.driveId = this.parentFolderId;
       } else {
-        // マイドライブの場合は allDrives で検索（より広い範囲をカバー）
-        queryParams.corpora = 'allDrives';
+        // マイドライブの場合
+        queryParams.corpora = 'user';
       }
 
-      let response;
-      try {
-        response = await drive.files.list(queryParams);
-      } catch (driveError: any) {
-        // corpora: 'drive' で失敗した場合、allDrives にフォールバック
-        console.warn(`⚠️ findFolderByName: corpora='drive' failed, falling back to allDrives: ${driveError.message}`);
-        const fallbackParams = { ...queryParams };
-        delete fallbackParams.driveId;
-        fallbackParams.corpora = 'allDrives';
-        response = await drive.files.list(fallbackParams);
-      }
+      const response = await drive.files.list(queryParams);
 
       let files = response.data.files;
 
@@ -197,12 +186,6 @@ export class GoogleDriveService extends BaseRepository {
         if (matchingFolder) {
           console.log(`✅ Found folder: ${matchingFolder.name} (${matchingFolder.id})`);
           return matchingFolder.id || null;
-        }
-        // 前方一致で見つからない場合、部分一致で検索
-        const partialMatch = files.find(f => f.name?.includes(name));
-        if (partialMatch) {
-          console.log(`✅ Found folder (partial match): ${partialMatch.name} (${partialMatch.id})`);
-          return partialMatch.id || null;
         }
       }
       console.log(`📁 Folder starting with "${name}" not found`);
@@ -622,7 +605,7 @@ export class GoogleDriveService extends BaseRepository {
       console.log(`✅ [listImagesWithThumbnails] Drive client obtained`);
       
       // 共有ドライブを使用している場合は corpora: 'drive' と driveId を指定
-      // 使用していない場合は corpora: 'allDrives' を指定（より広い範囲をカバー）
+      // 使用していない場合は corpora: 'user' を指定
       const isSharedDrive = !!this.parentFolderId;
       
       const queryParams: any = {
@@ -637,24 +620,13 @@ export class GoogleDriveService extends BaseRepository {
         queryParams.corpora = 'drive';
         queryParams.driveId = this.parentFolderId;
       } else {
-        queryParams.corpora = 'allDrives';
+        queryParams.corpora = 'user';
       }
 
       console.log(`📋 [listImagesWithThumbnails] Query params:`, JSON.stringify(queryParams, null, 2));
       console.log(`🚀 [listImagesWithThumbnails] Calling Google Drive API...`);
       
-      let response;
-      try {
-        response = await drive.files.list(queryParams);
-      } catch (driveError: any) {
-        // corpora: 'drive' で失敗した場合、allDrives にフォールバック
-        console.warn(`⚠️ [listImagesWithThumbnails] corpora='drive' failed, falling back to allDrives: ${driveError.message}`);
-        const fallbackParams = { ...queryParams };
-        delete fallbackParams.driveId;
-        fallbackParams.corpora = 'allDrives';
-        console.log(`📋 [listImagesWithThumbnails] Fallback query params:`, JSON.stringify(fallbackParams, null, 2));
-        response = await drive.files.list(fallbackParams);
-      }
+      const response = await drive.files.list(queryParams);
       
       console.log(`✅ [listImagesWithThumbnails] API call completed`);
 

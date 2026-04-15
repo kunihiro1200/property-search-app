@@ -586,45 +586,9 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
     
     // storage_locationが空の場合、property.athome_dataから取得
     if (!storageUrl && property.athome_data && Array.isArray(property.athome_data) && property.athome_data.length > 0) {
-      // athome_dataの全要素からGoogle DriveフォルダURLを探す（パノラマURLを除外）
-      const driveUrl = property.athome_data.find(
-        (url: string) => typeof url === 'string' && url.includes('/folders/')
-      );
-      if (driveUrl) {
-        storageUrl = driveUrl;
-        console.log(`[Images API] Using athome_data drive URL as storage_url: ${storageUrl}`);
-      } else {
-        // フォルダURLが見つからない場合は最初の要素を使用（後方互換性）
-        storageUrl = property.athome_data[0];
-        console.log(`[Images API] Using athome_data[0] as storage_url (no drive URL found): ${storageUrl}`);
-      }
-    }
-
-    // 最終フォールバック: Google Driveで物件番号フォルダを検索
-    if (!storageUrl) {
-      console.log(`[Images API] No storage URL found, searching Google Drive for property: ${property.property_number}`);
-      try {
-        const googleDriveService = new GoogleDriveService();
-        const propertyImageService = new PropertyImageService(
-          googleDriveService,
-          60,
-          parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
-          parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
-          parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
-        );
-        const foundUrl = await propertyImageService.getImageFolderUrl(property.property_number);
-        if (foundUrl) {
-          storageUrl = foundUrl;
-          console.log(`[Images API] Found folder in Google Drive: ${storageUrl}`);
-          // DBに保存して次回以降のフォールバックを不要にする
-          await supabase.from('property_listings')
-            .update({ storage_location: storageUrl })
-            .eq('id', property.id);
-          console.log(`[Images API] Updated storage_location in DB for ${property.property_number}`);
-        }
-      } catch (driveError: any) {
-        console.error(`[Images API] Error searching Google Drive:`, driveError.message);
-      }
+      // athome_dataの最初の要素がフォルダURL
+      storageUrl = property.athome_data[0];
+      console.log(`[Images API] Using athome_data as storage_url: ${storageUrl}`);
     }
 
     if (!storageUrl) {
