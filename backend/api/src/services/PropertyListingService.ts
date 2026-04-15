@@ -329,14 +329,28 @@ export class PropertyListingService {
         }
       }
       
-      if (priceRange?.min !== undefined) {
-        // sales_priceまたはlisting_priceが最小価格以上
-        query = query.or(`sales_price.gte.${priceRange.min},listing_price.gte.${priceRange.min}`);
-      }
-      
-      if (priceRange?.max !== undefined) {
-        // sales_priceまたはlisting_priceが最大価格以下
-        query = query.or(`sales_price.lte.${priceRange.max},listing_price.lte.${priceRange.max}`);
+      // priceRangeフィルター: .or() を1回だけ呼び出す（連鎖による400エラーを防ぐ）
+      if (priceRange?.min !== undefined || priceRange?.max !== undefined) {
+        const orParts: string[] = [];
+        
+        if (priceRange?.min !== undefined && priceRange?.max !== undefined) {
+          // min と max 両方: sales_price か listing_price が範囲内
+          orParts.push(`and(sales_price.gte.${priceRange.min},sales_price.lte.${priceRange.max})`);
+          orParts.push(`and(listing_price.gte.${priceRange.min},listing_price.lte.${priceRange.max})`);
+        } else if (priceRange?.min !== undefined) {
+          // min のみ: sales_price か listing_price が最小価格以上
+          orParts.push(`sales_price.gte.${priceRange.min}`);
+          orParts.push(`listing_price.gte.${priceRange.min}`);
+        } else if (priceRange?.max !== undefined) {
+          // max のみ: sales_price か listing_price が最大価格以下
+          orParts.push(`sales_price.lte.${priceRange.max}`);
+          orParts.push(`listing_price.lte.${priceRange.max}`);
+        }
+        
+        if (orParts.length > 0) {
+          // .or() は1回だけ呼び出す（PostgRESTの連鎖による400エラーを防ぐ）
+          query = query.or(orParts.join(','));
+        }
       }
       
       // エリアフィルターは一旦無効化（distribution_areasカラムが存在しないため）
