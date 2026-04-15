@@ -178,7 +178,19 @@ export class GoogleDriveService extends BaseRepository {
         response = await drive.files.list(fallbackParams);
       }
 
-      const files = response.data.files;
+      let files = response.data.files;
+
+      // corpora: 'drive' で空の結果が返った場合も allDrives でフォールバック
+      // マイドライブの共有フォルダ（Shared Drive ではない）の場合に発生する
+      if ((!files || files.length === 0) && queryParams.corpora === 'drive') {
+        console.log(`⚠️ findFolderByName: corpora='drive' returned empty results, falling back to allDrives`);
+        const fallbackParams = { ...queryParams };
+        delete fallbackParams.driveId;
+        fallbackParams.corpora = 'allDrives';
+        const fallbackResponse = await drive.files.list(fallbackParams);
+        files = fallbackResponse.data.files;
+      }
+
       if (files && files.length > 0) {
         // 売主番号で始まるフォルダを探す（前方一致）
         const matchingFolder = files.find(f => f.name?.startsWith(name));
@@ -646,7 +658,20 @@ export class GoogleDriveService extends BaseRepository {
       
       console.log(`✅ [listImagesWithThumbnails] API call completed`);
 
-      const files = response.data.files || [];
+      let files = response.data.files || [];
+
+      // corpora: 'drive' で空の結果が返った場合も allDrives でフォールバック
+      // マイドライブの共有フォルダ（Shared Drive ではない）の場合に発生する
+      if (files.length === 0 && queryParams.corpora === 'drive') {
+        console.log(`⚠️ [listImagesWithThumbnails] corpora='drive' returned empty results, falling back to allDrives`);
+        const fallbackParams = { ...queryParams };
+        delete fallbackParams.driveId;
+        fallbackParams.corpora = 'allDrives';
+        console.log(`📋 [listImagesWithThumbnails] Fallback query params:`, JSON.stringify(fallbackParams, null, 2));
+        const fallbackResponse = await drive.files.list(fallbackParams);
+        files = fallbackResponse.data.files || [];
+      }
+
       console.log(`📊 [listImagesWithThumbnails] Found ${files.length} images`);
       
       return files.map(file => ({
