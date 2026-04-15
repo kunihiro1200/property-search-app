@@ -82,6 +82,10 @@ export class GoogleDriveService extends BaseRepository {
         }
         
         if (keyFile) {
+          // private_keyの改行文字を正規化（Vercel環境変数で\\nになる場合がある）
+          if (keyFile.private_key && typeof keyFile.private_key === 'string') {
+            keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+          }
           console.log('✅ [GoogleDriveService] Service account key parsed successfully:');
           console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
           console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
