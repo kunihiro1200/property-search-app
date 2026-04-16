@@ -89,6 +89,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 地図ビュー用フェッチのデバウンスタイマーID
   const mapFetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  // 地図ビュー用フェッチのAbortController（リスト表示に戻った際にキャンセル）
+  const mapFetchAbortControllerRef = useRef<AbortController | null>(null);
+  
   // 検索実行フラグ
   const [shouldScrollToGrid, setShouldScrollToGrid] = useState(false);
   
@@ -554,6 +557,13 @@ const PublicPropertiesPage: React.FC = () => {
   // 地図表示用に全件取得（フィルター条件は適用）
   // 座標がある物件のみを単一リクエストで取得して高速化
   const fetchAllProperties = async () => {
+    // 前回のリクエストをキャンセル
+    if (mapFetchAbortControllerRef.current) {
+      mapFetchAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    mapFetchAbortControllerRef.current = abortController;
+
     try {
       setIsLoadingAllProperties(true);
       
@@ -567,51 +577,27 @@ const PublicPropertiesPage: React.FC = () => {
       const maxAgeParam = searchParams.get('maxAge');
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
-      // クエリパラメータを構築（whileループを廃止し、単一リクエストに置き換え）
+      // クエリパラメータを構築（単一リクエスト）
       const params = new URLSearchParams({
-        limit: '5000', // 座標付き物件の実件数を超える十分大きな値
+        limit: '500', // 座標付き物件は数百件程度なので500で十分
         offset: '0',
-        // 座標がある物件のみを取得するフラグ
         withCoordinates: 'true',
-        // 画像取得をスキップして高速化
         skipImages: 'true',
       });
       
-      if (propertyNumber) {
-        params.set('propertyNumber', propertyNumber);
-      }
-      
-      if (location) {
-        params.set('location', location);
-      }
-      
-      if (types) {
-        params.set('types', types);
-      }
-      
-      if (minPriceParam) {
-        params.set('minPrice', minPriceParam);
-      }
-      
-      if (maxPriceParam) {
-        params.set('maxPrice', maxPriceParam);
-      }
-      
-      if (minAgeParam) {
-        params.set('minAge', minAgeParam);
-      }
-      
-      if (maxAgeParam) {
-        params.set('maxAge', maxAgeParam);
-      }
-      
-      if (showPublicOnlyParam === 'true') {
-        params.set('showPublicOnly', 'true');
-      }
+      if (propertyNumber) params.set('propertyNumber', propertyNumber);
+      if (location) params.set('location', location);
+      if (types) params.set('types', types);
+      if (minPriceParam) params.set('minPrice', minPriceParam);
+      if (maxPriceParam) params.set('maxPrice', maxPriceParam);
+      if (minAgeParam) params.set('minAge', minAgeParam);
+      if (maxAgeParam) params.set('maxAge', maxAgeParam);
+      if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
-        `${apiUrl}/api/public/properties?${params.toString()}`
+        `${apiUrl}/api/public/properties?${params.toString()}`,
+        { signal: abortController.signal }
       );
       
       if (!response.ok) {
@@ -621,9 +607,16 @@ const PublicPropertiesPage: React.FC = () => {
       const data = await response.json();
       setAllProperties(data.properties || []);
     } catch (err: any) {
+      // AbortError はキャンセルによるものなので無視
+      if (err.name === 'AbortError') {
+        return;
+      }
       console.error('全件取得エラー:', err);
     } finally {
-      setIsLoadingAllProperties(false);
+      // キャンセルされていない場合のみローディングを解除
+      if (!abortController.signal.aborted) {
+        setIsLoadingAllProperties(false);
+      }
     }
   };
   
@@ -974,7 +967,19 @@ const PublicPropertiesPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   startIcon={<ListIcon />}
-                  onClick={() => setViewMode('list')}
+                  onClick={() => {
+                    // 進行中の地図用フェッチをキャンセル
+                    if (mapFetchAbortControllerRef.current) {
+                      mapFetchAbortControllerRef.current.abort();
+                      mapFetchAbortControllerRef.current = null;
+                    }
+                    if (mapFetchTimerRef.current) {
+                      clearTimeout(mapFetchTimerRef.current);
+                      mapFetchTimerRef.current = null;
+                    }
+                    setIsLoadingAllProperties(false);
+                    setViewMode('list');
+                  }}
                   sx={{
                     borderColor: '#FFC107',
                     color: '#000',
