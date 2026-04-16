@@ -233,15 +233,10 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
-      // viewModeを復元（保存されている場合）
-      if (savedState.viewMode) {
-        console.log('🔄 Restoring viewMode:', savedState.viewMode);
-        setViewMode(savedState.viewMode);
-      } else {
-        // viewModeが保存されていない場合はデフォルトで'list'
-        console.log('🔄 No viewMode saved, defaulting to list');
-        setViewMode('list');
-      }
+      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
+      // これにより、地図用データの取得useEffectが実行されない
+      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
+      setViewMode('list');
       
       // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
       setTimeout(() => {
