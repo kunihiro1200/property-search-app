@@ -581,7 +581,7 @@ const PublicPropertiesPage: React.FC = () => {
   };
   
   // 地図表示用に全件取得（フィルター条件は適用）
-  // 座標がある物件のみを単一リクエストで取得して高速化
+  // 地図専用軽量エンドポイントを使用して高速化
   const fetchAllProperties = async () => {
     // 前回のリクエストをキャンセル
     if (mapFetchAbortControllerRef.current) {
@@ -593,38 +593,23 @@ const PublicPropertiesPage: React.FC = () => {
     try {
       setIsLoadingAllProperties(true);
       
-      // URLパラメータから検索条件を取得
-      const propertyNumber = searchParams.get('propertyNumber');
-      const location = searchParams.get('location');
+      // 地図専用エンドポイント用パラメータ（最小限）
+      const params = new URLSearchParams();
       const types = searchParams.get('types');
       const minPriceParam = searchParams.get('minPrice');
       const maxPriceParam = searchParams.get('maxPrice');
-      const minAgeParam = searchParams.get('minAge');
-      const maxAgeParam = searchParams.get('maxAge');
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
-      // クエリパラメータを構築（単一リクエスト）
-      const params = new URLSearchParams({
-        limit: '500', // 座標付き物件は数百件程度なので500で十分
-        offset: '0',
-        withCoordinates: 'true',
-        skipImages: 'true',
-      });
-      
-      if (propertyNumber) params.set('propertyNumber', propertyNumber);
-      if (location) params.set('location', location);
       if (types) params.set('types', types);
       if (minPriceParam) params.set('minPrice', minPriceParam);
       if (maxPriceParam) params.set('maxPrice', maxPriceParam);
-      if (minAgeParam) params.set('minAge', minAgeParam);
-      if (maxAgeParam) params.set('maxAge', maxAgeParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(
-        `${apiUrl}/api/public/properties?${params.toString()}`,
-        { signal: abortController.signal }
-      );
+      const queryString = params.toString();
+      const url = `${apiUrl}/api/public/map-properties${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, { signal: abortController.signal });
       
       if (!response.ok) {
         throw new Error('物件の取得に失敗しました');
@@ -633,13 +618,9 @@ const PublicPropertiesPage: React.FC = () => {
       const data = await response.json();
       setAllProperties(data.properties || []);
     } catch (err: any) {
-      // AbortError はキャンセルによるものなので無視
-      if (err.name === 'AbortError') {
-        return;
-      }
+      if (err.name === 'AbortError') return;
       console.error('全件取得エラー:', err);
     } finally {
-      // キャンセルされていない場合のみローディングを解除
       if (!abortController.signal.aborted) {
         setIsLoadingAllProperties(false);
       }

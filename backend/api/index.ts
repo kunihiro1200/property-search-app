@@ -2157,6 +2157,82 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   });
 });
 
+// 地図表示専用エンドポイント（軽量・高速）
+// 座標と最小限のデータのみ返す（画像取得なし、storage_location不要）
+app.get('/api/public/map-properties', async (req, res) => {
+  try {
+    const types = req.query.types as string;
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+    const showPublicOnly = req.query.showPublicOnly === 'true';
+
+    // 地図表示に必要な最小限のカラムのみ取得
+    let query = supabase
+      .from('property_listings')
+      .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
+      .eq('is_hidden', false)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+
+    if (types) {
+      const typeList = types.split(',');
+      if (typeList.length > 0) {
+        query = query.in('property_type', typeList);
+      }
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const orParts: string[] = [];
+      if (minPrice !== undefined && maxPrice !== undefined) {
+        orParts.push(`and(sales_price.gte.${minPrice * 10000},sales_price.lte.${maxPrice * 10000})`);
+        orParts.push(`and(listing_price.gte.${minPrice * 10000},listing_price.lte.${maxPrice * 10000})`);
+      } else if (minPrice !== undefined) {
+        orParts.push(`sales_price.gte.${minPrice * 10000}`);
+        orParts.push(`listing_price.gte.${minPrice * 10000}`);
+      } else if (maxPrice !== undefined) {
+        orParts.push(`sales_price.lte.${maxPrice * 10000}`);
+        orParts.push(`listing_price.lte.${maxPrice * 10000}`);
+      }
+      if (orParts.length > 0) {
+        query = query.or(orParts.join(','));
+      }
+    }
+
+    if (showPublicOnly) {
+      query = query.not('atbb_status', 'is', null).ilike('atbb_status', '%公開中%');
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Supabase query error: ${error.message}`);
+    }
+
+    // 最小限の変換のみ（画像取得なし）
+    const typeMapping: Record<string, string> = {
+      '戸建': 'detached_house', '戸建て': 'detached_house',
+      'マンション': 'apartment', '土地': 'land',
+    };
+
+    const properties = (data || []).map((p) => ({
+      id: p.id,
+      property_number: p.property_number,
+      property_type: typeMapping[p.property_type] || p.property_type,
+      address: p.address,
+      price: p.sales_price || p.listing_price || 0,
+      atbb_status: p.atbb_status,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      images: [],
+    }));
+
+    res.json({ success: true, properties });
+  } catch (error: any) {
+    console.error('❌ Error fetching map properties:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Vercel用のハンドラー（重要：これがないとVercelで動作しない）
 // Vercelのサーバーレス関数として動作させるため、Expressアプリをラップ
 export default async (req: VercelRequest, res: VercelResponse) => {
