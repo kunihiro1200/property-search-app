@@ -442,22 +442,36 @@ export class PropertyListingService {
       const propertiesWithImages: any[] = [];
       
       if (skipImages) {
-        // 画像取得をスキップ（地図ビュー用）
-        console.log('[PropertyListingService] Skipping image fetching (skipImages=true)');
-        for (const property of data || []) {
-          const { price: _price, ...propertyWithoutPrice } = property; // priceカラムを除外
-          propertiesWithImages.push({
-            ...propertyWithoutPrice,
-            price: property.sales_price || property.listing_price || 0,  // sales_priceを優先、なければlisting_price
-            property_type: this.convertPropertyTypeToEnglish(property.property_type),
-            atbb_status: property.atbb_status,
-            badge_type: this.getBadgeType(property.atbb_status),
-            is_clickable: this.isPropertyClickable(property.atbb_status),
-            google_map_url: property.google_map_url || null,
-            storage_location: property.storage_location || null,  // folder-thumbnail遅延ロード用
-            images: []
-          });
-        }
+        // 画像取得をスキップ（一覧ページ用）
+        // storage_location は work_tasks から補完して folder-thumbnail 遅延ロードに使用
+        console.log('[PropertyListingService] Skipping image fetching (skipImages=true), enriching storage_location from work_tasks');
+        const skipImagesResults = await Promise.all(
+          (data || []).map(async (property) => {
+            const { price: _price, ...propertyWithoutPrice } = property;
+            let storageLocation = property.storage_location;
+
+            // storage_location が空の場合、work_tasks から補完
+            if (!storageLocation && property.property_number) {
+              storageLocation = await this.getStorageUrlFromWorkTasks(property.property_number);
+              if (storageLocation) {
+                console.log(`[PropertyListingService] Enriched storage_location for ${property.property_number} from work_tasks`);
+              }
+            }
+
+            return {
+              ...propertyWithoutPrice,
+              price: property.sales_price || property.listing_price || 0,
+              property_type: this.convertPropertyTypeToEnglish(property.property_type),
+              atbb_status: property.atbb_status,
+              badge_type: this.getBadgeType(property.atbb_status),
+              is_clickable: this.isPropertyClickable(property.atbb_status),
+              google_map_url: property.google_map_url || null,
+              storage_location: storageLocation || null,  // folder-thumbnail遅延ロード用
+              images: []
+            };
+          })
+        );
+        propertiesWithImages.push(...skipImagesResults);
       } else {
         // 通常の画像取得処理（リストビュー用）
         // 全件を並列処理して高速化（ローカル環境と同じ動作）
