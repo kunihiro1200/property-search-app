@@ -661,11 +661,42 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
     }
 
     if (!storageUrl) {
-      console.error(`❌ No storage URL found for property: ${identifier}`);
-      return res.status(404).json({ 
-        error: 'Storage URL not found',
-        message: '画像の格納先URLが設定されていません'
-      });
+      // storage_locationが空の場合、Google Driveで物件番号フォルダを自動検索
+      console.log(`[Images API] storage_location is empty, searching Google Drive for: ${property.property_number}`);
+      
+      const propertyImageServiceForSearch = new PropertyImageService(
+        new GoogleDriveService(),
+        60,
+        parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+        parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+        parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+      );
+      
+      const foundUrl = await propertyImageServiceForSearch.getImageFolderUrl(property.property_number);
+      
+      if (foundUrl) {
+        console.log(`[Images API] Found folder URL: ${foundUrl}, saving to DB...`);
+        storageUrl = foundUrl;
+        
+        // DBに storage_location を保存（次回以降のリクエストを高速化）
+        try {
+          const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+          await supabase
+            .from('property_listings')
+            .update({ storage_location: foundUrl })
+            .eq('id', property.id);
+          console.log(`[Images API] Saved storage_location to DB for property: ${property.property_number}`);
+        } catch (dbError: any) {
+          // DB保存に失敗しても画像取得は続行
+          console.warn(`[Images API] Failed to save storage_location to DB: ${dbError.message}`);
+        }
+      } else {
+        console.error(`❌ No storage URL found for property: ${identifier}`);
+        return res.status(404).json({ 
+          error: 'Storage URL not found',
+          message: '画像の格納先URLが設定されていません'
+        });
+      }
     }
 
     // PropertyImageServiceを使用して画像を取得
