@@ -202,6 +202,30 @@ export class GoogleDriveService extends BaseRepository {
   }
 
   /**
+   * フォルダの親フォルダIDを取得
+   * @param folderId フォルダID
+   * @returns 親フォルダID、見つからない場合はnull
+   */
+  async getParentFolderId(folderId: string): Promise<string | null> {
+    try {
+      const drive = await this.getDriveClient();
+      const response = await drive.files.get({
+        fileId: folderId,
+        fields: 'parents',
+        supportsAllDrives: true,
+      });
+      const parents = response.data.parents;
+      if (parents && parents.length > 0) {
+        return parents[0];
+      }
+      return null;
+    } catch (error: any) {
+      console.error(`Error getting parent folder ID for ${folderId}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * 親フォルダ内のすべてのサブフォルダを取得
    * @param parentId 親フォルダID
    * @returns サブフォルダの配列（id, name）

@@ -157,7 +157,32 @@ export class PropertyImageService {
         return publicFolderId;
       }
       
-      // 4. 親フォルダを使用（フォールバック）
+      // 4. 親フォルダを遡って検索（業務リストのURLがサブフォルダを指している場合に対応）
+      console.log(`🔍 Searching for public folders in parent folder (going up one level)...`);
+      try {
+        const grandParentFolderId = await this.driveService.getParentFolderId(parentFolderId);
+        if (grandParentFolderId) {
+          console.log(`🔍 Checking grandparent folder: ${grandParentFolderId}`);
+          const athomeInParent = await this.driveService.findFolderByName(grandParentFolderId, 'athome公開');
+          if (athomeInParent) {
+            const elapsedMs = Date.now() - startTime;
+            console.log(`✅ Found "athome公開" in grandparent folder: ${athomeInParent} (${elapsedMs}ms)`);
+            this.cacheFolderId(cacheKey, athomeInParent);
+            return athomeInParent;
+          }
+          const atbbInParent = await this.driveService.findFolderByName(grandParentFolderId, 'atbb公開');
+          if (atbbInParent) {
+            const elapsedMs = Date.now() - startTime;
+            console.log(`✅ Found "atbb公開" in grandparent folder: ${atbbInParent} (${elapsedMs}ms)`);
+            this.cacheFolderId(cacheKey, atbbInParent);
+            return atbbInParent;
+          }
+        }
+      } catch (parentError: any) {
+        console.warn(`⚠️ Error searching grandparent folder:`, parentError.message);
+      }
+      
+      // 5. 親フォルダを使用（フォールバック）
       const elapsedMs = Date.now() - startTime;
       console.log(`📁 No public subfolder found in parent: ${parentFolderId}, using parent folder (${elapsedMs}ms)`);
       this.cacheFolderId(cacheKey, parentFolderId);
