@@ -407,26 +407,26 @@ const PublicPropertiesPage: React.FC = () => {
     fetchProperties();
   }, [currentPage, searchParams, isStateRestored]);
   
-  // 全件取得は初回とフィルター変更時のみ（currentPageは除外）
+  // 全件取得は地図ビューの時のみ（リストビューでは不要）
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
       return;
     }
     
-    fetchAllProperties();
-  }, [searchParams, isStateRestored]);
+    // 地図ビューの時のみ全件取得（リストビューでは実行しない）
+    if (viewMode === 'map') {
+      fetchAllProperties();
+    }
+  }, [searchParams, isStateRestored, viewMode]);
   
-  // viewModeが変更されたときも全件取得
+  // viewModeが変更されたときも全件取得（地図ビューに切り替えた時のみ）
   useEffect(() => {
     if (viewMode === 'map' && allProperties.length === 0) {
       console.log('🗺️ Map view activated, fetching all properties...');
       fetchAllProperties();
-    } else if (viewMode === 'list') {
-      // リスト表示に戻ったときは、物件データを再取得
-      console.log('📋 List view activated, fetching properties...');
-      fetchProperties();
     }
+    // リスト表示に戻った時はsearchParams useEffectが処理するので不要
   }, [viewMode]);
 
   const fetchProperties = async () => {
