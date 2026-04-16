@@ -92,6 +92,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 地図ビュー用フェッチのAbortController（リスト表示に戻った際にキャンセル）
   const mapFetchAbortControllerRef = useRef<AbortController | null>(null);
   
+  // リスト用フェッチのAbortController（地図ビューに切り替えた際にキャンセル）
+  const listFetchAbortControllerRef = useRef<AbortController | null>(null);
+  
   // 検索実行フラグ
   const [shouldScrollToGrid, setShouldScrollToGrid] = useState(false);
   
@@ -410,8 +413,13 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
+    // 地図ビュー中はリスト用データ取得をスキップ（地図→リスト切り替え時の遅延を防ぐ）
+    if (viewMode === 'map') {
+      return;
+    }
+    
     fetchProperties();
-  }, [currentPage, searchParams, isStateRestored]);
+  }, [currentPage, searchParams, isStateRestored, viewMode]);
   
   // 全件取得は地図ビューの時のみ（リストビューでは不要）
   // searchParams変更時はデバウンス（400ms）で重複リクエストを防ぐ
@@ -444,6 +452,13 @@ const PublicPropertiesPage: React.FC = () => {
   }, [searchParams, isStateRestored, viewMode]);
 
   const fetchProperties = async () => {
+    // 前回のリクエストをキャンセル
+    if (listFetchAbortControllerRef.current) {
+      listFetchAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    listFetchAbortControllerRef.current = abortController;
+
     try {
       console.log('🔄 [fetchProperties] Starting fetch with currentPage:', currentPage);
       
@@ -475,41 +490,19 @@ const PublicPropertiesPage: React.FC = () => {
         offset: offset.toString(),
       });
       
-      if (propertyNumber) {
-        params.set('propertyNumber', propertyNumber);
-      }
-      
-      if (location) {
-        params.set('location', location);
-      }
-      
-      if (types) {
-        params.set('types', types);
-      }
-      
-      if (minPriceParam) {
-        params.set('minPrice', minPriceParam);
-      }
-      
-      if (maxPriceParam) {
-        params.set('maxPrice', maxPriceParam);
-      }
-      
-      if (minAgeParam) {
-        params.set('minAge', minAgeParam);
-      }
-      
-      if (maxAgeParam) {
-        params.set('maxAge', maxAgeParam);
-      }
-      
-      if (showPublicOnlyParam === 'true') {
-        params.set('showPublicOnly', 'true');
-      }
+      if (propertyNumber) params.set('propertyNumber', propertyNumber);
+      if (location) params.set('location', location);
+      if (types) params.set('types', types);
+      if (minPriceParam) params.set('minPrice', minPriceParam);
+      if (maxPriceParam) params.set('maxPrice', maxPriceParam);
+      if (minAgeParam) params.set('minAge', minAgeParam);
+      if (maxAgeParam) params.set('maxAge', maxAgeParam);
+      if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
-        `${apiUrl}/api/public/properties?${params.toString()}`
+        `${apiUrl}/api/public/properties?${params.toString()}`,
+        { signal: abortController.signal }
       );
       
       if (!response.ok) {
@@ -533,7 +526,6 @@ const PublicPropertiesPage: React.FC = () => {
       isInitialLoadDone.current = true;
       
       // 物件データ取得後、スクロール位置を復元
-      // refから取得
       setTimeout(() => {
         const savedState = savedNavigationState.current;
         if (savedState?.scrollPosition) {
@@ -541,16 +533,22 @@ const PublicPropertiesPage: React.FC = () => {
             top: savedState.scrollPosition,
             behavior: 'auto'
           });
-          // 復元後、refとstateをクリア
           savedNavigationState.current = null;
           window.history.replaceState(null, '');
         }
       }, 600);
     } catch (err: any) {
+      // AbortError はキャンセルによるものなので無視
+      if (err.name === 'AbortError') {
+        return;
+      }
       setError(err.message || 'エラーが発生しました');
     } finally {
-      setInitialLoading(false);
-      setFilterLoading(false);
+      // キャンセルされていない場合のみローディングを解除
+      if (!abortController.signal.aborted) {
+        setInitialLoading(false);
+        setFilterLoading(false);
+      }
     }
   };
   
@@ -798,6 +796,13 @@ const PublicPropertiesPage: React.FC = () => {
                   },
                 }}
                 onClick={() => {
+                  // 進行中のリスト用フェッチをキャンセル
+                  if (listFetchAbortControllerRef.current) {
+                    listFetchAbortControllerRef.current.abort();
+                    listFetchAbortControllerRef.current = null;
+                  }
+                  setInitialLoading(false);
+                  setFilterLoading(false);
                   setViewMode('map');
                   setShouldScrollToMap(true); // スクロールフラグを立てる
                 }}
