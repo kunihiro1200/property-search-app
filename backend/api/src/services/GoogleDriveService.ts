@@ -169,9 +169,22 @@ export class GoogleDriveService extends BaseRepository {
         queryParams.corpora = 'user';
       }
 
-      const response = await drive.files.list(queryParams);
+      let response = await drive.files.list(queryParams);
+      let files = response.data.files;
 
-      const files = response.data.files;
+      // allDrives で見つからない場合、corpora: 'user' でもフォールバック検索
+      // （マイドライブの共有フォルダの場合に対応）
+      if ((!files || files.length === 0) && queryParams.corpora === 'allDrives') {
+        console.log(`⚠️ findFolderByName: allDrives returned empty, trying corpora='user'`);
+        const userParams = {
+          q: queryParams.q,
+          fields: queryParams.fields,
+          corpora: 'user',
+        };
+        const userResponse = await drive.files.list(userParams);
+        files = userResponse.data.files;
+      }
+
       if (files && files.length > 0) {
         // 売主番号で始まるフォルダを探す（前方一致）
         const matchingFolder = files.find(f => f.name?.startsWith(name));
@@ -622,7 +635,25 @@ export class GoogleDriveService extends BaseRepository {
       
       console.log(`✅ [listImagesWithThumbnails] API call completed`);
 
-      const files = response.data.files || [];
+      let files = response.data.files || [];
+
+      // corpora: 'drive' で空の結果が返った場合、corpora: 'user' でフォールバック
+      // （マイドライブの共有フォルダの場合に対応）
+      if (files.length === 0 && queryParams.corpora === 'drive') {
+        console.log(`⚠️ [listImagesWithThumbnails] corpora='drive' returned empty, trying corpora='user'`);
+        const userParams = {
+          q: queryParams.q,
+          fields: queryParams.fields,
+          orderBy: queryParams.orderBy,
+          corpora: 'user',
+        };
+        const userResponse = await drive.files.list(userParams);
+        files = userResponse.data.files || [];
+        if (files.length > 0) {
+          console.log(`✅ [listImagesWithThumbnails] Found ${files.length} images with corpora='user'`);
+        }
+      }
+
       console.log(`📊 [listImagesWithThumbnails] Found ${files.length} images`);
       
       return files.map(file => ({
