@@ -414,6 +414,14 @@ const PublicPropertiesPage: React.FC = () => {
   // 地図ビュー中の searchParams を追跡
   const searchParamsDuringMapRef = useRef<string>('');
 
+  // view パラメータを除いたフィルター用 searchParams 文字列を取得
+  // viewMode 変更による searchParams 変化（view=map の追加/削除）をフィルター変更として誤検知しないため
+  const getFilterOnlyParams = (params: URLSearchParams): string => {
+    const copy = new URLSearchParams(params);
+    copy.delete('view');
+    return copy.toString();
+  };
+
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
@@ -422,8 +430,8 @@ const PublicPropertiesPage: React.FC = () => {
     
     // 地図ビュー中はリスト用データ取得をスキップ
     if (viewMode === 'map') {
-      // 地図ビュー中の searchParams 変化を追跡
-      const currentParams = searchParams.toString();
+      // 地図ビュー中の searchParams 変化を追跡（view パラメータは除外）
+      const currentParams = getFilterOnlyParams(searchParams);
       if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
         filterChangedDuringMapRef.current = true;
       }
@@ -513,9 +521,12 @@ const PublicPropertiesPage: React.FC = () => {
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
       // クエリパラメータを構築
+      // skipImages=true: 画像取得（getStorageUrlFromWorkTasks）をスキップして高速化
+      // 画像は PublicPropertyCard の img タグ（/api/public/folder-thumbnail/:folderId）で遅延ロード
       const params = new URLSearchParams({
         limit: '20',
         offset: offset.toString(),
+        skipImages: 'true',
       });
       
       if (propertyNumber) params.set('propertyNumber', propertyNumber);

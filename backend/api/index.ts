@@ -1167,8 +1167,9 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
     if (!result.images || result.images.length === 0) {
-      console.log(`[FolderThumbnail] No images found in folder: ${folderId}`);
-      return res.status(404).json({ error: 'No images found' });
+      console.log(`[FolderThumbnail] No images found in folder: ${folderId}, redirecting to placeholder`);
+      // 404 ではなくプレースホルダーにリダイレクト（ブラウザのコンソールエラーを抑制）
+      return res.redirect('https://via.placeholder.com/400x300?text=No+Image');
     }
 
     // 最初の画像のファイルIDを取得してリダイレクト
@@ -1190,7 +1191,12 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
     console.log(`✅ [FolderThumbnail] Served image ${fileId} from folder ${folderId}`);
   } catch (error: any) {
     console.error('❌ [FolderThumbnail] Error:', error.message);
-    res.status(500).json({ error: error.message || 'Failed to fetch folder thumbnail' });
+    // エラー時もプレースホルダーにリダイレクト（ブラウザのコンソールエラーを抑制）
+    try {
+      return res.redirect('https://via.placeholder.com/400x300?text=No+Image');
+    } catch {
+      res.status(500).json({ error: error.message || 'Failed to fetch folder thumbnail' });
+    }
   }
 });
 
