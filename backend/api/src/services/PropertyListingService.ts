@@ -454,6 +454,7 @@ export class PropertyListingService {
             badge_type: this.getBadgeType(property.atbb_status),
             is_clickable: this.isPropertyClickable(property.atbb_status),
             google_map_url: property.google_map_url || null,
+            storage_location: property.storage_location || null,  // folder-thumbnail遅延ロード用
             images: []
           });
         }
