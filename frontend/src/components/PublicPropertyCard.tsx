@@ -144,7 +144,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
 
   const thumbnailUrl = property.images && property.images.length > 0
     ? property.images[0].thumbnailUrl
-    : 'https://via.placeholder.com/400x300?text=No+Image';
+    : null;
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 
@@ -168,13 +168,19 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       }}
     >
       <Box className="property-card-image-container">
-        <img
-          src={thumbnailUrl}
-          alt={`${property.display_address || property.address}の物件画像`}
-          className="property-card-image"
-          loading="lazy"
-          crossOrigin="anonymous"
-        />
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={`${property.display_address || property.address}の物件画像`}
+            className="property-card-image"
+            loading="lazy"
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <Box className="property-card-image" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5f5f5', color: '#999', fontSize: '0.8rem' }}>
+            画像なし
+          </Box>
+        )}
         <Box className="property-card-image-overlay" />
         
         {/* バッジを表示 */}
