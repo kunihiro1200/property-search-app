@@ -86,6 +86,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 地図ビューへの参照
   const mapViewRef = useRef<HTMLDivElement>(null);
   
+  // 地図ビュー用フェッチのデバウンスタイマーID
+  const mapFetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // 検索実行フラグ
   const [shouldScrollToGrid, setShouldScrollToGrid] = useState(false);
   
@@ -408,6 +411,7 @@ const PublicPropertiesPage: React.FC = () => {
   }, [currentPage, searchParams, isStateRestored]);
   
   // 全件取得は地図ビューの時のみ（リストビューでは不要）
+  // searchParams変更時はデバウンス（400ms）で重複リクエストを防ぐ
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
@@ -415,19 +419,26 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     // 地図ビューの時のみ全件取得（リストビューでは実行しない）
-    if (viewMode === 'map') {
-      fetchAllProperties();
+    if (viewMode !== 'map') {
+      return;
     }
+    
+    // 前回のタイマーをキャンセル
+    if (mapFetchTimerRef.current) {
+      clearTimeout(mapFetchTimerRef.current);
+    }
+    
+    // デバウンス（400ms）で最後の変更のみ実行
+    mapFetchTimerRef.current = setTimeout(() => {
+      fetchAllProperties();
+    }, 400);
+    
+    return () => {
+      if (mapFetchTimerRef.current) {
+        clearTimeout(mapFetchTimerRef.current);
+      }
+    };
   }, [searchParams, isStateRestored, viewMode]);
-  
-  // viewModeが変更されたときも全件取得（地図ビューに切り替えた時のみ）
-  useEffect(() => {
-    if (viewMode === 'map' && allProperties.length === 0) {
-      console.log('🗺️ Map view activated, fetching all properties...');
-      fetchAllProperties();
-    }
-    // リスト表示に戻った時はsearchParams useEffectが処理するので不要
-  }, [viewMode]);
 
   const fetchProperties = async () => {
     try {
@@ -541,7 +552,7 @@ const PublicPropertiesPage: React.FC = () => {
   };
   
   // 地図表示用に全件取得（フィルター条件は適用）
-  // 座標がある物件のみを取得して高速化
+  // 座標がある物件のみを単一リクエストで取得して高速化
   const fetchAllProperties = async () => {
     try {
       setIsLoadingAllProperties(true);
@@ -556,84 +567,59 @@ const PublicPropertiesPage: React.FC = () => {
       const maxAgeParam = searchParams.get('maxAge');
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
-      const allFetchedProperties: PublicProperty[] = [];
-      let offset = 0;
-      const limit = 1000; // Supabaseの最大制限
-      let hasMore = true;
+      // クエリパラメータを構築（whileループを廃止し、単一リクエストに置き換え）
+      const params = new URLSearchParams({
+        limit: '5000', // 座標付き物件の実件数を超える十分大きな値
+        offset: '0',
+        // 座標がある物件のみを取得するフラグ
+        withCoordinates: 'true',
+        // 画像取得をスキップして高速化
+        skipImages: 'true',
+      });
       
-      while (hasMore) {
-        // クエリパラメータを構築
-        const params = new URLSearchParams({
-          limit: limit.toString(),
-          offset: offset.toString(),
-          // 座標がある物件のみを取得するフラグを追加
-          withCoordinates: 'true',
-          // 画像取得をスキップして高速化
-          skipImages: 'true',
-        });
-        
-        if (propertyNumber) {
-          params.set('propertyNumber', propertyNumber);
-        }
-        
-        if (location) {
-          params.set('location', location);
-        }
-        
-        if (types) {
-          params.set('types', types);
-        }
-        
-        if (minPriceParam) {
-          params.set('minPrice', minPriceParam);
-        }
-        
-        if (maxPriceParam) {
-          params.set('maxPrice', maxPriceParam);
-        }
-        
-        if (minAgeParam) {
-          params.set('minAge', minAgeParam);
-        }
-        
-        if (maxAgeParam) {
-          params.set('maxAge', maxAgeParam);
-        }
-        
-        if (showPublicOnlyParam === 'true') {
-          params.set('showPublicOnly', 'true');
-        }
-        
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const response = await fetch(
-          `${apiUrl}/api/public/properties?${params.toString()}`
-        );
-        
-        if (!response.ok) {
-          throw new Error('物件の取得に失敗しました');
-        }
-        
-        const data = await response.json();
-        const fetchedProperties = data.properties || [];
-        
-        allFetchedProperties.push(...fetchedProperties);
-        
-        // 取得した件数がlimit未満の場合、これ以上データがない
-        if (fetchedProperties.length < limit) {
-          hasMore = false;
-        } else {
-          // 次のバッチへ
-          offset += limit;
-        }
-        
-        // 安全装置：10回以上ループしたら停止（10,000件以上）
-        if (offset >= 10000) {
-          hasMore = false;
-          console.warn('⚠️ Stopped at 10,000 properties (safety limit)');
-        }
+      if (propertyNumber) {
+        params.set('propertyNumber', propertyNumber);
       }
       
-      setAllProperties(allFetchedProperties);
+      if (location) {
+        params.set('location', location);
+      }
+      
+      if (types) {
+        params.set('types', types);
+      }
+      
+      if (minPriceParam) {
+        params.set('minPrice', minPriceParam);
+      }
+      
+      if (maxPriceParam) {
+        params.set('maxPrice', maxPriceParam);
+      }
+      
+      if (minAgeParam) {
+        params.set('minAge', minAgeParam);
+      }
+      
+      if (maxAgeParam) {
+        params.set('maxAge', maxAgeParam);
+      }
+      
+      if (showPublicOnlyParam === 'true') {
+        params.set('showPublicOnly', 'true');
+      }
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(
+        `${apiUrl}/api/public/properties?${params.toString()}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('物件の取得に失敗しました');
+      }
+      
+      const data = await response.json();
+      setAllProperties(data.properties || []);
     } catch (err: any) {
       console.error('全件取得エラー:', err);
     } finally {
