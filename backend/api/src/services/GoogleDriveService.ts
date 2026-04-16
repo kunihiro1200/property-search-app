@@ -162,8 +162,8 @@ export class GoogleDriveService extends BaseRepository {
       if (isSharedDrive && this.parentFolderId) {
         queryParams.supportsAllDrives = true;
         queryParams.includeItemsFromAllDrives = true;
-        queryParams.corpora = 'drive';
-        queryParams.driveId = this.parentFolderId;
+        // corpora: 'allDrives' を使用（driveId指定だとサブフォルダ内の検索が制限される場合がある）
+        queryParams.corpora = 'allDrives';
       } else {
         // マイドライブの場合
         queryParams.corpora = 'user';
