@@ -407,15 +407,43 @@ const PublicPropertiesPage: React.FC = () => {
     setSearchParams(newParams, { replace: true });
   }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
+  // 前回の viewMode を追跡（map→list 切り替え時の再取得を防ぐ）
+  const prevViewModeRef = useRef<'list' | 'map'>('list');
+  // 地図ビュー中にフィルターが変更されたかどうかのフラグ
+  const filterChangedDuringMapRef = useRef(false);
+  // 地図ビュー中の searchParams を追跡
+  const searchParamsDuringMapRef = useRef<string>('');
+
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
       return;
     }
     
-    // 地図ビュー中はリスト用データ取得をスキップ（地図→リスト切り替え時の遅延を防ぐ）
+    // 地図ビュー中はリスト用データ取得をスキップ
     if (viewMode === 'map') {
+      // 地図ビュー中の searchParams 変化を追跡
+      const currentParams = searchParams.toString();
+      if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
+        filterChangedDuringMapRef.current = true;
+      }
+      searchParamsDuringMapRef.current = currentParams;
+      prevViewModeRef.current = 'map';
       return;
+    }
+    
+    // 地図→リスト切り替え時（map→list）
+    if (prevViewModeRef.current === 'map' && viewMode === 'list') {
+      prevViewModeRef.current = 'list';
+      // 地図ビュー中にフィルターが変更されていなければ再取得しない
+      // （バックエンドが limit=500 リクエスト処理中でも即座にリスト表示）
+      if (!filterChangedDuringMapRef.current) {
+        filterChangedDuringMapRef.current = false;
+        return;
+      }
+      filterChangedDuringMapRef.current = false;
+    } else {
+      prevViewModeRef.current = 'list';
     }
     
     fetchProperties();
