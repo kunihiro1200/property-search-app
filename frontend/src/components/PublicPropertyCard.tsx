@@ -142,9 +142,20 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     );
   };
 
+  // storage_location から Google Drive フォルダIDを抽出する
+  const extractFolderIdFromStorageLocation = (storageLocation: string | undefined): string | null => {
+    if (!storageLocation) return null;
+    const match = storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  const folderId = extractFolderIdFromStorageLocation(property.storage_location);
+
   const thumbnailUrl = property.images && property.images.length > 0
     ? property.images[0].thumbnailUrl
-    : null;
+    : folderId
+      ? `/api/public/folder-thumbnail/${folderId}`
+      : null;
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 

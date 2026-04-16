@@ -1198,8 +1198,14 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
     const result = await propertyImageService.getImagesFromStorageUrl(storageUrl);
 
     if (!result.images || result.images.length === 0) {
-      console.log(`[FolderThumbnail] No images found in folder: ${folderId}, returning 404`);
-      return res.status(404).json({ error: 'No images found' });
+      console.log(`[FolderThumbnail] No images found in folder: ${folderId}, returning SVG placeholder`);
+      const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f5f5f5"/><text x="200" y="150" text-anchor="middle" fill="#999" font-size="16" font-family="sans-serif">画像なし</text></svg>`;
+      res.set({
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      });
+      return res.send(svgPlaceholder);
     }
 
     // 最初の画像のファイルIDを取得してリダイレクト
@@ -1221,7 +1227,13 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
     console.log(`✅ [FolderThumbnail] Served image ${fileId} from folder ${folderId}`);
   } catch (error: any) {
     console.error('❌ [FolderThumbnail] Error:', error.message);
-    return res.status(500).json({ error: error.message || 'Failed to fetch folder thumbnail' });
+    const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f5f5f5"/><text x="200" y="150" text-anchor="middle" fill="#999" font-size="16" font-family="sans-serif">画像なし</text></svg>`;
+    res.set({
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400',
+      'Access-Control-Allow-Origin': '*',
+    });
+    return res.send(svgPlaceholder);
   }
 });
 

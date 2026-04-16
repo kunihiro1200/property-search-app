@@ -24,6 +24,7 @@ export interface PublicProperty {
   atbb_status: string;  // atbb_statusを追加
   badge_type?: 'none' | 'pre_release' | 'email_only' | 'sold';  // バッジタイプを追加
   is_clickable?: boolean;  // クリック可能フラグを追加
+  storage_location?: string;  // Google DriveフォルダURL（例: https://drive.google.com/drive/folders/FOLDER_ID）
   created_at: string;
   updated_at: string;
 }
