@@ -589,10 +589,20 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
                 onClick={() => handlePropertyClick(selectedProperty.id)}
                 aria-label="物件詳細を新しいタブで開く"
                 sx={{
-                  backgroundColor: '#FFC107',
-                  color: '#000',
+                  backgroundColor: (() => {
+                    const result = mapAtbbStatusToDisplayStatus(selectedProperty.atbb_status);
+                    return result.statusType === 'other'
+                      ? '#2196F3'
+                      : BADGE_CONFIGS[result.statusType].backgroundColor;
+                  })(),
+                  color: '#fff',
                   '&:hover': {
-                    backgroundColor: '#FFB300',
+                    backgroundColor: (() => {
+                      const result = mapAtbbStatusToDisplayStatus(selectedProperty.atbb_status);
+                      if (result.statusType === 'other') return '#1976D2';
+                      const base = BADGE_CONFIGS[result.statusType].backgroundColor;
+                      return base;
+                    })(),
                   },
                 }}
               >
