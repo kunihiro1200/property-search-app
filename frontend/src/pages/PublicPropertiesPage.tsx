@@ -243,19 +243,22 @@ const PublicPropertiesPage: React.FC = () => {
       }
       
       // viewMode を savedState から復元する（地図ビューから戻った場合は 'map' を維持）
-      if (savedState.viewMode) {
-        console.log('🔄 Restoring viewMode:', savedState.viewMode);
-        setViewMode(savedState.viewMode);
+      const restoredViewMode = savedState.viewMode || null;
+      if (restoredViewMode) {
+        console.log('🔄 Restoring viewMode:', restoredViewMode);
+        setViewMode(restoredViewMode);
       }
       // viewMode が未設定の場合は初期値（URLパラメータまたは 'list'）のまま維持
       
       // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
+      // viewMode の state 更新が確実に反映された後に isStateRestored を true にする
+      // （地図ビューの場合、viewMode='map' が確定してから fetchAllProperties をトリガーするため）
       setTimeout(() => {
         isRestoringState.current = false;
         isReturningFromDetail.current = false; // 戻り遷移フラグをリセット（以降はfilterLoadingを使用）
         setIsStateRestored(true);
-        console.log('✅ [PublicPropertiesPage] State restoration completed');
-      }, 100);
+        console.log('✅ [PublicPropertiesPage] State restoration completed, viewMode:', restoredViewMode);
+      }, 200);
     } else if (!savedState) {
       // location.stateがない場合（新規アクセスなど）
       if (hasRestoredState.current) {
