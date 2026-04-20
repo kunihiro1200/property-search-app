@@ -32,13 +32,20 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
     const searchParams = new URLSearchParams(location.search);
     const canHide = searchParams.get('canHide');
     
+    // navigationState から viewMode を取得
+    const viewMode = navigationState?.viewMode;
+    
     console.log('[PublicPropertyHeader] handleBackClick - canHide:', canHide);
+    console.log('[PublicPropertyHeader] handleBackClick - viewMode:', viewMode);
     console.log('[PublicPropertyHeader] handleBackClick - location.search:', location.search);
     
-    // canHideパラメータを保持したURLを構築
-    const backUrl = canHide === 'true' 
-      ? '/public/properties?canHide=true' 
-      : '/public/properties';
+    // viewMode と canHide の組み合わせでURLを構築
+    const params = new URLSearchParams();
+    if (canHide === 'true') params.set('canHide', 'true');
+    if (viewMode === 'map') params.set('view', 'map');
+    
+    const queryString = params.toString();
+    const backUrl = queryString ? `/public/properties?${queryString}` : '/public/properties';
     
     console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
     

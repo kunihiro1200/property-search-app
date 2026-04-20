@@ -242,10 +242,12 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
-      // ⚠️ 重要: 詳細画面から戻った時は、viewModeを強制的に'list'に設定
-      // これにより、地図用データの取得useEffectが実行されない
-      console.log('🔄 Restoring state from detail page, forcing viewMode to list');
-      setViewMode('list');
+      // viewMode を savedState から復元する（地図ビューから戻った場合は 'map' を維持）
+      if (savedState.viewMode) {
+        console.log('🔄 Restoring viewMode:', savedState.viewMode);
+        setViewMode(savedState.viewMode);
+      }
+      // viewMode が未設定の場合は初期値（URLパラメータまたは 'list'）のまま維持
       
       // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
       setTimeout(() => {
