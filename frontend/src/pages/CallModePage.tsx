@@ -1126,9 +1126,9 @@ const CallModePage = () => {
       }
 
       // 訪問予約情報の初期化
-      // ISO形式の日時をdatetime-local形式に変換 (YYYY-MM-DDTHH:mm)
+      // UTC変換なしで YYYY-MM-DDTHH:mm 形式を取得
       const appointmentDateLocal = sellerData.appointmentDate 
-        ? new Date(sellerData.appointmentDate).toISOString().slice(0, 16)
+        ? String(sellerData.appointmentDate).slice(0, 16)
         : '';
       setEditedAppointmentDate(appointmentDateLocal);
       setEditedAssignedTo(sellerData.assignedTo || '');
@@ -1603,9 +1603,9 @@ const CallModePage = () => {
       setSuccessMessage(null);
       setAppointmentSuccessMessage(null);
 
-      // datetime-localの値をISO形式に変換
+      // datetime-localの値をそのまま使用（タイムゾーン変換なし）
       const appointmentDateISO = editedAppointmentDate 
-        ? new Date(editedAppointmentDate).toISOString() 
+        ? editedAppointmentDate 
         : null;
 
       console.log('Saving appointment:', {
@@ -3540,9 +3540,9 @@ HP：https://ifoo-oita.com/
                   size="small"
                   onClick={() => {
                     if (editingAppointment) {
-                      // キャンセル時は元の値に戻す
+                      // キャンセル時は元の値に戻す（UTC変換なし）
                       const appointmentDateLocal = seller?.appointmentDate 
-                        ? new Date(seller.appointmentDate).toISOString().slice(0, 16)
+                        ? String(seller.appointmentDate).slice(0, 16)
                         : '';
                       setEditedAppointmentDate(appointmentDateLocal);
                       setEditedAssignedTo(seller?.assignedTo || '');
@@ -3560,7 +3560,8 @@ HP：https://ifoo-oita.com/
                         const timeOnly = timeStr.substring(0, 5); // HH:mm
                         appointmentDateLocal = `${dateStr}T${timeOnly}`;
                       } else if (seller?.appointmentDate) {
-                        appointmentDateLocal = new Date(seller.appointmentDate).toISOString().slice(0, 16);
+                        // UTC変換なしで YYYY-MM-DDTHH:mm 形式を取得
+                        appointmentDateLocal = String(seller.appointmentDate).slice(0, 16);
                       }
                       setEditedAppointmentDate(appointmentDateLocal);
                       setEditedAssignedTo(seller?.visitAssignee || seller?.assignedTo || '');

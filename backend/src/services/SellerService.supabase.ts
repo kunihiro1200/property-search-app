@@ -333,13 +333,12 @@ export class SellerService extends BaseRepository {
     }
     if (data.appointmentDate !== undefined) {
       updates.appointment_date = data.appointmentDate;
-      // appointmentDateをvisit_dateとvisit_timeに分割して保存
+      // appointmentDateをvisit_dateとvisit_timeに分割して保存（UTC変換なし）
       if (data.appointmentDate) {
-        const appointmentDateObj = new Date(data.appointmentDate);
-        updates.visit_date = appointmentDateObj.toISOString().split('T')[0]; // YYYY-MM-DD
-        const hours = appointmentDateObj.getHours().toString().padStart(2, '0');
-        const minutes = appointmentDateObj.getMinutes().toString().padStart(2, '0');
-        updates.visit_time = `${hours}:${minutes}:00`; // HH:mm:ss
+        updates.visit_date = data.appointmentDate.split('T')[0]; // YYYY-MM-DD
+        const timePart = data.appointmentDate.split('T')[1];
+        const timeOnly = timePart ? timePart.slice(0, 5) : '00:00'; // HH:mm
+        updates.visit_time = `${timeOnly}:00`; // HH:mm:ss
       } else {
         updates.visit_date = null;
         updates.visit_time = null;
