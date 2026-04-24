@@ -263,13 +263,20 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
       }
     }
     
+    // 内部メモ行（←で始まる行）をフィルタリング
+    const rawComments: any[] = Array.isArray(property.recommended_comments) ? property.recommended_comments : [];
+    const filteredComments = rawComments.filter((c: any) => {
+      const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
+      return !text.trim().startsWith('←') && !text.includes('一般媒介で、担当もついている場合');
+    });
+
     // レスポンスを返す（getPublicPropertyByIdが既に取得したデータを使用）
     // キャッシュヘッダーを設定（5分間）
     res.set('Cache-Control', 'public, max-age=300');
     res.json({
       property,
       favoriteComment: property.favorite_comment,
-      recommendedComments: property.recommended_comments,
+      recommendedComments: filteredComments,
       athomeData: property.athome_data,
       settlementDate,
       propertyAbout: property.property_about
