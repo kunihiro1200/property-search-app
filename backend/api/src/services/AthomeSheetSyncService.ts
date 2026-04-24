@@ -18,8 +18,8 @@ const CELL_MAPPING = {
     recommendedComments: 'B152:L166',
   },
   apartment: {
-    favoriteComment: 'B150',
-    recommendedComments: 'B149:L163',
+    favoriteComment: 'B139',
+    recommendedComments: 'B150:L163',
   },
 };
 
