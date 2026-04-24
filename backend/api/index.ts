@@ -543,7 +543,10 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
         const raw: any[] = Array.isArray(dbDetails.recommended_comments) ? dbDetails.recommended_comments : [];
         return raw.filter((c: any) => {
           const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
-          return !text.trim().startsWith('←') && !text.includes('一般媒介で、担当もついている場合');
+          const trimmed = text.trim();
+          return !trimmed.startsWith('←') && 
+                 !trimmed.includes('一般媒介で、担当もついている場合') &&
+                 !(trimmed.startsWith('＼') && trimmed.endsWith('／'));
         });
       })(),
       athomeData: dbDetails.athome_data,

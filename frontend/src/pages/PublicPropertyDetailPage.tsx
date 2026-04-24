@@ -831,7 +831,9 @@ const PublicPropertyDetailPage: React.FC = () => {
                         return String(c ?? '');
                       };
                       const text = flatten(comment).trim();
-                      return !text.startsWith('←') && !text.includes('一般媒介で、担当もついている場合');
+                      return !text.startsWith('←') && 
+                             !text.includes('一般媒介で、担当もついている場合') &&
+                             !text.startsWith('＼') && !text.endsWith('／');
                     })
                     .map((comment: any, commentIndex: number) => {
                       // commentが文字列の場合はそのまま表示
