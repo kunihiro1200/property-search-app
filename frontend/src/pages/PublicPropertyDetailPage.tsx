@@ -823,31 +823,35 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments.map((comment: any, commentIndex: number) => {
-                    // 内部メモ行（←で始まる行）は表示しない
-                    const text = Array.isArray(comment) ? comment.join(' ') : String(comment);
-                    if (text.startsWith('←') || text.includes('一般媒介で、担当もついている場合')) {
+                  {completeData.recommendedComments
+                    .filter((comment: any) => {
+                      // 内部メモ行を除外（←で始まる、または特定のキーワードを含む）
+                      const flatten = (c: any): string => {
+                        if (Array.isArray(c)) return c.map(flatten).join(' ');
+                        return String(c ?? '');
+                      };
+                      const text = flatten(comment).trim();
+                      return !text.startsWith('←') && !text.includes('一般媒介で、担当もついている場合');
+                    })
+                    .map((comment: any, commentIndex: number) => {
+                      // commentが文字列の場合はそのまま表示
+                      if (typeof comment === 'string') {
+                        return (
+                          <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                            {comment}
+                          </Typography>
+                        );
+                      }
+                      // commentが配列の場合は結合して表示
+                      if (Array.isArray(comment)) {
+                        return (
+                          <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                            {comment.join(' ')}
+                          </Typography>
+                        );
+                      }
                       return null;
-                    }
-                    // commentが文字列の場合はそのまま表示
-                    if (typeof comment === 'string') {
-                      return (
-                        <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                          {comment}
-                        </Typography>
-                      );
-                    }
-                    // commentが配列の場合は結合して表示
-                    if (Array.isArray(comment)) {
-                      return (
-                        <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                          {comment.join(' ')}
-                        </Typography>
-                      );
-                    }
-                    // それ以外（オブジェクトなど）の場合はスキップ
-                    return null;
-                  })}
+                    })}
                 </Box>
               </Paper>
             )}
