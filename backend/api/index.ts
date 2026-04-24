@@ -538,7 +538,14 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
     res.json({
       property,
       favoriteComment: dbDetails.favorite_comment,
-      recommendedComments: dbDetails.recommended_comments,
+      recommendedComments: (() => {
+        // 内部メモ行（←で始まる行）をフィルタリング
+        const raw: any[] = Array.isArray(dbDetails.recommended_comments) ? dbDetails.recommended_comments : [];
+        return raw.filter((c: any) => {
+          const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
+          return !text.trim().startsWith('←') && !text.includes('一般媒介で、担当もついている場合');
+        });
+      })(),
       athomeData: dbDetails.athome_data,
       settlementDate,
       propertyAbout: dbDetails.property_about,
