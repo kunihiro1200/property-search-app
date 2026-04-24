@@ -265,8 +265,8 @@ router.get('/properties/:id/complete', async (req: Request, res: Response): Prom
     });
 
     // レスポンスを返す（getPublicPropertyByIdが既に取得したデータを使用）
-    // キャッシュヘッダーを設定（5分間）
-    res.set('Cache-Control', 'public, max-age=300');
+    // キャッシュヘッダーを設定（キャッシュなし）
+    res.set('Cache-Control', 'no-store');
     res.json({
       property,
       favoriteComment: property.favorite_comment,
