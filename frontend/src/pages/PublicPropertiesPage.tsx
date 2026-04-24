@@ -1023,51 +1023,50 @@ const PublicPropertiesPage: React.FC = () => {
           </Box>
         )}
 
-        {properties.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="h6" color="text.secondary">
-              現在公開中の物件はありません
-            </Typography>
+        {/* 地図モード時は properties の件数に関わらず地図を表示 */}
+        {viewMode === 'map' ? (
+          <Box ref={mapViewRef}>
+            {isLoadingAllProperties ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
+                <CircularProgress />
+                <Typography sx={{ mt: 2 }} color="text.secondary">
+                  全物件データを取得中...
+                </Typography>
+              </Box>
+            ) : (
+              <PropertyMapView 
+                properties={allProperties} 
+                isLoaded={isMapLoaded} 
+                loadError={mapLoadError}
+                navigationState={{
+                  currentPage,
+                  viewMode,
+                  filters: {
+                    propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+                    priceRange: (minPrice || maxPrice) ? {
+                      min: minPrice || undefined,
+                      max: maxPrice || undefined
+                    } : undefined,
+                    buildingAgeRange: (minAge || maxAge) ? {
+                      min: minAge || undefined,
+                      max: maxAge || undefined
+                    } : undefined,
+                    searchQuery: searchQuery || undefined,
+                    searchType: searchType || undefined,
+                    showPublicOnly: showPublicOnly || undefined
+                  }
+                }}
+              />
+            )}
           </Box>
         ) : (
+          /* リストモード */
           <>
-            {/* 表示モード切り替えボタン（地図モード時、物件あり） - 上部の共通ボタンで代替 */}
-
-            {/* 地図表示 */}
-            {viewMode === 'map' ? (
-              <Box ref={mapViewRef}>
-                {isLoadingAllProperties ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
-                    <CircularProgress />
-                    <Typography sx={{ mt: 2 }} color="text.secondary">
-                      全物件データを取得中...
-                    </Typography>
-                  </Box>
-                ) : (
-                  <PropertyMapView 
-                    properties={allProperties} 
-                    isLoaded={isMapLoaded} 
-                    loadError={mapLoadError}
-                    navigationState={{
-                      currentPage,
-                      viewMode, // viewModeを渡す
-                      filters: {
-                        propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
-                        priceRange: (minPrice || maxPrice) ? {
-                          min: minPrice || undefined,
-                          max: maxPrice || undefined
-                        } : undefined,
-                        buildingAgeRange: (minAge || maxAge) ? {
-                          min: minAge || undefined,
-                          max: maxAge || undefined
-                        } : undefined,
-                        searchQuery: searchQuery || undefined,
-                        searchType: searchType || undefined,
-                        showPublicOnly: showPublicOnly || undefined
-                      }
-                    }}
-                  />
-                )}
+            {properties.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="text.secondary">
+                  現在公開中の物件はありません
+                </Typography>
               </Box>
             ) : (
               <>
@@ -1091,10 +1090,9 @@ const PublicPropertiesPage: React.FC = () => {
                 {/* 物件グリッド */}
                 <Grid container spacing={3} id="property-grid" ref={propertyGridRef} sx={{ opacity: filterLoading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
                   {properties.map((property, index) => {
-                    // 現在のナビゲーション状態を構築
                     const navigationState: Omit<NavigationState, 'scrollPosition'> = {
                       currentPage,
-                      viewMode, // viewModeを追加
+                      viewMode,
                       filters: {
                         propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
                         priceRange: (minPrice || maxPrice) ? {
@@ -1110,11 +1108,6 @@ const PublicPropertiesPage: React.FC = () => {
                         showPublicOnly: showPublicOnly || undefined
                       }
                     };
-                    
-                    // デバッグ：navigationStateをログ出力
-                    if (index === 0) {
-                      // 最初の物件のみログ出力（デバッグ用）
-                    }
                     
                     return (
                       <Grid item xs={12} md={6} lg={4} key={property.id}>
@@ -1134,15 +1127,12 @@ const PublicPropertiesPage: React.FC = () => {
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        // ページ変更時はlocation.stateをクリア（スクロール位置を復元しない）
                         window.history.replaceState(null, '');
                         setCurrentPage(p => Math.max(1, p - 1));
-                        // 物件グリッドの位置にスクロール
                         setTimeout(() => {
                           const gridElement = document.getElementById('property-grid');
                           if (gridElement) {
-                            const yOffset = -20; // 少し余白を持たせる
-                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset - 20;
                             window.scrollTo({ top: y, behavior: 'smooth' });
                           }
                         }, 100);
@@ -1152,23 +1142,18 @@ const PublicPropertiesPage: React.FC = () => {
                     >
                       前へ
                     </Button>
-                
-                <Typography sx={{ px: 2 }}>
-                  {currentPage} / {pagination.totalPages}
-                </Typography>
-                
+                    <Typography sx={{ px: 2 }}>
+                      {currentPage} / {pagination.totalPages}
+                    </Typography>
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        // ページ変更時はlocation.stateをクリア（スクロール位置を復元しない）
                         window.history.replaceState(null, '');
                         setCurrentPage(p => Math.min(pagination.totalPages, p + 1));
-                        // 物件グリッドの位置にスクロール
                         setTimeout(() => {
                           const gridElement = document.getElementById('property-grid');
                           if (gridElement) {
-                            const yOffset = -20; // 少し余白を持たせる
-                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset - 20;
                             window.scrollTo({ top: y, behavior: 'smooth' });
                           }
                         }, 100);
