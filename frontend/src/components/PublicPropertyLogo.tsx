@@ -1,7 +1,9 @@
 import React from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
-import logoPng from '../assets/comfortable-tenant-search-logo.png';
 import './PublicPropertyLogo.css';
+
+// publicフォルダから直接参照（Vercelのルーティング問題を回避）
+const LOGO_URL = '/comfortable-tenant-search-logo.png';
 
 const PublicPropertyLogo: React.FC = () => {
   const theme = useTheme();
@@ -25,7 +27,7 @@ const PublicPropertyLogo: React.FC = () => {
       aria-label="株式会社いふうのウェブサイトを開く"
     >
       <img 
-        src={logoPng} 
+        src={LOGO_URL} 
         alt="comfortable TENANT SEARCH" 
         className="logo-image"
       />
