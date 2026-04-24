@@ -247,6 +247,11 @@ const PublicPropertiesPage: React.FC = () => {
       if (restoredViewMode) {
         console.log('🔄 Restoring viewMode:', restoredViewMode);
         setViewMode(restoredViewMode);
+        // 地図モードで復元する場合、prevViewModeRef も 'map' に設定
+        // （これにより map→list 切り替え時に fetchProperties が正しく呼ばれる）
+        if (restoredViewMode === 'map') {
+          prevViewModeRef.current = 'map';
+        }
       }
       // viewMode が未設定の場合は初期値（URLパラメータまたは 'list'）のまま維持
       
@@ -418,6 +423,8 @@ const PublicPropertiesPage: React.FC = () => {
   const filterChangedDuringMapRef = useRef(false);
   // 地図ビュー中の searchParams を追跡
   const searchParamsDuringMapRef = useRef<string>('');
+  // properties の件数を ref で追跡（useEffect の依存配列に入れずに参照するため）
+  const propertiesLengthRef = useRef(0);
 
   // view パラメータを除いたフィルター用 searchParams 文字列を取得
   // viewMode 変更による searchParams 変化（view=map の追加/削除）をフィルター変更として誤検知しないため
@@ -449,8 +456,8 @@ const PublicPropertiesPage: React.FC = () => {
     if (prevViewModeRef.current === 'map' && viewMode === 'list') {
       prevViewModeRef.current = 'list';
       // 地図ビュー中にフィルターが変更されていなければ再取得しない
-      // （バックエンドが limit=500 リクエスト処理中でも即座にリスト表示）
-      if (!filterChangedDuringMapRef.current) {
+      // ただし、properties が空の場合（詳細ページから戻ってきた場合など）は必ず取得する
+      if (!filterChangedDuringMapRef.current && propertiesLengthRef.current > 0) {
         filterChangedDuringMapRef.current = false;
         return;
       }
@@ -555,6 +562,7 @@ const PublicPropertiesPage: React.FC = () => {
       
       const data = await response.json();
       setProperties(data.properties || []);
+      propertiesLengthRef.current = (data.properties || []).length;
       
       // paginationにtotalPagesを追加
       if (data.pagination) {
@@ -983,6 +991,38 @@ const PublicPropertiesPage: React.FC = () => {
           </Box>
         )}
         
+        {/* 地図モード時はリスト表示に戻るボタンを常に表示（物件0件でも） */}
+        {viewMode === 'map' && (
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              startIcon={<ListIcon />}
+              onClick={() => {
+                if (mapFetchAbortControllerRef.current) {
+                  mapFetchAbortControllerRef.current.abort();
+                  mapFetchAbortControllerRef.current = null;
+                }
+                if (mapFetchTimerRef.current) {
+                  clearTimeout(mapFetchTimerRef.current);
+                  mapFetchTimerRef.current = null;
+                }
+                setIsLoadingAllProperties(false);
+                setViewMode('list');
+              }}
+              sx={{
+                borderColor: '#FFC107',
+                color: '#000',
+                '&:hover': {
+                  borderColor: '#FFB300',
+                  backgroundColor: '#FFF9E6',
+                },
+              }}
+            >
+              リスト表示に戻る
+            </Button>
+          </Box>
+        )}
+
         {properties.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 6 }}>
             <Typography variant="h6" color="text.secondary">
@@ -991,38 +1031,7 @@ const PublicPropertiesPage: React.FC = () => {
           </Box>
         ) : (
           <>
-            {/* 表示モード切り替えボタン */}
-            {viewMode === 'map' && (
-              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ListIcon />}
-                  onClick={() => {
-                    // 進行中の地図用フェッチをキャンセル
-                    if (mapFetchAbortControllerRef.current) {
-                      mapFetchAbortControllerRef.current.abort();
-                      mapFetchAbortControllerRef.current = null;
-                    }
-                    if (mapFetchTimerRef.current) {
-                      clearTimeout(mapFetchTimerRef.current);
-                      mapFetchTimerRef.current = null;
-                    }
-                    setIsLoadingAllProperties(false);
-                    setViewMode('list');
-                  }}
-                  sx={{
-                    borderColor: '#FFC107',
-                    color: '#000',
-                    '&:hover': {
-                      borderColor: '#FFB300',
-                      backgroundColor: '#FFF9E6',
-                    },
-                  }}
-                >
-                  リスト表示に戻る
-                </Button>
-              </Box>
-            )}
+            {/* 表示モード切り替えボタン（地図モード時、物件あり） - 上部の共通ボタンで代替 */}
 
             {/* 地図表示 */}
             {viewMode === 'map' ? (
