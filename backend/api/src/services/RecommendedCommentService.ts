@@ -203,8 +203,14 @@ export class RecommendedCommentService {
             }
           }
           // 空でないセルがある行のみ追加
+          // ただし「←一般媒介で、担当もついている場合は、ラベルはEとAというふうに２ついれてください！」
+          // のような内部メモ行は除外する
           if (nonEmptyCells.length > 0) {
-            commentRows.push(nonEmptyCells);
+            const firstCell = nonEmptyCells[0];
+            const isInternalNote = firstCell.startsWith('←') || firstCell.includes('一般媒介で、担当もついている場合');
+            if (!isInternalNote) {
+              commentRows.push(nonEmptyCells);
+            }
           }
         }
       }
