@@ -824,6 +824,11 @@ const PublicPropertyDetailPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ m: 0 }}>
                   {completeData.recommendedComments.map((comment: any, commentIndex: number) => {
+                    // 内部メモ行（←で始まる行）は表示しない
+                    const text = Array.isArray(comment) ? comment.join(' ') : String(comment);
+                    if (text.startsWith('←') || text.includes('一般媒介で、担当もついている場合')) {
+                      return null;
+                    }
                     // commentが文字列の場合はそのまま表示
                     if (typeof comment === 'string') {
                       return (
