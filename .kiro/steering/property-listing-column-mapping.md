@@ -30,8 +30,14 @@ inclusion: manual
 |---------------------|---------------------|-----|------|
 | `land_area` | `土地面積` | H列 | 土地面積（㎡） |
 | `building_area` | `建物面積` | I列 | 建物面積（㎡） |
-| `sales_price` | `売買価格` | J列 | 売買価格（円） |
+| `sales_price` | **`価格`（第1優先）** | **BS列** | **価格（円）** |
+| `sales_price` | `売買価格`（第2優先） | J列 | 売買価格（円） |
 | `listing_price` | `売出価格` | e列 | 売出価格（円） |
+
+**価格の取得優先順位**:
+1. **第1優先**: BS列（`価格`）
+2. **第2優先**: J列（`売買価格`）
+3. **フォールバック**: `null`
 
 ### 売主・買主情報
 
@@ -267,7 +273,8 @@ export class PropertyListingSyncService {
         display_address: row['住居表示（ATBB登録住所）'],
         land_area: row['土地面積'],
         building_area: row['建物面積'],
-        sales_price: row['売買価格'],
+        // 価格の優先順位: BS列（価格）→ J列（売買価格）
+        sales_price: row['価格'] || row['売買価格'],
         listing_price: row['売出価格'],
         seller_name: row['名前(売主）'],  // ← 全角括弧
         buyer_name: row['名前（買主）'],  // ← 全角括弧

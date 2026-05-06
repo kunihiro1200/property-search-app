@@ -210,7 +210,10 @@ export class PropertyListingSyncService {
             const atbbStatus = String(
               row['atbb成約済み/非公開'] || row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || ''
             );
-            const salesPrice = row['売買価格']
+            // 価格の優先順位: BS列（価格）→ J列（売買価格）
+            const salesPrice = row['価格']
+              ? parseFloat(String(row['価格']).replace(/,/g, ''))
+              : row['売買価格']
               ? parseFloat(String(row['売買価格']).replace(/,/g, ''))
               : null;
             const listingPrice = row['売出価格']
@@ -263,7 +266,10 @@ export class PropertyListingSyncService {
           const atbbStatus = String(
             row['atbb成約済み/非公開'] || row['atbb_status'] || row['ATBB_status'] || row['ステータス'] || ''
           );
-          const salesPrice = row['売買価格']
+          // 価格の優先順位: BS列（価格）→ J列（売買価格）
+          const salesPrice = row['価格']
+            ? parseFloat(String(row['価格']).replace(/,/g, ''))
+            : row['売買価格']
             ? parseFloat(String(row['売買価格']).replace(/,/g, ''))
             : null;
           const listingPrice = row['売出価格']
@@ -457,7 +463,10 @@ export class PropertyListingSyncService {
             address: String(row['所在地'] || ''),
             display_address: String(row['住居表示（ATBB登録住所）'] || ''),
             property_type: String(row['種別'] || ''),
-            sales_price: row['売買価格']
+            // 価格の優先順位: BS列（価格）→ J列（売買価格）
+            sales_price: row['価格']
+              ? parseFloat(String(row['価格']).replace(/,/g, ''))
+              : row['売買価格']
               ? parseFloat(String(row['売買価格']).replace(/,/g, ''))
               : null,
             buyer_name: String(row['名前（買主）'] || ''),
