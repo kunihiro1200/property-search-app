@@ -249,6 +249,8 @@ const KujiraPropertyDetailPage: React.FC = () => {
             keywords={['くじら不動産', '不動産', '物件', property.property_type, property.address, '大分']}
             canonicalUrl={typeof window !== 'undefined' ? window.location.href : ''}
             ogImage={property.images?.[0]}
+            siteName="くじら不動産"
+            faviconUrl="/kujira-logo.png"
           />
           <StructuredData
             data={generatePropertyStructuredData({

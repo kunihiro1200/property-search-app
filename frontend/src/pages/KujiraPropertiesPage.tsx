@@ -440,6 +440,8 @@ const KujiraPropertiesPage: React.FC = () => {
         description="株式会社くじら不動産の物件情報です。大分県の不動産物件を掲載しています。"
         keywords={['不動産', '物件', 'くじら不動産', '大分', '売買']}
         canonicalUrl={typeof window !== 'undefined' ? window.location.href : ''}
+        siteName="くじら不動産"
+        faviconUrl="/kujira-logo.png"
       />
 
       <Box sx={{ minHeight: '100vh', bgcolor: '#EEF2FF' }}>

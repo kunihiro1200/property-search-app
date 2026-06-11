@@ -7,19 +7,15 @@ interface SEOHeadProps {
   canonicalUrl?: string;
   type?: 'website' | 'article';
   keywords?: string[];
+  // サイト名とfaviconを上書き可能（くじらサイト用）
+  siteName?: string;
+  faviconUrl?: string;
 }
 
 /**
  * SEOHeadコンポーネント
  * 
  * ページのメタタグ、Open Graphタグ、Twitter Cardタグを設定します。
- * 
- * @param title - ページタイトル（サイト名は自動的に追加されます）
- * @param description - ページの説明文
- * @param ogImage - OGP画像のURL（オプション）
- * @param canonicalUrl - 正規URL（オプション、現在のURLが使用されます）
- * @param type - ページタイプ（デフォルト: 'website'）
- * @param keywords - キーワード配列（オプション）
  */
 export const SEOHead: React.FC<SEOHeadProps> = ({
   title,
@@ -28,8 +24,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   canonicalUrl,
   type = 'website',
   keywords = [],
+  siteName = 'いふうの物件情報サイト',
+  faviconUrl,
 }) => {
-  const siteName = 'いふうの物件情報サイト';
   const fullTitle = `${title} | ${siteName}`;
   const currentUrl = canonicalUrl || (typeof window !== 'undefined' ? window.location.href : '');
   
@@ -39,8 +36,13 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
 
   return (
     <Helmet>
-      {/* Basic Meta Tags */}
+      {/* ページタイトル */}
       <title>{fullTitle}</title>
+
+      {/* Favicon（上書き指定がある場合はくじら用に切り替え） */}
+      {faviconUrl && <link rel="icon" type="image/png" href={faviconUrl} />}
+
+      {/* Basic Meta Tags */}
       <meta name="description" content={description} />
       {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
