@@ -324,9 +324,14 @@ app.get('/api/public/properties', async (req, res) => {
 
     console.log(`✅ Found ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
     
+    // いふうサイトではFI物件を除外（FI物件はくじら不動産サイト専用）
+    const filteredProperties = (result.properties || []).filter(
+      (p: any) => !p.property_number || !String(p.property_number).toUpperCase().startsWith('FI')
+    );
+    
     // price が設定されていない物件は sales_price || listing_price || 0 でインライン計算
     // （N+1クエリを排除: 個別のSupabaseクエリは実行しない）
-    const propertiesWithPrice = (result.properties || []).map((property) => {
+    const propertiesWithPrice = filteredProperties.map((property) => {
       // すでに price が設定されている場合はそのまま返す
       if (property.price !== null && property.price !== undefined) {
         return property;
@@ -2380,7 +2385,9 @@ app.get('/api/public/map-properties', async (req, res) => {
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
       .not('latitude', 'is', null)
-      .not('longitude', 'is', null);
+      .not('longitude', 'is', null)
+      // いふうサイトではFI物件を除外（くじら不動産サイト専用）
+      .not('property_number', 'ilike', 'FI%');
 
     if (types) {
       const typeList = types.split(',');
