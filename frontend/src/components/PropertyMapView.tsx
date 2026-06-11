@@ -14,6 +14,8 @@ interface PropertyMapViewProps {
   navigationState?: Omit<NavigationState, 'scrollPosition'>;
   // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
   detailBasePath?: string;
+  // 地図の初期中心座標（デフォルトは大分市）
+  defaultMapCenter?: { lat: number; lng: number };
 }
 
 interface PropertyWithCoordinates extends PublicProperty {
@@ -217,7 +219,7 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
 /**
  * 物件を地図上に表示するコンポーネント
  */
-const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState, detailBasePath = '/public/properties' }) => {
+const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState, detailBasePath = '/public/properties', defaultMapCenter }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
@@ -532,7 +534,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
       </Typography>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={defaultCenter}
+        center={defaultMapCenter || defaultCenter}
         zoom={11}
         onLoad={onLoad}
         onUnmount={onUnmount}

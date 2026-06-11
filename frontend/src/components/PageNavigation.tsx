@@ -23,8 +23,12 @@ export default function PageNavigation() {
     window.open('/public/properties', '_blank');
   };
 
+  const handleKujiraSiteClick = () => {
+    window.open('/kujira/properties', '_blank');
+  };
+
   return (
-    <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+    <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
       <ButtonGroup variant="outlined" size="large">
         {navItems.map((item) => (
           <Button
@@ -46,6 +50,21 @@ export default function PageNavigation() {
         sx={{ minWidth: 150 }}
       >
         公開物件サイト
+      </Button>
+      <Button
+        variant="outlined"
+        onClick={handleKujiraSiteClick}
+        sx={{
+          minWidth: 150,
+          borderColor: '#1565C0',
+          color: '#1565C0',
+          '&:hover': {
+            borderColor: '#0D47A1',
+            backgroundColor: '#EEF2FF',
+          },
+        }}
+      >
+        🐋 くじらサイト
       </Button>
     </Box>
   );

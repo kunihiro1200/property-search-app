@@ -700,6 +700,15 @@ const KujiraPropertiesPage: React.FC = () => {
                   }}
                   // くじらサイト用に詳細ページのベースURLを変更
                   detailBasePath="/kujira/properties"
+                  // 物件がある場合はその中心、なければ日本全体
+                  defaultMapCenter={
+                    allProperties.length > 0 && allProperties[0].latitude && allProperties[0].longitude
+                      ? {
+                          lat: allProperties.reduce((sum, p) => sum + (p.latitude || 0), 0) / allProperties.length,
+                          lng: allProperties.reduce((sum, p) => sum + (p.longitude || 0), 0) / allProperties.length,
+                        }
+                      : undefined
+                  }
                 />
               )}
             </Box>
