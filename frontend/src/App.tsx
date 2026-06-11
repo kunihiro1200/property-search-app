@@ -21,6 +21,8 @@ import BuyerDetailPage from './pages/BuyerDetailPage';
 import PublicPropertyListingPage from './pages/PublicPropertyListingPage';
 import PublicPropertiesPage from './pages/PublicPropertiesPage';
 import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
+import KujiraPropertiesPage from './pages/KujiraPropertiesPage';
+import KujiraPropertyDetailPage from './pages/KujiraPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
@@ -42,6 +44,9 @@ function App() {
         {/* Public routes - no authentication required */}
         <Route path="/public/properties" element={<PublicPropertiesPage />} />
         <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
+        {/* くじら不動産サイト（FI物件専用） */}
+        <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
+        <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
         <Route
           path="/"
           element={

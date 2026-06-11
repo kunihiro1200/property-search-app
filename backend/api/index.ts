@@ -15,6 +15,7 @@ import { PropertyService } from './src/services/PropertyService';
 import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
+import authRoutes from './src/routes/auth.supabase';
 
 
 const app = express();
@@ -73,6 +74,9 @@ app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// 認証ルート（社員ログイン用）
+app.use('/auth', authRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -2208,6 +2212,157 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
       retryable: false,
     },
   });
+});
+
+// =============================================================
+// くじら不動産サイト専用エンドポイント（FI物件のみ返す）
+// =============================================================
+
+// くじら物件一覧取得（property_numberが"FI"で始まる物件のみ）
+app.get('/api/kujira/properties', async (req, res) => {
+  try {
+    console.log('🐋 [Kujira] Fetching FI properties...');
+
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const propertyNumber = req.query.propertyNumber as string;
+    const location = req.query.location as string;
+    const types = req.query.types as string;
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+    const minAge = req.query.minAge ? parseInt(req.query.minAge as string) : undefined;
+    const maxAge = req.query.maxAge ? parseInt(req.query.maxAge as string) : undefined;
+    const showPublicOnly = req.query.showPublicOnly === 'true';
+    const skipImages = req.query.skipImages === 'true';
+
+    let priceFilter: { min?: number; max?: number } | undefined;
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      priceFilter = {};
+      if (minPrice !== undefined) priceFilter.min = minPrice * 10000;
+      if (maxPrice !== undefined) priceFilter.max = maxPrice * 10000;
+    }
+
+    let propertyTypeFilter: string[] | undefined;
+    if (types) propertyTypeFilter = types.split(',');
+
+    let buildingAgeRange: { min?: number; max?: number } | undefined;
+    if (minAge !== undefined || maxAge !== undefined) {
+      buildingAgeRange = {};
+      if (minAge !== undefined) buildingAgeRange.min = minAge;
+      if (maxAge !== undefined) buildingAgeRange.max = maxAge;
+    }
+
+    const result = await propertyListingService.getPublicProperties({
+      limit,
+      offset,
+      propertyType: propertyTypeFilter,
+      priceRange: priceFilter,
+      location,
+      propertyNumber,
+      buildingAgeRange,
+      showPublicOnly,
+      skipImages,
+    });
+
+    // FI物件のみフィルタリング
+    const fiProperties = (result.properties || []).filter(
+      (p: any) => p.property_number && String(p.property_number).toUpperCase().startsWith('FI')
+    );
+
+    // priceが未設定の場合は補完
+    const propertiesWithPrice = fiProperties.map((property: any) => {
+      if (property.price !== null && property.price !== undefined) return property;
+      return { ...property, price: property.sales_price || property.listing_price || 0 };
+    });
+
+    // FI物件の件数をpaginationに反映（近似値）
+    const fiTotal = propertiesWithPrice.length < limit
+      ? offset + propertiesWithPrice.length
+      : result.pagination.total; // 正確な値はクエリレベルでフィルタリングすれば取得可能
+
+    console.log(`🐋 [Kujira] Found ${propertiesWithPrice.length} FI properties`);
+
+    res.json({
+      success: true,
+      properties: propertiesWithPrice,
+      pagination: {
+        ...result.pagination,
+        total: fiTotal,
+      },
+    });
+  } catch (error: any) {
+    console.error('🐋 [Kujira] Error fetching FI properties:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// くじら地図用エンドポイント（FI物件のみ、軽量）
+app.get('/api/kujira/map-properties', async (req, res) => {
+  try {
+    const types = req.query.types as string;
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+    const showPublicOnly = req.query.showPublicOnly === 'true';
+
+    let query = supabase
+      .from('property_listings')
+      .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
+      .eq('is_hidden', false)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      // FI物件のみ（大文字小文字を区別しない）
+      .ilike('property_number', 'FI%');
+
+    if (types) {
+      const typeList = types.split(',');
+      if (typeList.length > 0) query = query.in('property_type', typeList);
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const orParts: string[] = [];
+      if (minPrice !== undefined && maxPrice !== undefined) {
+        orParts.push(`and(sales_price.gte.${minPrice * 10000},sales_price.lte.${maxPrice * 10000})`);
+        orParts.push(`and(listing_price.gte.${minPrice * 10000},listing_price.lte.${maxPrice * 10000})`);
+      } else if (minPrice !== undefined) {
+        orParts.push(`sales_price.gte.${minPrice * 10000}`);
+        orParts.push(`listing_price.gte.${minPrice * 10000}`);
+      } else if (maxPrice !== undefined) {
+        orParts.push(`sales_price.lte.${maxPrice * 10000}`);
+        orParts.push(`listing_price.lte.${maxPrice * 10000}`);
+      }
+      if (orParts.length > 0) query = query.or(orParts.join(','));
+    }
+
+    if (showPublicOnly) {
+      query = query.not('atbb_status', 'is', null).ilike('atbb_status', '%公開中%');
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Supabase query error: ${error.message}`);
+
+    const typeMapping: Record<string, string> = {
+      '戸建': 'detached_house', '戸建て': 'detached_house',
+      'マンション': 'apartment', '土地': 'land',
+    };
+
+    const properties = (data || []).map((p) => ({
+      id: p.id,
+      property_number: p.property_number,
+      property_type: typeMapping[p.property_type] || p.property_type,
+      address: p.address,
+      price: p.sales_price || p.listing_price || 0,
+      atbb_status: p.atbb_status,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      images: [],
+    }));
+
+    console.log(`🐋 [Kujira Map] Found ${properties.length} FI properties with coordinates`);
+    res.json({ success: true, properties });
+  } catch (error: any) {
+    console.error('🐋 [Kujira Map] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // 地図表示専用エンドポイント（軽量・高速）

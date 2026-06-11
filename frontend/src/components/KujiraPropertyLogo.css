@@ -1,0 +1,24 @@
+.kujira-property-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kujira-logo-image {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .kujira-logo-image {
+    height: 50px;
+  }
+}
+
+@media (max-width: 600px) {
+  .kujira-logo-image {
+    height: 40px;
+  }
+}

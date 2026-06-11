@@ -1,15 +1,17 @@
 /**
  * バッチ同期スクリプト（0-100件）
  */
-import { getPropertyListingSyncService } from './api/src/services/PropertyListingSyncService';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 async function main() {
   console.log('🔄 Starting batch sync (0-100)...\n');
 
   try {
+    const { getPropertyListingSyncService } = await import('./api/src/services/PropertyListingSyncService');
+    
     const syncService = getPropertyListingSyncService();
     await syncService.initialize();
 
@@ -30,7 +32,7 @@ async function main() {
 
   } catch (error: any) {
     console.error('❌ Error:', error.message);
-    console.error(error);
+    console.error(error.stack);
   }
 }
 

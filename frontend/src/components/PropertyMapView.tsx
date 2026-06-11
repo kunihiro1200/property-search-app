@@ -12,12 +12,8 @@ interface PropertyMapViewProps {
   loadError: Error | undefined;
   // ナビゲーション状態（一覧画面から渡される）
   navigationState?: Omit<NavigationState, 'scrollPosition'>;
-}
-
-interface PropertyMapViewProps {
-  properties: PublicProperty[];
-  isLoaded: boolean;
-  loadError: Error | undefined;
+  // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
+  detailBasePath?: string;
 }
 
 interface PropertyWithCoordinates extends PublicProperty {
@@ -221,7 +217,7 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
 /**
  * 物件を地図上に表示するコンポーネント
  */
-const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState }) => {
+const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState, detailBasePath = '/public/properties' }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
@@ -366,7 +362,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
   const handlePropertyClick = (propertyId: string) => {
     // navigationStateが渡されていない場合は新しいタブで開く
     if (!navigationState) {
-      window.open(`/public/properties/${propertyId}`, '_blank', 'noopener,noreferrer');
+      window.open(`${detailBasePath}/${propertyId}`, '_blank', 'noopener,noreferrer');
       return;
     }
     
@@ -382,14 +378,17 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
     };
     
     // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
-    sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify(fullNavigationState));
+    const storageKey = detailBasePath.startsWith('/kujira')
+      ? 'kujiraPropertiesNavigationState'
+      : 'publicPropertiesNavigationState';
+    sessionStorage.setItem(storageKey, JSON.stringify(fullNavigationState));
     console.log('[PropertyMapView] Saved state to sessionStorage:', fullNavigationState);
     
     // canHideパラメータを引き継ぐ
     const canHide = searchParams.get('canHide');
     const targetUrl = canHide === 'true' 
-      ? `/public/properties/${propertyId}?canHide=true`
-      : `/public/properties/${propertyId}`;
+      ? `${detailBasePath}/${propertyId}?canHide=true`
+      : `${detailBasePath}/${propertyId}`;
     
     console.log('[PropertyMapView] Navigating to (with state):', targetUrl);
     

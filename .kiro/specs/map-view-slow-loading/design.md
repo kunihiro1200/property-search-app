@@ -1,49 +1,82 @@
-# 地図ビュー遅延読み込み バグフィックス設計
+# 地図→リスト切り替え遅延 バグフィックス設計
 
 ## Overview
 
-公開物件サイト（`/public/properties`）の地図ビューにおいて、`fetchAllProperties` 関数が `while` ループで `limit=1000` のAPIリクエストを繰り返し実行し、最大10,000件の物件データを全件取得しようとするため、地図表示までに数秒〜数十秒の待機が発生している。
+公開物件サイト（`/public/properties`）の地図ビューからリストビューへの切り替えに30秒かかる問題。
 
-バックエンドには既に `withCoordinates=true`（座標付き物件のみ返す）と `skipImages=true`（画像取得スキップ）の最適化パラメータが実装済みであるにもかかわらず、フロントエンドが `while` ループによるページネーション取得を継続しているため、これらの最適化が十分に活かされていない。
-
-修正方針：`fetchAllProperties` の `while` ループを廃止し、`withCoordinates=true` + `skipImages=true` + `limit=大きな値`（または `limit` を座標付き物件の実件数に合わせた値）による**単一リクエスト**に置き換える。また、フィルター変更時の重複リクエストを防ぐためデバウンス制御を追加する。
+コミット `474618d` で `filterChangedDuringMapRef` による再取得スキップ制御を追加したが、`viewMode` 変更が `searchParams` を変更させる副作用により、スキップ制御が機能していない。さらに `fetchProperties` が `skipImages=false` で呼ばれるため、Google Sheets API クォータ超過時に各物件の画像取得が詰まり16秒以上の遅延が発生している。
 
 ## Glossary
 
-- **Bug_Condition (C)**: バグが発現する条件 — ユーザーが地図ビューに切り替えた、またはフィルターを変更した際に `fetchAllProperties` が `while` ループで複数回APIリクエストを実行する状態
-- **Property (P)**: 期待される正しい動作 — 地図ビュー切り替え時に単一APIリクエストで座標付き物件のみを取得し、地図表示までの待機時間を大幅に短縮する
-- **Preservation**: 修正によって変更してはならない既存の動作 — リストビューのページネーション取得、詳細ページからの戻り時の状態復元、地図マーカーのクリック動作
-- **fetchAllProperties**: `frontend/src/pages/PublicPropertiesPage.tsx` 内の関数。地図ビュー用に全物件データを取得する責務を持つ
-- **withCoordinates**: バックエンドAPIパラメータ。`true` の場合、`latitude` と `longitude` が両方 `null` でない物件のみを返す
-- **skipImages**: バックエンドAPIパラメータ。`true` の場合、画像取得処理をスキップしてレスポンスを高速化する
-- **searchParams**: React Router の URLSearchParams。フィルター条件（物件タイプ・価格帯・築年数など）を保持し、変更時に `fetchAllProperties` の再実行をトリガーする
+- **Bug_Condition (C)**: バグが発現する条件 — ユーザーが地図ビューからリストビューに切り替えた際に30秒の遅延が発生する状態
+- **filterChangedDuringMapRef**: 地図ビュー中にフィルターが変更されたかを追跡する `useRef`。`true` の場合のみリスト再取得を実行する
+- **searchParamsDuringMapRef**: 地図ビュー中の `searchParams` を追跡する `useRef`。変化を検知してフィルター変更フラグを立てる
+- **viewMode 変更の副作用**: `viewMode` が `'list'` に変わると、`selectedTypes, minPrice, ...viewMode` を依存配列に持つ `useEffect` が `searchParams` から `view=map` を削除する。この変化が `filterChangedDuringMapRef` を誤って `true` にする
+- **getStorageUrlFromWorkTasks**: `PropertyListingService` 内のメソッド。`storage_location` が空の物件に対して Google Sheets API（業務リスト）を呼び出す。クォータ超過時に遅延の原因となる
+- **skipImages**: バックエンドAPIパラメータ。`true` の場合、画像取得処理（`getStorageUrlFromWorkTasks` を含む）をスキップしてレスポンスを高速化する
 
 ## Bug Details
 
 ### Bug Condition
 
-地図ビューに切り替えた際、または地図ビュー表示中にフィルターを変更した際に、`fetchAllProperties` 関数が `while` ループで `limit=1000` のAPIリクエストを繰り返し実行する。`withCoordinates=true` + `skipImages=true` を指定しているにもかかわらず、ループが継続するため、座標付き物件が1,000件未満であっても最初のレスポンスで `fetchedProperties.length < limit` が成立するまで複数回リクエストが走る可能性がある。さらに `searchParams` の変更のたびに全件再取得が走る。
+地図ビューからリストビューに切り替えた際、以下の2つの問題が重なって30秒の遅延が発生する：
+
+**問題1: `filterChangedDuringMapRef` の誤検知**
+
+```
+viewMode: 'map' → 'list' に変更
+  ↓
+viewMode を依存配列に持つ useEffect が発火
+  ↓
+searchParams から 'view=map' を削除（setSearchParams）
+  ↓
+searchParams が変化
+  ↓
+fetchProperties の useEffect が発火（viewMode, searchParams を依存配列に持つ）
+  ↓
+viewMode === 'map' の条件で searchParamsDuringMapRef と比較
+  ↓ ← ここが問題: viewMode はすでに 'list' だが、
+       searchParams 変化の検知タイミングによっては
+       filterChangedDuringMapRef = true になる可能性がある
+```
+
+実際には `viewMode` が `'list'` になった後に `searchParams` が変わるため、`viewMode === 'map'` の条件は通らないが、React の state 更新バッチングにより同一レンダリングサイクルで両方が変わる場合がある。
+
+**問題2: `fetchProperties` が `skipImages=false` で呼ばれる**
+
+```
+fetchProperties() 呼び出し（skipImages パラメータなし）
+  ↓
+バックエンド: 20件の物件を取得
+  ↓
+各物件の storage_location が空 → getStorageUrlFromWorkTasks を呼び出し
+  ↓
+Google Sheets API（業務リスト）にリクエスト
+  ↓
+Quota exceeded エラー → 各物件で遅延
+  ↓
+20件 × 遅延 = 16秒以上
+```
 
 **Formal Specification:**
 ```
 FUNCTION isBugCondition(input)
-  INPUT: input of type { viewMode: string, searchParams: URLSearchParams, allProperties: PublicProperty[] }
+  INPUT: input of type { prevViewMode: 'list' | 'map', viewMode: 'list' | 'map' }
   OUTPUT: boolean
 
-  RETURN input.viewMode === 'map'
+  RETURN input.prevViewMode === 'map' AND input.viewMode === 'list'
          AND (
-           fetchAllPropertiesUsesWhileLoop()
-           OR (input.searchParams が変更された AND 重複リクエスト制御がない)
+           filterChangedDuringMapRef が誤って true になっている
+           OR fetchProperties が skipImages=false で呼ばれる
          )
 END FUNCTION
 ```
 
 ### Examples
 
-- **例1（バグあり）**: ユーザーが「地図で検索」ボタンをクリック → `fetchAllProperties` が `offset=0, limit=1000` でリクエスト → 座標付き物件が300件の場合でも `while` ループが1回実行される（300 < 1000 なので終了）が、座標付き物件が1,200件の場合は2回リクエストが走る
-- **例2（バグあり）**: 地図ビュー表示中にユーザーが「マンション」フィルターをクリック → `searchParams` 変更を検知して `fetchAllProperties` が再実行 → 再び `while` ループが走る
-- **例3（バグあり）**: 地図ビュー表示中にユーザーが価格フィルターを変更 → `searchParams` 変更を検知して即座に `fetchAllProperties` が再実行（デバウンスなし）
-- **例4（期待動作）**: `withCoordinates=true` + `skipImages=true` + 十分大きな `limit` で単一リクエスト → 座標付き物件のみを1回で取得して地図表示
+- **例1（バグあり）**: 地図ビューで「リスト表示に戻る」クリック → `viewMode='list'` → `searchParams` から `view=map` 削除 → `filterChangedDuringMapRef=true`（誤検知）→ `fetchProperties` 呼び出し → `skipImages=false` → Google Sheets API クォータ超過 → 16秒待機
+- **例2（期待動作）**: 地図ビューで「リスト表示に戻る」クリック → フィルター変更なし → `fetchProperties` をスキップ → 既存の `properties` データを即座に表示
+- **例3（期待動作）**: 地図ビューでフィルター変更後に「リスト表示に戻る」クリック → `fetchProperties` を `skipImages=true` で呼び出し → 画像なしで高速レスポンス → 画像は遅延ロード
 
 ## Expected Behavior
 
@@ -51,182 +84,170 @@ END FUNCTION
 
 **変更してはならない既存の動作:**
 - リストビューでのページネーション付き物件取得（`fetchProperties` 関数）は従来通り動作し続ける
+- 地図ビュー中にフィルターを変更してからリストビューに戻った場合は、変更されたフィルターで再取得する
 - 詳細ページから戻った際のリストビュー復元（フィルター状態・ページ番号・スクロール位置）は従来通り動作する
-- 地図マーカーのクリックによる情報ウィンドウ表示（物件種別・価格・住所・詳細リンク）は従来通り動作する
-- フィルター条件のURLパラメータ反映とページネーションリセットは従来通り動作する
-- バックエンドAPIが `withCoordinates=false`（デフォルト）でリクエストを受け取った場合、座標の有無に関わらず全物件を返す動作は変更しない
+- 地図マーカーのクリックによる情報ウィンドウ表示は従来通り動作する
 
 **スコープ:**
-地図ビューのデータ取得ロジック（`fetchAllProperties` 関数）のみを修正対象とする。リストビューのデータ取得（`fetchProperties`）、詳細ページ、バックエンドAPIの既存動作には一切変更を加えない。
+- `frontend/src/pages/PublicPropertiesPage.tsx` の `filterChangedDuringMapRef` 判定ロジック
+- `frontend/src/pages/PublicPropertiesPage.tsx` の `fetchProperties` 関数（`skipImages=true` 追加）
+- `backend/api/index.ts` の `/api/public/folder-thumbnail/:folderId` エンドポイント（404 → デフォルト画像）
 
 ## Hypothesized Root Cause
 
-コードの分析に基づき、以下の根本原因を仮説として立てる：
+### 根本原因1: `viewMode` 変更による `searchParams` 変化の誤検知
 
-1. **`while` ループによる全件取得**: `fetchAllProperties` が `while (hasMore)` ループで `limit=1000` のリクエストを繰り返し実行している。`withCoordinates=true` を指定しているため座標付き物件のみが返されるが、ループ終了条件が `fetchedProperties.length < limit` であるため、座標付き物件数が1,000件未満の場合でも最低1回のリクエストが必要。座標付き物件が1,000件を超える場合は複数回のリクエストが走る。
-   - 修正方針: `while` ループを廃止し、`limit` を十分大きな値（例: 5000）に設定した単一リクエストに置き換える
+**ファイル**: `frontend/src/pages/PublicPropertiesPage.tsx`
 
-2. **`searchParams` 依存による毎回の全件再取得**: `useEffect` の依存配列に `searchParams` が含まれているため、フィルター変更のたびに `fetchAllProperties` が再実行される。デバウンス制御がないため、連続したフィルター変更で複数のリクエストが同時に走る可能性がある。
-   - 修正方針: デバウンス（300〜500ms）またはリクエストキャンセル（AbortController）を追加する
+**問題箇所**:
+```typescript
+// viewMode を依存配列に持つ useEffect（フィルターをURLに反映）
+useEffect(() => {
+  // ...
+  if (viewMode === 'map') {
+    newParams.set('view', 'map');
+  } else {
+    newParams.delete('view');  // ← viewMode='list' になると searchParams が変わる
+  }
+  setSearchParams(newParams, { replace: true });
+}, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
 
-3. **`viewMode` 変更時の二重トリガー**: `searchParams` の `useEffect` と `viewMode` の `useEffect` の両方が地図ビュー切り替え時に `fetchAllProperties` を呼び出す可能性がある。
-   - 修正方針: トリガー条件を整理し、重複実行を防ぐ
+// fetchProperties の useEffect
+useEffect(() => {
+  // ...
+  if (viewMode === 'map') {
+    const currentParams = searchParams.toString();
+    if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
+      filterChangedDuringMapRef.current = true;  // ← viewMode='list' 後の searchParams 変化で誤検知
+    }
+    // ...
+  }
+}, [currentPage, searchParams, isStateRestored, viewMode]);
+```
 
-4. **安全装置の上限が高すぎる**: `offset >= 10000` で停止する安全装置があるが、これは10,000件取得後に停止するため、実質的な上限として機能していない。
-   - 修正方針: `while` ループ廃止により不要になる
+**修正方針**: `filterChangedDuringMapRef` の判定を `viewMode === 'map'` の条件内に限定し、`view` パラメータの変化を「フィルター変更」として扱わないようにする。具体的には、`searchParams` から `view` パラメータを除いた文字列で比較する。
+
+### 根本原因2: `fetchProperties` が `skipImages=false` で呼ばれる
+
+**ファイル**: `frontend/src/pages/PublicPropertiesPage.tsx`
+
+**問題箇所**:
+```typescript
+const fetchProperties = async () => {
+  // ...
+  const params = new URLSearchParams({
+    limit: '20',
+    offset: offset.toString(),
+    // skipImages が指定されていない → バックエンドで画像取得が走る
+  });
+  // ...
+};
+```
+
+**修正方針**: `fetchProperties` に `skipImages=true` を追加し、リスト表示では画像取得をスキップする。画像は `PublicPropertyCard` の `img` タグの `src` に設定された `/api/public/folder-thumbnail/:folderId` URL で遅延ロードされる（既存の仕組みを活用）。
+
+### 根本原因3: `folder-thumbnail` の 404 エラー
+
+**ファイル**: `backend/api/index.ts`
+
+**問題箇所**:
+```typescript
+app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
+  // ...
+  if (!result.images || result.images.length === 0) {
+    return res.status(404).json({ error: 'No images found' });  // ← 404 を返す
+  }
+  // ...
+});
+```
+
+**修正方針**: 画像が見つからない場合は 404 ではなく、プレースホルダー画像（`via.placeholder.com` または固定の SVG）にリダイレクトする。これによりブラウザのコンソールエラーを抑制する。
 
 ## Correctness Properties
 
-Property 1: Bug Condition - 地図ビュー切り替え時の単一リクエスト取得
+Property 1: Bug Condition - 地図→リスト切り替え時の即座表示
 
-_For any_ 入力において地図ビューへの切り替えが発生した場合（isBugCondition が true を返す）、修正後の `fetchAllProperties` 関数は `while` ループを使用せず、`withCoordinates=true` + `skipImages=true` パラメータを含む**単一のAPIリクエスト**で座標付き物件データを取得し、地図マーカーとして表示できる状態にする。
+_For any_ 入力において地図ビューからリストビューへの切り替えが発生し、かつ地図ビュー中にフィルターが変更されていない場合、修正後のコードは `fetchProperties` を呼び出さず、既存の `properties` データを即座に表示する。
 
 **Validates: Requirements 2.1, 2.2**
 
-Property 2: Preservation - リストビューおよびその他の動作の保持
+Property 2: Fix Condition - `skipImages=true` による高速化
 
-_For any_ 入力においてバグ条件が成立しない場合（地図ビューでない、またはリストビューでの操作）、修正後のコードは修正前のコードと同一の動作を保持し、リストビューのページネーション取得・詳細ページからの状態復元・地図マーカーのクリック動作を変更しない。
+_For any_ 入力において `fetchProperties` が呼ばれる場合、修正後のコードは `skipImages=true` パラメータを付与してリクエストを送信し、バックエンドは画像取得処理をスキップして高速にレスポンスを返す。
 
-**Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
+**Validates: Requirements 2.3**
+
+Property 3: Preservation - フィルター変更後の再取得
+
+_For any_ 入力において地図ビュー中にフィルターが変更された後にリストビューに戻った場合、修正後のコードは変更されたフィルター条件で `fetchProperties` を再実行する。
+
+**Validates: Requirements 3.2**
 
 ## Fix Implementation
 
 ### Changes Required
 
-根本原因の分析が正しいと仮定した場合の修正内容：
+**File 1**: `frontend/src/pages/PublicPropertiesPage.tsx`
 
-**File**: `frontend/src/pages/PublicPropertiesPage.tsx`
+**Change 1: `searchParams` 比較から `view` パラメータを除外**
 
-**Function**: `fetchAllProperties`
-
-**Specific Changes**:
-
-1. **`while` ループの廃止**: `while (hasMore)` ループを削除し、単一の `fetch` 呼び出しに置き換える
-   - `limit` を `5000`（または座標付き物件の実件数を超える十分大きな値）に設定
-   - `offset` は常に `0`
-   - `withCoordinates=true` + `skipImages=true` は維持
-
-2. **デバウンス制御の追加**: `searchParams` 変更時の `fetchAllProperties` 再実行にデバウンス（300〜500ms）を追加する
-   - `useRef` でタイマーIDを保持し、前回のタイマーをキャンセルしてから新しいタイマーをセット
-   - または `AbortController` を使用して進行中のリクエストをキャンセルする
-
-3. **`useEffect` のトリガー整理**: `searchParams` の `useEffect` と `viewMode` の `useEffect` の重複実行を防ぐ
-   - `viewMode === 'map'` に切り替わった時のみ `fetchAllProperties` を実行する条件を明確化
-
-4. **安全装置の削除**: `while` ループ廃止に伴い、`offset >= 10000` の安全装置は不要になるため削除する
-
-5. **エラーハンドリングの維持**: 既存のエラーハンドリング（`try/catch`、`setIsLoadingAllProperties`）は維持する
-
-**修正後の `fetchAllProperties` の概要:**
 ```typescript
-const fetchAllProperties = async () => {
-  try {
-    setIsLoadingAllProperties(true);
-    
-    // フィルターパラメータを構築（既存ロジックを維持）
-    const params = new URLSearchParams({
-      limit: '5000',  // while ループを廃止し、単一リクエストで取得
-      offset: '0',
-      withCoordinates: 'true',
-      skipImages: 'true',
-    });
-    // ... フィルターパラメータの追加（既存ロジックを維持）
-    
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const response = await fetch(`${apiUrl}/api/public/properties?${params.toString()}`);
-    
-    if (!response.ok) throw new Error('物件の取得に失敗しました');
-    
-    const data = await response.json();
-    setAllProperties(data.properties || []);
-  } catch (err: any) {
-    console.error('全件取得エラー:', err);
-  } finally {
-    setIsLoadingAllProperties(false);
-  }
+// 修正前
+const currentParams = searchParams.toString();
+if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
+  filterChangedDuringMapRef.current = true;
+}
+
+// 修正後
+const getFilterParams = (params: URLSearchParams) => {
+  const copy = new URLSearchParams(params);
+  copy.delete('view');  // view パラメータはフィルターではない
+  return copy.toString();
 };
+const currentParams = getFilterParams(searchParams);
+if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
+  filterChangedDuringMapRef.current = true;
+}
+searchParamsDuringMapRef.current = currentParams;  // view を除いた値で保存
+```
+
+**Change 2: `fetchProperties` に `skipImages=true` を追加**
+
+```typescript
+const params = new URLSearchParams({
+  limit: '20',
+  offset: offset.toString(),
+  skipImages: 'true',  // 追加: 画像取得をスキップして高速化
+});
+```
+
+**File 2**: `backend/api/index.ts`
+
+**Change 3: `folder-thumbnail` の 404 をプレースホルダーにリダイレクト**
+
+```typescript
+if (!result.images || result.images.length === 0) {
+  // 404 ではなくプレースホルダーにリダイレクト
+  return res.redirect('https://via.placeholder.com/400x300?text=No+Image');
+}
 ```
 
 ## Testing Strategy
 
-### Validation Approach
-
-テスト戦略は2フェーズで構成する：まず修正前のコードでバグを再現するテストを実行してバグの存在を確認し、次に修正後のコードでバグが解消されていること（Fix Checking）と既存動作が保持されていること（Preservation Checking）を検証する。
-
-### Exploratory Bug Condition Checking
-
-**Goal**: 修正前のコードでバグを再現し、根本原因分析を確認または反証する。反証された場合は根本原因を再仮説する。
-
-**Test Plan**: `fetchAllProperties` 関数をモックして、`while` ループが複数回APIリクエストを実行することを確認する。また、`searchParams` 変更時にデバウンスなしで即座に再実行されることを確認する。
-
-**Test Cases**:
-1. **`while` ループ複数回実行テスト**: 座標付き物件が1,001件存在する場合、`fetchAllProperties` が2回APIリクエストを実行することを確認（修正前のコードで失敗するはず）
-2. **フィルター変更時の即時再実行テスト**: `searchParams` を変更した際にデバウンスなしで `fetchAllProperties` が即座に再実行されることを確認
-3. **地図ビュー切り替え時の遅延テスト**: 地図ビューに切り替えた際の実際の待機時間を計測（数秒〜数十秒の遅延を確認）
-4. **二重トリガーテスト**: `searchParams` の `useEffect` と `viewMode` の `useEffect` が同時に `fetchAllProperties` を呼び出すケースを確認
-
-**Expected Counterexamples**:
-- `while` ループが複数回実行され、APIリクエストが2回以上発生する
-- `searchParams` 変更のたびに即座に `fetchAllProperties` が再実行される
-- 可能な原因: `while` ループの終了条件が `fetchedProperties.length < limit` であるため、座標付き物件数が `limit` を超える場合に複数回リクエストが走る
-
 ### Fix Checking
 
-**Goal**: バグ条件が成立するすべての入力に対して、修正後の関数が期待される動作を示すことを検証する。
+**Goal**: バグ条件が成立するすべての入力に対して、修正後のコードが期待される動作を示すことを検証する。
 
-**Pseudocode:**
-```
-FOR ALL input WHERE isBugCondition(input) DO
-  result := fetchAllProperties_fixed(input)
-  ASSERT APIリクエストが1回のみ実行された
-  ASSERT withCoordinates=true が含まれている
-  ASSERT skipImages=true が含まれている
-  ASSERT result.properties の全要素が latitude != null AND longitude != null
-END FOR
-```
+**Test Cases**:
+1. 地図ビューからリストビューに切り替えた際、`fetchProperties` が呼ばれないことを確認（フィルター変更なしの場合）
+2. `fetchProperties` が呼ばれる場合、`skipImages=true` パラメータが含まれることを確認
+3. `folder-thumbnail` エンドポイントが画像なしの場合にプレースホルダーにリダイレクトすることを確認
 
 ### Preservation Checking
 
-**Goal**: バグ条件が成立しないすべての入力に対して、修正後の関数が修正前と同一の動作を示すことを検証する。
-
-**Pseudocode:**
-```
-FOR ALL input WHERE NOT isBugCondition(input) DO
-  ASSERT fetchProperties_original(input) = fetchProperties_fixed(input)
-  ASSERT リストビューのページネーション動作が変わらない
-  ASSERT 詳細ページからの状態復元が変わらない
-END FOR
-```
-
-**Testing Approach**: プロパティベーステストは保持チェックに推奨される。理由：
-- 多様なフィルター条件の組み合わせを自動生成できる
-- 手動テストでは見落としがちなエッジケースを検出できる
-- リストビューの動作が変わっていないことを強く保証できる
-
-**Test Plan**: 修正前のコードでリストビューの動作を観察し、その動作をプロパティベーステストとして記述する。
+**Goal**: バグ条件が成立しないすべての入力に対して、修正後のコードが修正前と同一の動作を示すことを検証する。
 
 **Test Cases**:
-1. **リストビュー保持テスト**: `fetchProperties` がページネーション付きで動作し続けることを確認
-2. **詳細ページ戻り保持テスト**: `sessionStorage` からの状態復元が正常に動作することを確認
-3. **地図マーカークリック保持テスト**: `allProperties` のデータ構造が `PropertyMapView` コンポーネントの期待する形式と一致することを確認
-4. **フィルターURL反映保持テスト**: フィルター変更時に `searchParams` が正しく更新されることを確認
-
-### Unit Tests
-
-- `fetchAllProperties` が単一リクエストのみ実行することをテスト
-- `withCoordinates=true` + `skipImages=true` パラメータが含まれることをテスト
-- デバウンス制御が正しく動作することをテスト（連続した `searchParams` 変更で最後の変更のみが実行される）
-- エラー時に `isLoadingAllProperties` が `false` にリセットされることをテスト
-
-### Property-Based Tests
-
-- ランダムなフィルター条件（物件タイプ・価格帯・築年数の組み合わせ）を生成し、`fetchAllProperties` が常に単一リクエストのみ実行することを検証
-- ランダムな `searchParams` の変更シーケンスを生成し、デバウンス後に最後の変更のみが反映されることを検証
-- リストビューの `fetchProperties` がフィルター変更後も正しいページネーション動作を維持することを検証
-
-### Integration Tests
-
-- 地図ビューに切り替えた際の実際のAPIリクエスト数が1回であることを確認
-- フィルター変更後の地図ビューで正しい物件マーカーが表示されることを確認
-- リストビューと地図ビューを切り替えた際に両方の動作が正常であることを確認
-- 詳細ページから戻った際にリストビューが正しく復元されることを確認
+1. 地図ビュー中にフィルターを変更してからリストビューに戻った場合、`fetchProperties` が呼ばれることを確認
+2. リストビューでのページネーション動作が変わらないことを確認
+3. 詳細ページからの状態復元が変わらないことを確認

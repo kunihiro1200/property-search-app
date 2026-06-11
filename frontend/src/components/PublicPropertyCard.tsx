@@ -13,12 +13,15 @@ interface PublicPropertyCardProps {
   animationDelay?: number;
   // ナビゲーション状態（一覧画面から渡される）
   navigationState?: Omit<NavigationState, 'scrollPosition'>;
+  // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
+  detailBasePath?: string;
 }
 
 const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({ 
   property, 
   animationDelay = 0,
-  navigationState
+  navigationState,
+  detailBasePath = '/public/properties',
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -54,8 +57,8 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     if (!navigationState) {
       // canHideパラメータを引き継ぐ
       const targetUrl = canHide === 'true' 
-        ? `/public/properties/${property.property_number}?canHide=true`
-        : `/public/properties/${property.property_number}`;
+        ? `${detailBasePath}/${property.property_number}?canHide=true`
+        : `${detailBasePath}/${property.property_number}`;
       console.log('[PublicPropertyCard] Navigating to (no state):', targetUrl);
       navigate(targetUrl);
       return;
@@ -73,13 +76,17 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     };
     
     // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
-    sessionStorage.setItem('publicPropertiesNavigationState', JSON.stringify(fullNavigationState));
+    // くじらサイト用にキーを分けて保存
+    const storageKey = detailBasePath.startsWith('/kujira')
+      ? 'kujiraPropertiesNavigationState'
+      : 'publicPropertiesNavigationState';
+    sessionStorage.setItem(storageKey, JSON.stringify(fullNavigationState));
     console.log('[PublicPropertyCard] Saved state to sessionStorage:', fullNavigationState);
     
     // canHideパラメータを引き継ぐ
     const targetUrl = canHide === 'true' 
-      ? `/public/properties/${property.property_number}?canHide=true`
-      : `/public/properties/${property.property_number}`;
+      ? `${detailBasePath}/${property.property_number}?canHide=true`
+      : `${detailBasePath}/${property.property_number}`;
     
     console.log('[PublicPropertyCard] Navigating to (with state):', targetUrl);
     
