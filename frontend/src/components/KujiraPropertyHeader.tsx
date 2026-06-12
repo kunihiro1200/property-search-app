@@ -50,8 +50,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
   };
 
   const handlePhoneClick = () => {
-    // くじら不動産の電話番号（要確認・変更）
-    window.location.href = 'tel:0975332022';
+    window.location.href = 'tel:0924015331';
   };
 
   const renderBadge = () => {

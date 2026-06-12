@@ -509,10 +509,15 @@ export class PropertyService {
     sheetName: string
   ): Promise<void> {
     const VALIDATION_CELL = 'D11';  // 金額セル
-    const MAX_ATTEMPTS = 20;        // 最大試行回数
-    const RETRY_INTERVAL = 500;     // リトライ間隔（ms）
+    const MAX_ATTEMPTS = 3;         // 最大試行回数
+    const INITIAL_WAIT = 2000;      // 初回待機時間（ms）
+    const RETRY_INTERVAL = 1000;    // リトライ間隔（ms）
     
     console.log(`[waitForCalculationCompletion] Starting validation for cell ${VALIDATION_CELL}`);
+    console.log(`[waitForCalculationCompletion] Configuration: INITIAL_WAIT=${INITIAL_WAIT}ms, MAX_ATTEMPTS=${MAX_ATTEMPTS}, RETRY_INTERVAL=${RETRY_INTERVAL}ms`);
+    
+    // 初回待機（計算完了を待つ）
+    await new Promise(resolve => setTimeout(resolve, INITIAL_WAIT));
     
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
@@ -527,7 +532,7 @@ export class PropertyService {
         
         // 値が有効な数値かチェック
         if (this.isValidCalculatedValue(cellValue)) {
-          console.log(`[waitForCalculationCompletion] Calculation completed. Value: ${cellValue}`);
+          console.log(`[waitForCalculationCompletion] ✅ Calculation completed successfully!`);
           return;
         }
         
@@ -537,12 +542,15 @@ export class PropertyService {
         }
       } catch (error) {
         console.error(`[waitForCalculationCompletion] Error reading cell on attempt ${attempt}:`, error);
-        // エラーが発生しても続行（次の試行へ）
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+        }
       }
     }
     
     // タイムアウト
-    const timeoutSeconds = (MAX_ATTEMPTS * RETRY_INTERVAL) / 1000;
+    const totalTime = INITIAL_WAIT + (MAX_ATTEMPTS * RETRY_INTERVAL);
+    const timeoutSeconds = totalTime / 1000;
     throw new Error(`計算がタイムアウトしました（${timeoutSeconds}秒）。D11セルに値が入力されませんでした。`);
   }
   

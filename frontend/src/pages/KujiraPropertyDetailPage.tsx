@@ -555,6 +555,8 @@ const KujiraPropertyDetailPage: React.FC = () => {
                     propertyId={property.id}
                     propertyAddress={(property as any).display_address || property.address}
                     propertyNumber={property.property_number}
+                    phoneNumber="092-401-5331"
+                    phoneHours="お気軽にお問い合わせください"
                   />
                 </Box>
               </Grid>

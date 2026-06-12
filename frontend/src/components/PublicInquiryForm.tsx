@@ -18,8 +18,11 @@ import { ApiError } from '../types/publicProperty';
 interface PublicInquiryFormProps {
   propertyId: string;
   propertyAddress: string;
-  propertyNumber?: string; // 物件番号を追加
+  propertyNumber?: string;
   onSuccess?: () => void;
+  // くじらサイト用に電話番号・営業時間を上書き可能
+  phoneNumber?: string;
+  phoneHours?: string;
 }
 
 const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
@@ -27,6 +30,8 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
   propertyAddress,
   propertyNumber,
   onSuccess,
+  phoneNumber = '097-533-2022',
+  phoneHours = '10：00～17：30（定休日：水曜日）',
 }) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -250,7 +255,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
           size="large"
           fullWidth
           startIcon={<PhoneIcon />}
-          href="tel:0975332022"
+          href={`tel:${phoneNumber.replace(/-/g, '')}`}
           sx={{
             borderColor: '#4CAF50',
             color: '#4CAF50',
@@ -261,10 +266,10 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             },
           }}
         >
-          097-533-2022
+          {phoneNumber}
         </Button>
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-          10：00～17：30（定休日：水曜日）
+          {phoneHours}
         </Typography>
       </Box>
     </Paper>
