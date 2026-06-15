@@ -26,7 +26,7 @@ const publicApi = axios.create({
 // レスポンスインターセプター（エラーハンドリング）
 publicApi.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // ネットワークエラー
     if (!error.response) {
       console.error('Network error:', error.message);
@@ -36,24 +36,35 @@ publicApi.interceptors.response.use(
       });
     }
 
+    // Blobレスポンスの場合、エラーJSONをテキストに変換して読む
+    let errorData = error.response.data;
+    if (errorData instanceof Blob) {
+      try {
+        const text = await errorData.text();
+        errorData = JSON.parse(text);
+      } catch {
+        errorData = { message: 'サーバーエラーが発生しました' };
+      }
+    }
+
     // サーバーエラー（元のレスポンスデータを保持して上位に渡す）
     if (error.response.status >= 500) {
-      console.error('Server error:', error.response.data);
+      console.error('Server error:', errorData);
       return Promise.reject({
-        message: error.response.data?.message || 'サーバーエラーが発生しました。しばらくしてから再度お試しください。',
+        message: errorData?.message || 'サーバーエラーが発生しました。しばらくしてから再度お試しください。',
         type: 'server',
         status: error.response.status,
-        response: { data: error.response.data },
-        details: error.response.data?.details,
+        response: { data: errorData },
+        details: errorData?.details,
       });
     }
 
     // クライアントエラー
     return Promise.reject({
-      message: error.response.data?.error || 'エラーが発生しました',
+      message: errorData?.error || 'エラーが発生しました',
       type: 'client',
       status: error.response.status,
-      details: error.response.data,
+      details: errorData,
     });
   }
 );

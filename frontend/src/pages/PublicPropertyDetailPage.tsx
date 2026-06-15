@@ -310,33 +310,33 @@ const PublicPropertyDetailPage: React.FC = () => {
     console.log('⏳ [Estimate PDF] Generating PDF...');
     
     try {
-      // publicApiインスタンスを使用
+      // PDFをバイナリで直接受け取る
       console.log('📡 [Estimate PDF] Sending request to:', `/api/public/properties/${property.property_number}/estimate-pdf`);
-      const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
+      const response = await publicApi.post(
+        `/api/public/properties/${property.property_number}/estimate-pdf`,
+        {},
+        { responseType: 'blob' }
+      );
       
-      console.log('✅ [Estimate PDF] Response received:', response.data);
+      console.log('✅ [Estimate PDF] PDF received, size:', response.data.size);
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
       
       if (mode === 'preview') {
-        // プレビュー：同じタブでPDFを開く（ポップアップブロッカー回避）
-        console.log('🌐 [Estimate PDF] Opening PDF in same tab:', response.data.pdfUrl);
-        window.location.href = response.data.pdfUrl;
+        window.open(url, '_blank');
       } else {
-        // ダウンロード：ファイルとしてダウンロード
-        console.log('💾 [Estimate PDF] Downloading PDF:', response.data.pdfUrl);
         const link = document.createElement('a');
-        link.href = response.data.pdfUrl;
+        link.href = url;
         link.download = `概算書_${property.property_number}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
+      // 1分後にURLを解放
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error: any) {
-      console.error('❌ [Estimate PDF] Failed to generate estimate PDF:', error);
-      console.error('❌ [Estimate PDF] Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      console.error('❌ [Estimate PDF] Failed:', error);
       alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);

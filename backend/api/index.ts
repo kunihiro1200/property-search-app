@@ -1355,57 +1355,73 @@ app.get('/api/public/images/:fileId', async (req, res) => {
   }
 });
 
-// 概算書PDF生成（物件番号で生成）
+// 概算書PDF生成（スプレッドシート不依存・直接PDF生成）
 app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res) => {
-  try {
-    const { propertyNumber } = req.params;
-    
-    console.log(`[Estimate PDF] Starting for property: ${propertyNumber}`);
-    console.log(`[Estimate PDF] Environment check:`, {
-      hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-      googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-      hasGoogleServiceAccountKeyPath: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
-      nodeEnv: process.env.NODE_ENV,
-    });
-    
-    // PropertyServiceを使用（静的インポート）
-    const propertyService = new PropertyService();
-    
-    // 概算書PDFを生成
-    const pdfUrl = await propertyService.generateEstimatePdf(propertyNumber);
-    
-    console.log(`[Estimate PDF] Generated PDF URL: ${pdfUrl}`);
+  const { propertyNumber } = req.params;
+  console.log(`[Estimate PDF v2] Starting for property: ${propertyNumber}`);
 
-    res.json({ 
-      success: true,
-      pdfUrl 
+  try {
+    // --- スプレッドシートから物件データを取得 ---
+    const SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
+    const SHEET_NAME = '物件';
+
+    const sheetsClient = new GoogleSheetsClient({
+      spreadsheetId: SPREADSHEET_ID,
+      sheetName: SHEET_NAME,
+      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json',
     });
-  } catch (error: any) {
-    console.error('[Estimate PDF] Error:', error);
-    console.error('[Estimate PDF] Error details:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      name: error.name,
-    });
-    
-    // より詳細なエラーメッセージを返す（デバッグのため常にdetailsを返す）
-    let userMessage = '概算書の生成に失敗しました';
-    if (error.message?.includes('Quota exceeded')) {
-      userMessage = 'Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。';
-    } else if (error.message?.includes('タイムアウト')) {
-      userMessage = '計算がタイムアウトしました。もう一度お試しください。';
-    } else if (error.message?.includes('認証')) {
-      userMessage = 'Google Sheetsの認証に失敗しました。管理者にお問い合わせください。';
+
+    await sheetsClient.authenticate();
+    console.log(`[Estimate PDF v2] Authenticated`);
+
+    // 物件番号で行を検索（B列）
+    const rowIndex = await sheetsClient.findRowByColumn('物件番号', propertyNumber);
+    if (!rowIndex) {
+      return res.status(404).json({ success: false, message: `物件番号 ${propertyNumber} が見つかりませんでした` });
     }
-    
-    res.status(500).json({ 
+
+    // ZZ列まで読み取り
+    const rows = await sheetsClient.readRange(`A${rowIndex}:ZZ${rowIndex}`);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: '物件データが取得できませんでした' });
+    }
+
+    const row = rows[0];
+    console.log(`[Estimate PDF v2] Row data keys:`, Object.keys(row).slice(0, 20));
+
+    // 物件名: G列（住居表示）、なければF列（所在地）
+    const propertyName = (row['住居表示（ATBB登録住所）'] || row['所在地'] || '') as string;
+    // 種別: C列
+    const propertyType = (row['種別'] || '') as string;
+    // 物件価格: BS列
+    const priceRaw = row['価格'];
+    const price = priceRaw ? Number(String(priceRaw).replace(/[^0-9]/g, '')) : 0;
+
+    console.log(`[Estimate PDF v2] Data: name="${propertyName}", type="${propertyType}", price=${price}`);
+
+    // --- PDF生成 ---
+    const { generateEstimatePdfBuffer } = await import('./src/services/EstimatePdfService.js');
+    const pdfBuffer = await generateEstimatePdfBuffer({
+      propertyNumber,
+      propertyName,
+      propertyType,
+      price,
+    });
+
+    console.log(`[Estimate PDF v2] PDF generated, size: ${pdfBuffer.length} bytes`);
+
+    // PDFをレスポンスとして直接返す
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="概算書（${propertyNumber}）.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (error: any) {
+    console.error('[Estimate PDF v2] Error:', error.message);
+    res.status(500).json({
       success: false,
-      error: 'Internal server error',
-      message: userMessage,
+      message: '概算書の生成に失敗しました',
       details: error.message,
-      errorName: error.name,
-      errorCode: error.code,
     });
   }
 });

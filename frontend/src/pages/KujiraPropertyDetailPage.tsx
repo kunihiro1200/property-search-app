@@ -174,8 +174,17 @@ const KujiraPropertyDetailPage: React.FC = () => {
     setIsGeneratingPdf(true);
 
     try {
-      const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
-      window.location.href = response.data.pdfUrl;
+      // PDFをバイナリで受け取る
+      const response = await publicApi.post(
+        `/api/public/properties/${property.property_number}/estimate-pdf`,
+        {},
+        { responseType: 'blob' }
+      );
+      // Blobから一時URLを作成して開く
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error: any) {
       alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
     } finally {
