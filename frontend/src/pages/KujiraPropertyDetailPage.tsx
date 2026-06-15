@@ -177,7 +177,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
       const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
       window.location.href = response.data.pdfUrl;
     } catch (error: any) {
-      alert(error.response?.data?.message || '概算書の生成に失敗しました');
+      alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);
     }

@@ -36,13 +36,15 @@ publicApi.interceptors.response.use(
       });
     }
 
-    // サーバーエラー
+    // サーバーエラー（元のレスポンスデータを保持して上位に渡す）
     if (error.response.status >= 500) {
       console.error('Server error:', error.response.data);
       return Promise.reject({
-        message: 'サーバーエラーが発生しました。しばらくしてから再度お試しください。',
+        message: error.response.data?.message || 'サーバーエラーが発生しました。しばらくしてから再度お試しください。',
         type: 'server',
         status: error.response.status,
+        response: { data: error.response.data },
+        details: error.response.data?.details,
       });
     }
 

@@ -1389,7 +1389,7 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
       name: error.name,
     });
     
-    // より詳細なエラーメッセージを返す
+    // より詳細なエラーメッセージを返す（デバッグのため常にdetailsを返す）
     let userMessage = '概算書の生成に失敗しました';
     if (error.message?.includes('Quota exceeded')) {
       userMessage = 'Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。';
@@ -1403,7 +1403,9 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
       success: false,
       error: 'Internal server error',
       message: userMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: error.message,
+      errorName: error.name,
+      errorCode: error.code,
     });
   }
 });

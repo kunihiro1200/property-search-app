@@ -337,7 +337,7 @@ const PublicPropertyDetailPage: React.FC = () => {
         response: error.response?.data,
         status: error.response?.status,
       });
-      alert(error.response?.data?.message || '概算書の生成に失敗しました');
+      alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);
       console.log('🏁 [Estimate PDF] Process completed');
