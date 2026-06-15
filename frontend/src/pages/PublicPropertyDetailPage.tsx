@@ -324,17 +324,17 @@ const PublicPropertyDetailPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       
       if (mode === 'preview') {
-        window.open(url, '_blank');
+        // 同じタブで開く（ポップアップブロッカー回避）
+        window.location.href = url;
       } else {
         const link = document.createElement('a');
         link.href = url;
-        link.download = `概算書_${property.property_number}.pdf`;
+        link.download = `estimate-${property.property_number}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
-      // 1分後にURLを解放
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error: any) {
       console.error('❌ [Estimate PDF] Failed:', error);
       alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
