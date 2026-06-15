@@ -243,7 +243,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
               <span>建物: {property.building_area}㎡</span>
             </Box>
           )}
-          {property.building_age !== undefined && property.building_age !== null && (
+          {!!property.building_age && (
             <Box className="property-feature">
               <CalendarIcon className="property-feature-icon" size={16} />
               <span>築{property.building_age}年</span>
