@@ -1412,7 +1412,7 @@ app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res)
 
     // PDFをレスポンスとして直接返す
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="概算書（${propertyNumber}）.pdf"`);
+    res.setHeader('Content-Disposition', `inline; filename="estimate-${propertyNumber}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
 
