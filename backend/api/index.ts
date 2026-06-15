@@ -2257,43 +2257,34 @@ app.get('/api/kujira/properties', async (req, res) => {
       if (maxAge !== undefined) buildingAgeRange.max = maxAge;
     }
 
+    // DBクエリレベルでFI物件のみ取得（FI%のワイルドカードでilike検索）
+    // ユーザーが物件番号を個別検索した場合はそちらを優先
+    const fiPropertyNumberFilter = propertyNumber || 'FI%';
+
     const result = await propertyListingService.getPublicProperties({
       limit,
       offset,
       propertyType: propertyTypeFilter,
       priceRange: priceFilter,
       location,
-      propertyNumber,
+      propertyNumber: fiPropertyNumberFilter,
       buildingAgeRange,
       showPublicOnly,
       skipImages,
     });
 
-    // FI物件のみフィルタリング
-    const fiProperties = (result.properties || []).filter(
-      (p: any) => p.property_number && String(p.property_number).toUpperCase().startsWith('FI')
-    );
-
     // priceが未設定の場合は補完
-    const propertiesWithPrice = fiProperties.map((property: any) => {
+    const propertiesWithPrice = (result.properties || []).map((property: any) => {
       if (property.price !== null && property.price !== undefined) return property;
       return { ...property, price: property.sales_price || property.listing_price || 0 };
     });
 
-    // FI物件の件数をpaginationに反映（近似値）
-    const fiTotal = propertiesWithPrice.length < limit
-      ? offset + propertiesWithPrice.length
-      : result.pagination.total; // 正確な値はクエリレベルでフィルタリングすれば取得可能
-
-    console.log(`🐋 [Kujira] Found ${propertiesWithPrice.length} FI properties`);
+    console.log(`🐋 [Kujira] Found ${propertiesWithPrice.length} FI properties (DB-level filter)`);
 
     res.json({
       success: true,
       properties: propertiesWithPrice,
-      pagination: {
-        ...result.pagination,
-        total: fiTotal,
-      },
+      pagination: result.pagination,
     });
   } catch (error: any) {
     console.error('🐋 [Kujira] Error fetching FI properties:', error);
