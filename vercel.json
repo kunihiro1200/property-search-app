@@ -12,7 +12,8 @@
       "src": "backend/api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/api/src/**"]
+        "includeFiles": ["backend/api/src/**"],
+        "maxDuration": 60
       }
     }
   ],
