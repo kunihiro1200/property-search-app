@@ -24,6 +24,8 @@
   width: auto;
   display: block;
   flex-shrink: 0;
+  /* 黒(#000)→濃い青(#0D47A1)に変換 */
+  filter: invert(18%) sepia(87%) saturate(1200%) hue-rotate(205deg) brightness(85%) contrast(95%);
 }
 
 .kujira-company-info {
