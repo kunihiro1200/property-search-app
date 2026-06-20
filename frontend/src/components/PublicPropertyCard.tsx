@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Box, Typography, Chip } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { PROPERTY_FEATURE_ICONS } from '../utils/propertyIcons';
@@ -13,14 +13,27 @@ interface PublicPropertyCardProps {
   animationDelay?: number;
   // ナビゲーション状態（一覧画面から渡される）
   navigationState?: Omit<NavigationState, 'scrollPosition'>;
+  // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
+  detailBasePath?: string;
 }
 
 const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({ 
   property, 
   animationDelay = 0,
-  navigationState
+  navigationState,
+  detailBasePath = '/public/properties',
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // 🔍 デバッグ: propertyオブジェクトをログ出力
+  console.log('[PublicPropertyCard] Rendering:', {
+    property_number: property.property_number,
+    price: property.price,
+    sales_price: (property as any).sales_price,
+    listing_price: (property as any).listing_price,
+    fullProperty: property,
+  });
 
   // バッジタイプとクリック可能性を判定
   const badgeType = getBadgeType(property.atbb_status);
@@ -32,9 +45,22 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       return;
     }
     
+    // useSearchParamsから確実にcanHideパラメータを取得
+    const canHide = searchParams.get('canHide');
+    
+    console.log('[PublicPropertyCard] handleClick - canHide:', canHide);
+    console.log('[PublicPropertyCard] handleClick - property:', property.property_number);
+    console.log('[PublicPropertyCard] handleClick - current URL:', window.location.href);
+    console.log('[PublicPropertyCard] handleClick - searchParams:', Object.fromEntries(searchParams.entries()));
+    
     // navigationStateが渡されていない場合はデフォルト値を使用
     if (!navigationState) {
-      navigate(`/public/properties/${property.property_number}`);
+      // canHideパラメータを引き継ぐ
+      const targetUrl = canHide === 'true' 
+        ? `${detailBasePath}/${property.property_number}?canHide=true`
+        : `${detailBasePath}/${property.property_number}`;
+      console.log('[PublicPropertyCard] Navigating to (no state):', targetUrl);
+      navigate(targetUrl);
       return;
     }
     
@@ -45,16 +71,42 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     const fullNavigationState: NavigationState = {
       currentPage: navigationState.currentPage,
       scrollPosition: currentScrollPosition,
+      viewMode: navigationState.viewMode, // viewModeを保存
       filters: navigationState.filters
     };
     
+    // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
+    // くじらサイト用にキーを分けて保存
+    const storageKey = detailBasePath.startsWith('/kujira')
+      ? 'kujiraPropertiesNavigationState'
+      : 'publicPropertiesNavigationState';
+    sessionStorage.setItem(storageKey, JSON.stringify(fullNavigationState));
+    console.log('[PublicPropertyCard] Saved state to sessionStorage:', fullNavigationState);
+    
+    // canHideパラメータを引き継ぐ
+    const targetUrl = canHide === 'true' 
+      ? `${detailBasePath}/${property.property_number}?canHide=true`
+      : `${detailBasePath}/${property.property_number}`;
+    
+    console.log('[PublicPropertyCard] Navigating to (with state):', targetUrl);
+    
     // 状態を保持してナビゲート
-    navigate(`/public/properties/${property.property_number}`, {
+    navigate(targetUrl, {
       state: fullNavigationState
     });
   };
 
   const formatPrice = (price: number | undefined) => {
+    // 🔍 デバッグ: priceの値をログ出力
+    console.log('[PublicPropertyCard] formatPrice:', {
+      property_number: property.property_number,
+      price: price,
+      type: typeof price,
+      isUndefined: price === undefined,
+      isNull: price === null,
+      isFalsy: !price,
+    });
+    
     if (!price) return '価格応談';
     return `${(price / 10000).toLocaleString()}万円`;
   };
@@ -97,9 +149,20 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     );
   };
 
+  // storage_location から Google Drive フォルダIDを抽出する
+  const extractFolderIdFromStorageLocation = (storageLocation: string | undefined): string | null => {
+    if (!storageLocation) return null;
+    const match = storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  const folderId = extractFolderIdFromStorageLocation(property.storage_location);
+
   const thumbnailUrl = property.images && property.images.length > 0
-    ? property.images[0]
-    : property.image_url || '/placeholder-property.jpg';
+    ? property.images[0].thumbnailUrl
+    : folderId
+      ? `/api/public/folder-thumbnail/${folderId}`
+      : null;
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 
@@ -123,13 +186,19 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       }}
     >
       <Box className="property-card-image-container">
-        <img
-          src={thumbnailUrl}
-          alt={`${property.display_address || property.address}の物件画像`}
-          className="property-card-image"
-          loading="lazy"
-          crossOrigin="anonymous"
-        />
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={`${property.display_address || property.address}の物件画像`}
+            className="property-card-image"
+            loading="lazy"
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <Box className="property-card-image" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5f5f5', color: '#999', fontSize: '0.8rem' }}>
+            画像なし
+          </Box>
+        )}
         <Box className="property-card-image-overlay" />
         
         {/* バッジを表示 */}
@@ -174,7 +243,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
               <span>建物: {property.building_area}㎡</span>
             </Box>
           )}
-          {property.building_age !== undefined && property.building_age !== null && (
+          {!!property.building_age && (
             <Box className="property-feature">
               <CalendarIcon className="property-feature-icon" size={16} />
               <span>築{property.building_age}年</span>

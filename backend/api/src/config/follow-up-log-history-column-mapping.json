@@ -1,0 +1,17 @@
+{
+  "spreadsheetId": "1wKBRLWbT6pSKa9IlTDabjhjTnfs_GxX6Rn6M6kbio1I",
+  "sheetName": "売主追客ログ",
+  "columnMapping": {
+    "date": "日付",
+    "followUpLogId": "売主追客ログID",
+    "sellerNumber": "売主番号",
+    "comment": "コメント",
+    "assigneeFirstHalf": "担当（前半）",
+    "assigneeSecondHalf": "担当（後半）",
+    "assigneeAll": "担当（全部）",
+    "assigneeHalf": "担当（半分）",
+    "firstHalfCompleted": "前半終了",
+    "secondHalfCompleted": "後半終了",
+    "secondCallDueToNoAnswer": "不通のための2度目架電"
+  }
+}

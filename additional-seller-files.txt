@@ -1,0 +1,9 @@
+﻿frontend/src/App.tsx
+frontend/src/pages/CallModePage.tsx
+backend/src/types/index.ts
+backend/src/index.ts
+admin-frontend-new/src/App.tsx
+admin-frontend-new/src/types/index.ts
+admin-frontend-new/src/backend/types/index.ts
+admin-frontend-new/src/pages/CallModePage.tsx
+admin-frontend-new/src/backend/config/column-mapping.json

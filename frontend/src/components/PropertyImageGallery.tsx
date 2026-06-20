@@ -23,6 +23,7 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { usePropertyImages } from '../hooks/usePublicProperties';
 import ImageDeleteButton from './ImageDeleteButton';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -81,9 +82,18 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   // 非表示画像を含めて取得するかどうか（管理者モードまたは非表示画像表示モード）
   const includeHidden = canHide || showHiddenImages;
   
+  // キャッシュクリア状態
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  
+  // 格納先URL入力フィールドの状態
+  const [storageUrlInput, setStorageUrlInput] = useState('');
+  const [isUpdatingStorageUrl, setIsUpdatingStorageUrl] = useState(false);
+  
   // デバッグログ
   console.log('PropertyImageGallery - propertyId:', propertyId);
   console.log('PropertyImageGallery - includeHidden:', includeHidden);
+  console.log('PropertyImageGallery - canHide:', canHide);
+  console.log('PropertyImageGallery - isPublicSite:', isPublicSite);
   
   const { data, isLoading, isError, refetch } = usePropertyImages(propertyId, includeHidden);
   
@@ -91,6 +101,95 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   console.log('PropertyImageGallery - data:', data);
   console.log('PropertyImageGallery - isLoading:', isLoading);
   console.log('PropertyImageGallery - isError:', isError);
+
+  // 画像キャッシュをクリアして再取得
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      // publicApiインスタンスを使用
+      const response = await publicApi.post(`/api/public/properties/${propertyId}/clear-image-cache`);
+      
+      if (response.data.success) {
+        // キャッシュクリア成功後、画像を再取得
+        await refetch();
+        
+        setSnackbar({
+          open: true,
+          message: '画像キャッシュをクリアしました。最新の画像が表示されます。',
+          severity: 'success',
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to clear image cache:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '画像キャッシュのクリアに失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+  
+  // 格納先URLを更新
+  const handleUpdateStorageUrl = async () => {
+    console.log('[handleUpdateStorageUrl] Starting...');
+    console.log('[handleUpdateStorageUrl] propertyId:', propertyId);
+    console.log('[handleUpdateStorageUrl] storageUrlInput:', storageUrlInput);
+    console.log('[handleUpdateStorageUrl] canHide:', canHide);
+    
+    if (!storageUrlInput.trim()) {
+      setSnackbar({
+        open: true,
+        message: 'Google DriveフォルダURLを入力してください',
+        severity: 'error',
+      });
+      return;
+    }
+    
+    setIsUpdatingStorageUrl(true);
+    try {
+      // 公開サイトのエンドポイントなので、publicApiを使用（認証不要）
+      const apiClient = publicApi;
+      console.log('[handleUpdateStorageUrl] Using API client: publicApi (no auth)');
+      
+      const url = `/api/public/properties/${propertyId}/update-storage-url`;
+      console.log('[handleUpdateStorageUrl] Request URL:', url);
+      console.log('[handleUpdateStorageUrl] Request body:', { storageUrl: storageUrlInput.trim() });
+      
+      const response = await apiClient.post(url, {
+        storageUrl: storageUrlInput.trim()
+      });
+      
+      console.log('[handleUpdateStorageUrl] Response:', response.data);
+      
+      if (response.data.success) {
+        // 成功後、画像を再取得
+        await refetch();
+        
+        setSnackbar({
+          open: true,
+          message: '格納先URLを更新しました。画像を取得しています...',
+          severity: 'success',
+        });
+        
+        // 入力フィールドをクリア
+        setStorageUrlInput('');
+      }
+    } catch (error: any) {
+      console.error('[handleUpdateStorageUrl] Error:', error);
+      console.error('[handleUpdateStorageUrl] Error response:', error.response);
+      console.error('[handleUpdateStorageUrl] Error message:', error.message);
+      
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '格納先URLの更新に失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setIsUpdatingStorageUrl(false);
+    }
+  };
 
   // APIから取得した非表示画像リストとローカル状態をマージ
   const hiddenImageIds = useMemo(() => {
@@ -368,26 +467,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   }
 
   // エラー状態または画像なし
-  if (isError || images.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 6,
-          bgcolor: 'grey.100',
-          borderRadius: 2,
-        }}
-      >
-        <ImageNotSupportedIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          画像がありません
-        </Typography>
-      </Box>
-    );
-  }
+  const hasNoImages = isError || images.length === 0;
 
   // グリッドの列数を画面サイズに応じて調整
   const cols = isMobile ? 2 : isTablet ? 3 : 4;
@@ -395,26 +475,91 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   return (
     <>
       <Box sx={{ position: 'relative', width: '100%' }}>
-        {/* 非表示画像カウンター（管理者モード時） */}
-        {canHide && hiddenImageIds.length > 0 && (
-          <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Chip
-              icon={<VisibilityOffIcon />}
-              label={`非表示: ${hiddenImageIds.length}枚`}
-              size="small"
-              color="warning"
-              variant="outlined"
-            />
-            {!showHiddenImages && (
-              <Typography variant="caption" color="text.secondary">
-                ※非表示画像は公開サイトに表示されません
-              </Typography>
-            )}
+        {/* ヘッダー部分（非表示画像カウンター + 格納先URL入力 + キャッシュクリアボタン） */}
+        <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* 上段: 非表示画像カウンター */}
+          {canHide && hiddenImageIds.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip
+                icon={<VisibilityOffIcon />}
+                label={`非表示: ${hiddenImageIds.length}枚`}
+                size="small"
+                color="warning"
+                variant="outlined"
+              />
+              {!showHiddenImages && (
+                <Typography variant="caption" color="text.secondary">
+                  ※非表示画像は公開サイトに表示されません
+                </Typography>
+              )}
+            </Box>
+          )}
+          
+          {/* 下段: 格納先URL入力 + ボタン（管理者モード時のみ） */}
+          {canHide && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: '300px', display: 'flex', gap: 1 }}>
+                <input
+                  type="text"
+                  value={storageUrlInput}
+                  onChange={(e) => setStorageUrlInput(e.target.value)}
+                  placeholder="Google DriveフォルダURL（例: https://drive.google.com/drive/folders/...）"
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleUpdateStorageUrl}
+                  disabled={isUpdatingStorageUrl || !storageUrlInput.trim()}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  {isUpdatingStorageUrl ? '更新中...' : 'URL更新'}
+                </Button>
+              </Box>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+                startIcon={isClearingCache ? <CircularProgress size={16} /> : <RefreshIcon />}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                {isClearingCache ? '更新中...' : '画像を更新'}
+              </Button>
+            </Box>
+          )}
+        </Box>
+
+        {/* 画像がない場合のメッセージ */}
+        {hasNoImages && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 6,
+              bgcolor: 'grey.100',
+              borderRadius: 2,
+            }}
+          >
+            <ImageNotSupportedIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
+            <Typography variant="body2" color="text.secondary">
+              画像がありません
+            </Typography>
           </Box>
         )}
 
         {/* 画像グリッド */}
-        <ImageList cols={cols} gap={8} sx={{ m: 0 }}>
+        {!hasNoImages && (
+          <ImageList cols={cols} gap={8} sx={{ m: 0 }}>
           {images.map((image, index) => {
             const isHidden = isImageHidden(image.id);
             const isLoading = isHideLoading === image.id;
@@ -528,9 +673,10 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
             );
           })}
         </ImageList>
+        )}
 
         {/* 「他の画像を見る」ボタン */}
-        {!showAllImages && hasMoreImages && (
+        {!showAllImages && hasMoreImages && !hasNoImages && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
               variant="outlined"
@@ -549,7 +695,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
         )}
 
         {/* 「閉じる」ボタン（全画像表示中） */}
-        {showAllImages && hasMoreImages && (
+        {showAllImages && hasMoreImages && !hasNoImages && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
               variant="outlined"

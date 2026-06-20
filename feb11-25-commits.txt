@@ -1,0 +1,941 @@
+﻿
+1bfd6202b412b01110b03039a76f20bc486ad507 2026-02-23 fix: Re
+move root vercel.json (public property site config) - use b
+ackend/vercel.json only
+0f0f4ec2cbea514ac91f42f813245575c0618ead 2026-02-23 chore: 
+Force Vercel rebuild to clear cache
+bd162a562680deb821a11b7beb196545e892268c 2026-02-23 fix: Wr
+ap .env loading in try-catch and use dynamic import for p-q
+ueue in both backend/src and backend/api
+bb31643fb31bfff51d570bd9868b54a6c0694bcd 2026-02-23 Fix: Ve
+rcel迺ｰ蠅・ｯｾ蠢・- .env隱ｭ縺ｿ霎ｼ縺ｿ縺ｨp-queue蜍慕噪繧､繝ｳ繝昴・繝・18b9ff601ed6
+3a08279b02757e2a1c14bef906dc 2026-02-23 fix: Restore backen
+d/api/index.ts to working state (5578997) - public property
+ site entry point
+a834d673e2143a6d14ab81c9b3c413f2b2d04d0b 2026-02-23 fix: Re
+move backend/src/** from vercel.json to prevent building in
+ternal system code in public site
+aafb178f566b170f3cc691049ca43e4d5b578e24 2026-02-23 revert:
+ Restore backend/package.json build scripts to working stat
+e (exit 0)
+063af327d857b9c2bb93422d2cd3a8bbfca471c9 2026-02-23 revert:
+ Restore vercel.json to working state before internal syste
+m changes
+1b76bb459a25d952a283a7bf39232e66178a19a2 2026-02-23 fix: In
+clude backend dependencies in Vercel build and add public p
+roperty site protection rules
+35f1a4a0a99f2bf3c7486090ab7429a07a589342 2026-02-23 fix: Re
+move backend/vercel.json to use root vercel.json for public
+ property site
+b7a7255ba1c53166c05291f6e591265523bc0785 2026-02-23 fix: Re
+store backend/api/index.ts for public property site
+1bd68f85b7d27b9630a9960d7cbf0f74c0a9301e 2026-02-23 fix: Sk
+ip TypeScript compilation in Vercel build
+2ad0df673cbef25accbd773820fc566cabfe8351 2026-02-23 fix: Us
+e ts-node directly in Vercel instead of compiling TypeScrip
+t
+0fdde2a71ab03a1b1b1cd0af883d59402aa0aaae 2026-02-23 fix: Fi
+x backend build script and add Vercel serverless function e
+ntry point
+4d31a602c11920bd11191427b9b978ffa451e76e 2026-02-23 fix: Re
+move backend/vercel.json and enable TypeScript build for Ve
+rcel
+ab8bb3527113d56de16883ee1c07b0585e07a3f4 2026-02-23 fix: Ad
+d Vercel configuration for backend serverless deployment
+0b137a231789adaddbcde917fd3516e39f5aef17 2026-02-23 fix: Ad
+d new-admin-management-system-v2 URL to CORS allowed origin
+s
+579ea036be0b5de5104dbe5ac8ac1fac6257b2ea 2026-02-23 fix: Ad
+d SPA routing configuration for frontend Vercel project
+159759f6bb7dce6a94f7b15990e7e7efda47f761 2026-02-23 Add ver
+cel.json for new-admin-management-system-v2 frontend deploy
+ment
+3d5e2a0b98d0f446a81b862d98b560dd02c99631 2026-02-23 Force r
+edeploy: Fix authentication error in production
+30655c5b7c472c004ca122cac8cc7e48bba18c6b 2026-02-22 Clean: 
+Remove unnecessary session summary document
+5f5d9f99d72446803ada9138ace0712704eb1c3e 2026-02-22 Add: Co
+de modification verification rule steering document (2026-0
+2-22)
+6e8200cbd855fc276989a061374de3106b44ef88 2026-02-22 Fix: Di
+sable property listings sync cron job (PropertyListingSyncS
+ervice does not exist)
+94d516b53487fa3a9a0d3a9a902517d42d72c621 2026-02-22 fix: em
+ployees繝・・繝悶Ν縺ｮauth_user_id繧ｫ繝ｩ繝縺悟ｭ伜惠縺励↑縺・◆繧√‘mail縺ｧ讀懃ｴ｢縺
+吶ｋ繧医≧縺ｫ菫ｮ豁｣
+2e058c70ce90ac0efed5acfe85614c22efc11199 2026-02-22 fix: Su
+pabase隱崎ｨｼ諠・ｱ繧堤峩謗･螳夂ｾｩ縺励※迺ｰ蠅・､画焚隱ｭ縺ｿ霎ｼ縺ｿ蝠城｡後ｒ譬ｹ譛ｬ逧・↓隗｣豎ｺ
+6eb15f30a2d72a8a3997682710568a8ca99d0c99 2026-02-22 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・迺ｰ蠅・､画焚縺ｫVITE_繝励Ξ繝輔ぅ繝・け繧ｹ縺ｮ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ繧定ｿｽ
+蜉
+9dba68f579bd72c0d6afc8ca4c45bf86bde974ea 2026-02-22 fix: 隱崎
+ｨｼ繧ｳ繝ｼ繝ｫ繝舌ャ繧ｯ繧呈乖譌･蜍輔＞縺ｦ縺・◆迥ｶ諷九↓謌ｻ縺呻ｼ・mplicit Flow縺ｮ縺ｿ・・36ee
+d4215a4ef3b786971456c6647427c6e09923 2026-02-22 fix: PKCE F
+low縺ｨImplicit Flow縺ｮ荳｡譁ｹ縺ｫ蟇ｾ蠢懊☆繧九ｈ縺・↓handleAuthCallback繧剃ｿｮ
+豁｣
+9f00e076ae88443083adf1d130f94ef437a0870f 2026-02-22 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒapi/auth繝・ぅ繝ｬ繧ｯ繝医Μ縺ｫ遘ｻ蜍輔＠縺ｦURL繝代せ縺ｨ荳閾ｴ縺輔○繧
+・fd6596fbfb917d26010ebbe6b3baf5326445088f 2026-02-22 fix: v
+ercel.json縺ｮrewrites繧池outes縺ｫ螟画峩縺励※API繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・蜆ｪ蜈磯・ｽ
+阪ｒ菫ｮ豁｣
+db443bd4bf5041548229271d9c892dbb8ece3b3f 2026-02-22 fix: ve
+rcel.json縺ｫ繧ｵ繝ｼ繝舌・繝ｬ繧ｹ髢｢謨ｰ縺ｮ譏守､ｺ逧・↑螳夂ｾｩ繧定ｿｽ蜉
+92c1ee7a18af8e7a1c79f71ce931023fd956dc10 2026-02-22 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・迺ｰ蠅・､画焚縺ｨAPI繝吶・繧ｹURL繧剃ｿｮ豁｣
+2c8bc7bfa51b40c0d670efd834115cf0f55d3851 2026-02-22 fix: ba
+ckend/api蟆ら畑縺ｮtsconfig.json繧定ｿｽ蜉縺励※Vercel繝薙Ν繝峨お繝ｩ繝ｼ繧定ｧ｣豎ｺ
+d69c0d067c469260e22441a49365a036787bc061 2026-02-22 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒ蜈・・迥ｶ諷九↓謌ｻ縺呻ｼ・ackend/api/index.ts縺ｮ/api/aut
+h繝ｫ繝ｼ繝医ｒ菴ｿ逕ｨ・・6fac57108892df666737724d7d0a6e8ef5c20309 2026
+-02-22 fix: 隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・繝代せ繧剃ｿｮ豁｣・・auth/callback 竊・/a
+pi/auth/callback縲・auth/me 竊・/api/auth/me・・1dd1a2d56460c8383
+0a5b01c8149bc2c1a3759c3 2026-02-22 fix: 隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・C
+ORS險ｭ螳壹ｒ菫ｮ豁｣縺励※繝励Μ繝輔Λ繧､繝医Μ繧ｯ繧ｨ繧ｹ繝医↓蟇ｾ蠢・c66441fee93dd0d0bbf5
+f9998246c68d8e1dd7ba 2026-02-22 fix: api/main.ts繧貞炎髯､縺励※Typ
+eScript繝薙Ν繝峨お繝ｩ繝ｼ繧貞ｮ悟・縺ｫ隗｣豎ｺ
+1012741be7879b330bf84e32bddb042d3d4b4acd 2026-02-22 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒ迢ｬ遶九＠縺溘し繝ｼ繝舌・繝ｬ繧ｹ髢｢謨ｰ縺ｨ縺励※蜀榊ｮ溯｣・b9d64ddfd06
+4c3c9c867b9668a717adf7c8b18ca 2026-02-22 fix: vercel.json縺ｫ
+src/index.ts縺ｮ繝薙Ν繝峨ｒ霑ｽ蜉縺励※TypeScript繝薙Ν繝峨お繝ｩ繝ｼ繧定ｧ｣豎ｺ
+d6adb2b4ba5f0e2f17aca0d7926ff3caa80d88ae 2026-02-22 fix: 讌ｭ
+蜍咏ｮ｡逅・す繧ｹ繝・Β隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒ譌｢蟄倥・Express繧｢繝励Μ縺ｫ邨ｱ蜷・8fba43
+9c1048c9a95ca1a8ae9b8cb11cd32ffcfc 2026-02-22 fix: 隱崎ｨｼ繧ｨ繝ｳ
+繝峨・繧､繝ｳ繝医ｒapi/繝ｫ繝ｼ繝医↓遘ｻ蜍輔＠縺ｦVercel繝薙Ν繝峨お繝ｩ繝ｼ繧定ｧ｣豎ｺ
+43683350ea05aeea4d7eb392e1b9190064680a84 2026-02-22 fix: ve
+rcel.json縺ｮrewrites縺ｧ隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒ蜆ｪ蜈医☆繧九ｈ縺・↓鬆・ｺ上ｒ螟画峩
+7528c0b37d124bf779bb06d84a6907f7e7be1aa8 2026-02-22 fix: 繝輔
+Ο繝ｳ繝医お繝ｳ繝峨・API URL縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ繧定ｿｽ蜉・育腸蠅・､画焚譛ｪ險ｭ螳壽凾縺ｮ蟇ｾ遲厄
+ｼ・90587688552c690ed4fae7d8c602c4bff0554407 2026-02-22 fix: 
+隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒauth/繝・ぅ繝ｬ繧ｯ繝医Μ縺ｫ遘ｻ蜍輔＠縺ｦVercel縺ｮ閾ｪ蜍墓､懷・縺ｫ
+蟇ｾ蠢・7c116b3c5e19946aa57636f14036dc7d3322c4c9 2026-02-22 fix
+: 隱崎ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・backend/src萓晏ｭ倥ｒ蜑企勁縺励∫峩謗･Supabase繧ｯ繝ｩ繧
+､繧｢繝ｳ繝医ｒ蛻晄悄蛹・7e0bbc545eaeca6c6e1f91f5d39a55d3f1247376 2026-
+02-22 Revert "fix: backend/vercel.json縺ｮbuilds繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧貞炎
+髯､縺励※閾ｪ蜍墓､懷・縺ｫ螟画峩"
+6a32b8b322f21859d836df6636ba839788804a66 2026-02-22 fix: ba
+ckend/vercel.json縺ｮbuilds繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧貞炎髯､縺励※閾ｪ蜍墓､懷・縺ｫ螟画峩
+71db8ee5792b4ac65a7c038a609a17899cd08a55 2026-02-22 fix: ba
+ckend/api/tsconfig.json縺ｫdownlevelIteration繧定ｿｽ蜉
+b092189f57324e8a1c06476f4ff90963364c8101 2026-02-22 fix: ba
+ckend/api/tsconfig.json縺ｮrootDir繧貞炎髯､縺励※繝薙Ν繝峨お繝ｩ繝ｼ繧剃ｿｮ豁｣
+04e47874418ea0586db5a4253801710e79d78863 2026-02-22 fix: ve
+rcel.json縺ｮrewrites縺ｮ鬆・ｺ上ｒ菫ｮ豁｣
+a033402273f79db9b5eb5e16d02711ef98f38a6b 2026-02-22 fix: ba
+ckend/api/package-lock.json繧定ｿｽ蜉
+b33420af900bf794418e02537627a4a22f071fcf 2026-02-22 fix: 隱崎
+ｨｼ繧ｳ繝ｼ繝ｫ繝舌ャ繧ｯURL繧・api/auth/callback縺ｫ菫ｮ豁｣
+22da0daf6ac77e561edc5965bf86964573766272 2026-02-21 fix: 隱崎
+ｨｼ繧ｨ繝ｳ繝峨・繧､繝ｳ繝医・CORS險ｭ螳壹ｒ菫ｮ豁｣
+ee6f837fb16eb6e5178195f6cf1aa5c5e68d9639 2026-02-21 fix: ve
+rcel.json縺ｮCORS險ｭ螳壹ｒ菫ｮ豁｣
+f185a24d845bf6962182ccec4898cbc3f05190fb 2026-02-21 fix: ap
+i.ts縺ｮAPI_BASE_URL繧堤腸蠅・､画焚縺九ｉ隱ｭ縺ｿ霎ｼ繧繧医≧縺ｫ菫ｮ豁｣
+74a4919407594cb9ad7f0fe4a842453b0d01c5a7 2026-02-21 fix: Ge
+ocodingService縺ｮ迺ｰ蠅・､画焚隱ｭ縺ｿ霎ｼ縺ｿ繧値azy initialization縺ｫ螟画峩
+483211fbf5dead98885446805f6aaea654aad80d 2026-02-21 Merge r
+estore-feb-13-14 branch into main
+24e98b41a01056242513d74c4dfed4decdd4a234 2026-02-21 feat: 2
+026-02-17縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ・dmin-frontend-new霑ｽ蜉縲∫腸蠅・
+ｨｭ螳夲ｼ・c8716cc0c002374bc02a2552f458d45fea0aa15c 2026-02-21 f
+eat: 2026-02-17縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ・ackend險ｭ螳壻ｿｮ豁｣・・b0c2
+9cc22acc59d9219c89cb200e72dc63ba77dd 2026-02-21 feat: 2026-
+02-17縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ医せ繝・い繝ｪ繝ｳ繧ｰ繝峨く繝･繝｡繝ｳ繝郁ｿｽ蜉・・783
+5aab24c476ba9f04d892351a9f281abfdc3c5 2026-02-21 docs: Add 
+Google Sheets spreadsheet mapping steering document (5 spre
+adsheets)
+4e59841d6c8d26a47ea9c1c26bea0ed5b489ff60 2026-02-21 Fix: pu
+blicInquiries lazy initialization to prevent server crash
+71c8b0046fe3f1824b48aff834d2ffcfa1ee9e5e 2026-02-21 fix: ad
+d test endpoint for Google Sheets authentication debugging
+944f111d18591c1125534e7d5bcc01a510a765b7 2026-02-21 fix: ad
+d @ts-nocheck to remaining service files with TypeScript er
+rors
+5bb23d040bdea22343b0136cdb4226fc56d18df0 2026-02-21 fix: re
+move invalid typescript property from vercel.json
+a26eba70b8f148d050938a6236de8ec85754534e 2026-02-21 fix: ig
+nore TypeScript build errors in Vercel deployment
+fdda227d4955e572519731cba3cfd996fad6c3db 2026-02-21 fix: ad
+d @ts-nocheck to bypass TypeScript compilation errors
+531e013b3e069607d38f4d6855751d1334f45ead 2026-02-21 fix: ad
+d TS_NODE_TRANSPILE_ONLY env to skip type checking
+de3f2a82960f57ac2833c60cb8500055ef865dfc 2026-02-21 fix: ad
+d transpileOnly to backend vercel.json to ignore TypeScript
+ errors
+1414ff56807c5b3f780a783e91ff39961ba568a9 2026-02-21 fix: co
+rrect VITE_API_URL endpoint (remove duplicate /api)
+3ab958edad079e9ec306fe568a120b76a9d76b9c 2026-02-21 revert:
+ restore original vercel.json config
+ece1308587231150bb7f9f1de4d1d0f9af72e201 2026-02-21 fix: ad
+d TypeScript build step for Vercel deployment
+9bc2677a251eb12271808d6d4d1df8e7e2f603ee 2026-02-21 fix: us
+e GOOGLE_SERVICE_ACCOUNT_JSON env var in SharedItemsService
+61115470b59ce07364b90f4a97b182634e7cec35 2026-02-21 fix: up
+date vercel.json dest path for Root Directory=backend
+b0b4190735b1285780134a32e47fd22f0a449c4e 2026-02-21 chore: 
+trigger deployment for baikyaku-property-site3
+5ae2579f60c04a50bd00e5657987ced55d07824c 2026-02-21 fix: Mo
+ve shared-items route to unauthenticated section
+6c161612070aa77432484edc4003612ca13d5f94 2026-02-21 chore: 
+trigger Vercel deployment for shared items feature
+ce8c25a1347eabb2e5536951d3266349c5c9f45d 2026-02-21 Fix: 蜈ｱ
+譛峨ョ繝ｼ繧ｿ縺ｮID蜿門ｾ励ｒA蛻励°繧牙叙蠕励☆繧九ｈ縺・↓菫ｮ豁｣
+05336f25a0a57c8fa7152fb208f84515192a695c 2026-02-21 fix: 譌･
+莉倥ヵ繧｣繝ｼ繝ｫ繝峨・螟画鋤蜃ｦ逅・ｒ菫ｮ豁｣・・YYY/M/D蠖｢蠑上→Excel繧ｷ繝ｪ繧｢繝ｫ蛟､縺ｫ蟇ｾ蠢懶
+ｼ・42d547d03b97e9b90a011a3516d31de4f48b8868 2026-02-21 temp:
+ 繝・せ繝域悄髢謎ｸｭ縺ｯ蜈ｨ繝輔ぅ繝ｼ繝ｫ繝峨ｒ繧ｹ繝励す竊偵ヶ繝ｩ繧ｦ繧ｶ縺ｫ螟画峩・域悽逡ｪ迺ｰ蠅・ｧｻ陦梧凾縺
+ｫ謌ｻ縺呻ｼ・7c7bea0249cede18d81f65104cde18d4c60c4b8f 2026-02-21 
+fix: 讌ｭ蜍吶Μ繧ｹ繝医・蜷梧悄繝ｫ繝ｼ繝ｫ菫ｮ豁｣ - 蟄伜惠縺励↑縺・き繝ｩ繝繧貞炎髯､縺励※繝悶Λ繧ｦ繧ｶ
+蟆ら畑繝輔ぅ繝ｼ繝ｫ繝峨ｒ菫晁ｭｷ
+22fb47b4ca2651cf82a60f9af6d30dcf1f0f1aeb 2026-02-21 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医・繝輔ぅ繝ｼ繝ｫ繝牙挨蜷梧悄繝ｫ繝ｼ繝ｫ繧貞ｮ溯｣・efc707bf8e24e5320f0a156d1
+2a91d9fb4ad08a7 2026-02-21 fix: 蜈ｱ譛峨・繝ｼ繧ｸ縺ｮ繝輔ぅ繝ｼ繝ｫ繝峨・繝・ヴ繝ｳ繧
+ｰ繧剃ｿｮ豁｣・医せ繝励Ξ繝・ラ繧ｷ繝ｼ繝医・螳滄圀縺ｮ繧ｫ繝ｩ繝蜷阪↓蟇ｾ蠢懶ｼ・7de6d64c0225335d
+e6873af4173bd3ae68139186 2026-02-21 fix: SharedItems繝ｫ繝ｼ繝医・
+getNormalStaff繝｡繧ｽ繝・ラ繧剃ｿｮ豁｣
+0a93fbbc0574425438d3cd078d7bca58f6a8405d 2026-02-21 fix: Se
+llerStatusSidebar縺ｨsellerStatusFilters縺ｮundefined繝√ぉ繝・け繧定ｿｽ
+蜉
+7e19940b7870ac6e3e62b71751cc625f81d56ac8 2026-02-21 fix: Wo
+rkTaskDetailModal縺ｮSECTION_COLORS.workTask繧担ECTION_COLORS.t
+ask縺ｫ菫ｮ豁｣
+9c8cdde9796f3af0e79c3acb932bbdffcb3880c6 2026-02-21 fix: Wo
+rkTasksPage縺ｫSECTION_COLORS縺ｮ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ蜃ｦ逅・ｒ霑ｽ蜉
+1b597f800ff845a0dba8fa74a0678f81775272d0 2026-02-21 chore: 
+force Vercel rebuild to clear cache
+b55911349819d4519996973e39380a1bdfbaabaf 2026-02-21 fix: SE
+CTION_COLORS.task縺ｫlight繝励Ο繝代ユ繧｣繧定ｿｽ蜉縲ヾharedItemsService縺九
+ｉStaffService萓晏ｭ倥ｒ蜑企勁
+40ae64d654a8b57ed915d5a4ff596f0b9265c911 2026-02-21 fix: Wo
+rkTasksPage縺ｮSECTION_COLORS蜿ら・繧ｨ繝ｩ繝ｼ繧剃ｿｮ豁｣
+0e3c419a15d0e7e748cb167d39970567cd704580 2026-02-21 fix: Pr
+opertySidebarStatus縺ｮ繧､繝ｳ繝昴・繝医お繝ｩ繝ｼ繧剃ｿｮ豁｣
+676b21369fea58e43344cbb6cf6da85f69276003 2026-02-21 fix: Me
+ssageTemplateDialog縺ｮ繧､繝ｳ繝昴・繝医お繝ｩ繝ｼ繧剃ｿｮ豁｣
+40e3b268b3c5efb6c45aa8c5317cf480b9141da4 2026-02-21 fix: 譌･
+莉倥ヵ繧｣繝ｼ繝ｫ繝峨・螟画鋤蜃ｦ逅・ｒ菫ｮ豁｣・・YYY/M/D蠖｢蠑上→Excel繧ｷ繝ｪ繧｢繝ｫ蛟､縺ｫ蟇ｾ蠢懶
+ｼ・91c07a0b2b966c516f170699aecebc1cc5208871 2026-02-21 feat:
+ 蜈ｱ譛会ｼ育､ｾ蜀・・譛我ｺ矩・ｮ｡逅・ｼ画ｩ溯・縺ｮ螳溯｣・- Part 3/3 (繝輔Ο繝ｳ繝医お繝ｳ繝・
+a28eeaca0f59f8f3f2e8a9d7a82855ead022e0e1 2026-02-21 feat: 蜈
+ｱ譛会ｼ育､ｾ蜀・・譛我ｺ矩・ｮ｡逅・ｼ画ｩ溯・縺ｮ螳溯｣・- Part 2/3
+7a9d00074e7e322ea623848197c567b0fc5d6444 2026-02-21 feat: 蜈
+ｱ譛会ｼ育､ｾ蜀・・譛我ｺ矩・ｮ｡逅・ｼ画ｩ溯・縺ｮ螳溯｣・- Part 1/3
+007b43f2771bce4280571a5d72512904888a2f45 2026-02-21 temp: 繝
+・せ繝域悄髢謎ｸｭ縺ｯ蜈ｨ繝輔ぅ繝ｼ繝ｫ繝峨ｒ繧ｹ繝励す竊偵ヶ繝ｩ繧ｦ繧ｶ縺ｫ螟画峩・域悽逡ｪ迺ｰ蠅・ｧｻ陦梧凾縺ｫ謌
+ｻ縺呻ｼ・3ed2235dee1e38e164bd3871b8d66cb4fb1e04d0 2026-02-21 fi
+x: 讌ｭ蜍吶Μ繧ｹ繝医・蜷梧悄繝ｫ繝ｼ繝ｫ菫ｮ豁｣ - 蟄伜惠縺励↑縺・き繝ｩ繝繧貞炎髯､縺励※繝悶Λ繧ｦ繧ｶ蟆ら
+畑繝輔ぅ繝ｼ繝ｫ繝峨ｒ菫晁ｭｷ
+604fd763a20b2febba5eaece396391ad9e1925d1 2026-02-21 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医・繝輔ぅ繝ｼ繝ｫ繝牙挨蜷梧悄繝ｫ繝ｼ繝ｫ繧貞ｮ溯｣・21b19da8fe4c565abd3b4be96
+e49134623b4de44 2026-02-21 fix: 讌ｭ蜍吶Μ繧ｹ繝医・讀懃ｴ｢讖溯・繧呈隼蝟・- 繧ｫ繝
+・ざ繝ｪ繝ｼ驕ｸ謚樔ｸｭ縺ｧ繧ょ・莉ｶ讀懃ｴ｢蜿ｯ閭ｽ縺ｫ
+7c25dccc75fe1037b99f59acfd74c084a7b582e8 2026-02-21 fix: 繧ｵ
+繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ陦ｨ遉ｺ繧剃ｿｮ豁｣・亥｣ｲ雋ｷ螂醍ｴ・蝟ｶ讌ｭ遒ｺ隱堺ｸｭ縺ｮ蜆ｪ蜈磯・ｽ阪ｒ2縺
+ｫ螟画峩縲∵律莉倥・蜑阪↓繧ｹ繝壹・繧ｹ霑ｽ蜉・・7337f4e012748daa8ce497928400462fc
+135be7e 2026-02-21 fix: filterTasksByStatus縺ｧsidebar_catego
+ry繧貞━蜈育噪縺ｫ菴ｿ逕ｨ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+8109d9731539af3211074fbf766b4dbecad24ef7 2026-02-21 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｫ蜈ｨ譌･莉倩｡ｨ遉ｺ縲∵､懃ｴ｢繝舌・縺ｫ繧ｯ繝ｪ繧｢繝懊ち繝ｳ霑ｽ蜉縲∫黄莉
+ｶ逡ｪ蜿ｷ繧ｯ繝ｪ繝・け縺ｧ繧ｳ繝斐・讖溯・霑ｽ蜉
+8fb14d75b0bc71c21a0779bdfbe5f4c8a10dadaa 2026-02-21 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｮ鬆・ｺ上ｒ菫ｮ豁｣・亥ｪ剃ｻ銀・繧ｵ繧､繝育匳骭ｲ竊貞｣ｲ雋ｷ竊呈ｱｺ貂遺・蜿ｰ
+蟶ｳ竊剃ｿ晉蕗・・f3e074179150ea2e00c06dbc7325415742d6420b 2026-02-2
+1 feat: 繧ｵ繧､繝峨ヰ繝ｼ縺ｮ蟷・ｒ400px縺ｫ諡｡螟ｧ縲√し繧､繝井ｾ晞ｼ貂医∩邏榊刀蠕・■縺ｫ邏榊刀莠
+亥ｮ壽律繧定｡ｨ遉ｺ
+e8d10683b1113fa2d90b14dc8adcb913c869a4d1 2026-02-21 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ縺ｮ蟷・ｒ220px縺九ｉ300px縺ｫ諡｡螟ｧ・医き繝・ざ繝ｪ繝ｼ蜷阪ｒ蜈ｨ縺ｦ陦ｨ遉ｺ・・7432
+2614cef29a7e1590ee577f7a13c30418a77a 2026-02-21 feat: 繧ｵ繧､繝
+峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｮ譌･莉倥ｒ螟ｪ蟄励↓縲∵悄髯仙・繧鯉ｼ亥ｽ捺律莉･蜑搾ｼ峨・繧ｫ繝・ざ繝ｪ繝ｼ繧定ｵ､蟄
+励↓螟画峩
+33c719b74881132cf1329b5764337bf7758ededb 2026-02-21 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医・繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｫ譌･莉倥ｒ陦ｨ遉ｺ縲√ユ繝ｼ繝悶Ν縺ｮ繧ｹ繝・・繧ｿ繧ｹ蛻励
+ｒ蜑企勁
+ee08999c56ba94bd2ff954501d6f8d387335ec53 2026-02-21 feat: 2
+026-02-15縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ・art 1: UI謾ｹ蝟・∵･ｭ蜍吶Μ繧ｹ繝域ｩ溯
+・霑ｽ蜉・・e71919d7c27653ef9889cc678c09dd59926e31ee 2026-02-21 
+feat: 2026-02-17縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ医ン繝ｫ繝芽ｨｭ螳壻ｿｮ豁｣縲√せ繝・い
+繝ｪ繝ｳ繧ｰ繝峨く繝･繝｡繝ｳ繝郁ｿｽ蜉・・a41944a565f2bda9692e80a8ff65df26c860
+63fb 2026-02-21 feat: 2026-02-16縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ繧ｳ繝溘ャ繝医ｒ蠕ｩ蜈・ｼ郁ｿ鷹團
+雋ｷ荳ｻ繝ｪ繧ｹ繝域隼蝟・∬・蜍募酔譛滉ｿｮ豁｣・・4b8920406f508fbcb4e7e37675038105
+930bf9ce 2026-02-21 fix: add CORS headers directly in verce
+l.json for serverless functions
+0067bc5f71ef67b30ab23108296965f0df1119a5 2026-02-21 chore: 
+force Vercel cache clear - CORS fix
+4c75eebcfee860668d13ff8932b16e05fafd0ef8 2026-02-21 fix: si
+mplify CORS to allow all origins temporarily for debugging
+66eb3c647f4dc8be0cbde2cf9c0b8ae285c074ce 2026-02-21 fix: us
+e wildcard CORS pattern to allow all Vercel domains
+fc25344063cc15b1cbf5fd80451fa6c7c7ed8f7c 2026-02-21 fix: im
+prove CORS configuration with dynamic origin checking and l
+ogging
+0701e766d3987a84c03161313b88d142c11234f2 2026-02-21 chore: 
+force backend redeploy for CORS fix
+9164bedf7f57aaa60b80c6fd3534219d51894271 2026-02-21 fix: up
+date frontend production API URL to correct backend
+6cc9464fc797e32089f95c8a44965204873d03a9 2026-02-21 fix: ad
+d new-admin-management-system-v2 domain to CORS config
+d349a633c08ba45a2e5ae915a3de964952c3ee67 2026-02-21 chore: 
+force Vercel rebuild - clear all caches
+813089354cbaeecee5d50508eaaa2a8775fa0ce5 2026-02-21 fix: fo
+rce UTF-8 encoding for sellerStatusFilters.ts to fix Vercel
+ deployment
+047bf7c74c2247688a5144e05b364f23ba48337b 2026-02-21 fix: fo
+rce clean build by removing Vite cache before build
+68cf56a48dc79fd2f8f9cd4d3104677f73122254 2026-02-21 chore: 
+force Vercel rebuild - clear build cache
+327d66968c7e4f77459ad5c5069a3e502875a32a 2026-02-21 fix: re
+move root vercel.json to avoid config conflict with fronten
+d/vercel.json
+29adedecf8ffe4ff0e6e42ad31dcd9fb24b6bc5c 2026-02-21 chore: 
+force Vercel clean build - bypass cache
+a36435715dea34ca147d81bca5ed0c97c94dae16 2026-02-21 chore: 
+force rebuild to clear Vercel cache
+b1ab26c57a47ebe71b5f87ff2db3c0b8af1f0dee 2026-02-21 fix: pr
+eferredContactTime縺ｮ驥崎､・ｒ蜑企勁
+d3ed6e3c355c09b2877cb7ac1e7776cf5f008eb5 2026-02-21 fix: Ty
+peScript繝薙Ν繝峨お繝ｩ繝ｼ繧剃ｿｮ豁｣・・ontactMethod縺ｮ驥崎､・→sx螻樊ｧ縺ｮ驥崎､・ｼ・
+38ed072aa24d48758fefddb16a14b5229aee581d 2026-02-21 fix: is
+VisitOther髢｢謨ｰ縺ｨvisitOther繧ｫ繝・ざ繝ｪ繧定ｿｽ蜉・医さ繝溘ャ繝・14b9e2縺九ｉ蠕ｩ蜈
+・ｼ・d0a0dd86feb8ba9df642ea64f1e6b7705a3d7c70 2026-02-21 fix:
+ groupTodayCallWithInfo髢｢謨ｰ縺ｨTodayCallWithInfoGroup繧､繝ｳ繧ｿ繝ｼ
+繝輔ぉ繝ｼ繧ｹ繧定ｿｽ蜉・医さ繝溘ャ繝・14b9e2縺九ｉ蠕ｩ蜈・ｼ・1117b62742f32cac482b6e2
+e8e620e5f8de0f9c1 2026-02-21 fix: 繧ｳ繝溘ャ繝・14b9e2縺ｧ谺縺代※縺・◆繧ｳ
+繝ｳ繝昴・繝阪Φ繝医ｒ菴懈・・・ectionColors, RichTextCommentEditor, Proper
+tyMapSection, NearbyBuyersList, CollapsibleSection・・c901be2
+8b450a16680746ae19d4caa50d561a5be 2026-02-21 feat: 螢ｲ荳ｻ繝ｪ繧ｹ
+繝医→騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮUI謾ｹ蝟・ｼ医さ繝溘ャ繝・14b9e2繧帝←逕ｨ・・1f94d6a49d03
+fddb9c9303d12302d0fe489be005 2026-02-21 feat: 讌ｭ蜍吶Μ繧ｹ繝医Δ繝ｼ繝
+繝ｫ縺ｮUI謾ｹ蝟・ｼ医さ繝溘ャ繝・34e5ca, 03c3348繧帝←逕ｨ・・50b75770998707e68c
+b51b914d686a591bbe8e7b 2026-02-21 Fix: Add transpileOnly to
+ skip TypeScript type checking in Vercel build
+67bb088d995cb5dbb5dc9591ecd2634e986b9af3 2026-02-21 Fix: Co
+nvert p-queue to dynamic import to resolve ERR_REQUIRE_ESM 
+error
+0a60034ec889336d162df04e8ba4da5b9eddc7cc 2026-02-20 Fix: Ad
+d TypeScript noEmitOnError config to backend vercel.json
+d9877c400bc95edc75bc993351845334417f0e89 2026-02-20 Fix: Ad
+d new-admin-management-system URL to CORS origins
+3829b5afcd1b1cd346ce4870afe9796f9a38da77 2026-02-20 Fix: Ad
+d rewrites to frontend vercel.json for SPA routing
+621a907ddccace4a8b69b0a235af35dd44a15072 2026-02-20 Add: Fr
+ontend vercel.json to specify output directory
+06115ecced7889b5677b3bc3c31fa77e38fc503c 2026-02-20 Fix: Ba
+ckend vercel.json paths for empty Root Directory
+14ebf02f68157afda8d3d771228aae6edf0c243f 2026-02-20 Fix: Up
+date vercel.json to use backend/ prefix for Root Directory 
+empty config
+fb85eba01e438128a6ae6d6298afae5a2be374a5 2026-02-20 Fix: Ad
+d proper Vercel serverless function configuration
+5b7c10b4e2d399c8af5e10993e2dc1cf1ac09740 2026-02-20 Fix: Mi
+nimal Vercel configuration
+8adc444717af11f7011f5a060ec6dcd910159675 2026-02-20 Fix: Si
+mplify Vercel configuration to use package.json
+7dfdb77b9f92a044de3565d5ffb3f0a7cd3fe0a6 2026-02-20 Fix: Ad
+d Vercel configuration for baikyaku-property-site3 backend
+a1bef1ecc07b7770a557a37041aa26171f493e30 2026-02-20 Fix: Ad
+d PropertyImageService constructor arguments
+757a49eafdd1bf629a2a7b6fb0452c7ddbf0b2e4 2026-02-20 Revert:
+ Remove private_key newline conversion (Vercel env already 
+has correct newlines)
+342e13ff6a76f475f274f1d87d7b4078293b444b 2026-02-20 Fix: Co
+nvert newlines BEFORE JSON parsing in PropertyService and G
+oogleDriveService
+8228639ef7975ea771fa0cf25dc97467e88101b9 2026-02-20 Fix: Ad
+d private_key newline conversion for Vercel environment in 
+PropertyService and GoogleDriveService
+f116c444f67aad48f8f3d73add8e4098e152cc06 2026-02-20 Fix: Ad
+d .js extension to dynamic import in backend/api/index.ts (
+line 1607)
+792622cfd31dde59cea34299e53f79109669f382 2026-02-20 Fix: Ad
+d required arguments to PropertyImageService constructor
+8ad6fd4bde5a79fe2bda6ae8ee066d2f6212fde3 2026-02-20 Fix: Re
+move backend/src references from backend/api files
+877ddf2388d5c0d36498a0880aca4a5faf0f16ae 2026-02-20 Fix: Re
+move backend/src from vercel.json includeFiles to prevent b
+uild errors
+7ba5ec75ad563bbc38b4005ff18ec6568ea5e387 2026-02-20 Fix: Ad
+d dotenv to backend/api/package.json
+c6e5e1fb07e70d8d44f2133f1279e9f3c8a3b12c 2026-02-20 Fix: Ad
+d missing dependencies (google-auth-library, redis) to back
+end/api/package.json
+a2ddc0023b6d09f12fea3d7d2bbf7c156fc7b93b 2026-02-20 Fix: Co
+mplete backend/api independence - remove extends, add .js e
+xtensions, fix PropertyImageService constructor
+80ec7f29f81a4b50f98ba3b7ba597f5a9553502a 2026-02-20 Fix: Re
+move backend/src dependency from backend/api/tsconfig.json
+01476294053b7913cb303dc789fed217a45ab288 2026-02-20 Fix: Ap
+ply estimate PDF generation fixes only (private_key newline
+ + PropertyImageService constructor)
+792b41afeb22cd888f9e6a48a4d1f1eae2ade855 2026-02-20 Fix: Ap
+ply estimate PDF generation fixes to 7692f0d (private_key n
+ewline conversion and PropertyImageService constructor)
+05147f07e7febce1a02936b02e68f50b98ef415d 2026-02-20 Fix: Ad
+d GoogleDriveService parameter to PropertyImageService cons
+tructor in retrieveStorageUrl
+e6e7d045f9584f8231ed7c667902d9aa82ed12ad 2026-02-20 Fix: Co
+nvert \\n to actual newlines in private_key for estimate PD
+F generation (backend/api)
+4a6ec680cc96d7ef96d4f8903cca8c7890265ac0 2026-02-20 docs: C
+larify that seller management system and business managemen
+t system are the same
+ae37957c0ae949b4f8292835d785c2a9e75ec2fd 2026-02-20 docs: U
+pdate public-property-site-architecture.md with other Verce
+l projects info
+7692f0db314b40df3389dd517e79f57c06811f7a 2026-02-20 Add: Pu
+blic property site architecture steering document
+94de1e45e0015dbee039cb99985901e47fc75c1d 2026-02-20 Fix: Ad
+d .js extensions to ESM imports in PropertyListingService
+fc6079237153947c17da6431f0901fa3cacb4862 2026-02-20 Fix: Pr
+opertyImageService constructor calls - add GoogleDriveServi
+ce parameter and fix GoogleSheetsClient.getLastRow
+54845bb66ba7762029657ecb4be845c3d78669cb 2026-02-20 Fix: Ad
+d .js extensions to ESM imports in backend/api for Vercel d
+eployment
+dd9cb5aef1cbe6dc9c2bf44aae6311428b15a3f0 2026-02-19 Fix: Re
+place dynamic imports with static imports in PropertyListin
+gService for Vercel
+d3d70e1be30c029775e9b9e92cc9e2e59872b54f 2026-02-19 Fix: Re
+move backend/vercel.json to use root vercel.json only
+a2e4ce07d6a801d6fe8aac22cd0d59fd3962bb5c 2026-02-19 Remove 
+rootDir from backend/api/tsconfig.json to fix TypeScript er
+rors
+2b13a7185397555e75facfec4f708225e05b684f 2026-02-19 Fix inc
+ludeFiles in vercel.json to include backend/api/src
+d1926f8a093a900805552927d5dd2d68ae54a60d 2026-02-19 Fix imp
+ort paths in backend/api/index.ts and copy AthomeSheetSyncS
+ervice
+3e55ca3b71e8c56dffa0e536ecc36728ef6d7b2d 2026-02-19 Fix Ver
+cel build: Add installCommand and tsconfig for api director
+y
+1ff169bbb1e29f925991f833fe1c84e098011f52 2026-02-19 Add pac
+kage.json to api directory for Vercel dependency resolution
+47b1629faa0fc84ae4b9c721e633da63113843c8 2026-02-19 Fix: Re
+move dotenv import from supabase.ts for Vercel compatibilit
+y
+9daa0f2a68639485ee909fe6c49aa5a8cd76efac 2026-02-19 Enhance
+d error logging for AA12649 image endpoint - include errorC
+ode, errorStatus, errorDetails
+4c3423c03afb305a5dd67dd010b9ce3fa0cd210a 2026-02-19 Add det
+ailed error logging for Google Drive API errors (AA12649 de
+bug)
+355809cc3eab336cbb2b31440ff1de745618c5e1 2026-02-19 Fix: Re
+store backend/api/index.ts from working commit (fc6f146)
+c2059bd22bfc6fb53ff710887daa3b8c51c2b1bf 2026-02-19 Fix: Re
+store working vercel.json configuration with includeFiles f
+or backend/src
+e9937956bdedec05fe824d28473d347c85077fd8 2026-02-19 fix: Ad
+d lazy initialization for Redis client to handle Vercel ser
+verless environment
+4d3ad8ce6baddc6108f2d4a0242437174883a68d 2026-02-19 fix: De
+ploy backend/src/index.ts directly instead of backend/api/i
+ndex.ts to resolve dependency issues
+1678e75a9a9113fec075413d8897d332ca4fe50f 2026-02-19 fix: Re
+lax TypeScript strict mode in backend/api to allow compilat
+ion with ../src imports
+b92a9121841210ef3359b192c1cf2c44df037782 2026-02-19 fix: Ad
+d missing dependencies (redis, pg, p-queue, p-retry, zod) t
+o backend/api/package.json and fix buildCommand
+4c623113321732c5369be8e20f98ddd051b8bb6e 2026-02-19 Fix: Re
+vert import paths to ../src/ and update vercel.json to incl
+ude parent directory
+ab9bbd94796b1496d6b9adb9872e23f098f0176b 2026-02-19 Add: ts
+config.json for backend/api TypeScript configuration
+0b50923d713a8067986ef994376abca36c22f35e 2026-02-19 Fix: Ad
+d redis and uuid dependencies to backend/api/package.json
+1198350485e07684d3c75c7db36bc5769b02d079 2026-02-19 Add: pa
+ckage.json for backend/api Vercel deployment
+319ee0348e8e4deccabf7add20cd15ba5dc0cb42 2026-02-19 Fix: Co
+rrect import paths for Vercel deployment (../ to ./)
+1c02ea37f8b095876a5a13def7851ae7327ec680 2026-02-19 Add ver
+cel.json for backend/api routing configuration
+46590e074fa902362d92de50e16854afae3d1b12 2026-02-19 Add det
+ailed logging and error handling to Google Drive API calls
+48c14ec6ff476d361adb8620a5d92d9fc2ecc313 2026-02-19 Fix: In
+ject GoogleDriveService singleton into PropertyImageService
+05d2c3ce324e5cd01fcfd6c3bf9846cf60197457 2026-02-19 Add det
+ailed logging to GoogleDriveService initialization for debu
+gging
+ee42d6f0b25d7c18b336758fdcc9ec00c24bc175 2026-02-19 Fix: Us
+e GoogleDriveService singleton to improve error handling
+d4e26a08dde9b6e136ede753a7adc66389594f81 2026-02-19 Add /ap
+i/test-env endpoint to debug GOOGLE_SERVICE_ACCOUNT_JSON
+e3e62d72d93597c1eaa7d836be494d0172c7c10c 2026-02-19 Fix: Co
+nvert image_url to object format in public property API (ba
+ckend/api)
+f63400eb67b32d3f90b0643da252c0799b044ffc 2026-02-19 Fix: Ex
+tract file ID from image_url proxy URL for images array
+f9006931422e7a433be783d4643ae04b07d5fc15 2026-02-19 Fix: Im
+prove Base64 detection - try JSON parse first, then Base64 
+decode
+f83373e281c50f69f8b60cabe9aa515409e958eb 2026-02-19 Fix: Au
+to-decode Base64 encoded GOOGLE_SERVICE_ACCOUNT_JSON
+6517d53021fff6110559255bd74d8b8aa49ef634 2026-02-19 Fix: Th
+row error when GOOGLE_SERVICE_ACCOUNT_JSON is not configure
+d
+9c8c9e6c451a3e6b0b7c4ac20b725cad72e63ecd 2026-02-19 Add det
+ailed GOOGLE_SERVICE_ACCOUNT_JSON validation logging
+22e63f4cfbdfa518b3770476f555baca5f7e286b 2026-02-19 Fix: Ad
+d gyomu list cache to avoid Google Sheets API quota errors
+7b2c3512cf4e608547fdc73305597a6a77ff5e91 2026-02-19 Fix: Al
+low /u/0/ in Google Drive folder URLs for storage_location 
+validation
+76afa9c594328000c346b06ecea1001fa731685c 2026-02-19 Fix: Re
+-fetch storage_location from gyomu list if existing DB valu
+e is not a valid URL format
+c2aef0ee9c7a4e31cb38f8f0d96a253e2c7cbaff 2026-02-19 Fix: Va
+lidate storage_location URL format before using from gyomu 
+list
+f1dc01a494276c5af0987d7f836f3e8943d14aa3 2026-02-19 Fix: Ge
+t storage_location from gyomu list CO column first, then fa
+llback to Google Drive search
+dcac7c5948816786d038d24980b669ffaa0f336f 2026-02-19 Revert:
+ Restore simple storage_location logic (existing DB value o
+r Google Drive search)
+0618944d2c94e9d119b54b54889ffc227610de15 2026-02-19 Fix: Ge
+t storage_location from gyomu list CO column instead of pro
+perty list spreadsheet
+38a16a69d67f4604ea53208ab73a92e39c0f4c2d 2026-02-19 Fix: Ge
+t storage_location from spreadsheet '菫晏ｭ伜ｴ謇' column first
+, then fallback to Google Drive search
+a89c2ee6df5fed84d1764a23e453738bc676dfb2 2026-02-19 Fix: Im
+plement batch processing for property listings sync to avoi
+d timeout
+7791dcce2fbc1d0a49f3e8bf74ad2d68a83ed79a 2026-02-19 Fix: Pr
+ocess all properties in sync (not just last 100)
+1c784dabba2afbcae335609481c43df501ff3732 2026-02-19 Fix: Up
+date Google Service Account to koukaibukkennsaito project
+d149a8289eaf716efce80b01b98365437e787ec0 2026-02-19 fix: Go
+ogle Sheets authentication with GoogleAuth instead of JWT
+622836067d781af88788de726fa187ff996734d9 2026-02-19 Add det
+ailed debug logs for JSON parsing and private_key format
+b0059c6adf49c6fabcc994fe498e848952ff4fa4 2026-02-18 Debug: 
+Add detailed authentication method logging
+8e3f09d6b37b249d92f558ba9cbf58d153feb920 2026-02-18 Debug: 
+Change console.log to console.error for Vercel logging
+fcc373ac025c691c7f42ebd5515c4e3ed67a9a70 2026-02-18 Add deb
+ug endpoint to check environment variables in Vercel
+141fdbf8db23e3e2bf2c0e52f3349bf862cd129a 2026-02-18 Add det
+ailed debug logs for Google Sheets authentication
+d78a69d7cf63d2e230be67a9def3296500f5c172 2026-02-18 Add Bas
+e64 decode test script for Google Service Account JSON
+ba39f7d560646015c1b86a28d4385241850ce252 2026-02-18 Debug: 
+Add logging for private_key format
+a669ae3c3e828de74f36ece68e9122cbef378843 2026-02-18 Fix: Pr
+operly detect and decode Base64 encoded GOOGLE_SERVICE_ACCO
+UNT_JSON
+1f5bccd1b576731be818a006d6b83e88b3534413 2026-02-18 Fix: Ad
+d support for GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVA
+TE_KEY env vars
+c1be783cbb60686d3fd42dba74713fa73a41edb6 2026-02-18 Fix: Re
+move serviceAccountKeyPath from PropertyListingSyncService 
+to use GOOGLE_SERVICE_ACCOUNT_JSON in Vercel
+e7d02084bf6d0481df9a1b0530eb6c54fa14c024 2026-02-18 Fix: Up
+date GOOGLE_SERVICE_ACCOUNT_JSON environment variable
+fc6f146b467144e0be2887dd77c8aaf304e3fea1 2026-02-18 Fix: Re
+store vercel.json and .env.production to working state (855
+1bd4)
+05570432252a2f2e80d6561c81925566e24e5dec 2026-02-18 Fix: Us
+e GoogleAuth instead of JWT for Google Sheets authenticatio
+n
+faa314af92abee58c11ea2a7411609ec7eb35541 2026-02-18 Revert:
+ Restore working vercel.json from b06435f (simple config)
+0f7aea2f43caaf0f0b629881caa82266adc9f39d 2026-02-18 Fix: Re
+move outputDirectory from vercel.json (Root Directory is se
+t to frontend)
+d67ff2dfb21fe6d9768fa2132e2c817cf633b98a 2026-02-18 Revert:
+ Restore original vercel.json configuration
+0d6ff9594841389caa9b2ca7c110e1783ec2ec4e 2026-02-18 Fix: Up
+date Vercel build config to use correct distDir path
+28c6358b2d6c967e5110b24af376524bd478c6a2 2026-02-18 Force r
+edeploy: Trigger Vercel rebuild for image display fix
+a653bc924125fb6f2fc3e7c9a9a0f75450d9e568 2026-02-16 WIP on 
+main: b06435f Remove environment-variables-guide.md (contai
+ns secrets)
+830568bdfcfd02db5fa4d6813414e2222774c35b 2026-02-16 index o
+n main: b06435f Remove environment-variables-guide.md (cont
+ains secrets)
+b06435fbae88d63e3feae3efc3a15ac34b4935e0 2026-02-16 Remove 
+environment-variables-guide.md (contains secrets)
+ba41a64971e2ec0f5a78ffffd238b57c6f40d4ec 2026-02-16 Fix: Ve
+rcel繝薙Ν繝峨せ繧ｯ繝ｪ繝励ヨ繧剃ｿｮ豁｣・井ｸ崎ｦ√↑TypeScript繧ｳ繝ｳ繝代う繝ｫ繧貞炎髯､・・f85
+193147842f287e460fd1133207a2acd871c28 2026-02-16 Fix: Phase
+ 4.6縺ｧ譌｢蟄倡黄莉ｶ縺ｮ譖ｴ譁ｰ繧ょｮ溯｡後☆繧九ｈ縺・↓菫ｮ豁｣
+f3ae229d60fbb5b4f3408eab4e1fb15940ab2754 2026-02-16 feat: 讌
+ｭ蜍咏ｮ｡逅・す繧ｹ繝・Β縺ｮ隱崎ｨｼ讖溯・繧貞ｮ溯｣・ｼ・upabase Auth逶ｴ謗･蛻ｩ逕ｨ・・2feb0cd
+b2ed005182302fa3dffc163c7549bd908 2026-02-16 feat: 霑鷹團雋ｷ荳ｻ繝
+ｪ繧ｹ繝医↓繧ｽ繝ｼ繝域ｩ溯・縺ｨ陦ｨ遉ｺ謾ｹ蝟・ｒ霑ｽ蜉
+0b849fb78c5be7a9095184cf064f45bc63060429 2026-02-16 perf: 霑
+鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ螟ｧ蟷・隼蝟・41f15296efed71a38c16d73ff63
+229b88563257f 2026-02-16 perf: 霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ謾ｹ
+蝟・ea1c08a952d64521d9a578b765fa29fff5d3697d 2026-02-16 feat:
+ 霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・陦ｨ遉ｺ謾ｹ蝟・0f63faef370bdc48982405a679bfda18cd31
+957c 2026-02-16 chore: 荳崎ｦ√↑spec繝峨く繝･繝｡繝ｳ繝医ｒ蜑企勁
+414b9e2a9e637cbc599f54aae524ddf7f97b0302 2026-02-16 feat: 螢
+ｲ荳ｻ繝ｪ繧ｹ繝医→騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮUI謾ｹ蝟・0d635772763773feab97cd31a8
+b29e46ab4628d3 2026-02-16 style: 騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮ髱定牡隕∫ｴ繧定
+ｵ､濶ｲ縺ｫ邨ｱ荳・郁ｨｪ蝠丈ｺ育ｴ・・崕隧ｱ縲∵焔蜈･蜉佞hip縲∵渊螳夐｡阪・繧ｿ繝ｳ・・c93519bb40
+f22c851e2c51b1b35c18c54653fc65 2026-02-16 style: 螢ｲ荳ｻ繝ｪ繧ｹ繝医
+・濶ｲ繧偵が繝ｬ繝ｳ繧ｸ縺九ｉ襍､濶ｲ縺ｫ螟画峩縺励∝・縺ｦ縺ｮ螢ｲ荳ｻ髢｢騾｣隕∫ｴ縺ｫ邨ｱ荳
+64a9e657965324e0b50987a8fd667c5ddde287a3 2026-02-16 style: 
+迚ｩ莉ｶ繝ｪ繧ｹ繝医・繝ｼ繧ｸ縺ｮ繧ｿ繧､繝医Ν縺ｫ髱定牡繧定ｿｽ蜉縺励※繧ｹ繧ｿ繧､繝ｫ繧堤ｵｱ荳
+68625433c29507e804d7cfd7e87fb3099e6a9b0b 2026-02-16 style: 
+螢ｲ荳ｻ繝ｪ繧ｹ繝医→騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮ繧ｿ繧､繝医Ν繧定ｲｷ荳ｻ繝ｪ繧ｹ繝医・繧ｹ繧ｿ繧､繝ｫ縺ｫ邨
+ｱ荳・・5縲∝､ｪ蟄励√が繝ｬ繝ｳ繧ｸ濶ｲ・・7162fb0109470a561be2bd5180818554c8
+096d43 2026-02-16 feat: 騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮ繝倥ャ繝繝ｼ繝懊ち繝ｳ繧偵瑚ｿ鷹
+團雋ｷ荳ｻ縲阪↓螟画峩縺励∬ｿ鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医↓蝠丞粋縺帙◆迚ｩ莉ｶ縺ｮ謇蝨ｨ蝨ｰ蛻励ｒ霑ｽ蜉
+5cca49f3051773eddee06fe1460058afac71305b 2026-02-16 feat: 霑
+鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医↓SMS/繝｡繝ｼ繝ｫ騾∽ｿ｡讖溯・縺ｨ迚ｩ莉ｶ隧ｳ邏ｰ諠・ｱ繧定ｿｽ蜉
+3c42adc65585258271e737f7cd35be330f1651e1 2026-02-15 fix: 譌･
+莉倥ヵ繧｣繝ｼ繝ｫ繝峨・螟画鋤蜃ｦ逅・ｒ菫ｮ豁｣・・YYY/M/D蠖｢蠑上→Excel繧ｷ繝ｪ繧｢繝ｫ蛟､縺ｫ蟇ｾ蠢懶
+ｼ・abb622e1a51403356d72c449845924313ccfe510 2026-02-15 feat:
+ 蜈ｱ譛会ｼ育､ｾ蜀・・譛我ｺ矩・ｮ｡逅・ｼ画ｩ溯・縺ｮ螳溯｣・2dde7e66102435f246dbb8596f
+586f88c9e689df 2026-02-15 temp: 繝・せ繝域悄髢謎ｸｭ縺ｯ蜈ｨ繝輔ぅ繝ｼ繝ｫ繝峨ｒ繧ｹ繝
+励す竊偵ヶ繝ｩ繧ｦ繧ｶ縺ｫ螟画峩・域悽逡ｪ迺ｰ蠅・ｧｻ陦梧凾縺ｫ謌ｻ縺呻ｼ・85a49f554fe034deb0d90
+f49c0da1c90938feacf 2026-02-15 fix: 讌ｭ蜍吶Μ繧ｹ繝医・蜷梧悄繝ｫ繝ｼ繝ｫ菫ｮ豁｣
+ - 蟄伜惠縺励↑縺・き繝ｩ繝繧貞炎髯､縺励※繝悶Λ繧ｦ繧ｶ蟆ら畑繝輔ぅ繝ｼ繝ｫ繝峨ｒ菫晁ｭｷ
+f3ddfce964df036fb36a74d23c840100d1936ad5 2026-02-15 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医・繝輔ぅ繝ｼ繝ｫ繝牙挨蜷梧悄繝ｫ繝ｼ繝ｫ繧貞ｮ溯｣・2367cd07ddbc42c950539d2f7
+66babf4f85677d5 2026-02-15 fix: 讌ｭ蜍吶Μ繧ｹ繝医・讀懃ｴ｢讖溯・繧呈隼蝟・- 繧ｫ繝
+・ざ繝ｪ繝ｼ驕ｸ謚樔ｸｭ縺ｧ繧ょ・莉ｶ讀懃ｴ｢蜿ｯ閭ｽ縺ｫ
+c7f1095ec0925d8beee06bbad3da69fda5b83fde 2026-02-15 feat: 讌
+ｭ蜍吶Μ繧ｹ繝亥･醍ｴ・ｱｺ貂医ち繝悶・繝輔ぅ繝ｼ繝ｫ繝我ｿｮ豁｣縺ｨ繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ陦ｨ遉ｺ菫ｮ豁｣
+965c17c8be2d1d0616d4d052aaf5a05743d8652c 2026-02-15 chore: 
+荳崎ｦ√↑繝√ぉ繝・け繧ｹ繧ｯ繝ｪ繝励ヨ繧貞炎髯､
+77a77bd48589b218fc674fa3ee89f5155ac7aa6e 2026-02-15 fix: fi
+lterTasksByStatus縺ｧsidebar_category繧貞━蜈育噪縺ｫ菴ｿ逕ｨ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+dad958bf019f687f29afa3641f36055cd02d534f 2026-02-15 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｫ蜈ｨ譌･莉倩｡ｨ遉ｺ縲∵､懃ｴ｢繝舌・縺ｫ繧ｯ繝ｪ繧｢繝懊ち繝ｳ霑ｽ蜉縲∫黄莉
+ｶ逡ｪ蜿ｷ繧ｯ繝ｪ繝・け縺ｧ繧ｳ繝斐・讖溯・霑ｽ蜉
+0a315da770600d40607c93ad9267bf417312466e 2026-02-15 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｮ鬆・ｺ上ｒ菫ｮ豁｣・亥ｪ剃ｻ銀・繧ｵ繧､繝育匳骭ｲ竊貞｣ｲ雋ｷ竊呈ｱｺ貂遺・蜿ｰ
+蟶ｳ竊剃ｿ晉蕗・・746f5ef687c86ff548af83b65469288fe41bbebc 2026-02-1
+5 feat: 繧ｵ繧､繝峨ヰ繝ｼ縺ｮ蟷・ｒ400px縺ｫ諡｡螟ｧ縲√し繧､繝井ｾ晞ｼ貂医∩邏榊刀蠕・■縺ｫ邏榊刀莠
+亥ｮ壽律繧定｡ｨ遉ｺ
+0320f57eb566fb04eb86aad866dcd42ab280a485 2026-02-15 feat: 繧
+ｵ繧､繝峨ヰ繝ｼ縺ｮ蟷・ｒ220px縺九ｉ300px縺ｫ諡｡螟ｧ・医き繝・ざ繝ｪ繝ｼ蜷阪ｒ蜈ｨ縺ｦ陦ｨ遉ｺ・・fbf2
+09903af837b465a2f30c762a53fb3dc3dd34 2026-02-15 feat: 繧ｵ繧､繝
+峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｮ譌･莉倥ｒ螟ｪ蟄励↓縲∵悄髯仙・繧鯉ｼ亥ｽ捺律莉･蜑搾ｼ峨・繧ｫ繝・ざ繝ｪ繝ｼ繧定ｵ､蟄
+励↓螟画峩
+7ff76ab0449f1a9847175dbee8c8367fed6e69d2 2026-02-15 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医・繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｫ譌･莉倥ｒ陦ｨ遉ｺ縲√ユ繝ｼ繝悶Ν縺ｮ繧ｹ繝・・繧ｿ繧ｹ蛻励
+ｒ蜑企勁
+9733779c13b1da80e0e2261ea939646a0030e4b1 2026-02-15 fix: 繧ｵ
+繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺ｫ譌･莉倥→諡・ｽ楢・錐繧貞・霑ｽ蜉
+ea6c8a0e492d95630b1ea3d323ee793382d38fec 2026-02-15 fix: 繧ｵ
+繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ縺九ｉ譌･莉倩｡ｨ遉ｺ繧貞炎髯､
+06fdd8bfb90ecacb7357f43709bc914280bf51ff 2026-02-15 feat: 讌
+ｭ蜍吶Μ繧ｹ繝医↓繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝ｪ繝ｼ陦ｨ遉ｺ繧定ｿｽ蜉・郁｣ｽ譛ｬ莠亥ｮ壽律繝ｻ邏榊刀莠亥ｮ壽律繧
+貞性繧・・76f310d490f95ac6a8e98e012d21727bd2aaa6f8 2026-02-15 f
+eat: 譁ｹ菴崎ｨ伜捷縺ｨ髢灘叙蝗ｳ縺ｫ繝懊ち繝ｳ繧定ｿｽ蜉
+48263a907cfe026c4e40104a7510cc50d24e3b42 2026-02-15 feat: 繝
+倥ャ繝繝ｼ縺ｫ螢ｲ荳ｻ蜷崎ｿｽ蜉縲∫｢ｺ隱榊ｾ悟・逅・ｒ邏ｫ濶ｲ縺ｫ螟画峩縲∫黄莉ｶ繝輔ぃ繧､繝ｫ縺ｨ迚ｩ莉ｶ荳
+隕ｧ縺ｫ陦瑚ｿｽ蜉縺ｫ繝懊ち繝ｳ霑ｽ蜉縲・俣蜿門峙菫ｮ豁｣蝗樊焚縺ｫ繝懊ち繝ｳ霑ｽ蜉縲・俣蜿門峙遒ｺ隱弘K縺ｨ繧
+ｵ繧､繝育匳骭ｲ遒ｺ隱弘K繧ｳ繝｡繝ｳ繝医↓蛻晄悄蛟､險ｭ螳・6a5aee5e289c34a6b515b9bd615d
+beff85726565 2026-02-15 feat: 髢灘叙蝗ｳ譬ｼ邏肴ｸ医∩騾｣邨｡繝｡繝ｼ繝ｫ縲√ヱ繝弱Λ繝
+槫ｮ御ｺ・√し繧､繝育匳骭ｲ遒ｺ隱阪↓繝懊ち繝ｳ繧定ｿｽ蜉
+824d97f3f73ba335cea165b708d841f8259b4604 2026-02-15 fix: 騾∽
+ｿ｡繝懊ち繝ｳ縺ｮ蛟､繧探RUE/FALSE縺ｫ螟画峩縲√・繧ｿ繝ｳ髢薙↓髫咎俣繧定ｿｽ蜉
+03c3348b172ba5b1b774b3436ce27e8aa5c6848c 2026-02-15 feat: 繝
+懊ち繝ｳ縺ｮ蟷・ｒ邨ｱ荳縲√ヱ繝弱Λ繝槭↓縲後≠繧翫阪・繧ｿ繝ｳ繧定ｿｽ蜉
+e34e5cadda6431804af6218626ffdbab42ebfb3d 2026-02-15 feat: 繧
+ｰ繝ｫ繝ｼ繝励ち繧､繝医Ν繧貞､ｧ縺阪￥陦ｨ遉ｺ縲，W縺ｮ譁ｹ縺ｸ萓晞ｼ繝｡繝ｼ繝ｫ繧帝∽ｿ｡繝懊ち繝ｳ縺ｫ螟画峩
+7b670cd8f284e09a02a14daed89eb18e241f62e9 2026-02-15 feat: 繧
+ｵ繧､繝育匳骭ｲ繧ｿ繝悶↓騾壼ｸｸ繧ｹ繧ｿ繝・ヵ驕ｸ謚櫁い繧定ｿｽ蜉縲√げ繝ｫ繝ｼ繝励ち繧､繝医Ν繧定ｵ､濶ｲ縺ｫ螟
+画峩縲∵擅莉ｶ莉倥″陦ｨ遉ｺ繧貞ｮ溯｣・d26213940a9d407cdef27385d8d72895060eeca
+8 2026-02-15 feat: 繧ｵ繧､繝育匳骭ｲ繧ｿ繝悶ｒ蜀肴ｧ区・・医げ繝ｫ繝ｼ繝怜喧縲√ヵ繧｣繝ｼ繝ｫ繝芽
+ｿｽ蜉縲∫ｴ肴悄莠亥ｮ壽律閾ｪ蜍戊ｨ育ｮ暦ｼ・dde2a50b9530cc10c529fca91994e5188ce
+46da7 2026-02-15 feat: 讌ｭ蜍呵ｩｳ邏ｰ繝｢繝ｼ繝繝ｫ縺ｮ繝倥ャ繝繝ｼ諠・ｱ繧貞､ｪ蟄励〒
+陦ｨ遉ｺ縺励∵球蠖楢・ｒ霑ｽ蜉
+aec1b8181e663a7bea12cc024744a64b4eabf01b 2026-02-15 refacto
+r: 繧ｵ繧､繝育匳骭ｲ繧ｿ繝悶°繧峨後し繧､繝育匳骭ｲ萓晞ｼ譌･縲阪ヵ繧｣繝ｼ繝ｫ繝峨ｒ蜑企勁
+ef2a5394cef84e9a8be49110464180ad25c23cb1 2026-02-15 feat: 讌
+ｭ蜍呵ｩｳ邏ｰ繝｢繝ｼ繝繝ｫ縺ｮ繝倥ャ繝繝ｼ縺ｫ迚ｩ莉ｶ諠・ｱ繧定｡ｨ遉ｺ
+f7ce4459d31d533c0742a499136ccb4f7707896d 2026-02-15 fix: 讌ｭ
+蜍吶Μ繧ｹ繝医・譌･莉倥ヱ繝ｼ繧ｹ蜃ｦ逅・ｒ菫ｮ豁｣・域凾蛻ｻ莉倥″譌･莉伜ｽ｢蠑上↓蟇ｾ蠢懶ｼ・012a5a791a
+ba4fa8b32dde72d40bc25ab93eb0b9 2026-02-15 feat: 讀懃ｴ｢繝舌・縺ｮ笘薙
+・繧ｿ繝ｳ繧貞・蜉帙ユ繧ｭ繧ｹ繝医・縺吶＄蜿ｳ縺ｫ驟咲ｽｮ縲∫黄莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｫ繧ｵ繧､繝峨ヰ繝ｼ繧ｫ繝・ざ繝
+ｪ繝ｼ繧定ｿｽ蜉
+a755774ffb2d8d7b7fbe2d132db75e8b0b527d96 2026-02-14 fix: 螢ｲ
+雋ｷ萓｡譬ｼ縺ｮ閾ｪ蜍穂ｿ晏ｭ倥ｒ蛛懈ｭ｢縺励∽ｿ晏ｭ倥・繧ｿ繝ｳ縺ｧ遒ｺ螳壹☆繧九ｈ縺・↓菫ｮ豁｣
+12eee5c74322e13b395fcd48160f375674ffaefc 2026-02-14 fix: Ch
+at騾∽ｿ｡蜀・ｮｹ繧呈隼蝟・ｼ亥､荳九￡萓晞ｼ縺ｫ螟画峩縲∫黄莉ｶ逡ｪ蜿ｷ繧定ｿｽ蜉・・8b4a5c89eb3
+eba9b2a9584b54deb147995e6d1d0 2026-02-14 fix: 邱ｨ髮・Δ繝ｼ繝我ｸｭ繧ゆ
+ｺ育ｴ・､荳九￡繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧定｡ｨ遉ｺ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+739f7531eca3d8ff198f92b40e184a1cf1916516 2026-02-14 fix: 邱ｨ
+髮・Δ繝ｼ繝我ｸｭ繧・hat騾∽ｿ｡繝懊ち繝ｳ繧定｡ｨ遉ｺ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+5d249998d6dde50317adc0569165d03b335eb5ed 2026-02-14 feat: 萓
+｡譬ｼ諠・ｱ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮChat騾∽ｿ｡讖溯・繧呈隼蝟・149fc76d3cfb7c1f2f046644
+26c25ca81a81f772 2026-02-14 feat: 迚ｩ莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｮ萓｡譬ｼ諠・ｱ繧ｻ繧
+ｯ繧ｷ繝ｧ繝ｳ縺ｫ蜊ｳ蛟､荳九￡讖溯・繧定ｿｽ蜉
+3af9b392857526a95d70a6b72b8cb14a6e9976ab 2026-02-14 fix: 蜑企
+勁貂医∩雋ｷ荳ｻ繧堤黄莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺九ｉ髯､螟悶∝・髢狗黄莉ｶ繧ｵ繧､繝医・繧ｿ繝ｳ繧貞炎髯､
+5f272b6e41384517c335908471881cce90595ea6 2026-02-14 chore: 
+Vercel繝・・繝ｭ繧､蛻・屬spec繧貞炎髯､・井ｽ懈･ｭ螳御ｺ・・縺溘ａ・・716785e8e888c0d7c7
+06f6f424e6c1eb88edb193 2026-02-14 test: 邂｡逅・判髱｢蟆ら畑繝輔ぃ繧､繝ｫ縺ｮ
+繝・せ繝茨ｼ・dmin-frontend縺ｮ縺ｿ繝・・繝ｭ繧､縺輔ｌ繧九∋縺搾ｼ・820f8f9e4d7ea36203
+93c8e57c45b9a5c7beaea1 2026-02-14 fix: Vercel險ｭ螳壹ヵ繧｡繧､繝ｫ繧定ｿ
+ｽ蜉・・dmin-frontend繝励Ο繧ｸ繧ｧ繧ｯ繝育畑・・b308f04b1be1090152ba684874c
+6909d57ab8c53 2026-02-14 test: 邂｡逅・判髱｢蟆ら畑繝輔ぃ繧､繝ｫ縺ｮ繝・せ繝亥､画峩・
+亥・髢九し繧､繝医↓蠖ｱ髻ｿ縺ｪ縺暦ｼ・dbfb08675345f660adc816f28bcd103af442ace
+c 2026-02-14 feat: Vercel繝・・繝ｭ繧､蛻・屬繧ｹ繧ｯ繝ｪ繝励ヨ縺ｨspec霑ｽ蜉
+822b7dc405b4eb564a8ede31316bbd342d403367 2026-02-14 Revert 
+"feat: 迚ｩ莉ｶ繝ｪ繧ｹ繝・I謾ｹ蝟・- 蜊ｳ蛟､荳九￡繝懊ち繝ｳ縲√し繧､繝峨ヰ繝ｼ鬆・ｺ丞､画峩縲∝､荳九
+￡騾夂衍繝ｭ繧ｰ蠑ｷ蛹・
+40c915772839517abf804dd9e8476549d8756bd0 2026-02-14 feat: 迚
+ｩ莉ｶ繝ｪ繧ｹ繝・I謾ｹ蝟・- 蜊ｳ蛟､荳九￡繝懊ち繝ｳ縲√し繧､繝峨ヰ繝ｼ鬆・ｺ丞､画峩縲∝､荳九￡騾夂衍繝ｭ繧ｰ
+蠑ｷ蛹・9e65b74f1c891c3c2bfc7479132f2f59ec56026d 2026-02-14 fea
+t: 莠育ｴ・夂衍讖溯・縺ｮ謾ｹ蝟・- 騾夂衍騾∽ｿ｡譎ょ綾縺ｮ豁｣遒ｺ諤ｧ蜷台ｸ翫→繝ｭ繧ｰ謾ｹ蝟・4f4682a
+b15309ac57c41b685ace1c264ab808cbe 2026-02-14 chore: 雋ｷ荳ｻ蜑企勁
+蜷梧悄讖溯・縺ｮ繧ｹ繝壹ャ繧ｯ繝輔ぃ繧､繝ｫ繧貞炎髯､・亥ｮ溯｣・ｮ御ｺ・ｼ・93a84136d263a60ad93c
+1b43cc09d56ac8348e37 2026-02-14 feat: 雋ｷ荳ｻ蜑企勁蜷梧悄讖溯・繧貞ｮ溯｣・2b
+c903eae13a4217c7bc2bcd56ce88dcd2bbe032 2026-02-14 fix: 雋ｷ荳ｻ
+逡ｪ蜿ｷ縺ｮ驥崎､・お繝ｩ繝ｼ繧剃ｿｮ豁｣
+8bbe8d238d6f6c37e3bdac597da460a20b110cb6 2026-02-14 fix: 蟶梧
+悍遞ｮ蛻･縺梧里縺ｫ險ｭ螳壹＆繧後※縺・ｋ蝣ｴ蜷医ｂ萓｡譬ｼ蟶ｯ縺ｨ繧ｨ繝ｪ繧｢繧定・蜍戊ｨｭ螳・e4baff3a35
+4648c3ab424afbd17446637f91b0b2 2026-02-14 feat: 蝠丞粋縺帷黄莉ｶ縺九ｉ
+萓｡譬ｼ蟶ｯ縺ｨ蟶梧悍繧ｨ繝ｪ繧｢繧定・蜍戊ｨｭ螳・6a9b42ff11c47cebf0b2499088d6ade59
+c0b8d2a 2026-02-14 feat: 蝠丞粋縺帷黄莉ｶ縺ｮ遞ｮ蛻･縺九ｉ蟶梧悍遞ｮ蛻･繧定・蜍戊ｨｭ螳壹＠
+縲∝撫蜷医○繝偵い繝ｪ繝ｳ繧ｰ縺九ｉ萓｡譬ｼ蟶ｯ繧定・蜍募渚譏
+f23801ecfbb52e04d037caac1ac081d950466933 2026-02-14 fix: 譁ｰ
+隕剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢縺ｮ蟶梧悍譚｡莉ｶ繝ｻ蜀・ｦｧ繝懊ち繝ｳ繧定・蜍慕匳骭ｲ蟇ｾ蠢懊↓菫ｮ豁｣
+c6070fe6af18448ab103a5f9190128775d8e0d85 2026-02-14 feat: 雋
+ｷ荳ｻ逡ｪ蜿ｷ6978繧偵せ繝励Ξ繝・ラ繧ｷ繝ｼ繝医↓蜷梧悄
+a63c2611fc0bb358edb6d29998a97e5fb647f50b 2026-02-14 fix: 雋ｷ
+荳ｻ譁ｰ隕冗匳骭ｲ譎ゅ・繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝亥酔譛溘ｒ菫ｮ豁｣
+a8824d3d9a8e5a3e4855e7309a6ee39d675b71f5 2026-02-14 fix: 譁ｰ
+隕剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢縺ｮ蟶梧悍譚｡莉ｶ縺ｨ蜀・ｦｧ繝懊ち繝ｳ繧呈怏蜉ｹ蛹・ceaacfaba19ff4e0d9
+f9ae60c0fd35ba9ddbd3ad 2026-02-14 docs: 雋ｷ荳ｻ譁ｰ隕冗匳骭ｲ逕ｻ髱｢縺ｨ雋ｷ
+荳ｻ隧ｳ邏ｰ逕ｻ髱｢縺ｮ蜷梧悄繝ｫ繝ｼ繝ｫ繧定ｿｽ蜉
+7b9fab793a0d51788a2946908f3aa8c2aab38eaa 2026-02-14 feat: 譁
+ｰ隕剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢縺ｮ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ鬆・ｺ上ｒ螟画峩
+30d0e49ce82e524267b78780c8515e305905f0ab 2026-02-14 fix: 雋ｷ
+荳ｻ逡ｪ蜿ｷ逕滓・縺ｧE蛻励ｒ蜿ら・縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+966e2311093d156b5663baea5858e6995c968597 2026-02-14 雋ｷ荳ｻ逡ｪ蜿
+ｷ逕滓・縺ｫ繝・ヰ繝・げ繝ｭ繧ｰ繧定ｿｽ蜉
+4c1090e6d7f78ef945453cc9ae3d367e05bbadce 2026-02-14 譁ｰ隕剰ｲｷ荳
+ｻ逋ｻ骭ｲ繝壹・繧ｸ縺ｫ繝懊ち繝ｳ蠖｢蠑上ヵ繧｣繝ｼ繝ｫ繝峨ｒ霑ｽ蜉
+0ed71bcf1f3a33a661551c5d86a86c8741a629e6 2026-02-14 雋ｷ荳ｻ逡ｪ蜿
+ｷ閾ｪ蜍慕函謌・ 蜈ｬ髢九Γ繧ｽ繝・ラ繧定ｿｽ蜉縺励※繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝医°繧画ｭ｣縺励＞譛螟ｧ蛟､+1繧
+貞叙蠕・7f7ba3bd99d752e31a27fe1fa3cb6d708b1e790d 2026-02-14 譁ｰ隕
+剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢: 繝倥ャ繝繝ｼ繝懊ち繝ｳ繧定ｿｽ蜉縺励※雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｨ邨ｱ荳
+070846164edf7bbcbca10dd8a6337019d6b67777 2026-02-14 feat: 雋
+ｷ荳ｻ逡ｪ蜿ｷ縺ｮ閾ｪ蜍慕函謌舌→繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝亥酔譛溘ｒ螳溯｣・c40f7fc066ad1c6e491b
+02f94df121ac8a7813f7 2026-02-14 譁ｰ隕剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢繧定ｲｷ荳ｻ隧ｳ邏ｰ繝
+壹・繧ｸ縺ｨ螳悟・縺ｫ邨ｱ荳・亥ｮ悟・迚茨ｼ・65d99945209ce9874e769ca90003db2ef9b
+a7d72 2026-02-14 譁ｰ隕剰ｲｷ荳ｻ逋ｻ骭ｲ逕ｻ髱｢繧定ｲｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｨ螳悟・縺ｫ邨ｱ荳
+18e526fe1c57af3b2a13932eafbf597f5fb48942 2026-02-14 譁ｰ隕剰ｲｷ荳
+ｻ逋ｻ骭ｲ逕ｻ髱｢繧定ｲｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢縺ｨ邨ｱ荳: PropertyInfoCard繧剃ｽｿ逕ｨ縲∝・隕ｧ諠
+・ｱ縺ｨ縺昴・莉悶・繝輔ぅ繝ｼ繝ｫ繝峨ｒ霑ｽ蜉
+a11b2b822e1d134008127012ad9940936e887a70 2026-02-14 譁ｰ隕剰ｲｷ荳
+ｻ逋ｻ骭ｲ逕ｻ髱｢縺ｫ繧よ･ｭ閠・∈縺ｮ蟇ｾ蠢懆ｭｦ蜻翫・繝ｼ繧ｯ繧定ｿｽ蜉: 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｨ蜷後§
+繧ｹ繧ｿ繧､繝ｫ縺ｧ陦ｨ遉ｺ
+13da29d204118faeeab5124238bb66f3bece7125 2026-02-14 蝗ｺ螳夊ｳ・肇
+遞弱・陦ｨ遉ｺ繧剃ｿｮ豁｣・・1荳・・縺ｨ陦ｨ遉ｺ・峨∵･ｭ閠・∈縺ｮ蟇ｾ蠢懆ｭｦ蜻翫・繝ｼ繧ｯ縺ｮ繝・ヰ繝・げ繝ｭ
+繧ｰ繧定ｿｽ蜉
+cb0829ee92407d21902ccf79eee56925d3c247ce 2026-02-14 雋ｷ荳ｻ隧ｳ邏
+ｰ繝壹・繧ｸ縺ｮ迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝峨↓讌ｭ閠・∈縺ｮ蟇ｾ蠢懆ｭｦ蜻翫・繝ｼ繧ｯ繧定ｿｽ蜉: 迚ｩ莉ｶ隧ｳ邏ｰ
+繝壹・繧ｸ縺ｨ蜷後§繧ｹ繧ｿ繧､繝ｫ縺ｧ陦ｨ遉ｺ
+eef756e7439c77a472e26cb88cc424124b61fd19 2026-02-14 讌ｭ閠・∈縺ｮ
+蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 鮟・牡閭梧勹縺ｮ縺ｿ縺ｫ螟画峩縺励※謨ｰ蟄励ｒ隕九ｄ縺吶￥縲∬ｵ､譁・ｭ励〒蠑ｷ隱ｿ
+d7a20d698160e5eb7e9f7b50cacefb5841888628 2026-02-14 讌ｭ閠・∈縺ｮ
+蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 鮟・牡縺ｨ襍､縺ｮ繧ｹ繝医Λ繧､繝苓レ譎ｯ縺ｧ蜊ｱ髯ｺ繧貞ｼｷ隱ｿ縲∫せ貊・→謠ｺ繧後い繝九
+Γ繝ｼ繧ｷ繝ｧ繝ｳ霑ｽ蜉
+791af0957e74b83e3b55aa19881bf1629799f4b7 2026-02-14 讌ｭ閠・∈縺ｮ
+蟇ｾ蠢懈律莉倩｡ｨ遉ｺ: 譫縺ｪ縺励・螟ｧ縺阪↑襍､蟄励↓螟画峩
+79ca1b9e3b52f0a799d2a1ba2109312c1b036427 2026-02-14 讌ｭ閠・∈縺ｮ
+蟇ｾ蠢懈律莉倩｡ｨ遉ｺ縺ｮ菫ｮ豁｣: Excel繧ｷ繝ｪ繧｢繝ｫ蛟､繧呈ｭ｣縺励￥譌･莉倥↓螟画鋤
+0894409487823089dcd780ffc6a96e4178c39745 2026-02-14 迚ｩ莉ｶ隧ｳ邏
+ｰ繝壹・繧ｸ: 讌ｭ閠・∈縺ｮ蟇ｾ蠢懈律莉倥ｒ陦ｨ遉ｺ・井ｻ頑律繧医ｊ蠕後・蝣ｴ蜷医・縺ｿ縲∵擲莠ｬ譎る俣・・1972
+768862ea6dd881b2be47e5e2ea11724887bd 2026-02-14 迚ｩ莉ｶ繝ｪ繧ｹ繝域､
+懃ｴ｢讖溯・縺ｮ菫ｮ豁｣: 讀懃ｴ｢繧ｯ繧ｨ繝ｪ縺ｮ蜑榊ｾ後・遨ｺ逋ｽ繧貞炎髯､縺励※繝槭ャ繝√Φ繧ｰ邊ｾ蠎ｦ繧貞髄荳
+・f1dfd3ad4528d767668c01df0e18d8717eeff998 2026-02-14 讀懃ｴ｢繝輔
+ぅ繝ｫ繧ｿ繝ｼ縺ｮ繝・ヰ繝・げ繝ｭ繧ｰ霑ｽ蜉: property_number縺ｮ蛟､繧定ｩｳ邏ｰ遒ｺ隱・e9c64
+e968e0e6e60c44d373c23958fe295cec026 2026-02-14 迚ｩ莉ｶ繝ｪ繧ｹ繝・ A
+A13407縺ｨAA13389縺瑚｡ｨ遉ｺ縺輔ｌ縺ｪ縺・撫鬘後・繝・ヰ繝・げ繝ｭ繧ｰ霑ｽ蜉
+7870c7d9152c2e9654c990e18bff29bfddfab4ab 2026-02-14 Propert
+yListingSyncService縺ｮ驥崎､・さ繝ｼ繝牙炎髯､
+b1edf71585e468118c972dc8eb97465229ed9cde 2026-02-14 迚ｩ莉ｶ隧ｳ邏
+ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ繝ｬ繧､繧｢繧ｦ繝域隼蝟・ BB14縺ｮ蜿ｳ髫｣縺ｫ繝懊ち繝ｳ驟咲ｽｮ縲∵園蝨ｨ蝨ｰ陦後
+ｒ蜑企勁縺励※1谿ｵ縺ｫ邨ｱ蜷・41534954644e253af5f78e50b9501ff32ff7e5e6 20
+26-02-13 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ讖溯・謾ｹ蝟・ Chat騾∽ｿ｡閠・錐菫ｮ豁｣縲ゞI謾ｹ蝟・√さ繝溘
+Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ縲∬・蜍穂ｿ晏ｭ倥√Γ繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝育ｽｲ蜷肴ｬ・・諡・ｽ楢・ュ蝣ｱ蜿
+門ｾ・58eba1f72308f962f5f5f9ed4b5cdca11e3f679e 2026-02-13 feat
+: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｫ繧ｳ繝溘Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ繧定ｿｽ蜉
+aa345238d344228555a17a4aada3c7db083b625b 2026-02-13 feat: 螢
+ｲ荳ｻ縺ｸ縺ｮ騾｣邨｡繧偵さ繝溘Η繝九こ繝ｼ繧ｷ繝ｧ繝ｳ螻･豁ｴ縺ｫ險倬鹸
+4903112c629722fdfc0cbe16e36e75614b9e4f47 2026-02-13 refacto
+r: 繝倥ャ繝繝ｼ繝懊ち繝ｳ縺ｮ繝・く繧ｹ繝医ｒ逵∫払縺励※繧ｳ繝ｳ繝代け繝亥喧
+d6ad1f160a76e08e96d0d6e14af959ae6a1a6c10 2026-02-13 fix: 荳
+諡ｬ驟堺ｿ｡繝懊ち繝ｳ縺ｮ險育ｮ嶺ｸｭ繝｡繝・そ繝ｼ繧ｸ繧呈隼蝟・df00f3606cb89cc96ba2422309
+d1f35efe6fdb3f 2026-02-13 feat: 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｫ螢ｲ荳ｻ縺ｸSMS騾∽ｿ
+｡繝懊ち繝ｳ繧定ｿｽ蜉
+b1ceb8b0f8e3d242d2ad9f337713ee3f9ebae7cb 2026-02-13 迚ｩ莉ｶ隧ｳ邏
+ｰ繝壹・繧ｸ: 諡・ｽ薙∈Chat騾∽ｿ｡縺ｫ隧ｳ邏ｰ諠・ｱ繧定ｿｽ蜉縲√Γ繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝医・螟画焚鄂
+ｮ謠帶ｩ溯・繧貞ｮ溯｣・cbb47b5ddfbe01059e175601a03565ea5c343b9f 2026-0
+2-13 諡・ｽ薙∈Chat騾∽ｿ｡譎ゅ↓騾∽ｿ｡閠・・迚ｩ莉ｶ諠・ｱ繝ｻ螢ｲ荳ｻ諠・ｱ繝ｻ迚ｩ莉ｶ隧ｳ邏ｰURL
+繧貞性繧√ｋ繧医≧縺ｫ謾ｹ蝟・a98684c5d6b7e1a93d3c777adf2099365aa01577 202
+6-02-13 迚ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ: 諡・ｽ薙∈Chat騾∽ｿ｡繝懊ち繝ｳ繧偵・繝・ム繝ｼ縺ｫ遘ｻ蜍輔√ユ繝
+ｳ繝励Ξ繝ｼ繝医・繧ｹ繧ｿ繝・ヵ繧ｵ繝ｼ繝薙せ縺ｫ隱崎ｨｼ諠・ｱ繧定ｿｽ蜉
+e0bb23e6b9ea3fa868611f657407385c12e5f3a1 2026-02-13 feat: 繝
+｡繝・そ繝ｼ繧ｸ繝・Φ繝励Ξ繝ｼ繝域ｩ溯・縺ｨ諡・ｽ薙∈Chat騾∽ｿ｡讖溯・繧貞ｮ溯｣・cfdf98975348b6
+9ee0e11f27dd2187701ef6d2b8 2026-02-13 fix: MessageTemplateS
+ervice縺ｮGoogleSheetsClient蛻晄悄蛹悶お繝ｩ繝ｼ繧剃ｿｮ豁｣
+162847b555aadfaf535c13732e0076f3340cecfd 2026-02-13 feat: 迚
+ｩ莉ｶ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ繝懊ち繝ｳ驟咲ｽｮ螟画峩縺ｨ繝｡繝ｼ繝ｫ繝・Φ繝励Ξ繝ｼ繝域ｩ溯・霑ｽ蜉
+4bfae11ceb679dc449808e6949f7848379359662 2026-02-13 fix: 雋ｷ
+荳ｻ繝ｪ繧ｹ繝医・蜀・ｦｧ譌･繝輔ぅ繝ｼ繝ｫ繝牙錐繧剃ｿｮ豁｣ (viewing_date -> latest_vie
+wing_date)
+8c258b4ae93d20ca9aae701a2f83b4de8e8d8097 2026-02-13 雋ｷ荳ｻ繝ｪ繧
+ｹ繝医・繧ｯ繝ｪ繝・け縺ｧ蛻･繧ｿ繝冶｡ｨ遉ｺ縺ｫ螟画峩
+12a162190d36ac7bf170fe4df911ffdd7a4dfda4 2026-02-13 雋ｷ荳ｻ繝ｪ繧
+ｹ繝医ｒ繝・・繝悶Ν蠖｢蠑上↓螟画峩: 豌丞錐繝ｻ蜿嶺ｻ俶律繝ｻ蜀・ｦｧ譌･繝ｻ譎る俣繝ｻ譛譁ｰ迥ｶ豕√ｒ陦ｨ遉ｺ
+e9e6b96582829d8371e0b9553c6f69bb43f69e4d 2026-02-13 雋ｷ荳ｻ繝ｪ繧
+ｹ繝亥叙蠕励・菫ｮ豁｣: buyer_id縺ｨbuyer_number縺ｮ荳｡譁ｹ繧定ｿ斐☆繧医≧縺ｫ螟画峩
+ac5f70dce0ffdbc1aa80e601816fb8e17eaab9a9 2026-02-13 迚ｩ莉ｶ繝ｪ繧
+ｹ繝郁ｩｳ邏ｰ逕ｻ髱｢縺ｮ繝ｬ繧､繧｢繧ｦ繝域隼蝟・ 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ讓ｪ荳ｦ縺ｳ驟咲ｽｮ縺ｨ繝ｬ繧ｹ繝昴Φ繧ｷ繝
+門ｯｾ蠢懊∬牡蛻・￠霑ｽ蜉
+608d0a3af7cd92f18461f2a98abd34ecfd88fc5c 2026-02-13 fix: 莠育
+ｴ・､荳九￡縺ｮ陦ｨ遉ｺ繧ｿ繧､繝溘Φ繧ｰ繧剃ｺ育ｴ・律縺ｮ0:00・域ｷｱ螟懶ｼ峨↓螟画峩
+a2d8b21c5ce2d605436e6c3c441acc7b1769d70f 2026-02-13 fix: 莠育
+ｴ・律縺ｮ0:00縺九ｉ蛟､荳九￡譛ｪ螳御ｺ・↓陦ｨ遉ｺ縺輔ｌ繧九ｈ縺・↓菫ｮ豁｣
+c8e972fd4ba0f78b40e9a3e5ac26900304269f59 2026-02-13 feat: V
+ercel Cron Jobs縺ｧ莠育ｴ・､荳九￡騾夂衍繧定・蜍暮∽ｿ｡・倶ｺ育ｴ・・螳ｹ陦ｨ遉ｺ讖溯・
+c6fab344e20dfe902d98d3f0f23824cad985db27 2026-02-13 fix: ch
+at-notifications繝ｫ繝ｼ繝医↓/api繝励Ξ繝輔ぅ繝・け繧ｹ繧定ｿｽ蜉
+08a4a0ba0aa613d36c29db86a0a2ab3ad48c6478 2026-02-13 feat: 莠
+育ｴ・､荳九￡騾夂衍縺ｮ螳壽悄螳溯｡後ち繧ｹ繧ｯ閾ｪ蜍戊ｨｭ螳壹せ繧ｯ繝ｪ繝励ヨ繧定ｿｽ蜉
+8556438bc8f5cc209ea6ff81852df103b27b39bf 2026-02-13 feat: 莠
+育ｴ・､荳九￡讖溯・縺ｮ螳御ｺ・・繧ｿ繝ｳUI螳溯｣・068e6187f6e324d596dc6bba21e60eb
+e9024911c 2026-02-13 fix: 譌･莉倥ヵ繧｣繝ｼ繝ｫ繝峨・繝ｩ繝吶Ν繧偵碁∽ｿ｡譌･縲阪°繧
+峨御ｺ育ｴ・律縲阪↓螟画峩
+4a288b6c34008857c48babba008368caff52af46 2026-02-13 feat: 莠
+育ｴ・､荳九￡讖溯・繧貞ｮ溯｣・ｼ域欠螳壽律縺ｮ譚ｱ莠ｬ譎る俣9譎ゅ↓騾∽ｿ｡・・edeeeb55358691898
+64f991a954db06af272eac9 2026-02-13 feat: 萓｡譬ｼ諠・ｱ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ
+縺ｫ縺昴・莉悶メ繝｣繝・ヨ騾∽ｿ｡讖溯・繧定ｿｽ蜉
+c19de21e71f54c74c035e5978898c88dd8ee3405 2026-02-13 fix: 萓｡
+譬ｼ螟画峩螻･豁ｴ縺ｮ閾ｪ蜍戊ｿｽ蜉讖溯・繧剃ｿｮ豁｣
+38a8ebd03b2297bd31ecc1b4194989fe977c4a0e 2026-02-13 feat: 萓
+｡譬ｼ螟画峩譎ゅ↓蛟､荳九￡螻･豁ｴ繧定・蜍戊ｿｽ蜉縲∝｣ｲ蜃ｺ萓｡譬ｼ繧貞渕譛ｬ諠・ｱ縺ｫ遘ｻ蜍・b5522a3
+ecc4bf45a29c2be0a754756d72b437a9b 2026-02-13 feat: 迚ｩ莉ｶ隧ｳ邏ｰ
+繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ謾ｹ蝟・32a08e027e5a60aa887462f074c045500a742b6d 
+2026-02-13 chore: 荳崎ｦ√↑繝峨く繝･繝｡繝ｳ繝医→繧ｹ繧ｯ繝ｪ繝励ヨ繧貞炎髯､
+09556869270c943116b93a6120c3875d7cadd0bd 2026-02-13 feat: 迚
+ｩ莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｮ荳諡ｬ驟堺ｿ｡繧貞句挨騾∽ｿ｡・亥錐蜑榊・繧奇ｼ峨↓螟画峩
+28d6656502f07a70c285db9e9274b6b9d5b91cad 2026-02-13 fix: SM
+S騾∽ｿ｡繧貞｣ｲ荳ｻ繝ｪ繧ｹ繝医→蜷後§莉慕ｵ・∩縺ｫ螟画峩
+b372025fbbc84cd585ffebc38685ea30032e97ac 2026-02-13 feat: 雋
+ｷ荳ｻ蛟呵｣懊Μ繧ｹ繝医↓蛟句挨SMS騾∽ｿ｡讖溯・繧定ｿｽ蜉
+1ab36951b60c46f1164e9f888a68e55c5c1a0a32 2026-02-13 feat: 繝
+｡繝ｼ繝ｫ譛ｬ譁・↓迚ｩ莉ｶ縺ｮ遞ｮ蛻･縺ｨ萓｡譬ｼ繧定・蜍戊ｿｽ蜉
+f8c12f6be94b0cea0f3ec3d3ae1b9be5d43146fe 2026-02-13 refacto
+r: SMS荳諡ｬ騾∽ｿ｡讖溯・繧貞炎髯､
+6adc2f6c0f34e59aa83e286ab1e5bdffe1ed13a1 2026-02-13 feat: 繝
+｡繝ｼ繝ｫ遒ｺ隱阪Δ繝ｼ繝繝ｫ縺ｧ雋ｷ荳ｻ蜷阪ｒ閾ｪ蜍戊｡ｨ遉ｺ
+0662c923a291608995ecc8c02eda47c4a38c8656 2026-02-13 feat: 雋
+ｷ荳ｻ蛟呵｣懊Μ繧ｹ繝医↓繝｡繝ｼ繝ｫ騾∽ｿ｡遒ｺ隱阪Δ繝ｼ繝繝ｫ繧堤ｵｱ蜷・34675b3824e42d287e0
+c4a5f301f6110711d8ba6 2026-02-13 Twilio SMS荳諡ｬ騾∽ｿ｡讖溯・縺ｨ繝｡繝
+ｼ繝ｫ蛟句挨騾∽ｿ｡讖溯・縺ｮ螳溯｣・9cc5f6b622fc6048dd44c0d8d31f1f8f777f3428
+ 2026-02-13 Gmail驟堺ｿ｡讖溯・縺ｮ謾ｹ蝟・→UI蜷台ｸ・75b02849a70b729ade2df5
+22b740555179e9cd65 2026-02-12 fix: 雋ｷ荳ｻ閾ｪ蜍募炎髯､縺ｮ隱､讀懷・繧剃ｿｮ豁｣
+381b24d05d6a3ad7af159601b67b74b3a2554b3b 2026-02-12 feat: 迚
+ｩ莉ｶ繝ｪ繧ｹ繝医↓繧ｵ繧､繝峨ヰ繝ｼ繧ｹ繝・・繧ｿ繧ｹ讖溯・繧貞ｮ溯｣・fcc15f2cce6ffe480144ba
+0b01ae30682736bb8e 2026-02-12 docs: Add deployment rule for
+ property list development
+0906002ab9dba73ee585b10d61b6f1d5cb6a565f 2026-02-12 feat: A
+dd sidebar status logic for property list management
+aec3da416e2a98376adcc2a43911805731baae77 2026-02-12 fix: 蜍慕
+噪縺ｫ逕滓・縺輔ｌ縺滓球蠖薙き繝・ざ繝ｪ繝ｼ繧偵し繧､繝峨ヰ繝ｼ縺ｫ陦ｨ遉ｺ
+480aa3785c042ad3cf863e4a09a3d0a63888a5e6 2026-02-12 fix: 雋ｷ
+荳ｻ6940縺ｮ蜑企勁繝輔Λ繧ｰ繧偵け繝ｪ繧｢縺励※蠕ｩ蜈・∬ｨｺ譁ｭ繧ｹ繧ｯ繝ｪ繝励ヨ繧定ｿｽ蜉
+d8cf61d83c43628d12d2b004b0879fc6286ec7b4 2026-02-12 fix: 雋ｷ
+荳ｻ繧ｹ繝・・繧ｿ繧ｹ縲瑚ｦ∝・隕ｧ菫・ｲ螳｢縲阪・陦ｨ遉ｺ鬆・ｺ上→譚｡莉ｶ繧剃ｿｮ豁｣
+51f4b8d27717186c11ce6b8a4160cac4e0b80526 2026-02-11 fix: 萓｡
+譬ｼ蟶ｯ繝槭ャ繝斐Φ繧ｰ繝ｭ繧ｸ繝・け繧剃ｿｮ豁｣
+683a508f598ac93d600c9d30b6065f3a28a4b00e 2026-02-11 fix: 雋ｷ
+荳ｻ逡ｪ蜿ｷ4216縺ｮ繝・・繧ｿ繧剃ｿｮ豁｣
+5184903c248d27cc696503cc032c97e4c3ec5945 2026-02-11 fix: 萓｡
+譬ｼ蟶ｯ繝槭ャ繝斐Φ繧ｰ繧貞ｮ滄圀縺ｮ驕ｸ謚櫁い縺ｫ蜷医ｏ縺帙※菫ｮ豁｣
+7b20dac78448bbc3c996af1abc36b1e2e8a8ae9c 2026-02-11 fix: 萓｡
+譬ｼ蟶ｯ繧貞ｸ梧悍遞ｮ蛻･縺ｫ蠢懊§縺ｦ驕ｩ蛻・↑繝輔ぅ繝ｼ繝ｫ繝峨・縺ｿ縺ｫ蜿肴丐縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+4b77d0f5f79f5397dd98fba4cf41f824a137191e 2026-02-11 繝・せ繝医せ繧
+ｯ繝ｪ繝励ヨ菫ｮ豁｣: 蜿､縺・き繝ｩ繝蜷阪ｒ譁ｰ縺励＞繧ｫ繝ｩ繝蜷阪↓螟画峩
+bee0f638286685b79a2bf772d3c369e3b4fad962 2026-02-11 蝠丞粋縺帶凾繝
+偵い繝ｪ繝ｳ繧ｰ閾ｪ蜍募渚譏: updateWithSync()繝｡繧ｽ繝・ラ縺ｫ閾ｪ蜍輔ヱ繝ｼ繧ｹ蜃ｦ逅・ｒ霑ｽ蜉
+
+0476a6c12fe9fc5f67193aa9284dbd68e6384c2a 2026-02-11 debug(b
+uyer): 菫晏ｭ倥・繧ｿ繝ｳ縺ｮ繝・ヰ繝・げ繝ｭ繧ｰ繧定ｿｽ蜉
+8b0dccf1dbc2fe0fe402ebd7132ad3f114213e52 2026-02-11 debug(b
+uyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ閾ｪ蜍輔ヱ繝ｼ繧ｹ縺ｮ繝ｭ繧ｰ蜃ｺ蜉帙ｒ霑ｽ蜉
+8d446c3465a3e015c33a5b92af5b67cf7e398696 2026-02-11 fix(buy
+er): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺ｮ閾ｪ蜍穂ｿ晏ｭ倥ｒ辟｡蜉ｹ蛹・a0aff531bcdf8bee399d2b
+8840f3c8f127801a57 2026-02-11 docs(spec): 繧ｿ繧ｹ繧ｯ5.2繧定ｿｽ蜉・井
+ｿ晏ｭ倥・繧ｿ繝ｳ縺ｮ螳溯｣・ｼ・edaccdd1695423a86ae43e816e9b2428851e3104 2
+026-02-11 feat(buyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺ｫ菫晏ｭ倥・繧ｿ繝ｳ繧定ｿｽ蜉
+59163e3512be88eb3dae4f08fbe85c0ebe0c1777 2026-02-11 fix: 萓｡
+譬ｼ蟶ｯ繝輔ぅ繝ｼ繝ｫ繝峨ｒ迚ｩ莉ｶ遞ｮ蛻･縺ｫ蠢懊§縺ｦ蜿肴丐縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+b759f9a88d8f12cf9c291e6b43061a06b4846bbb 2026-02-11 fix: 鬧占
+ｻ雁ｴ蟶梧悍蜿ｰ謨ｰ縺ｮ繧ｫ繝ｩ繝蜷阪ｒparking_spaces縺ｫ菫ｮ豁｣
+d1f07370ec6eaf01a33153f6d9e0c39336d1349c 2026-02-11 feat(bu
+yer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺九ｉ蟶梧悍譚｡莉ｶ縺ｸ縺ｮ閾ｪ蜍募渚譏讖溯・繧貞ｮ溯｣・d1b9b09b
+4e4fce507ece2bc22b6650c7d83420f5 2026-02-11 feat(ui): 迚ｩ莉ｶ諠
+・ｱ繧ｫ繝ｼ繝峨・謇蝨ｨ蝨ｰ縺ｨ菴丞ｱ・｡ｨ遉ｺ縺ｫ繧ｳ繝斐・讖溯・繧定ｿｽ蜉
+0e3bea6cf5eef580a800b7d0102680b13914d127 2026-02-11 fix(ui)
+: 繝・く繧ｹ繝医お繝ｪ繧｢縺ｧ驕ｸ謚樒ｯ・峇繧奪elete繧ｭ繝ｼ縺ｧ蜑企勁縺ｧ縺阪ｋ繧医≧縺ｫ謾ｹ蝟・71cdde
+0fce16751aadb938642dfb43466ba866ba 2026-02-11 feat(buyer): 
+雋ｷ荳ｻ蜀・ｦｧ邨先棡繝壹・繧ｸ縺ｮ蜈ｨ讖溯・螳溯｣・ｮ御ｺ・2d05a5422920cbe48f4b0e035178
+d31d7ffb4250 2026-02-11 fix(buyer): 騾壼ｸｸ縺ｮ雋ｷ莉倥〒繧りｲｷ莉倥メ繝｣繝・ヨ
+騾∽ｿ｡繧貞ｿ・亥喧
+ac2646403ae77bc3252dd1530c42f9d7fe76d631 2026-02-11 feat(bu
+yer): 雋ｷ莉倥さ繝｡繝ｳ繝医ヵ繧｣繝ｼ繝ｫ繝峨↓繝励Ξ繝ｼ繧ｹ繝帙Ν繝繝ｼ繧定ｿｽ蜉縺励・壼ｸｸ縺ｮ雋ｷ
+莉倥〒繧ょｿ・亥喧
+7d2516d6709c478d1176b66ca9f0bb95075208ec 2026-02-11 feat(bu
+yer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧貞ｮ悟・縺ｫ菫ｮ豁｣
+21a59c8874dc7c9f14e9450166fd3966e11f362b 2026-02-11 feat(bu
+yer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧呈隼蝟・637db1ea4230737d772f7e23f61158d0c
+16d1faf 2026-02-11 fix(buyer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・縺ｨ繝峨Ο繝・・繝繧ｦ繝
+ｳ陦ｨ遉ｺ繧剃ｿｮ豁｣
+39ee01ea76a9f804125d8758df3b5299b934b523 2026-02-11 feat(bu
+yer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧呈隼蝟・664591bf9b5e284bb5e69f15a6765f83f
+6be667d 2026-02-11 feat(buyer): 譛譁ｰ迥ｶ豕√↓縲瑚ｲｷ莉伜､悶ｌ縺ｾ縺励◆縲阪・繧
+ｿ繝ｳ繧定ｿｽ蜉
+f7542b80921a47adf6fc604d43ebe84157eb0e88 2026-02-11 fix(buy
+er): hasMailInquiry縺ｮ驥崎､・ｮ｣險繧剃ｿｮ豁｣
+2bb4bd4a974907686b43a97aa3b03edd99ad20c6 2026-02-11 feat(bu
+yer): 蜈ｨ縺ｦ縺ｮ繝峨Ο繝・・繝繧ｦ繝ｳ縺ｫ遨ｺ谺・∈謚櫁い繧定ｿｽ蜉縲・蝗樊楔髮ｻ繝舌Μ繝・・繧ｷ繝ｧ繝ｳ
+菫ｮ豁｣
+1870fb9fe35bcf4dc5db752591dfd0b25389757e 2026-02-11 fix(buy
+er): 譛譁ｰ迥ｶ豕√・繝峨Ο繝・・繝繧ｦ繝ｳ縺ｫ遨ｺ谺・∈謚櫁い繧定ｿｽ蜉
+4112b44a9775dbda4833539d1fb5e43f5bbc3c04 2026-02-11 feat(bu
+yer): 譛譁ｰ迥ｶ豕√・驕ｸ謚櫁い繧堤黄莉ｶ縺ｮatbb_status縺ｫ蠢懊§縺ｦ蜍慕噪繝輔ぅ繝ｫ繧ｿ繝ｪ繝ｳ
+繧ｰ
+0817bffe4f1cfd655f822351ca81130638114f89 2026-02-11 fix(buy
+er): Google Chat繝｡繝・そ繝ｼ繧ｸ繝輔か繝ｼ繝槭ャ繝医ｒ菫ｮ豁｣
+30737254a395390cea6af7520e2a1711de28fe6f 2026-02-11 feat(bu
+yer): 雋ｷ荳ｻ霑鷹團迚ｩ莉ｶ荳隕ｧ縺ｮ繝・・繝悶Ν陦ｨ遉ｺ鬆・岼繧貞､画峩
+6ed852cfcfe2a8b267bbfd3373419a5020388cc4 2026-02-11 chore: 
+雋ｷ荳ｻ繝ｪ繧ｹ繝亥・隕ｧ蠖｢諷九ヵ繧｣繝ｼ繝ｫ繝牙酔譛溘・險ｺ譁ｭ繧ｹ繧ｯ繝ｪ繝励ヨ繧定ｿｽ蜉
+a4642c0f135833b24788d5ec3ba6f847f9ad5dd9 2026-02-11 fix: 雋ｷ
+荳ｻ繝ｪ繧ｹ繝医・蜀・ｦｧ蠖｢諷九ヵ繧｣繝ｼ繝ｫ繝峨ｒviewing_mobile縺ｫ繝槭ャ繝斐Φ繧ｰ菫ｮ豁｣
+9fb67135eb22e3a090894851bfaa0febd02a250c 2026-02-11 fix: 雋ｷ
+荳ｻ繝ｪ繧ｹ繝医・蜀・ｦｧ譎る俣繝輔ぅ繝ｼ繝ｫ繝峨・Excel繧ｷ繝ｪ繧｢繝ｫ蛟､螟画鋤縺ｫ蟇ｾ蠢・45f4a1b11
+00d0219aee7ac4e9155df50f705af63 2026-02-11 style: 雋ｷ荳ｻ隧ｳ邏ｰ繝
+壹・繧ｸ縺ｮ蜀・ｦｧ繝懊ち繝ｳ繧堤岼遶九▽繧医≧縺ｫ螟画峩
+396542c7525bce6d7a6f8e2b37c981ee18b1ff1a 2026-02-11 feat: 雋
+ｷ荳ｻ繝ｪ繧ｹ繝郁ｿ鷹團迚ｩ莉ｶ讀懃ｴ｢繧呈僑蠑ｵ・郁ｷ晞屬繝吶・繧ｹ+驟堺ｿ｡繧ｨ繝ｪ繧｢繝吶・繧ｹ・・0c5421
+aaec5501ae34abe79f3c3e989b560aaf38 2026-02-11 fix: 繝峨Ο繝・・繝
+繧ｦ繝ｳ繧偵ヵ繧｣繝ｼ繝ｫ繝臥峩荳九↓陦ｨ遉ｺ縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+3cb2f0d8226562738a3687c84d1370ed66db9635 2026-02-11 fix: 雋ｷ
+荳ｻ蟶梧悍譚｡莉ｶ繝壹・繧ｸ縺ｮUI謾ｹ蝟・- 繝峨Ο繝・・繝繧ｦ繝ｳ騾上￠蝠城｡瑚ｧ｣豎ｺ縺ｨ繝・じ繧､繝ｳ邨ｱ荳
+
+1aa7715d26784b72a017c0dbada82c756a8d19ab 2026-02-11 fix: de
+tectUpdatedBuyers縺ｧ蜈ｨ繝輔ぅ繝ｼ繝ｫ繝峨ｒ豈碑ｼ・☆繧九ｈ縺・↓菫ｮ豁｣
+1bd3af9bccffad3592741075d17f4fcc3c9bf745 2026-02-11 fix: de
+tectUpdatedBuyers縺ｧ3蝗樊楔髮ｻ遒ｺ隱肴ｸ医∩縺ｨ蝠丞粋繝｡繝ｼ繝ｫ髮ｻ隧ｱ蟇ｾ蠢懊ヵ繧｣繝ｼ繝ｫ繝
+峨ｒ豈碑ｼ・ｯｾ雎｡縺ｫ霑ｽ蜉
+79e3f1fffc5dfe62a7c2a155d5fdb2c06fafb13c 2026-02-11 fix: 閾ｪ
+蜍募酔譛滓凾縺ｫ繧ｭ繝｣繝・す繝･繧偵け繝ｪ繧｢縺励※譛譁ｰ縺ｮ繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝医ョ繝ｼ繧ｿ繧貞叙蠕・f7
+8d04ccd54ecf9602ce56998ad77f3008f56bbe 2026-02-11 feat: 雋ｷ荳
+ｻ隧ｳ邏ｰ逕ｻ髱｢縺ｮ縲仙撫蜷医Γ繝ｼ繝ｫ縲鷹崕隧ｱ蟇ｾ蠢懊ヵ繧｣繝ｼ繝ｫ繝峨↓縲御ｸ崎ｦ√埼∈謚櫁い繧定ｿｽ蜉
+043386bb53d73ec9fa5eac9421174445cb16f353 2026-02-11 讌ｭ蜍吩ｾ晞
+ｼ繝ｪ繧ｹ繝医・繧ｫ繝ｩ繝ｼ繧堤ｴｫ濶ｲ縺ｫ邨ｱ荳
+
+

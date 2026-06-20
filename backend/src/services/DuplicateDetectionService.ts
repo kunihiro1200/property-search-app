@@ -85,11 +85,11 @@ export class DuplicateDetectionService {
           sellerNumber: seller.seller_number,
         },
         propertyInfo: seller.properties?.[0]
-          ? {
-              address: seller.properties[0].property_address || seller.properties[0].address,
-              propertyType: seller.properties[0].property_type,
-            }
-          : undefined,
+  ? {
+      address: seller.properties[0].address,
+      propertyType: seller.properties[0].property_type,
+    }
+  : undefined,
       }));
     } catch (error) {
       console.error('Check duplicate by phone error:', error);

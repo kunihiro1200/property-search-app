@@ -44,6 +44,14 @@ export const usePublicProperties = (
       const response = await publicApi.get<PublicPropertyListResponse>(
         `/api/public/properties?${params.toString()}`
       );
+      
+      // 🔍 デバッグ: APIレスポンスをログ出力
+      console.log('[usePublicProperties] API Response:', {
+        total: response.data.properties?.length || 0,
+        firstProperty: response.data.properties?.[0],
+        cc105: response.data.properties?.find(p => p.property_number === 'CC105'),
+      });
+      
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5分間はキャッシュを使用

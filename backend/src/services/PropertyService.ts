@@ -421,7 +421,26 @@ export class PropertyService {
    * @returns PDFのURL
    */
   async generateEstimatePdf(propertyNumber: string): Promise<string> {
+    console.log(`[generateEstimatePdf] Method called for: ${propertyNumber}`);
+    
     try {
+      // キャッシュをチェック（5分間）- Redisが利用できない場合はスキップ
+      const cacheKey = `estimate_pdf:${propertyNumber}`;
+      console.log(`[generateEstimatePdf] Checking cache with key: ${cacheKey}`);
+      
+      try {
+        const cached = await CacheHelper.get<string>(cacheKey);
+        if (cached !== null) {
+          console.log(`[generateEstimatePdf] Using cached PDF URL for ${propertyNumber}`);
+          return cached;
+        }
+        console.log(`[generateEstimatePdf] No cached PDF found`);
+      } catch (cacheError: any) {
+        // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
+        console.log(`[generateEstimatePdf] Cache not available, skipping:`, cacheError?.message || cacheError);
+      }
+      
+      console.log(`[generateEstimatePdf] Importing googleapis...`);
       const { google } = await import('googleapis');
       const fs = require('fs');
       const path = require('path');
@@ -431,14 +450,29 @@ export class PropertyService {
       // サービスアカウント認証
       // Vercel環境では環境変数から、ローカル環境ではファイルから読み込む
       let keyFile;
+      console.log(`[generateEstimatePdf] Loading service account credentials...`);
+      
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         // Vercel環境: 環境変数から直接読み込む
         console.log(`[generateEstimatePdf] Using GOOGLE_SERVICE_ACCOUNT_JSON from environment`);
-        keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        try {
+          keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          console.log(`[generateEstimatePdf] Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON`);
+          
+          // ⚠️ 重要：private_keyの\\nを実際の改行に変換
+          if (keyFile.private_key) {
+            keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+            console.log(`[generateEstimatePdf] ✅ Converted \\\\n to actual newlines in private_key`);
+          }
+        } catch (parseError: any) {
+          console.error(`[generateEstimatePdf] Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:`, parseError);
+          throw new Error(`認証情報のパースに失敗しました: ${parseError.message}`);
+        }
       } else {
         // ローカル環境: ファイルから読み込む
         console.log(`[generateEstimatePdf] Using service account key file`);
         const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json');
+        console.log(`[generateEstimatePdf] Key file path: ${keyPath}`);
         keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
       }
       
@@ -488,16 +522,47 @@ export class PropertyService {
       const pdfUrl = this.exportSheetAsPdf(spreadsheetId, sheetId, propertyNumber);
       console.log(`[generateEstimatePdf] Generated PDF URL: ${pdfUrl}`);
       
+      // キャッシュに保存（5分間）- Redisが利用できない場合はスキップ
+      try {
+        await CacheHelper.set(cacheKey, pdfUrl, 300);
+      } catch (cacheError: any) {
+        // Redisが利用できない場合はキャッシュをスキップ（Vercel環境など）
+        console.log(`[generateEstimatePdf] Cache save failed, skipping:`, cacheError?.message || cacheError);
+      }
+      
       return pdfUrl;
-    } catch (error) {
-      console.error('[generateEstimatePdf] Error:', error);
-      throw new Error('概算書の生成に失敗しました');
+    } catch (error: any) {
+      console.error('[generateEstimatePdf] Error occurred:', error);
+      console.error('[generateEstimatePdf] Error type:', typeof error);
+      console.error('[generateEstimatePdf] Error constructor:', error?.constructor?.name);
+      console.error('[generateEstimatePdf] Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        name: error?.name,
+      });
+      
+      // クォータ超過エラーの場合は分かりやすいメッセージを返す
+      if (error.code === 429 || error.message?.includes('Quota exceeded')) {
+        const quotaError = new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        console.error('[generateEstimatePdf] Throwing quota error:', quotaError.message);
+        throw quotaError;
+      }
+      
+      // エラーメッセージを構築
+      const errorMessage = error?.message || error?.toString() || '概算書の生成に失敗しました';
+      const finalError = new Error(errorMessage);
+      console.error('[generateEstimatePdf] Throwing error:', finalError.message);
+      throw finalError;
     }
   }
   
   /**
    * スプレッドシートの計算完了を待機
    * D11セル（金額セル）の値をポーリングして計算完了を確認
+   * 
+   * 注意: スプレッドシートの計算式は単純なので、通常は2-3秒で完了します。
+   * 初回待機時間は短く設定し、リトライで対応します。
    * 
    * @param sheets Google Sheets APIクライアント
    * @param spreadsheetId スプレッドシートID
@@ -509,13 +574,21 @@ export class PropertyService {
     sheetName: string
   ): Promise<void> {
     const VALIDATION_CELL = 'D11';  // 金額セル
-    const MAX_ATTEMPTS = 20;        // 最大試行回数
-    const RETRY_INTERVAL = 500;     // リトライ間隔（ms）
+    const MAX_ATTEMPTS = 3;         // 最大試行回数（通常は1回で成功）
+    const INITIAL_WAIT = 2000;      // 初回待機時間（ms）- 計算は高速なので2秒で十分
+    const RETRY_INTERVAL = 1000;    // リトライ間隔（ms）- ネットワークエラー対応
     
     console.log(`[waitForCalculationCompletion] Starting validation for cell ${VALIDATION_CELL}`);
+    console.log(`[waitForCalculationCompletion] Configuration: INITIAL_WAIT=${INITIAL_WAIT}ms, MAX_ATTEMPTS=${MAX_ATTEMPTS}, RETRY_INTERVAL=${RETRY_INTERVAL}ms`);
+    
+    // 初回待機（計算完了を待つ - 通常は2秒で十分）
+    console.log(`[waitForCalculationCompletion] Initial wait: ${INITIAL_WAIT}ms`);
+    await new Promise(resolve => setTimeout(resolve, INITIAL_WAIT));
     
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
+        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Reading cell ${VALIDATION_CELL}...`);
+        
         // D11セルの値を読み取り
         const response = await sheets.spreadsheets.values.get({
           spreadsheetId,
@@ -523,27 +596,60 @@ export class PropertyService {
         });
         
         const cellValue = response.data.values?.[0]?.[0];
-        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Cell value = ${cellValue}`);
+        console.log(`[waitForCalculationCompletion] Attempt ${attempt}/${MAX_ATTEMPTS}: Cell value = "${cellValue}" (type: ${typeof cellValue})`);
         
         // 値が有効な数値かチェック
         if (this.isValidCalculatedValue(cellValue)) {
-          console.log(`[waitForCalculationCompletion] Calculation completed. Value: ${cellValue}`);
+          const elapsedTime = INITIAL_WAIT + ((attempt - 1) * RETRY_INTERVAL);
+          console.log(`[waitForCalculationCompletion] ✅ Calculation completed successfully!`);
+          console.log(`[waitForCalculationCompletion] Final value: ${cellValue}`);
+          console.log(`[waitForCalculationCompletion] Total elapsed time: ${elapsedTime / 1000} seconds`);
           return;
+        }
+        
+        // 値が無効な理由をログ出力
+        if (cellValue === undefined || cellValue === null || cellValue === '') {
+          console.log(`[waitForCalculationCompletion] ⚠️ Cell is empty or undefined`);
+        } else {
+          const numValue = typeof cellValue === 'number' ? cellValue : parseFloat(cellValue);
+          if (isNaN(numValue)) {
+            console.log(`[waitForCalculationCompletion] ⚠️ Cell value is not a valid number: "${cellValue}"`);
+          } else if (numValue <= 0) {
+            console.log(`[waitForCalculationCompletion] ⚠️ Cell value is not positive: ${numValue}`);
+          }
         }
         
         // 最後の試行でない場合は待機
         if (attempt < MAX_ATTEMPTS) {
+          console.log(`[waitForCalculationCompletion] Waiting ${RETRY_INTERVAL}ms before next attempt...`);
           await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
         }
-      } catch (error) {
-        console.error(`[waitForCalculationCompletion] Error reading cell on attempt ${attempt}:`, error);
-        // エラーが発生しても続行（次の試行へ）
+      } catch (error: any) {
+        console.error(`[waitForCalculationCompletion] ❌ Error reading cell on attempt ${attempt}:`, error);
+        console.error(`[waitForCalculationCompletion] Error details:`, {
+          message: error?.message,
+          code: error?.code,
+          name: error?.name,
+        });
+        
+        // クォータ超過エラーの場合は即座に失敗
+        if (error.code === 429 || error.message?.includes('Quota exceeded')) {
+          throw new Error('Google Sheets APIのクォータを超過しました。しばらく待ってから再度お試しください。');
+        }
+        
+        // その他のエラーは続行（次の試行へ）
+        if (attempt < MAX_ATTEMPTS) {
+          console.log(`[waitForCalculationCompletion] Continuing to next attempt despite error...`);
+        }
       }
     }
     
     // タイムアウト
-    const timeoutSeconds = (MAX_ATTEMPTS * RETRY_INTERVAL) / 1000;
-    throw new Error(`計算がタイムアウトしました（${timeoutSeconds}秒）。D11セルに値が入力されませんでした。`);
+    const totalTime = INITIAL_WAIT + (MAX_ATTEMPTS * RETRY_INTERVAL);
+    const timeoutSeconds = totalTime / 1000;
+    console.error(`[waitForCalculationCompletion] ❌ Timeout after ${timeoutSeconds} seconds`);
+    console.error(`[waitForCalculationCompletion] D11 cell did not contain a valid calculated value after ${MAX_ATTEMPTS} attempts`);
+    throw new Error(`計算がタイムアウトしました（約${timeoutSeconds}秒）。D11セルに有効な価格が入力されませんでした。スプレッドシートの数式を確認してください。`);
   }
   
   /**

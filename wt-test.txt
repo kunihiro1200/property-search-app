@@ -1,0 +1,2 @@
+﻿42d547d temp: 繝・せ繝域悄髢謎ｸｭ縺ｯ蜈ｨ繝輔ぅ繝ｼ繝ｫ繝峨ｒ繧ｹ繝励す竊偵ヶ繝ｩ繧ｦ繧ｶ縺ｫ螟画峩・域悽逡ｪ迺ｰ蠅・ｧｻ陦梧凾縺ｫ謌ｻ縺呻ｼ・
+backend/src/config/work-task-column-mapping.json

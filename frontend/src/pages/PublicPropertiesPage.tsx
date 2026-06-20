@@ -22,6 +22,7 @@ import PropertyMapView from '../components/PropertyMapView';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { SEOHead } from '../components/SEOHead';
+import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 // import { StructuredData } from '../components/StructuredData';
 // import { generatePropertyListStructuredData } from '../utils/structuredData';
 
@@ -36,12 +37,18 @@ interface PaginationInfo {
 const PublicPropertiesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  
+  // Google Maps APIローダー（Context経由で取得）
+  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useGoogleMaps();
+  
   const [properties, setProperties] = useState<PublicProperty[]>([]);
   const [allProperties, setAllProperties] = useState<PublicProperty[]>([]); // 地図用の全物件
   const [isLoadingAllProperties, setIsLoadingAllProperties] = useState(false); // 全件取得中フラグ
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   // 初回ロードとフィルターロードを分離
-  const [initialLoading, setInitialLoading] = useState(true);
+  // 詳細画面から戻ってきた場合（sessionStorageに状態がある）はフルスクリーンローディングをスキップ
+  const isReturningFromDetail = useRef(!!sessionStorage.getItem('publicPropertiesNavigationState'));
+  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current);
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,7 +71,7 @@ const PublicPropertiesPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   
-  // 公開中のみ表示フィルター状態
+  // 公開中のみ表示フィルター状態（デフォルトで全物件を表示）
   const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
   
   // 初回ロード完了フラグ
@@ -78,6 +85,15 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 地図ビューへの参照
   const mapViewRef = useRef<HTMLDivElement>(null);
+  
+  // 地図ビュー用フェッチのデバウンスタイマーID
+  const mapFetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // 地図ビュー用フェッチのAbortController（リスト表示に戻った際にキャンセル）
+  const mapFetchAbortControllerRef = useRef<AbortController | null>(null);
+  
+  // リスト用フェッチのAbortController（地図ビューに切り替えた際にキャンセル）
+  const listFetchAbortControllerRef = useRef<AbortController | null>(null);
   
   // 検索実行フラグ
   const [shouldScrollToGrid, setShouldScrollToGrid] = useState(false);
@@ -133,6 +149,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 状態復元が完了したかどうかのフラグ
   const [isStateRestored, setIsStateRestored] = useState(false);
   
+  // 状態復元中かどうかのフラグ（setCurrentPage(1)を防ぐため）
+  const isRestoringState = useRef(false);
+  
   // location.stateを保持するref
   const savedNavigationState = useRef<NavigationState | null>(null);
 
@@ -145,7 +164,25 @@ const PublicPropertiesPage: React.FC = () => {
   // 詳細画面から戻ってきた時の状態復元
   useEffect(() => {
     // location.stateから保存された状態を取得
-    const savedState = location.state as NavigationState | null;
+    let savedState = location.state as NavigationState | null;
+    
+    // location.stateがnullの場合、sessionStorageから復元を試みる
+    if (!savedState) {
+      const savedStateStr = sessionStorage.getItem('publicPropertiesNavigationState');
+      if (savedStateStr) {
+        try {
+          savedState = JSON.parse(savedStateStr);
+          console.log('🔄 [PublicPropertiesPage] Restored state from sessionStorage:', savedState);
+          // 復元後、sessionStorageをクリア
+          sessionStorage.removeItem('publicPropertiesNavigationState');
+        } catch (e) {
+          console.error('Failed to parse saved state from sessionStorage:', e);
+        }
+      }
+    }
+    
+    console.log('🔍 [PublicPropertiesPage] useEffect triggered - location.state:', savedState);
+    console.log('🔍 [PublicPropertiesPage] location.key:', location.key);
     
     // refに保存
     if (savedState) {
@@ -162,8 +199,14 @@ const PublicPropertiesPage: React.FC = () => {
       // 復元完了フラグを先に立てる（無限ループ防止）
       hasRestoredState.current = true;
       
+      // 状態復元中フラグを立てる（setCurrentPage(1)を防ぐため）
+      isRestoringState.current = true;
+      
+      console.log('🔄 [PublicPropertiesPage] Restoring state from detail page:', savedState);
+      
       // ページ番号を復元
       if (savedState.currentPage) {
+        console.log('📄 [PublicPropertiesPage] Restoring currentPage:', savedState.currentPage);
         setCurrentPage(savedState.currentPage);
       }
       
@@ -199,14 +242,35 @@ const PublicPropertiesPage: React.FC = () => {
         }
       }
       
-      // 状態復元完了
-      setIsStateRestored(true);
+      // viewMode を savedState から復元する（地図ビューから戻った場合は 'map' を維持）
+      const restoredViewMode = savedState.viewMode || null;
+      if (restoredViewMode) {
+        console.log('🔄 Restoring viewMode:', restoredViewMode);
+        setViewMode(restoredViewMode);
+        // 地図モードで復元する場合、prevViewModeRef も 'map' に設定
+        // （これにより map→list 切り替え時に fetchProperties が正しく呼ばれる）
+        if (restoredViewMode === 'map') {
+          prevViewModeRef.current = 'map';
+        }
+      }
+      // viewMode が未設定の場合は初期値（URLパラメータまたは 'list'）のまま維持
+      
+      // 状態復元完了（少し遅延させてフィルター状態の更新を待つ）
+      // viewMode の state 更新が確実に反映された後に isStateRestored を true にする
+      // （地図ビューの場合、viewMode='map' が確定してから fetchAllProperties をトリガーするため）
+      setTimeout(() => {
+        isRestoringState.current = false;
+        isReturningFromDetail.current = false; // 戻り遷移フラグをリセット（以降はfilterLoadingを使用）
+        setIsStateRestored(true);
+        console.log('✅ [PublicPropertiesPage] State restoration completed, viewMode:', restoredViewMode);
+      }, 200);
     } else if (!savedState) {
       // location.stateがない場合（新規アクセスなど）
       if (hasRestoredState.current) {
         hasRestoredState.current = false;
       }
       // 状態復元不要なので即座に完了扱い
+      isRestoringState.current = false;
       setIsStateRestored(true);
     }
   }, [location.state, location.key]); // location.keyを依存配列に追加
@@ -353,41 +417,102 @@ const PublicPropertiesPage: React.FC = () => {
     setSearchParams(newParams, { replace: true });
   }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
   
+  // 前回の viewMode を追跡（map→list 切り替え時の再取得を防ぐ）
+  const prevViewModeRef = useRef<'list' | 'map'>('list');
+  // 地図ビュー中にフィルターが変更されたかどうかのフラグ
+  const filterChangedDuringMapRef = useRef(false);
+  // 地図ビュー中の searchParams を追跡
+  const searchParamsDuringMapRef = useRef<string>('');
+  // properties の件数を ref で追跡（useEffect の依存配列に入れずに参照するため）
+  const propertiesLengthRef = useRef(0);
+
+  // view パラメータを除いたフィルター用 searchParams 文字列を取得
+  // viewMode 変更による searchParams 変化（view=map の追加/削除）をフィルター変更として誤検知しないため
+  const getFilterOnlyParams = (params: URLSearchParams): string => {
+    const copy = new URLSearchParams(params);
+    copy.delete('view');
+    return copy.toString();
+  };
+
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
       return;
+    }
+    
+    // 地図ビュー中はリスト用データ取得をスキップ
+    if (viewMode === 'map') {
+      // 地図ビュー中の searchParams 変化を追跡（view パラメータは除外）
+      const currentParams = getFilterOnlyParams(searchParams);
+      if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
+        filterChangedDuringMapRef.current = true;
+      }
+      searchParamsDuringMapRef.current = currentParams;
+      prevViewModeRef.current = 'map';
+      return;
+    }
+    
+    // 地図→リスト切り替え時（map→list）
+    if (prevViewModeRef.current === 'map' && viewMode === 'list') {
+      prevViewModeRef.current = 'list';
+      // 地図ビュー中にフィルターが変更されていなければ再取得しない
+      // ただし、properties が空の場合（詳細ページから戻ってきた場合など）は必ず取得する
+      if (!filterChangedDuringMapRef.current && propertiesLengthRef.current > 0) {
+        filterChangedDuringMapRef.current = false;
+        return;
+      }
+      filterChangedDuringMapRef.current = false;
+    } else {
+      prevViewModeRef.current = 'list';
     }
     
     fetchProperties();
-  }, [currentPage, searchParams, isStateRestored]);
+  }, [currentPage, searchParams, isStateRestored, viewMode]);
   
-  // 全件取得は初回とフィルター変更時のみ（currentPageは除外）
+  // 全件取得は地図ビューの時のみ（リストビューでは不要）
+  // searchParams変更時はデバウンス（400ms）で重複リクエストを防ぐ
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
       return;
     }
     
-    fetchAllProperties();
-  }, [searchParams, isStateRestored]);
-  
-  // viewModeが変更されたときも全件取得
-  useEffect(() => {
-    if (viewMode === 'map' && allProperties.length === 0) {
-      console.log('🗺️ Map view activated, fetching all properties...');
-      fetchAllProperties();
-    } else if (viewMode === 'list') {
-      // リスト表示に戻ったときは、物件データを再取得
-      console.log('📋 List view activated, fetching properties...');
-      fetchProperties();
+    // 地図ビューの時のみ全件取得（リストビューでは実行しない）
+    if (viewMode !== 'map') {
+      return;
     }
-  }, [viewMode]);
+    
+    // 前回のタイマーをキャンセル
+    if (mapFetchTimerRef.current) {
+      clearTimeout(mapFetchTimerRef.current);
+    }
+    
+    // デバウンス（400ms）で最後の変更のみ実行
+    mapFetchTimerRef.current = setTimeout(() => {
+      fetchAllProperties();
+    }, 400);
+    
+    return () => {
+      if (mapFetchTimerRef.current) {
+        clearTimeout(mapFetchTimerRef.current);
+      }
+    };
+  }, [searchParams, isStateRestored, viewMode]);
 
   const fetchProperties = async () => {
+    // 前回のリクエストをキャンセル
+    if (listFetchAbortControllerRef.current) {
+      listFetchAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    listFetchAbortControllerRef.current = abortController;
+
     try {
+      console.log('🔄 [fetchProperties] Starting fetch with currentPage:', currentPage);
+      
       // 初回ロードかフィルター変更かで異なるローディング状態を設定
-      if (!isInitialLoadDone.current) {
+      // 詳細画面から戻ってきた場合（isReturningFromDetail）はフルスクリーンローディングをスキップ
+      if (!isInitialLoadDone.current && !isReturningFromDetail.current) {
         setInitialLoading(true);
       } else {
         setFilterLoading(true);
@@ -395,6 +520,7 @@ const PublicPropertiesPage: React.FC = () => {
       setError(null);
       
       const offset = (currentPage - 1) * 20;
+      console.log('📊 [fetchProperties] Calculated offset:', offset, 'from currentPage:', currentPage);
       
       // URLパラメータから検索条件を取得
       const propertyNumber = searchParams.get('propertyNumber');
@@ -407,46 +533,27 @@ const PublicPropertiesPage: React.FC = () => {
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
       // クエリパラメータを構築
+      // skipImages=true: 画像取得（getStorageUrlFromWorkTasks）をスキップして高速化
+      // 画像は PublicPropertyCard の img タグ（/api/public/folder-thumbnail/:folderId）で遅延ロード
       const params = new URLSearchParams({
         limit: '20',
         offset: offset.toString(),
+        skipImages: 'true',
       });
       
-      if (propertyNumber) {
-        params.set('propertyNumber', propertyNumber);
-      }
-      
-      if (location) {
-        params.set('location', location);
-      }
-      
-      if (types) {
-        params.set('types', types);
-      }
-      
-      if (minPriceParam) {
-        params.set('minPrice', minPriceParam);
-      }
-      
-      if (maxPriceParam) {
-        params.set('maxPrice', maxPriceParam);
-      }
-      
-      if (minAgeParam) {
-        params.set('minAge', minAgeParam);
-      }
-      
-      if (maxAgeParam) {
-        params.set('maxAge', maxAgeParam);
-      }
-      
-      if (showPublicOnlyParam === 'true') {
-        params.set('showPublicOnly', 'true');
-      }
+      if (propertyNumber) params.set('propertyNumber', propertyNumber);
+      if (location) params.set('location', location);
+      if (types) params.set('types', types);
+      if (minPriceParam) params.set('minPrice', minPriceParam);
+      if (maxPriceParam) params.set('maxPrice', maxPriceParam);
+      if (minAgeParam) params.set('minAge', minAgeParam);
+      if (maxAgeParam) params.set('maxAge', maxAgeParam);
+      if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
-        `${apiUrl}/api/public/properties?${params.toString()}`
+        `${apiUrl}/api/public/properties?${params.toString()}`,
+        { signal: abortController.signal }
       );
       
       if (!response.ok) {
@@ -455,6 +562,7 @@ const PublicPropertiesPage: React.FC = () => {
       
       const data = await response.json();
       setProperties(data.properties || []);
+      propertiesLengthRef.current = (data.properties || []).length;
       
       // paginationにtotalPagesを追加
       if (data.pagination) {
@@ -470,7 +578,6 @@ const PublicPropertiesPage: React.FC = () => {
       isInitialLoadDone.current = true;
       
       // 物件データ取得後、スクロール位置を復元
-      // refから取得
       setTimeout(() => {
         const savedState = savedNavigationState.current;
         if (savedState?.scrollPosition) {
@@ -478,117 +585,69 @@ const PublicPropertiesPage: React.FC = () => {
             top: savedState.scrollPosition,
             behavior: 'auto'
           });
-          // 復元後、refとstateをクリア
           savedNavigationState.current = null;
           window.history.replaceState(null, '');
         }
       }, 600);
     } catch (err: any) {
+      // AbortError はキャンセルによるものなので無視
+      if (err.name === 'AbortError') {
+        return;
+      }
       setError(err.message || 'エラーが発生しました');
     } finally {
-      setInitialLoading(false);
-      setFilterLoading(false);
+      // キャンセルされていない場合のみローディングを解除
+      if (!abortController.signal.aborted) {
+        setInitialLoading(false);
+        setFilterLoading(false);
+      }
     }
   };
   
   // 地図表示用に全件取得（フィルター条件は適用）
-  // 座標がある物件のみを取得して高速化
+  // 地図専用軽量エンドポイントを使用して高速化
   const fetchAllProperties = async () => {
+    // 前回のリクエストをキャンセル
+    if (mapFetchAbortControllerRef.current) {
+      mapFetchAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    mapFetchAbortControllerRef.current = abortController;
+
     try {
       setIsLoadingAllProperties(true);
       
-      // URLパラメータから検索条件を取得
-      const propertyNumber = searchParams.get('propertyNumber');
-      const location = searchParams.get('location');
+      // 地図専用エンドポイント用パラメータ（最小限）
+      const params = new URLSearchParams();
       const types = searchParams.get('types');
       const minPriceParam = searchParams.get('minPrice');
       const maxPriceParam = searchParams.get('maxPrice');
-      const minAgeParam = searchParams.get('minAge');
-      const maxAgeParam = searchParams.get('maxAge');
       const showPublicOnlyParam = searchParams.get('showPublicOnly');
       
-      const allFetchedProperties: PublicProperty[] = [];
-      let offset = 0;
-      const limit = 1000; // Supabaseの最大制限
-      let hasMore = true;
+      if (types) params.set('types', types);
+      if (minPriceParam) params.set('minPrice', minPriceParam);
+      if (maxPriceParam) params.set('maxPrice', maxPriceParam);
+      if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       
-      while (hasMore) {
-        // クエリパラメータを構築
-        const params = new URLSearchParams({
-          limit: limit.toString(),
-          offset: offset.toString(),
-          // 座標がある物件のみを取得するフラグを追加
-          withCoordinates: 'true',
-          // 画像取得をスキップして高速化
-          skipImages: 'true',
-        });
-        
-        if (propertyNumber) {
-          params.set('propertyNumber', propertyNumber);
-        }
-        
-        if (location) {
-          params.set('location', location);
-        }
-        
-        if (types) {
-          params.set('types', types);
-        }
-        
-        if (minPriceParam) {
-          params.set('minPrice', minPriceParam);
-        }
-        
-        if (maxPriceParam) {
-          params.set('maxPrice', maxPriceParam);
-        }
-        
-        if (minAgeParam) {
-          params.set('minAge', minAgeParam);
-        }
-        
-        if (maxAgeParam) {
-          params.set('maxAge', maxAgeParam);
-        }
-        
-        if (showPublicOnlyParam === 'true') {
-          params.set('showPublicOnly', 'true');
-        }
-        
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const response = await fetch(
-          `${apiUrl}/api/public/properties?${params.toString()}`
-        );
-        
-        if (!response.ok) {
-          throw new Error('物件の取得に失敗しました');
-        }
-        
-        const data = await response.json();
-        const fetchedProperties = data.properties || [];
-        
-        allFetchedProperties.push(...fetchedProperties);
-        
-        // 取得した件数がlimit未満の場合、これ以上データがない
-        if (fetchedProperties.length < limit) {
-          hasMore = false;
-        } else {
-          // 次のバッチへ
-          offset += limit;
-        }
-        
-        // 安全装置：10回以上ループしたら停止（10,000件以上）
-        if (offset >= 10000) {
-          hasMore = false;
-          console.warn('⚠️ Stopped at 10,000 properties (safety limit)');
-        }
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const queryString = params.toString();
+      const url = `${apiUrl}/api/public/map-properties${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, { signal: abortController.signal });
+      
+      if (!response.ok) {
+        throw new Error('物件の取得に失敗しました');
       }
       
-      setAllProperties(allFetchedProperties);
+      const data = await response.json();
+      setAllProperties(data.properties || []);
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error('全件取得エラー:', err);
     } finally {
-      setIsLoadingAllProperties(false);
+      if (!abortController.signal.aborted) {
+        setIsLoadingAllProperties(false);
+      }
     }
   };
   
@@ -601,8 +660,10 @@ const PublicPropertiesPage: React.FC = () => {
         return [...prev, type];
       }
     });
-    // ページを1に戻す
-    setCurrentPage(1);
+    // 状態復元中でない場合のみページを1に戻す
+    if (!isRestoringState.current) {
+      setCurrentPage(1);
+    }
   };
   
   // すべてのフィルターをクリアする処理
@@ -625,8 +686,10 @@ const PublicPropertiesPage: React.FC = () => {
       // 公開中のみ表示フィルターをクリア
       setShowPublicOnly(false);
       
-      // ページを1に戻す
-      setCurrentPage(1);
+      // 状態復元中でない場合のみページを1に戻す
+      if (!isRestoringState.current) {
+        setCurrentPage(1);
+      }
       
       // URLパラメータをクリア
       const newSearchParams = new URLSearchParams();
@@ -636,6 +699,19 @@ const PublicPropertiesPage: React.FC = () => {
       console.error('Error clearing filters:', error);
       setError('フィルターのクリアに失敗しました。もう一度お試しください。');
     }
+  };
+  
+  // フィルター条件が適用されているかどうかを判定
+  const hasActiveFilters = () => {
+    return (
+      selectedTypes.length > 0 ||
+      minPrice !== '' ||
+      maxPrice !== '' ||
+      minAge !== '' ||
+      maxAge !== '' ||
+      showPublicOnly ||
+      searchQuery.trim() !== ''
+    );
   };
 
   if (initialLoading) {
@@ -737,26 +813,34 @@ const PublicPropertiesPage: React.FC = () => {
                 )}
               </Box>
               <Button
-                variant="outlined"
+                variant={viewMode === 'map' ? "contained" : "outlined"}
                 startIcon={<LocationOnIcon />}
                 sx={{
                   height: '56px',
                   minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
                   width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
                   borderColor: '#4CAF50',
-                  color: '#4CAF50',
+                  color: viewMode === 'map' ? '#ffffff' : '#4CAF50',
+                  backgroundColor: viewMode === 'map' ? '#4CAF50' : 'transparent',
                   fontWeight: 'bold',
                   '&:hover': {
                     borderColor: '#45A049',
-                    backgroundColor: '#F1F8F4',
+                    backgroundColor: viewMode === 'map' ? '#45A049' : '#F1F8F4',
                   },
                 }}
                 onClick={() => {
+                  // 進行中のリスト用フェッチをキャンセル
+                  if (listFetchAbortControllerRef.current) {
+                    listFetchAbortControllerRef.current.abort();
+                    listFetchAbortControllerRef.current = null;
+                  }
+                  setInitialLoading(false);
+                  setFilterLoading(false);
                   setViewMode('map');
                   setShouldScrollToMap(true); // スクロールフラグを立てる
                 }}
               >
-                地図で検索
+                {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
               </Button>
             </Box>
         </Container>
@@ -848,7 +932,10 @@ const PublicPropertiesPage: React.FC = () => {
                 variant={showPublicOnly ? "contained" : "outlined"}
                 onClick={() => {
                   setShowPublicOnly(!showPublicOnly);
-                  setCurrentPage(1);
+                  // 状態復元中でない場合のみページを1に戻す
+                  if (!isRestoringState.current) {
+                    setCurrentPage(1);
+                  }
                 }}
                 disabled={filterLoading}
                 sx={{
@@ -870,21 +957,23 @@ const PublicPropertiesPage: React.FC = () => {
             {/* すべての条件をクリアボタン */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
               <Button
-                variant="outlined"
+                variant={hasActiveFilters() ? "contained" : "outlined"}
                 onClick={handleClearAllFilters}
                 disabled={filterLoading}
                 sx={{
                   mt: 1,
                   borderColor: '#FFC107',
-                  color: '#FFC107',
+                  color: hasActiveFilters() ? '#000' : '#FFC107',
+                  backgroundColor: hasActiveFilters() ? '#FFC107' : 'transparent',
+                  fontWeight: 600,
                   '&:hover': {
                     borderColor: '#FFB300',
-                    bgcolor: 'rgba(255, 193, 7, 0.08)',
+                    bgcolor: hasActiveFilters() ? '#FFB300' : 'rgba(255, 193, 7, 0.08)',
                   },
                 }}
                 aria-label="すべてのフィルター条件をクリア"
               >
-                すべての条件をクリア
+                {hasActiveFilters() ? '✓ 条件をクリア' : 'すべての条件をクリア'}
               </Button>
             </Box>
           </Stack>
@@ -902,48 +991,82 @@ const PublicPropertiesPage: React.FC = () => {
           </Box>
         )}
         
-        {properties.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="h6" color="text.secondary">
-              現在公開中の物件はありません
-            </Typography>
+        {/* 地図モード時はリスト表示に戻るボタンを常に表示（物件0件でも） */}
+        {viewMode === 'map' && (
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              startIcon={<ListIcon />}
+              onClick={() => {
+                if (mapFetchAbortControllerRef.current) {
+                  mapFetchAbortControllerRef.current.abort();
+                  mapFetchAbortControllerRef.current = null;
+                }
+                if (mapFetchTimerRef.current) {
+                  clearTimeout(mapFetchTimerRef.current);
+                  mapFetchTimerRef.current = null;
+                }
+                setIsLoadingAllProperties(false);
+                setViewMode('list');
+              }}
+              sx={{
+                borderColor: '#FFC107',
+                color: '#000',
+                '&:hover': {
+                  borderColor: '#FFB300',
+                  backgroundColor: '#FFF9E6',
+                },
+              }}
+            >
+              リスト表示に戻る
+            </Button>
+          </Box>
+        )}
+
+        {/* 地図モード時は properties の件数に関わらず地図を表示 */}
+        {viewMode === 'map' ? (
+          <Box ref={mapViewRef}>
+            {isLoadingAllProperties ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
+                <CircularProgress />
+                <Typography sx={{ mt: 2 }} color="text.secondary">
+                  全物件データを取得中...
+                </Typography>
+              </Box>
+            ) : (
+              <PropertyMapView 
+                properties={allProperties} 
+                isLoaded={isMapLoaded} 
+                loadError={mapLoadError}
+                navigationState={{
+                  currentPage,
+                  viewMode,
+                  filters: {
+                    propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+                    priceRange: (minPrice || maxPrice) ? {
+                      min: minPrice || undefined,
+                      max: maxPrice || undefined
+                    } : undefined,
+                    buildingAgeRange: (minAge || maxAge) ? {
+                      min: minAge || undefined,
+                      max: maxAge || undefined
+                    } : undefined,
+                    searchQuery: searchQuery || undefined,
+                    searchType: searchType || undefined,
+                    showPublicOnly: showPublicOnly || undefined
+                  }
+                }}
+              />
+            )}
           </Box>
         ) : (
+          /* リストモード */
           <>
-            {/* 表示モード切り替えボタン */}
-            {viewMode === 'map' && (
-              <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ListIcon />}
-                  onClick={() => setViewMode('list')}
-                  sx={{
-                    borderColor: '#FFC107',
-                    color: '#000',
-                    '&:hover': {
-                      borderColor: '#FFB300',
-                      backgroundColor: '#FFF9E6',
-                    },
-                  }}
-                >
-                  リスト表示に戻る
-                </Button>
-              </Box>
-            )}
-
-            {/* 地図表示 */}
-            {viewMode === 'map' ? (
-              <Box ref={mapViewRef}>
-                {isLoadingAllProperties ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
-                    <CircularProgress />
-                    <Typography sx={{ mt: 2 }} color="text.secondary">
-                      全物件データを取得中...
-                    </Typography>
-                  </Box>
-                ) : (
-                  <PropertyMapView properties={allProperties} />
-                )}
+            {properties.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="text.secondary">
+                  現在公開中の物件はありません
+                </Typography>
               </Box>
             ) : (
               <>
@@ -967,9 +1090,9 @@ const PublicPropertiesPage: React.FC = () => {
                 {/* 物件グリッド */}
                 <Grid container spacing={3} id="property-grid" ref={propertyGridRef} sx={{ opacity: filterLoading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
                   {properties.map((property, index) => {
-                    // 現在のナビゲーション状態を構築
                     const navigationState: Omit<NavigationState, 'scrollPosition'> = {
                       currentPage,
+                      viewMode,
                       filters: {
                         propertyTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
                         priceRange: (minPrice || maxPrice) ? {
@@ -985,11 +1108,6 @@ const PublicPropertiesPage: React.FC = () => {
                         showPublicOnly: showPublicOnly || undefined
                       }
                     };
-                    
-                    // デバッグ：navigationStateをログ出力
-                    if (index === 0) {
-                      // 最初の物件のみログ出力（デバッグ用）
-                    }
                     
                     return (
                       <Grid item xs={12} md={6} lg={4} key={property.id}>
@@ -1009,15 +1127,12 @@ const PublicPropertiesPage: React.FC = () => {
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        // ページ変更時はlocation.stateをクリア（スクロール位置を復元しない）
                         window.history.replaceState(null, '');
                         setCurrentPage(p => Math.max(1, p - 1));
-                        // 物件グリッドの位置にスクロール
                         setTimeout(() => {
                           const gridElement = document.getElementById('property-grid');
                           if (gridElement) {
-                            const yOffset = -20; // 少し余白を持たせる
-                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset - 20;
                             window.scrollTo({ top: y, behavior: 'smooth' });
                           }
                         }, 100);
@@ -1027,23 +1142,18 @@ const PublicPropertiesPage: React.FC = () => {
                     >
                       前へ
                     </Button>
-                
-                <Typography sx={{ px: 2 }}>
-                  {currentPage} / {pagination.totalPages}
-                </Typography>
-                
+                    <Typography sx={{ px: 2 }}>
+                      {currentPage} / {pagination.totalPages}
+                    </Typography>
                     <Button
                       variant="outlined"
                       onClick={() => {
-                        // ページ変更時はlocation.stateをクリア（スクロール位置を復元しない）
                         window.history.replaceState(null, '');
                         setCurrentPage(p => Math.min(pagination.totalPages, p + 1));
-                        // 物件グリッドの位置にスクロール
                         setTimeout(() => {
                           const gridElement = document.getElementById('property-grid');
                           if (gridElement) {
-                            const yOffset = -20; // 少し余白を持たせる
-                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                            const y = gridElement.getBoundingClientRect().top + window.pageYOffset - 20;
                             window.scrollTo({ top: y, behavior: 'smooth' });
                           }
                         }, 100);

@@ -86,16 +86,17 @@ router.get('/folders/:sellerNumber', authenticate, async (req: Request, res: Res
     // 売主情報を取得（物件住所と依頼者名も含む）
     const baseRepo = new BaseRepository();
     const { data: seller, error: sellerError } = await (baseRepo as any).table('sellers')
-      .select('id, name, properties(address)')
+      .select('id, name, property_address')
       .eq('seller_number', sellerNumber)
       .single();
 
     if (sellerError || !seller) {
+      console.error('Seller not found:', { sellerNumber, error: sellerError });
       return res.status(404).json({ error: '売主が見つかりません' });
     }
 
-    // 物件住所を取得
-    const propertyAddress = seller.properties?.[0]?.address || '';
+    // 物件住所を取得（sellersテーブルのproperty_addressカラムから直接取得）
+    const propertyAddress = seller.property_address || '';
     // 依頼者名を復号化（暗号化されている場合）
     let sellerName = '';
     if (seller.name) {
@@ -149,16 +150,17 @@ router.post('/folders/:sellerNumber/files', authenticate, upload.single('file'),
     // 売主情報を取得（物件住所と依頼者名も含む）
     const baseRepo = new BaseRepository();
     const { data: seller, error: sellerError } = await (baseRepo as any).table('sellers')
-      .select('id, name, properties(address)')
+      .select('id, name, property_address')
       .eq('seller_number', sellerNumber)
       .single();
 
     if (sellerError || !seller) {
+      console.error('Seller not found:', { sellerNumber, error: sellerError });
       return res.status(404).json({ error: '売主が見つかりません' });
     }
 
-    // 物件住所を取得
-    const propertyAddress = seller.properties?.[0]?.address || '';
+    // 物件住所を取得（sellersテーブルのproperty_addressカラムから直接取得）
+    const propertyAddress = seller.property_address || '';
     // 依頼者名を復号化（暗号化されている場合）
     let sellerName = '';
     if (seller.name) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Box, useMediaQuery, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmailIcon from '@mui/icons-material/Email';
@@ -22,22 +22,37 @@ const PublicPropertyHeader: React.FC<PublicPropertyHeaderProps> = ({
   showInquiryButton = false,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const badgeType = getBadgeType(atbbStatus);
 
   const handleBackClick = () => {
-    // navigationStateを保持したまま一覧ページに戻る
-    if (navigationState) {
-      // stateを保持して一覧ページに戻る
-      navigate('/public/properties', {
-        state: navigationState,
-        replace: false
-      });
-    } else {
-      // stateがない場合は通常の戻る
-      navigate('/public/properties');
-    }
+    // 現在のURLからcanHideパラメータを取得
+    const searchParams = new URLSearchParams(location.search);
+    const canHide = searchParams.get('canHide');
+    
+    // navigationState から viewMode を取得
+    const viewMode = navigationState?.viewMode;
+    
+    console.log('[PublicPropertyHeader] handleBackClick - canHide:', canHide);
+    console.log('[PublicPropertyHeader] handleBackClick - viewMode:', viewMode);
+    console.log('[PublicPropertyHeader] handleBackClick - location.search:', location.search);
+    
+    // viewMode と canHide の組み合わせでURLを構築
+    const params = new URLSearchParams();
+    if (canHide === 'true') params.set('canHide', 'true');
+    if (viewMode === 'map') params.set('view', 'map');
+    
+    const queryString = params.toString();
+    const backUrl = queryString ? `/public/properties?${queryString}` : '/public/properties';
+    
+    console.log('[PublicPropertyHeader] handleBackClick - backUrl:', backUrl);
+    
+    // ⚠️ 重要: 一覧画面から一覧画面に戻る場合はnavigationStateを渡さない
+    // これにより、フィルターがリセットされず、表示も遅くならない
+    // navigationStateは詳細画面から戻る場合のみ使用される
+    navigate(backUrl);
   };
 
   const handleInquiryClick = () => {

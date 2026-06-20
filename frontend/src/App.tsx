@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import SellersPage from './pages/SellersPage';
@@ -20,25 +21,40 @@ import BuyerDetailPage from './pages/BuyerDetailPage';
 import PublicPropertyListingPage from './pages/PublicPropertyListingPage';
 import PublicPropertiesPage from './pages/PublicPropertiesPage';
 import PublicPropertyDetailPage from './pages/PublicPropertyDetailPage';
+import KujiraPropertiesPage from './pages/KujiraPropertiesPage';
+import KujiraPropertyDetailPage from './pages/KujiraPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuthStore } from './store/authStore';
+import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 
 function App() {
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+  
+  // アプリ起動時に認証状態を確認
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+  
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      {/* Public routes - no authentication required */}
-      <Route path="/public/properties" element={<PublicPropertiesPage />} />
-      <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <SellersPage />
-          </ProtectedRoute>
-        }
-      />
+    <GoogleMapsProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        {/* Public routes - no authentication required */}
+        <Route path="/public/properties" element={<PublicPropertiesPage />} />
+        <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
+        {/* くじら不動産サイト（FI物件専用） */}
+        <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
+        <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <SellersPage />
+            </ProtectedRoute>
+          }
+        />
       <Route
         path="/sellers/new"
         element={
@@ -169,6 +185,7 @@ function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </GoogleMapsProvider>
   );
 }
 

@@ -2,7 +2,7 @@ import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { GyomuListService } from './GyomuListService';
 
 export interface AthomeDataResult {
-  data: string[];  // Non-empty cell values
+  data: string[];  // [フォルダURL, パノラマURL]
   propertyType: string;
   cached: boolean;
 }
@@ -11,9 +11,9 @@ export interface AthomeDataResult {
  * Athomeデータ取得サービス
  * 
  * 業務リスト（業務依頼シート）の「格納先URL」からGoogle DriveフォルダURLを取得し、
- * そのフォルダ内の画像URLを取得します。
+ * スプレッドシートの「athome!N1」セルからパノラマURLを取得します。
  * 
- * 注: 現在は格納先URLのみを返します。画像URL一覧の取得は今後実装予定。
+ * 戻り値: [フォルダURL, パノラマURL]
  */
 export class AthomeDataService {
   private gyomuListService: GyomuListService;
@@ -48,26 +48,118 @@ export class AthomeDataService {
         return { data: cachedData, propertyType, cached: true };
       }
       
-      // 業務リストから格納先URLを取得
+      // 業務リストから格納先URLとスプシURLを取得
       const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
       
-      if (!gyomuData || !gyomuData.storageUrl) {
-        console.log(`[AthomeDataService] No storage URL for ${propertyNumber} in 業務リスト`);
+      if (!gyomuData) {
+        console.log(`[AthomeDataService] No data for ${propertyNumber} in 業務リスト`);
         return { data: [], propertyType, cached: false };
       }
       
-      // 現在は格納先URLのみを返す
-      // TODO: Google Drive APIを使用してフォルダ内の画像URL一覧を取得
-      const data = [gyomuData.storageUrl];
+      const folderUrl = gyomuData.storageUrl || '';
+      let panoramaUrl = '';
+      
+      // スプシURLが存在する場合、パノラマURLを取得
+      if (gyomuData.spreadsheetUrl) {
+        panoramaUrl = await this.getPanoramaUrlFromSpreadsheet(
+          propertyNumber,
+          gyomuData.spreadsheetUrl
+        );
+      }
+      
+      // [フォルダURL, パノラマURL] の配列を返す
+      const data = [folderUrl, panoramaUrl];
       
       // Cache the result
       this.setCachedData(cacheKey, data);
       
-      console.log(`[AthomeDataService] Fetched storage URL for ${propertyNumber}`);
+      console.log(`[AthomeDataService] Fetched data for ${propertyNumber}: folder=${!!folderUrl}, panorama=${!!panoramaUrl}`);
       return { data, propertyType, cached: false };
     } catch (error: any) {
       console.error(`[AthomeDataService] Failed to get athome data for ${propertyNumber}:`, error.message);
       return { data: [], propertyType, cached: false };
+    }
+  }
+  
+  /**
+   * スプレッドシートからパノラマURLを取得
+   * 
+   * @param propertyNumber 物件番号
+   * @param spreadsheetUrl スプレッドシートURL
+   * @returns パノラマURL（存在しない場合は空文字列）
+   */
+  private async getPanoramaUrlFromSpreadsheet(
+    propertyNumber: string,
+    spreadsheetUrl: string
+  ): Promise<string> {
+    try {
+      // スプレッドシートIDを抽出
+      const spreadsheetIdMatch = spreadsheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!spreadsheetIdMatch) {
+        console.log(`[AthomeDataService] Invalid spreadsheet URL for ${propertyNumber}`);
+        return '';
+      }
+      
+      const spreadsheetId = spreadsheetIdMatch[1];
+      
+      // GoogleSheetsClientを初期化
+      const sheetsClient = new GoogleSheetsClient({
+        spreadsheetId: spreadsheetId,
+        sheetName: 'athome', // デフォルトのシート名
+        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      });
+      
+      await sheetsClient.authenticate();
+      
+      // シート一覧を取得して「athome」シートを探す（前後の空白を考慮）
+      const { google } = require('googleapis');
+      const auth = sheetsClient['auth']; // privateプロパティにアクセス
+      const sheets = google.sheets({ version: 'v4', auth });
+      
+      const metadataResponse = await sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId,
+      });
+      
+      const sheetList = metadataResponse.data.sheets || [];
+      let athomeSheetName = 'athome'; // デフォルト
+      
+      // 「athome」を含むシート名を探す（前後の空白を考慮）
+      for (const sheet of sheetList) {
+        const sheetTitle = sheet.properties?.title || '';
+        if (sheetTitle.trim().toLowerCase() === 'athome') {
+          athomeSheetName = sheetTitle; // 実際のシート名を使用
+          console.log(`[AthomeDataService] Found athome sheet: "${athomeSheetName}" for ${propertyNumber}`);
+          break;
+        }
+      }
+      
+      // N1セルからパノラマURLを取得
+      const range = `${athomeSheetName}!N1`;
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: range,
+        valueRenderOption: 'UNFORMATTED_VALUE',
+      });
+      
+      const values = response.data.values;
+      
+      if (!values || values.length === 0 || values[0].length === 0) {
+        console.log(`[AthomeDataService] N1 cell is empty for ${propertyNumber}`);
+        return '';
+      }
+      
+      const panoramaUrl = String(values[0][0]).trim();
+      
+      if (panoramaUrl) {
+        console.log(`[AthomeDataService] Found panorama URL for ${propertyNumber}`);
+        return panoramaUrl;
+      }
+      
+      return '';
+      
+    } catch (error: any) {
+      console.error(`[AthomeDataService] Failed to get panorama URL for ${propertyNumber}:`, error.message);
+      return '';
     }
   }
   

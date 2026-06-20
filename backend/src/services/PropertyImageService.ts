@@ -2,6 +2,8 @@
  * PropertyImageService
  * 物件の格納先URL（storage_url）からGoogleドライブの画像を取得するサービス
  * 画像の削除機能も提供
+ * Last updated: 2026-01-24 - Force rebuild to clear Vercel cache v2
+ * PRODUCTION URL ONLY: https://property-site-frontend-kappa.vercel.app
  */
 
 import { GoogleDriveService, DriveFile } from './GoogleDriveService';
@@ -106,8 +108,8 @@ export class PropertyImageService {
   }
 
   /**
-   * "athome公開"または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
-   * 検索順序: athome公開 → atbb公開 → 親フォルダ
+   * "athome公開"、"athome作成"、または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
+   * 検索順序: athome公開 → athome作成 → atbb公開 → 親フォルダ
    * 2階層まで再帰的に検索（中間フォルダがある場合に対応）
    * 存在しない場合は元のフォルダIDを返す
    */
@@ -137,7 +139,16 @@ export class PropertyImageService {
         return athomeFolderId;
       }
       
-      // 2. 直下の"atbb公開"フォルダを検索（後方互換性）
+      // 2. 直下の"athome作成"フォルダを検索（新規追加）
+      const athomeSakuseiFolderId = await this.driveService.findFolderByName(parentFolderId, 'athome作成');
+      if (athomeSakuseiFolderId) {
+        const elapsedMs = Date.now() - startTime;
+        console.log(`✅ Found "athome作成" subfolder: ${athomeSakuseiFolderId} in parent: ${parentFolderId} (${elapsedMs}ms)`);
+        this.cacheFolderId(cacheKey, athomeSakuseiFolderId);
+        return athomeSakuseiFolderId;
+      }
+      
+      // 3. 直下の"atbb公開"フォルダを検索（後方互換性）
       const atbbFolderId = await this.driveService.findFolderByName(parentFolderId, 'atbb公開');
       if (atbbFolderId) {
         const elapsedMs = Date.now() - startTime;
@@ -146,7 +157,7 @@ export class PropertyImageService {
         return atbbFolderId;
       }
       
-      // 3. 中間フォルダがある場合に対応（2階層目まで検索）
+      // 4. 中間フォルダがある場合に対応（2階層目まで検索）
       console.log(`🔍 Searching for public folders in subfolders (2nd level)...`);
       const publicFolderId = await this.searchPublicFolderInSubfolders(parentFolderId);
       if (publicFolderId) {
@@ -156,7 +167,7 @@ export class PropertyImageService {
         return publicFolderId;
       }
       
-      // 4. 親フォルダを使用（フォールバック）
+      // 5. 親フォルダを使用（フォールバック）
       const elapsedMs = Date.now() - startTime;
       console.log(`📁 No public subfolder found in parent: ${parentFolderId}, using parent folder (${elapsedMs}ms)`);
       this.cacheFolderId(cacheKey, parentFolderId);
@@ -203,7 +214,7 @@ export class PropertyImageService {
   }
 
   /**
-   * サブフォルダ内の"athome公開"または"atbb公開"フォルダを検索（2階層目）
+   * サブフォルダ内の"athome公開"、"athome作成"、または"atbb公開"フォルダを検索（2階層目）
    * 例: 親フォルダ → 中間フォルダ → athome公開
    * 並列処理で高速化、タイムアウト付き
    */
@@ -231,7 +242,14 @@ export class PropertyImageService {
           return { type: 'athome', folderId: athomeFolderId };
         }
         
-        // atbb公開を次に検索
+        // athome作成を次に検索（新規追加）
+        const athomeSakuseiFolderId = await this.driveService.findFolderByName(subfolder.id, 'athome作成');
+        if (athomeSakuseiFolderId) {
+          console.log(`  ✅ Found "athome作成" in subfolder: ${subfolder.name}`);
+          return { type: 'athome_sakusei', folderId: athomeSakuseiFolderId };
+        }
+        
+        // atbb公開を最後に検索
         const atbbFolderId = await this.driveService.findFolderByName(subfolder.id, 'atbb公開');
         if (atbbFolderId) {
           console.log(`  ✅ Found "atbb公開" in subfolder: ${subfolder.name}`);
@@ -308,7 +326,9 @@ export class PropertyImageService {
 
     try {
       // Googleドライブから画像を取得
+      console.log(`[PropertyImageService] Fetching images from folder: ${targetFolderId}`);
       const driveFiles = await this.driveService.listImagesWithThumbnails(targetFolderId);
+      console.log(`[PropertyImageService] Found ${driveFiles.length} images`);
       
       // PropertyImage形式に変換
       const images = this.convertToPropertyImages(driveFiles);
@@ -322,7 +342,16 @@ export class PropertyImageService {
         cached: false,
       };
     } catch (error: any) {
-      console.error(`Error fetching images from folder ${targetFolderId}:`, error.message);
+      console.error(`❌ [PropertyImageService] Error fetching images from folder ${targetFolderId}:`, error.message);
+      console.error('❌ [PropertyImageService] Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        stack: error.stack,
+        response: error.response?.data,
+        errors: error.errors,
+      });
+      console.error('❌ [PropertyImageService] Full error:', JSON.stringify(error, null, 2));
       
       // エラー時は空の配列を返す（ユーザー体験を損なわない）
       return {
@@ -337,9 +366,10 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // ✅ Environment Contract準拠: BACKEND_URLを使用（NODE_ENV分岐禁止）
-    // フロントエンドとバックエンドは常に別オリジン（ローカルでも5173と3000）
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+    // ✅ 常に本番URLを使用（ローカル開発時のみlocalhost）
+    const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
+    
+    console.log(`[PropertyImageService] Using baseUrl: ${baseUrl}`);
     
     return driveFiles.map(file => ({
       id: file.id,
@@ -434,8 +464,8 @@ export class PropertyImageService {
     const cachedEntry = this.cache.get(cacheKey);
     if (cachedEntry && Date.now() < cachedEntry.expiresAt) {
       console.log(`[PropertyImageService] Cache hit for property ${propertyId}, folder ${targetFolderId}`);
-      // ✅ Environment Contract準拠: BACKEND_URLを使用
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+      // ✅ 常に本番URLを使用
+      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
       return cachedEntry.images.length > 0 
         ? [`${baseUrl}/api/public/images/${cachedEntry.images[0].id}/thumbnail`] 
         : [];
@@ -477,8 +507,8 @@ export class PropertyImageService {
         expiresAt: now + (5 * 60 * 1000), // 5分間
       });
       
-      // ✅ Environment Contract準拠: BACKEND_URLを使用
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+      // ✅ 常に本番URLを使用
+      const baseUrl = 'https://property-site-frontend-kappa.vercel.app';
       return [`${baseUrl}/api/public/images/${images[0].id}/thumbnail`];
     } catch (error: any) {
       console.error(`[PropertyImageService] Error fetching first image for property ${propertyId} from folder ${targetFolderId}:`, error.message);

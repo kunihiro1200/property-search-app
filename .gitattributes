@@ -1,0 +1,64 @@
+# Git属性ファイル - ファイルエンコーディングとEOL設定
+
+# 全てのテキストファイルをUTF-8として扱う
+* text=auto eol=lf
+
+# TypeScript/JavaScript ファイル
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# JSON ファイル
+*.json text eol=lf
+
+# Markdown ファイル
+*.md text eol=lf
+
+# 設定ファイル
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+.env* text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# HTML/CSS
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+
+# シェルスクリプト
+*.sh text eol=lf
+*.bash text eol=lf
+
+# バッチファイル（Windowsのみ）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# バイナリファイル
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+
+# 特定のファイルを強制的にUTF-8として扱う
+backend/api/index.ts text eol=lf working-tree-encoding=UTF-8
+frontend/src/**/*.ts text eol=lf working-tree-encoding=UTF-8
+frontend/src/**/*.tsx text eol=lf working-tree-encoding=UTF-8
+backend/src/**/*.ts text eol=lf working-tree-encoding=UTF-8

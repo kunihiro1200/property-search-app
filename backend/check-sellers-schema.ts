@@ -1,61 +1,103 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
 
 async function checkSellersSchema() {
-  console.log('🔍 sellersテーブルのスキーマを確認します...\n');
+  console.log('🔍 sellersテーブルのスキーマを確認中...\n');
 
-  try {
-    // 1. sellersテーブルの1件を取得してカラムを確認
-    console.log('1️⃣ sellersテーブルの最初の1件を取得:');
-    const { data: seller, error } = await supabase
-      .from('sellers')
-      .select('*')
-      .limit(1)
-      .single();
+  // 1件のレコードを取得してカラム名を確認
+  const { data, error } = await supabase
+    .from('sellers')
+    .select('*')
+    .limit(1);
 
-    if (error) {
-      console.error('❌ エラー:', error);
-    } else if (seller) {
-      console.log('✅ 取得成功');
-      console.log('\n📋 利用可能なカラム:');
-      const columns = Object.keys(seller).sort();
-      columns.forEach((col, index) => {
-        console.log(`  ${index + 1}. ${col}`);
-      });
-      
-      console.log('\n🔍 削除関連のカラムを確認:');
-      const deletionColumns = columns.filter(col => 
-        col.includes('delete') || col.includes('removed') || col.includes('archived')
-      );
-      if (deletionColumns.length > 0) {
-        console.log('  見つかった削除関連カラム:', deletionColumns.join(', '));
-      } else {
-        console.log('  ❌ 削除関連のカラムが見つかりません');
-      }
-    }
+  if (error) {
+    console.error('❌ エラー:', error);
+    return;
+  }
 
-    // 2. 総数を確認（deleted_atなしで）
-    console.log('\n2️⃣ 売主の総数を確認:');
-    const { count, error: countError } = await supabase
-      .from('sellers')
-      .select('*', { count: 'exact', head: true });
+  if (!data || data.length === 0) {
+    console.log('❌ sellersテーブルにデータがありません');
+    return;
+  }
 
-    if (countError) {
-      console.error('❌ エラー:', countError);
+  const columns = Object.keys(data[0]);
+  console.log(`📊 sellersテーブルのカラム数: ${columns.length}\n`);
+  console.log('📋 カラム一覧:');
+  columns.sort().forEach(column => {
+    console.log(`  - ${column}`);
+  });
+
+  // column-mapping.jsonで定義されているが、データベースに存在しないカラムを確認
+  const requiredColumns = [
+    'seller_number',
+    'name',
+    'address',
+    'phone_number',
+    'email',
+    'inquiry_site',
+    'property_type',
+    'property_address',
+    'land_area',
+    'building_area',
+    'build_year',
+    'structure',
+    'floor_plan',
+    'current_status',
+    'inquiry_year',
+    'inquiry_date',
+    'inquiry_detailed_datetime',
+    'valuation_amount_1',
+    'valuation_amount_2',
+    'valuation_amount_3',
+    'visit_acquisition_date',
+    'visit_date',
+    'visit_time',
+    'visit_assignee',
+    'visit_valuation_acquirer',
+    'valuation_assignee',
+    'phone_contact_person',
+    'preferred_contact_time',
+    'contact_method',
+    'status',
+    'comments',
+    'pinrich_status',
+    'unreachable_status',
+    'confidence_level',
+    'next_call_date',
+    'contract_year_month',
+    'competitor_name',
+    'competitor_name_and_reason',
+    'exclusive_other_decision_factor',
+    'visit_notes',
+    'valuation_method',
+  ];
+
+  console.log('\n🔍 column-mapping.jsonで定義されているカラムの存在確認:');
+  const missingColumns: string[] = [];
+  requiredColumns.forEach(column => {
+    if (columns.includes(column)) {
+      console.log(`  ✅ ${column}`);
     } else {
-      console.log(`✅ 総売主数: ${count}件`);
+      console.log(`  ❌ ${column} - データベースに存在しません`);
+      missingColumns.push(column);
     }
+  });
 
-  } catch (error) {
-    console.error('❌ エラーが発生しました:', error);
+  if (missingColumns.length > 0) {
+    console.log('\n⚠️ データベースに存在しないカラム:');
+    missingColumns.forEach(column => console.log(`  - ${column}`));
+    console.log('\nこれらのカラムを追加するマイグレーションが必要です。');
+  } else {
+    console.log('\n✅ 全てのカラムがデータベースに存在します');
   }
 }
 
-checkSellersSchema();
+checkSellersSchema().catch(console.error);

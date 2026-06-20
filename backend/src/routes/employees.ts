@@ -55,6 +55,42 @@ router.get('/active', async (req: Request, res: Response) => {
 });
 
 /**
+ * 有効なスタッフのイニシャル一覧を取得（電話担当プルダウン用）
+ * スタッフ管理スプレッドシートの「通常=TRUE」のスタッフのイニシャルを返す
+ */
+router.get('/active-initials', async (req: Request, res: Response) => {
+  try {
+    // スタッフ管理スプレッドシートから通常=TRUEのスタッフを取得
+    const { GoogleSheetsClient } = await import('../services/GoogleSheetsClient');
+    const sheetsClient = new GoogleSheetsClient(
+      process.env.STAFF_SPREADSHEET_ID || '19yAuVYQRm-_zhjYX7M7zjiGbnBibkG77Mpz93sN1xx',
+      'スタッフ'
+    );
+
+    await sheetsClient.initialize();
+    const rows = await sheetsClient.readAll();
+
+    // 通常=TRUEのスタッフのイニシャルを抽出
+    const activeInitials = rows
+      .filter((row: any) => row['通常'] === 'TRUE' || row['通常'] === true)
+      .map((row: any) => row['イニシャル'])
+      .filter((initial: string) => initial && initial.trim() !== '');
+
+    console.log(`Returning ${activeInitials.length} active staff initials`);
+    res.json({ initials: activeInitials });
+  } catch (error) {
+    console.error('Get active staff initials error:', error);
+    res.status(500).json({
+      error: {
+        code: 'GET_ACTIVE_INITIALS_ERROR',
+        message: 'Failed to get active staff initials',
+        retryable: true,
+      },
+    });
+  }
+});
+
+/**
  * 全従業員の一覧とカレンダー接続状態を取得
  */
 router.get('/', async (req: Request, res: Response) => {

@@ -226,18 +226,18 @@ export class InquiryService {
    * Map database record to InquiryInfo type
    */
   private mapToInquiryInfo(data: any): InquiryInfo {
-    return {
-      inquiryYear: data.inquiry_year,
-      inquiryDate: data.inquiry_date ? new Date(data.inquiry_date) : new Date(),
-      inquiryDetailedDateTime: data.inquiry_detailed_datetime
-        ? new Date(data.inquiry_detailed_datetime)
-        : undefined,
-      inquirySite: data.inquiry_site,
-      inquiryReason: data.inquiry_reason,
-      siteUrl: data.site_url,
-      numberOfCompanies: data.number_of_companies,
-    };
-  }
+  return {
+    inquiryYear: data.inquiry_year,
+    inquiryDate: data.inquiry_date,
+    inquiryDetailedDateTime: data.inquiry_detailed_datetime
+      ? new Date(data.inquiry_detailed_datetime)
+      : undefined,
+    inquirySite: data.inquiry_site,
+    inquiryReason: data.inquiry_reason,
+    siteUrl: data.site_url,
+    numberOfCompanies: data.number_of_companies,
+  };
+}
 }
 
 // Export singleton instance

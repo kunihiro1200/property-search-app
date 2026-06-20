@@ -1,25 +1,48 @@
-import dotenv from 'dotenv';
-import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
+import { google } from 'googleapis';
+import * as dotenv from 'dotenv';
 
-dotenv.config();
+// .envファイルを読み込む
+dotenv.config({ path: './backend/.env' });
 
 async function checkHeaders() {
-  const client = new GoogleSheetsClient({
-    spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
-    sheetName: '物件',
-    serviceAccountKeyPath: './google-service-account.json',
+  console.log('🔍 Checking property list spreadsheet headers...\n');
+
+  // Google Sheets APIクライアントを初期化
+  const auth = new google.auth.GoogleAuth({
+    keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
-  
-  await client.authenticate();
-  const headers = await client.getHeaders();
-  
-  console.log('Total headers:', headers.length);
-  console.log('\nFirst 30 headers:');
-  headers.slice(0, 30).forEach((h, i) => console.log(`${i + 1}. ${h}`));
-  
-  console.log('\nSearching for specific headers:');
-  console.log('お気に入り文言:', headers.includes('お気に入り文言') ? '✅' : '❌');
-  console.log('こちらの物件について:', headers.includes('こちらの物件について') ? '✅' : '❌');
+
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = process.env.PROPERTY_LISTING_SPREADSHEET_ID;
+
+  // ヘッダー行（1行目）を取得
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: '物件!1:1',
+  });
+
+  const headers = response.data.values?.[0] || [];
+
+  console.log('📋 Headers:');
+  headers.forEach((header, index) => {
+    const columnLetter = String.fromCharCode(65 + index); // A, B, C, ...
+    console.log(`  ${columnLetter}列: ${header || '（空）'}`);
+  });
+
+  console.log(`\n📊 Total columns: ${headers.length}`);
+
+  // storage_locationカラムを検索
+  const storageLocationIndex = headers.findIndex(h => 
+    h && (h.includes('格納先') || h.includes('storage') || h.includes('Storage'))
+  );
+
+  if (storageLocationIndex !== -1) {
+    const columnLetter = String.fromCharCode(65 + storageLocationIndex);
+    console.log(`\n✅ Found storage_location column: ${columnLetter}列 (${headers[storageLocationIndex]})`);
+  } else {
+    console.log('\n❌ storage_location column not found');
+  }
 }
 
 checkHeaders().catch(console.error);

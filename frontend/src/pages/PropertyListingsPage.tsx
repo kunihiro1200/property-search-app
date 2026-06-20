@@ -34,6 +34,7 @@ import BuyerIndicator from '../components/BuyerIndicator';
 import { InquiryResponseButton } from '../components/InquiryResponseButton';
 import PublicUrlCell from '../components/PublicUrlCell';
 import StatusBadge from '../components/StatusBadge';
+import PublicSiteButtons from '../components/PublicSiteButtons';
 import {
   PropertyListing,
   WorkTask,
@@ -348,7 +349,10 @@ export default function PropertyListingsPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>物件リスト</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Typography variant="h5" fontWeight="bold">物件リスト</Typography>
+        <PublicSiteButtons />
+      </Box>
       
       {/* ページナビゲーション */}
       <PageNavigation />

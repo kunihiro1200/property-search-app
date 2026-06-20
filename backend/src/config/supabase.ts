@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 
-dotenv.config();
+// Note: dotenv is not needed in Vercel - environment variables are automatically available
+// dotenv.config() is only needed for local development
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;

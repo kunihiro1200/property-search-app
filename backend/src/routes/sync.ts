@@ -575,6 +575,34 @@ router.post('/trigger', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/sync/trigger-async
+ * フル同期を非同期で実行（即座に200を返す）
+ * GitHub ActionsなどのCronジョブから呼び出す用途
+ * Vercelのタイムアウト制限を回避するため、バックグラウンドで実行
+ */
+router.post('/trigger-async', async (req: Request, res: Response) => {
+  // 即座に200を返す（タイムアウト回避）
+  res.json({
+    success: true,
+    message: 'Full sync started in background',
+    startedAt: new Date().toISOString(),
+  });
+
+  // バックグラウンドでフル同期を実行
+  (async () => {
+    try {
+      const { getEnhancedAutoSyncService } = await import('../services/EnhancedAutoSyncService');
+      const syncService = getEnhancedAutoSyncService();
+      await syncService.initialize();
+      const result = await syncService.runFullSync('manual');
+      console.log(`[trigger-async] Full sync completed: status=${result.status}, added=${result.additionResult.successfullyAdded}`);
+    } catch (error: any) {
+      console.error('[trigger-async] Full sync error:', error.message);
+    }
+  })();
+});
+
+/**
  * GET /api/sync/missing
  * 不足している売主を検出（同期はしない）
  */

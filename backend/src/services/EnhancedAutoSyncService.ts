@@ -52,6 +52,11 @@ export class EnhancedAutoSyncService {
   private propertySyncHandler: PropertySyncHandler;
   private isInitialized = false;
 
+  // スプレッドシートキャッシュ（Google Sheets APIクォータ対策）
+  private spreadsheetCache: any[] | null = null;
+  private spreadsheetCacheExpiry: number = 0;
+  private readonly SPREADSHEET_CACHE_TTL = 30 * 60 * 1000; // 30分間キャッシュ（Google Sheets APIクォータ対策）
+
   constructor(supabaseUrl: string, supabaseKey: string) {
     this.supabase = createClient(supabaseUrl, supabaseKey);
     this.columnMapper = new ColumnMapper();
@@ -80,6 +85,42 @@ export class EnhancedAutoSyncService {
       console.error('❌ EnhancedAutoSyncService initialization failed:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * スプレッドシートデータを取得（キャッシュ対応）
+   * Google Sheets APIクォータ対策のため、5分間キャッシュします
+   */
+  private async getSpreadsheetData(forceRefresh: boolean = false): Promise<any[]> {
+    const now = Date.now();
+
+    // 強制リフレッシュでない場合、キャッシュが有効なら使用
+    if (!forceRefresh && this.spreadsheetCache && now < this.spreadsheetCacheExpiry) {
+      console.log('📦 Using cached spreadsheet data (valid for', Math.round((this.spreadsheetCacheExpiry - now) / 1000), 'seconds)');
+      return this.spreadsheetCache;
+    }
+
+    // キャッシュが無効な場合は再取得
+    console.log('🔄 Fetching fresh spreadsheet data...');
+    if (!this.isInitialized || !this.sheetsClient) {
+      await this.initialize();
+    }
+
+    const allRows = await this.sheetsClient!.readAll();
+    this.spreadsheetCache = allRows;
+    this.spreadsheetCacheExpiry = now + this.SPREADSHEET_CACHE_TTL;
+    
+    console.log(`✅ Spreadsheet data cached (${allRows.length} rows, valid for 30 minutes)`);
+    return allRows;
+  }
+
+  /**
+   * スプレッドシートキャッシュをクリア
+   */
+  public clearSpreadsheetCache(): void {
+    this.spreadsheetCache = null;
+    this.spreadsheetCacheExpiry = 0;
+    console.log('🗑️ Spreadsheet cache cleared');
   }
 
   /**
@@ -151,8 +192,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting missing sellers (full comparison)...');
 
-    // スプレッドシートから全売主番号を取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全売主番号を取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetSellerNumbers = new Set<string>();
     
     for (const row of allRows) {
@@ -201,8 +242,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting deleted sellers (full comparison)...');
 
-    // スプレッドシートから全売主番号を取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全売主番号を取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetSellerNumbers = new Set<string>();
     
     for (const row of allRows) {
@@ -310,6 +351,7 @@ export class EnhancedAutoSyncService {
       };
 
       // 1. アクティブな契約をチェック
+      // 専任契約中・一般契約中の売主は削除をブロック
       const activeContractStatuses = ['専任契約中', '一般契約中'];
       if (activeContractStatuses.includes(seller.status)) {
         details.hasActiveContract = true;
@@ -321,43 +363,12 @@ export class EnhancedAutoSyncService {
         };
       }
 
-      // 2. 最近のアクティビティをチェック
-      const recentActivityDays = config.recentActivityDays;
-      const recentDate = new Date();
-      recentDate.setDate(recentDate.getDate() - recentActivityDays);
+      // 注意: 以下のチェックは削除済み（2026-01-31）
+      // - 最近のアクティビティチェック（7日以内の更新）
+      // - 将来の電話予定チェック
+      // スプレッドシートから削除されたら即座に削除同期する
 
-      // updated_atまたはnext_call_dateをチェック
-      const lastActivityDate = seller.updated_at ? new Date(seller.updated_at) : null;
-      const nextCallDate = seller.next_call_date ? new Date(seller.next_call_date) : null;
-
-      if (lastActivityDate && lastActivityDate > recentDate) {
-        details.hasRecentActivity = true;
-        details.lastActivityDate = lastActivityDate;
-        
-        if (config.strictValidation) {
-          return {
-            canDelete: false,
-            reason: `Recent activity within ${recentActivityDays} days`,
-            requiresManualReview: true,
-            details,
-          };
-        }
-      }
-
-      if (nextCallDate && nextCallDate > new Date()) {
-        details.hasRecentActivity = true;
-        
-        if (config.strictValidation) {
-          return {
-            canDelete: false,
-            reason: 'Future call scheduled',
-            requiresManualReview: true,
-            details,
-          };
-        }
-      }
-
-      // 3. アクティブな物件リストをチェック
+      // 2. アクティブな物件リストをチェック
       const { data: propertyListings, error: listingsError } = await this.supabase
         .from('property_listings')
         .select('id')
@@ -696,8 +707,8 @@ export class EnhancedAutoSyncService {
 
     console.log(`🔄 Syncing ${sellerNumbers.length} missing sellers...`);
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const rowsBySellerNumber = new Map<string, any>();
     for (const row of allRows) {
       const sellerNumber = row['売主番号'];
@@ -762,8 +773,8 @@ export class EnhancedAutoSyncService {
 
     console.log(`🔄 Updating ${sellerNumbers.length} existing sellers...`);
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const rowsBySellerNumber = new Map<string, any>();
     for (const row of allRows) {
       const sellerNumber = row['売主番号'];
@@ -825,8 +836,8 @@ export class EnhancedAutoSyncService {
 
     console.log('🔍 Detecting updated sellers (comparing data)...');
 
-    // スプレッドシートから全データを取得
-    const allRows = await this.sheetsClient!.readAll();
+    // スプレッドシートから全データを取得（キャッシュ対応）
+    const allRows = await this.getSpreadsheetData();
     const sheetDataBySellerNumber = new Map<string, any>();
     
     for (const row of allRows) {
@@ -847,7 +858,7 @@ export class EnhancedAutoSyncService {
     while (hasMore) {
       const { data: dbSellers, error } = await this.supabase
         .from('sellers')
-        .select('seller_number, status, contract_year_month, visit_assignee, updated_at')
+        .select('seller_number, status, contract_year_month, visit_assignee, phone_contact_person, preferred_contact_time, contact_method, updated_at')
         .range(offset, offset + pageSize - 1);
 
       if (error) {
@@ -871,6 +882,10 @@ export class EnhancedAutoSyncService {
           const sheetContractYearMonth = sheetRow['契約年月 他決は分かった時点'];
           const sheetVisitAssignee = sheetRow['営担'];
           const sheetStatus = sheetRow['状況（当社）'];
+          // コミュニケーションフィールドを追加
+          const sheetPhoneContactPerson = sheetRow['電話担当（任意）'];
+          const sheetPreferredContactTime = sheetRow['連絡取りやすい日、時間帯'];
+          const sheetContactMethod = sheetRow['連絡方法'];
 
           // データが異なる場合は更新対象
           let needsUpdate = false;
@@ -894,6 +909,28 @@ export class EnhancedAutoSyncService {
 
           // statusの比較
           if (sheetStatus && sheetStatus !== dbSeller.status) {
+            needsUpdate = true;
+          }
+
+          // コミュニケーションフィールドの比較
+          // phone_contact_personの比較
+          const dbPhoneContact = dbSeller.phone_contact_person || '';
+          const sheetPhoneContact = sheetPhoneContactPerson || '';
+          if (sheetPhoneContact !== dbPhoneContact) {
+            needsUpdate = true;
+          }
+
+          // preferred_contact_timeの比較
+          const dbPreferredTime = dbSeller.preferred_contact_time || '';
+          const sheetPreferredTime = sheetPreferredContactTime || '';
+          if (sheetPreferredTime !== dbPreferredTime) {
+            needsUpdate = true;
+          }
+
+          // contact_methodの比較
+          const dbContactMethod = dbSeller.contact_method || '';
+          const sheetContact = sheetContactMethod || '';
+          if (sheetContact !== dbContactMethod) {
             needsUpdate = true;
           }
 
@@ -1018,12 +1055,27 @@ export class EnhancedAutoSyncService {
   }
 
   /**
+   * 不通フラグをbooleanに変換
+   * スプレッドシートの「不通」カラムの値:
+   * - 空欄 → false
+   * - 「通電OK」 → false
+   * - その他の値（例: 「不通」） → true
+   */
+  private convertIsUnreachable(value: any): boolean {
+    if (!value || value === '' || String(value).trim() === '' || String(value).trim() === '通電OK') {
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * 単一の売主を更新
    */
   private async updateSingleSeller(sellerNumber: string, row: any): Promise<void> {
     const mappedData = this.columnMapper.mapToDatabase(row);
     
     // 査定額を取得（手入力優先、なければ自動計算）
+    // 🚨 重要: 種別（土地/戸建て/マンション）に関係なく、手動入力査定額を最優先で使用
     const valuation1 = row['査定額1'] || row['査定額1（自動計算）v'];
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
@@ -1039,6 +1091,22 @@ export class EnhancedAutoSyncService {
     const visitValuationAcquirer = row['訪問査定取得者'];
     const visitAssignee = row['営担'];
 
+    // 物件関連フィールドを取得
+    const propertyAddress = row['物件所在地'];
+    let propertyType = row['種別'];
+    if (propertyType) {
+      const typeStr = String(propertyType).trim();
+      const typeMapping: Record<string, string> = {
+        '土': '土地', '戸': '戸建', 'マ': 'マンション', '事': '事業用',
+      };
+      propertyType = typeMapping[typeStr] || typeStr;
+    }
+    const landArea = row['土（㎡）'];
+    const buildingArea = row['建（㎡）'];
+    const buildYear = row['築年'];
+    const structure = row['構造'];
+    const floorPlan = row['間取り'];
+
     const updateData: any = {
       name: mappedData.name ? encrypt(mappedData.name) : null,
       address: mappedData.address ? encrypt(mappedData.address) : null,
@@ -1046,8 +1114,36 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
+      pinrich_status: mappedData.pinrich_status || null,
+      is_unreachable: this.convertIsUnreachable(row['不通']),
       updated_at: new Date().toISOString(),
     };
+
+    // 物件関連フィールドを追加
+    if (propertyAddress) {
+      updateData.property_address = String(propertyAddress);
+    }
+    if (propertyType) {
+      updateData.property_type = String(propertyType);
+    }
+    const parsedLandArea = this.parseNumeric(landArea);
+    if (parsedLandArea !== null) {
+      updateData.land_area = parsedLandArea;
+    }
+    const parsedBuildingArea = this.parseNumeric(buildingArea);
+    if (parsedBuildingArea !== null) {
+      updateData.building_area = parsedBuildingArea;
+    }
+    const parsedBuildYear = this.parseNumeric(buildYear);
+    if (parsedBuildYear !== null) {
+      updateData.build_year = parsedBuildYear;
+    }
+    if (structure) {
+      updateData.structure = String(structure);
+    }
+    if (floorPlan) {
+      updateData.floor_plan = String(floorPlan);
+    }
 
     // 反響関連フィールドを追加
     if (inquiryYear) {
@@ -1072,6 +1168,34 @@ export class EnhancedAutoSyncService {
     }
     if (visitAssignee) {
       updateData.visit_assignee = String(visitAssignee);
+    }
+
+    // コミュニケーションフィールドを追加
+    const phoneContactPerson = row['電話担当（任意）'];
+    const preferredContactTime = row['連絡取りやすい日、時間帯'];
+    const contactMethod = row['連絡方法'];
+    
+    if (phoneContactPerson) {
+      updateData.phone_contact_person = String(phoneContactPerson);
+    }
+    if (preferredContactTime) {
+      updateData.preferred_contact_time = String(preferredContactTime);
+    }
+    if (contactMethod) {
+      updateData.contact_method = String(contactMethod);
+    }
+
+    // 査定方法を追加
+    const valuationMethod = row['査定方法'];
+    if (valuationMethod) {
+      updateData.valuation_method = String(valuationMethod);
+    }
+
+    // I列「査定額」（テキスト形式）を追加
+    // 例: "1900～2200万円", "2000万円前後"
+    const valuationText = row['査定額'];
+    if (valuationText) {
+      updateData.valuation_text = String(valuationText);
     }
 
     // 契約年月を追加
@@ -1135,6 +1259,7 @@ export class EnhancedAutoSyncService {
     const mappedData = this.columnMapper.mapToDatabase(row);
     
     // 査定額を取得（手入力優先、なければ自動計算）
+    // 🚨 重要: 種別（土地/戸建て/マンション）に関係なく、手動入力査定額を最優先で使用
     const valuation1 = row['査定額1'] || row['査定額1（自動計算）v'];
     const valuation2 = row['査定額2'] || row['査定額2（自動計算）v'];
     const valuation3 = row['査定額3'] || row['査定額3（自動計算）v'];
@@ -1150,6 +1275,22 @@ export class EnhancedAutoSyncService {
     const visitValuationAcquirer = row['訪問査定取得者'];
     const visitAssignee = row['営担'];
 
+    // 物件関連フィールドを取得
+    const propertyAddress = row['物件所在地'];
+    let propertyType = row['種別'];
+    if (propertyType) {
+      const typeStr = String(propertyType).trim();
+      const typeMapping: Record<string, string> = {
+        '土': '土地', '戸': '戸建', 'マ': 'マンション', '事': '事業用',
+      };
+      propertyType = typeMapping[typeStr] || typeStr;
+    }
+    const landArea = row['土（㎡）'];
+    const buildingArea = row['建（㎡）'];
+    const buildYear = row['築年'];
+    const structure = row['構造'];
+    const floorPlan = row['間取り'];
+
     const encryptedData: any = {
       seller_number: sellerNumber,
       name: mappedData.name ? encrypt(mappedData.name) : null,
@@ -1158,7 +1299,35 @@ export class EnhancedAutoSyncService {
       email: mappedData.email ? encrypt(mappedData.email) : null,
       status: mappedData.status || '追客中',
       next_call_date: mappedData.next_call_date || null,
+      pinrich_status: mappedData.pinrich_status || null,
+      is_unreachable: this.convertIsUnreachable(row['不通']),
     };
+
+    // 物件関連フィールドを追加
+    if (propertyAddress) {
+      encryptedData.property_address = String(propertyAddress);
+    }
+    if (propertyType) {
+      encryptedData.property_type = String(propertyType);
+    }
+    const parsedLandArea = this.parseNumeric(landArea);
+    if (parsedLandArea !== null) {
+      encryptedData.land_area = parsedLandArea;
+    }
+    const parsedBuildingArea = this.parseNumeric(buildingArea);
+    if (parsedBuildingArea !== null) {
+      encryptedData.building_area = parsedBuildingArea;
+    }
+    const parsedBuildYear = this.parseNumeric(buildYear);
+    if (parsedBuildYear !== null) {
+      encryptedData.build_year = parsedBuildYear;
+    }
+    if (structure) {
+      encryptedData.structure = String(structure);
+    }
+    if (floorPlan) {
+      encryptedData.floor_plan = String(floorPlan);
+    }
 
     // 反響関連フィールドを追加
     if (inquiryYear) {
@@ -1183,6 +1352,34 @@ export class EnhancedAutoSyncService {
     }
     if (visitAssignee) {
       encryptedData.visit_assignee = String(visitAssignee);
+    }
+
+    // コミュニケーションフィールドを追加
+    const phoneContactPerson = row['電話担当（任意）'];
+    const preferredContactTime = row['連絡取りやすい日、時間帯'];
+    const contactMethod = row['連絡方法'];
+    
+    if (phoneContactPerson) {
+      encryptedData.phone_contact_person = String(phoneContactPerson);
+    }
+    if (preferredContactTime) {
+      encryptedData.preferred_contact_time = String(preferredContactTime);
+    }
+    if (contactMethod) {
+      encryptedData.contact_method = String(contactMethod);
+    }
+
+    // 査定方法を追加
+    const valuationMethod = row['査定方法'];
+    if (valuationMethod) {
+      encryptedData.valuation_method = String(valuationMethod);
+    }
+
+    // I列「査定額」（テキスト形式）を追加
+    // 例: "1900～2200万円", "2000万円前後"
+    const valuationText = row['査定額'];
+    if (valuationText) {
+      encryptedData.valuation_text = String(valuationText);
     }
 
     // 契約年月を追加
@@ -1438,19 +1635,393 @@ export class EnhancedAutoSyncService {
   }
 
   /**
+   * Phase 4.7: property_details同期を実行
+   * property_listingsに存在するがproperty_detailsに存在しない物件を検出して同期
+   */
+  /**
+   * Phase 4.8: スプレッドシートから削除された物件を非表示にする同期
+   * - DBにあってスプレッドシートにない物件 → is_hidden = true
+   * - スプレッドシートに再登録された物件（is_hidden=true） → is_hidden = false
+   */
+  async syncHiddenPropertyListings(): Promise<{
+    success: boolean;
+    hidden: number;
+    restored: number;
+    failed: number;
+    duration_ms: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      console.log('🙈 Starting hidden property listings sync...');
+
+      // 1. 物件リストスプレッドシートから全物件番号を取得
+      const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+      const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
+      const PROPERTY_LIST_SHEET_NAME = '物件';
+
+      const sheetsConfig = {
+        spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
+        sheetName: PROPERTY_LIST_SHEET_NAME,
+        serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+      };
+
+      const sheetsClient = new GoogleSheetsClient(sheetsConfig);
+      await sheetsClient.authenticate();
+      const spreadsheetData = await sheetsClient.readAll();
+
+      const spreadsheetPropertyNumbers = new Set<string>();
+      for (const row of spreadsheetData) {
+        const propertyNumber = String(row['物件番号'] || '').trim();
+        if (propertyNumber) {
+          spreadsheetPropertyNumbers.add(propertyNumber);
+        }
+      }
+
+      console.log(`📊 Spreadsheet properties: ${spreadsheetPropertyNumbers.size}`);
+
+      // 2. DBの property_listings から全物件番号と is_hidden フラグを取得（ページネーション対応）
+      const dbProperties: Array<{ property_number: string; is_hidden: boolean }> = [];
+      const pageSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await this.supabase
+          .from('property_listings')
+          .select('property_number, is_hidden')
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          throw new Error(`Failed to read property_listings: ${error.message}`);
+        }
+
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          for (const property of data) {
+            if (property.property_number) {
+              dbProperties.push({
+                property_number: property.property_number,
+                is_hidden: property.is_hidden ?? false,
+              });
+            }
+          }
+          offset += pageSize;
+          if (data.length < pageSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      console.log(`📊 Database properties: ${dbProperties.length}`);
+
+      // 3. DBにあってスプレッドシートにない物件 → is_hidden = true
+      const toHide = dbProperties
+        .filter(p => !spreadsheetPropertyNumbers.has(p.property_number) && !p.is_hidden)
+        .map(p => p.property_number);
+
+      // 4. スプレッドシートに再登録された物件（is_hidden=true） → is_hidden = false
+      const toRestore = dbProperties
+        .filter(p => spreadsheetPropertyNumbers.has(p.property_number) && p.is_hidden)
+        .map(p => p.property_number);
+
+      console.log(`🙈 Properties to hide: ${toHide.length}`);
+      console.log(`👁️  Properties to restore: ${toRestore.length}`);
+
+      let hidden = 0;
+      let restored = 0;
+      let failed = 0;
+
+      // 非表示にする
+      for (const propertyNumber of toHide) {
+        try {
+          const { error } = await this.supabase
+            .from('property_listings')
+            .update({ is_hidden: true })
+            .eq('property_number', propertyNumber);
+
+          if (error) {
+            console.error(`❌ Failed to hide ${propertyNumber}: ${error.message}`);
+            failed++;
+          } else {
+            console.log(`🙈 Hidden: ${propertyNumber}`);
+            hidden++;
+          }
+        } catch (err: any) {
+          console.error(`❌ ${propertyNumber}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      // 再表示する
+      for (const propertyNumber of toRestore) {
+        try {
+          const { error } = await this.supabase
+            .from('property_listings')
+            .update({ is_hidden: false })
+            .eq('property_number', propertyNumber);
+
+          if (error) {
+            console.error(`❌ Failed to restore ${propertyNumber}: ${error.message}`);
+            failed++;
+          } else {
+            console.log(`👁️  Restored: ${propertyNumber}`);
+            restored++;
+          }
+        } catch (err: any) {
+          console.error(`❌ ${propertyNumber}: ${err.message}`);
+          failed++;
+        }
+      }
+
+      const duration_ms = Date.now() - startTime;
+      console.log(`✅ Hidden property sync completed: ${hidden} hidden, ${restored} restored, ${failed} failed`);
+
+      return { success: failed === 0, hidden, restored, failed, duration_ms };
+
+    } catch (error: any) {
+      const duration_ms = Date.now() - startTime;
+      console.error('❌ Hidden property sync failed:', error.message);
+      return { success: false, hidden: 0, restored: 0, failed: 1, duration_ms };
+    }
+  }
+
+  async syncMissingPropertyDetails(): Promise<{
+    success: boolean;
+    synced: number;
+    failed: number;
+    duration_ms: number;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      console.log('📝 Starting property details sync...');
+
+      // 1. property_listingsから全物件番号を取得
+      const propertyListingsNumbers = new Set<string>();
+      const pageSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: properties, error } = await this.supabase
+          .from('property_listings')
+          .select('property_number')
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          throw new Error(`Failed to read property_listings: ${error.message}`);
+        }
+
+        if (!properties || properties.length === 0) {
+          hasMore = false;
+        } else {
+          for (const property of properties) {
+            if (property.property_number) {
+              propertyListingsNumbers.add(property.property_number);
+            }
+          }
+          offset += pageSize;
+          
+          if (properties.length < pageSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      console.log(`📊 Total properties in property_listings: ${propertyListingsNumbers.size}`);
+
+      // 2. property_detailsから全物件番号を取得（コメントデータが空かどうかも確認）
+      const propertyDetailsNumbers = new Set<string>();
+      const emptyCommentsPropertyNumbers = new Set<string>(); // コメントデータが空の物件
+      offset = 0;
+      hasMore = true;
+
+      while (hasMore) {
+        const { data: details, error } = await this.supabase
+          .from('property_details')
+          .select('property_number, recommended_comments')
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          throw new Error(`Failed to read property_details: ${error.message}`);
+        }
+
+        if (!details || details.length === 0) {
+          hasMore = false;
+        } else {
+          for (const detail of details) {
+            if (detail.property_number) {
+              propertyDetailsNumbers.add(detail.property_number);
+              
+              // recommended_commentsが空または未設定の場合、更新対象に追加
+              const hasComments = detail.recommended_comments && 
+                                  Array.isArray(detail.recommended_comments) && 
+                                  detail.recommended_comments.length > 0;
+              if (!hasComments) {
+                emptyCommentsPropertyNumbers.add(detail.property_number);
+              }
+            }
+          }
+          offset += pageSize;
+          
+          if (details.length < pageSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      console.log(`📊 Total properties in property_details: ${propertyDetailsNumbers.size}`);
+      console.log(`📊 Properties with empty comments: ${emptyCommentsPropertyNumbers.size}`);
+
+      // 3. 差分を計算（property_listingsにあってproperty_detailsにないもの + コメントが空のもの）
+      const missingPropertyNumbers: string[] = [];
+      for (const propertyNumber of propertyListingsNumbers) {
+        // property_detailsに存在しない、またはコメントデータが空の場合は同期対象
+        if (!propertyDetailsNumbers.has(propertyNumber) || emptyCommentsPropertyNumbers.has(propertyNumber)) {
+          missingPropertyNumbers.push(propertyNumber);
+        }
+      }
+
+      console.log(`🆕 Properties to sync (missing or empty comments): ${missingPropertyNumbers.length}`);
+
+      if (missingPropertyNumbers.length === 0) {
+        const duration_ms = Date.now() - startTime;
+        return {
+          success: true,
+          synced: 0,
+          failed: 0,
+          duration_ms
+        };
+      }
+
+      // 4. PropertyListingSyncServiceを使用して同期
+      const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
+      const syncService = new PropertyListingSyncService();
+
+      let synced = 0;
+      let failed = 0;
+
+      // バッチ処理（10件ずつ）
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < missingPropertyNumbers.length; i += BATCH_SIZE) {
+        const batch = missingPropertyNumbers.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(missingPropertyNumbers.length / BATCH_SIZE);
+
+        console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} properties)...`);
+
+        for (const propertyNumber of batch) {
+          try {
+            // 物件情報を取得（物件種別が必要）
+            const { data: property, error: propertyError } = await this.supabase
+              .from('property_listings')
+              .select('property_type')
+              .eq('property_number', propertyNumber)
+              .single();
+
+            if (propertyError || !property) {
+              console.error(`❌ ${propertyNumber}: Property not found in property_listings`);
+              failed++;
+              continue;
+            }
+
+            // AthomeSheetSyncServiceを使用してスプレッドシートからコメントデータを取得
+            const { AthomeSheetSyncService } = await import('./AthomeSheetSyncService');
+            const athomeSheetSyncService = new AthomeSheetSyncService();
+            
+            const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+              propertyNumber,
+              property.property_type as 'land' | 'detached_house' | 'apartment'
+            );
+
+            // PropertyServiceを使用して物件リストスプレッドシートのBQ列（●内覧前伝達事項）からproperty_aboutを取得
+            const { PropertyService } = await import('./PropertyService');
+            const propertyService = new PropertyService();
+            
+            try {
+              const propertyAbout = await propertyService.getPropertyAbout(propertyNumber);
+              
+              if (propertyAbout) {
+                // property_detailsテーブルにproperty_aboutを保存
+                const { error: updateError } = await this.supabase
+                  .from('property_details')
+                  .update({ property_about: propertyAbout })
+                  .eq('property_number', propertyNumber);
+                
+                if (updateError) {
+                  console.warn(`⚠️ ${propertyNumber}: Failed to update property_about: ${updateError.message}`);
+                } else {
+                  console.log(`✅ ${propertyNumber}: Synced property_about from BQ column`);
+                }
+              }
+            } catch (aboutError: any) {
+              console.warn(`⚠️ ${propertyNumber}: Failed to get property_about: ${aboutError.message}`);
+            }
+
+            if (syncSuccess) {
+              console.log(`✅ ${propertyNumber}: Synced comments from spreadsheet`);
+              synced++;
+            } else {
+              console.error(`❌ ${propertyNumber}: Failed to sync comments from spreadsheet`);
+              failed++;
+            }
+          } catch (error: any) {
+            console.error(`❌ ${propertyNumber}: ${error.message}`);
+            failed++;
+          }
+        }
+
+        // バッチ間に少し待機
+        if (i + BATCH_SIZE < missingPropertyNumbers.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      const duration_ms = Date.now() - startTime;
+
+      console.log(`✅ Property details sync completed: ${synced} synced, ${failed} failed`);
+
+      return {
+        success: failed === 0,
+        synced,
+        failed,
+        duration_ms
+      };
+
+    } catch (error: any) {
+      const duration_ms = Date.now() - startTime;
+      console.error('❌ Property details sync failed:', error.message);
+
+      return {
+        success: false,
+        synced: 0,
+        failed: 1,
+        duration_ms
+      };
+    }
+  }
+
+  /**
    * フル同期を実行
    * detectMissingSellersとsyncMissingSellersを組み合わせて実行
    * 更新同期と削除同期も含む
    */
-  async runFullSync(triggeredBy: 'scheduled' | 'manual' = 'scheduled'): Promise<CompleteSyncResult> {
+  async runFullSync(triggeredBy: 'scheduled' | 'manual' = 'scheduled', clearCache: boolean = false): Promise<CompleteSyncResult> {
     const startTime = new Date();
     console.log(`🔄 Starting full sync (triggered by: ${triggeredBy})`);
     
+    // 手動トリガーまたは明示的にキャッシュクリアが指定された場合、キャッシュをクリア
+    if (clearCache || triggeredBy === 'manual') {
+      this.clearSpreadsheetCache();
+    }
+    
     try {
-      // Phase 1: 追加同期 - 不足売主を検出して追加
-      console.log('📥 Phase 1: Seller Addition Sync');
-      const missingSellers = await this.detectMissingSellers();
-      
+      // Phase 1〜3: 売主同期（SELLER_SYNC_ENABLED=false でスキップ）
+      // ユーザー要件: 売主リスト同期は不要のため、デフォルトで無効化
+      const isSellerSyncEnabled = process.env.SELLER_SYNC_ENABLED === 'true';
+
       let additionResult = {
         totalProcessed: 0,
         successfullyAdded: 0,
@@ -1458,32 +2029,6 @@ export class EnhancedAutoSyncService {
         failed: 0,
       };
 
-      if (missingSellers.length > 0) {
-        const syncResult = await this.syncMissingSellers(missingSellers);
-        additionResult = {
-          totalProcessed: missingSellers.length,
-          successfullyAdded: syncResult.newSellersCount,
-          successfullyUpdated: 0,
-          failed: syncResult.errors.length,
-        };
-      } else {
-        console.log('✅ No missing sellers to sync');
-      }
-
-      // Phase 2: 更新同期 - 既存売主のデータを更新
-      console.log('\n🔄 Phase 2: Seller Update Sync');
-      const updatedSellers = await this.detectUpdatedSellers();
-      
-      if (updatedSellers.length > 0) {
-        const updateResult = await this.syncUpdatedSellers(updatedSellers);
-        additionResult.totalProcessed += updatedSellers.length;
-        additionResult.successfullyUpdated = updateResult.updatedSellersCount;
-        additionResult.failed += updateResult.errors.length;
-      } else {
-        console.log('✅ No sellers to update');
-      }
-
-      // Phase 3: 削除同期 - 削除された売主を検出してソフトデリート
       let deletionResult: DeletionSyncResult = {
         totalDetected: 0,
         successfullyDeleted: 0,
@@ -1497,75 +2042,193 @@ export class EnhancedAutoSyncService {
         durationMs: 0,
       };
 
-      if (this.isDeletionSyncEnabled()) {
-        console.log('\n🗑️  Phase 3: Seller Deletion Sync');
-        const deletedSellers = await this.detectDeletedSellers();
-        
-        if (deletedSellers.length > 0) {
-          deletionResult = await this.syncDeletedSellers(deletedSellers);
+      if (isSellerSyncEnabled) {
+        // Phase 1: 追加同期 - 不足売主を検出して追加
+        console.log('📥 Phase 1: Seller Addition Sync');
+        const missingSellers = await this.detectMissingSellers();
+
+        if (missingSellers.length > 0) {
+          const syncResult = await this.syncMissingSellers(missingSellers);
+          additionResult = {
+            totalProcessed: missingSellers.length,
+            successfullyAdded: syncResult.newSellersCount,
+            successfullyUpdated: 0,
+            failed: syncResult.errors.length,
+          };
         } else {
-          console.log('✅ No deleted sellers to sync');
+          console.log('✅ No missing sellers to sync');
+        }
+
+        // Phase 2: 更新同期 - 既存売主のデータを更新
+        console.log('\n🔄 Phase 2: Seller Update Sync');
+        const updatedSellers = await this.detectUpdatedSellers();
+
+        if (updatedSellers.length > 0) {
+          const updateResult = await this.syncUpdatedSellers(updatedSellers);
+          additionResult.totalProcessed += updatedSellers.length;
+          additionResult.successfullyUpdated = updateResult.updatedSellersCount;
+          additionResult.failed += updateResult.errors.length;
+        } else {
+          console.log('✅ No sellers to update');
+        }
+
+        // Phase 3: 削除同期 - 削除された売主を検出してソフトデリート
+        if (this.isDeletionSyncEnabled()) {
+          console.log('\n🗑️  Phase 3: Seller Deletion Sync');
+          const deletedSellers = await this.detectDeletedSellers();
+
+          if (deletedSellers.length > 0) {
+            deletionResult = await this.syncDeletedSellers(deletedSellers);
+          } else {
+            console.log('✅ No deleted sellers to sync');
+          }
+        } else {
+          console.log('\n⏭️  Phase 3: Seller Deletion Sync (Disabled)');
         }
       } else {
-        console.log('\n⏭️  Phase 3: Seller Deletion Sync (Disabled)');
+        console.log('⏭️  Phase 1-3: Seller Sync skipped (SELLER_SYNC_ENABLED is not "true")');
       }
+
 
       // Phase 4: 作業タスク同期（既存）
       console.log('\n📋 Phase 4: Work Task Sync');
       // Note: Work task sync is handled elsewhere
       console.log('✅ Work task sync (handled by existing service)');
 
-      // Phase 4.5: 物件リスト更新同期（新規追加）
+      // Phase 4.5と4.6: 共有GoogleSheetsClientを1回だけ作成してAPIリクエスト数を削減
+      // （クォータ超過対策: 各フェーズが独立してクライアントを作成するとAPIリクエストが増加する）
       console.log('\n🏢 Phase 4.5: Property Listing Update Sync');
       let propertyListingUpdateResult = {
         updated: 0,
         failed: 0,
         duration_ms: 0,
       };
-      
-      try {
-        const plResult = await this.syncPropertyListingUpdates();
-        propertyListingUpdateResult = {
-          updated: plResult.updated,
-          failed: plResult.failed,
-          duration_ms: plResult.duration_ms,
-        };
-        
-        if (plResult.updated > 0) {
-          console.log(`✅ Property listing update sync: ${plResult.updated} updated`);
-        } else {
-          console.log('✅ No property listings to update');
-        }
-      } catch (error: any) {
-        console.error('⚠️  Property listing update sync error:', error.message);
-        propertyListingUpdateResult.failed = 1;
-        // エラーでも次のフェーズに進む
-      }
 
-      // Phase 4.6: 新規物件追加同期（新規追加）
       console.log('\n🆕 Phase 4.6: New Property Addition Sync');
       let newPropertyAdditionResult = {
         added: 0,
         failed: 0,
         duration_ms: 0,
       };
+
+      try {
+        const { GoogleSheetsClient } = await import('./GoogleSheetsClient');
+        const { PropertyListingSyncService } = await import('./PropertyListingSyncService');
+
+        const PROPERTY_LIST_SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
+        const PROPERTY_LIST_SHEET_NAME = '物件';
+
+        // Phase 4.5と4.6で共有するクライアントを1回だけ作成
+        const sharedSheetsClient = new GoogleSheetsClient({
+          spreadsheetId: PROPERTY_LIST_SPREADSHEET_ID,
+          sheetName: PROPERTY_LIST_SHEET_NAME,
+          serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
+        });
+        await sharedSheetsClient.authenticate();
+        const sharedSyncService = new PropertyListingSyncService(sharedSheetsClient);
+
+        // Phase 4.5: 共有サービスを使用して物件リスト更新同期
+        try {
+          const plStartTime = Date.now();
+          const plResult = await sharedSyncService.syncUpdatedPropertyListings();
+          propertyListingUpdateResult = {
+            updated: plResult.updated,
+            failed: plResult.failed,
+            duration_ms: Date.now() - plStartTime,
+          };
+
+          if (plResult.updated > 0) {
+            console.log(`✅ Property listing update sync: ${plResult.updated} updated`);
+          } else {
+            console.log('✅ No property listings to update');
+          }
+        } catch (error: any) {
+          console.error('⚠️  Property listing update sync error:', error.message);
+          propertyListingUpdateResult.failed = 1;
+          // エラーでも次のフェーズに進む
+        }
+
+        // Phase 4.6: 同じ共有サービスを使用して新規物件追加同期（新しいクライアントを作成しない）
+        try {
+          const npStartTime = Date.now();
+          const newPropResult = await sharedSyncService.syncNewProperties();
+          newPropertyAdditionResult = {
+            added: newPropResult.added,
+            failed: newPropResult.failed,
+            duration_ms: Date.now() - npStartTime,
+          };
+
+          if (newPropResult.added > 0) {
+            console.log(`✅ New property addition sync: ${newPropResult.added} added`);
+          } else {
+            console.log('✅ No new properties to add');
+          }
+        } catch (error: any) {
+          console.error('⚠️  New property addition sync error:', error.message);
+          newPropertyAdditionResult.failed = 1;
+          // エラーでも処理を継続
+        }
+
+      } catch (error: any) {
+        console.error('⚠️  Shared GoogleSheetsClient initialization failed:', error.message);
+        propertyListingUpdateResult.failed = 1;
+        newPropertyAdditionResult.failed = 1;
+        // エラーでも処理を継続
+      }
+
+      // Phase 4.7: property_details同期（新規追加）
+      console.log('\n📝 Phase 4.7: Property Details Sync');
+      let propertyDetailsSyncResult = {
+        synced: 0,
+        failed: 0,
+        duration_ms: 0,
+      };
       
       try {
-        const newPropResult = await this.syncNewPropertyAddition();
-        newPropertyAdditionResult = {
-          added: newPropResult.added,
-          failed: newPropResult.failed,
-          duration_ms: newPropResult.duration_ms,
+        const pdResult = await this.syncMissingPropertyDetails();
+        propertyDetailsSyncResult = {
+          synced: pdResult.synced,
+          failed: pdResult.failed,
+          duration_ms: pdResult.duration_ms,
         };
         
-        if (newPropResult.added > 0) {
-          console.log(`✅ New property addition sync: ${newPropResult.added} added`);
+        if (pdResult.synced > 0) {
+          console.log(`✅ Property details sync: ${pdResult.synced} synced`);
         } else {
-          console.log('✅ No new properties to add');
+          console.log('✅ No missing property details to sync');
         }
       } catch (error: any) {
-        console.error('⚠️  New property addition sync error:', error.message);
-        newPropertyAdditionResult.failed = 1;
+        console.error('⚠️  Property details sync error:', error.message);
+        propertyDetailsSyncResult.failed = 1;
+        // エラーでも処理を継続
+      }
+
+      // Phase 4.8: スプレッドシートから削除された物件の非表示同期
+      console.log('\n🙈 Phase 4.8: Hidden Property Listings Sync');
+      let hiddenPropertySyncResult = {
+        hidden: 0,
+        restored: 0,
+        failed: 0,
+        duration_ms: 0,
+      };
+
+      try {
+        const hpResult = await this.syncHiddenPropertyListings();
+        hiddenPropertySyncResult = {
+          hidden: hpResult.hidden,
+          restored: hpResult.restored,
+          failed: hpResult.failed,
+          duration_ms: hpResult.duration_ms,
+        };
+
+        if (hpResult.hidden > 0 || hpResult.restored > 0) {
+          console.log(`✅ Hidden property sync: ${hpResult.hidden} hidden, ${hpResult.restored} restored`);
+        } else {
+          console.log('✅ No property listing changes to hide/restore');
+        }
+      } catch (error: any) {
+        console.error('⚠️  Hidden property sync error:', error.message);
+        hiddenPropertySyncResult.failed = 1;
         // エラーでも処理を継続
       }
 
@@ -1577,7 +2240,8 @@ export class EnhancedAutoSyncService {
       if (additionResult.failed > 0 || 
           deletionResult.failedToDelete > 0 || 
           propertyListingUpdateResult.failed > 0 ||
-          newPropertyAdditionResult.failed > 0) {
+          newPropertyAdditionResult.failed > 0 ||
+          hiddenPropertySyncResult.failed > 0) {
         status = 'partial_success';
       }
       if (additionResult.successfullyAdded === 0 && 
@@ -1607,6 +2271,9 @@ export class EnhancedAutoSyncService {
       console.log(`   Sellers Deleted: ${deletionResult.successfullyDeleted}`);
       console.log(`   Property Listings Updated: ${propertyListingUpdateResult.updated}`);
       console.log(`   New Properties Added: ${newPropertyAdditionResult.added}`);
+      console.log(`   Property Details Synced: ${propertyDetailsSyncResult.synced}`);
+      console.log(`   Properties Hidden: ${hiddenPropertySyncResult.hidden}`);
+      console.log(`   Properties Restored: ${hiddenPropertySyncResult.restored}`);
       console.log(`   Manual Review: ${deletionResult.requiresManualReview}`);
       console.log(`   Duration: ${(totalDurationMs / 1000).toFixed(2)}s`);
 
@@ -1674,7 +2341,7 @@ export class EnhancedPeriodicSyncManager {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
 
-  constructor(intervalMinutes: number = 5) {
+  constructor(intervalMinutes: number = 10) {
     this.syncService = getEnhancedAutoSyncService();
     this.intervalMinutes = intervalMinutes;
   }
@@ -1692,16 +2359,21 @@ export class EnhancedPeriodicSyncManager {
       await this.syncService.initialize();
       this.isRunning = true;
 
-      // 初回実行
+      // 初回実行を60秒後に遅延（クォータ制限対策）
       console.log(`🔄 Starting enhanced periodic sync (interval: ${this.intervalMinutes} minutes)`);
-      await this.runSync();
-
-      // 定期実行を設定
-      this.intervalId = setInterval(async () => {
+      console.log('⏰ First sync will run in 60 seconds (quota limit protection)');
+      
+      setTimeout(async () => {
         await this.runSync();
-      }, this.intervalMinutes * 60 * 1000);
+        
+        // 定期実行を設定
+        this.intervalId = setInterval(async () => {
+          await this.runSync();
+        }, this.intervalMinutes * 60 * 1000);
+        
+        console.log(`✅ Enhanced periodic sync started (every ${this.intervalMinutes} minutes)`);
+      }, 60 * 1000); // 60秒後に初回実行
 
-      console.log(`✅ Enhanced periodic sync started (every ${this.intervalMinutes} minutes)`);
     } catch (error: any) {
       console.error('❌ Failed to start enhanced periodic sync:', error.message);
       // エラーでも再試行のためにisRunningはtrueのまま

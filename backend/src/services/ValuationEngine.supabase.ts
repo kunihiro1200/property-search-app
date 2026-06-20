@@ -113,7 +113,7 @@ export class ValuationEngine extends BaseRepository {
       return cached;
     }
 
-    const { data: valuations, error } = await this.table<ValuationResult>('valuations')
+   const { data: valuations, error } = await this.table('valuations')
       .select('*')
       .eq('seller_id', sellerId)
       .order('calculated_at', { ascending: false });

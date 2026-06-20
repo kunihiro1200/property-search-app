@@ -1,11 +1,21 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, InfoWindow } from '@react-google-maps/api';
 import { Box, Typography, Button, CircularProgress, Paper, Chip } from '@mui/material';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
+import { NavigationState } from '../types/navigationState';
 import { mapAtbbStatusToDisplayStatus, StatusType } from '../utils/atbbStatusDisplayMapper';
 
 interface PropertyMapViewProps {
   properties: PublicProperty[];
+  isLoaded: boolean;
+  loadError: Error | undefined;
+  // ナビゲーション状態（一覧画面から渡される）
+  navigationState?: Omit<NavigationState, 'scrollPosition'>;
+  // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
+  detailBasePath?: string;
+  // 地図の初期中心座標（デフォルトは大分市）
+  defaultMapCenter?: { lat: number; lng: number };
 }
 
 interface PropertyWithCoordinates extends PublicProperty {
@@ -209,21 +219,13 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
 /**
  * 物件を地図上に表示するコンポーネント
  */
-const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
+const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState, detailBasePath = '/public/properties', defaultMapCenter }) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    language: 'ja',
-    region: 'JP',
-    onError: (error) => {
-      console.error('❌ Google Maps API読み込みエラー:', error);
-    },
-  });
 
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
@@ -360,8 +362,42 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
   };
 
   const handlePropertyClick = (propertyId: string) => {
-    // 新しいタブで物件詳細ページを開く
-    window.open(`/public/properties/${propertyId}`, '_blank', 'noopener,noreferrer');
+    // navigationStateが渡されていない場合は新しいタブで開く
+    if (!navigationState) {
+      window.open(`${detailBasePath}/${propertyId}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    // 現在のスクロール位置を取得
+    const currentScrollPosition = window.scrollY || window.pageYOffset;
+    
+    // ナビゲーション状態にスクロール位置を追加
+    const fullNavigationState: NavigationState = {
+      currentPage: navigationState.currentPage,
+      scrollPosition: currentScrollPosition,
+      viewMode: navigationState.viewMode, // viewModeを保存
+      filters: navigationState.filters
+    };
+    
+    // sessionStorageに状態を保存（navigate(-1)で戻った時に復元するため）
+    const storageKey = detailBasePath.startsWith('/kujira')
+      ? 'kujiraPropertiesNavigationState'
+      : 'publicPropertiesNavigationState';
+    sessionStorage.setItem(storageKey, JSON.stringify(fullNavigationState));
+    console.log('[PropertyMapView] Saved state to sessionStorage:', fullNavigationState);
+    
+    // canHideパラメータを引き継ぐ
+    const canHide = searchParams.get('canHide');
+    const targetUrl = canHide === 'true' 
+      ? `${detailBasePath}/${propertyId}?canHide=true`
+      : `${detailBasePath}/${propertyId}`;
+    
+    console.log('[PropertyMapView] Navigating to (with state):', targetUrl);
+    
+    // 状態を保持してナビゲート
+    navigate(targetUrl, {
+      state: fullNavigationState
+    });
   };
 
   // 価格をフォーマット
@@ -498,7 +534,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
       </Typography>
       <GoogleMap
         mapContainerStyle={containerStyle}
-        center={defaultCenter}
+        center={defaultMapCenter || defaultCenter}
         zoom={11}
         onLoad={onLoad}
         onUnmount={onUnmount}
@@ -553,11 +589,20 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties }) => {
                 fullWidth
                 onClick={() => handlePropertyClick(selectedProperty.id)}
                 aria-label="物件詳細を新しいタブで開く"
+                style={(() => {
+                  const result = mapAtbbStatusToDisplayStatus(selectedProperty.atbb_status);
+                  const bgColor = result.statusType === 'other'
+                    ? '#2196F3'
+                    : BADGE_CONFIGS[result.statusType].backgroundColor;
+                  return { backgroundColor: bgColor, color: '#fff' };
+                })()}
                 sx={{
-                  backgroundColor: '#FFC107',
-                  color: '#000',
                   '&:hover': {
-                    backgroundColor: '#FFB300',
+                    backgroundColor: (() => {
+                      const result = mapAtbbStatusToDisplayStatus(selectedProperty.atbb_status);
+                      if (result.statusType === 'other') return '#1976D2';
+                      return BADGE_CONFIGS[result.statusType].backgroundColor;
+                    })(),
                   },
                 }}
               >

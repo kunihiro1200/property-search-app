@@ -1,75 +1,47 @@
-// property_listingsテーブルのスキーマを確認
-import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
 
-config();
+dotenv.config({ path: '.env.local' });
+
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function checkSchema() {
-  console.log('🔍 property_listingsテーブルのスキーマを確認中...\n');
-  console.log('='.repeat(80));
-  
-  try {
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
-    
-    // AA4885のデータを取得
-    const { data, error } = await supabase
-      .from('property_listings')
-      .select('*')
-      .eq('property_number', 'AA4885')
-      .single();
-    
-    if (error) {
-      console.error('❌ エラー:', error.message);
-      return;
-    }
-    
-    if (!data) {
-      console.log('❌ AA4885が見つかりません');
-      return;
-    }
-    
-    console.log('✅ AA4885のデータを取得しました\n');
-    
-    // ATBB関連のカラムを検索
-    console.log('📊 ATBB関連のカラム:');
-    console.log('-'.repeat(80));
-    
-    const atbbColumns = Object.keys(data).filter(key => 
-      key.toLowerCase().includes('atbb') || 
-      key.toLowerCase().includes('athome')
-    );
-    
-    if (atbbColumns.length === 0) {
-      console.log('❌ ATBB関連のカラムが見つかりません');
-    } else {
-      for (const column of atbbColumns) {
-        console.log(`  ${column}: ${data[column] || '(null)'}`);
-      }
-    }
-    
-    // すべてのカラム名を表示
-    console.log('\n📋 すべてのカラム名:');
-    console.log('-'.repeat(80));
-    const allColumns = Object.keys(data).sort();
-    for (let i = 0; i < allColumns.length; i += 3) {
-      const cols = allColumns.slice(i, i + 3);
-      console.log(`  ${cols.join(', ')}`);
-    }
-    
-  } catch (error: any) {
-    console.error('❌ エラー:', error.message);
+  console.log('🔍 Checking property_listings table schema...\n');
+
+  // 1. CC105のデータを取得（全カラム）
+  const { data, error } = await supabase
+    .from('property_listings')
+    .select('*')
+    .eq('property_number', 'CC105')
+    .single();
+
+  if (error) {
+    console.error('❌ Error:', error);
+    return;
   }
+
+  console.log('📊 CC105 data (all columns):');
+  console.log(JSON.stringify(data, null, 2));
+
+  console.log('\n🔑 Available keys:');
+  Object.keys(data).forEach(key => {
+    console.log(`  - ${key}: ${typeof data[key]} = ${data[key]}`);
+  });
+
+  console.log('\n💰 Price-related fields:');
+  const priceFields = Object.keys(data).filter(key => 
+    key.toLowerCase().includes('price') || 
+    key.toLowerCase().includes('sales') ||
+    key.toLowerCase().includes('listing')
+  );
+  priceFields.forEach(key => {
+    console.log(`  - ${key}: ${data[key]}`);
+  });
+
+  console.log('\n✨ Check completed!');
 }
 
-checkSchema()
-  .then(() => {
-    console.log('\n✅ スクリプト完了');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('\n❌ スクリプトエラー:', error);
-    process.exit(1);
-  });
+checkSchema().catch(console.error);

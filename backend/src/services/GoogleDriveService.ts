@@ -49,6 +49,13 @@ export class GoogleDriveService extends BaseRepository {
         try {
           keyFile = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
           console.log('✅ Successfully parsed GOOGLE_SERVICE_ACCOUNT_JSON');
+          console.log('📧 Service account email:', keyFile.client_email);
+          
+          // ⚠️ 重要：private_keyの\\nを実際の改行に変換
+          if (keyFile.private_key) {
+            keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
+            console.log('✅ Converted \\\\n to actual newlines in private_key');
+          }
         } catch (parseError: any) {
           console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
           console.error('First 100 chars:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
@@ -581,14 +588,18 @@ export class GoogleDriveService extends BaseRepository {
         thumbnailLink: (file as any).thumbnailLink || undefined,
       }));
     } catch (error: any) {
-      console.error('Error listing images with thumbnails:', error.message);
-      console.error('Error details:', {
+      console.error('❌ [GoogleDriveService] Error listing images with thumbnails:', error.message);
+      console.error('❌ [GoogleDriveService] Error details:', {
         folderId,
         isSharedDrive: !!this.parentFolderId,
         parentFolderId: this.parentFolderId,
         errorCode: error.code,
+        errorStatus: error.status,
         errorMessage: error.message,
+        errorResponse: error.response?.data,
+        errorErrors: error.errors,
       });
+      console.error('❌ [GoogleDriveService] Full error object:', JSON.stringify(error, null, 2));
       throw error;
     }
   }
@@ -805,6 +816,8 @@ export class GoogleDriveService extends BaseRepository {
    * - U_AA13069_xxx (プレフィックス付き)
    * - その他の形式で物件番号を含む
    * 
+   * ⚠️ 全角・半角の違いに対応（CC6とCC６など）
+   * 
    * @param folderName 検索するフォルダ名（物件番号）
    * @returns フォルダID、見つからない場合はnull
    */
@@ -812,8 +825,11 @@ export class GoogleDriveService extends BaseRepository {
     try {
       const drive = await this.getDriveClient();
       
+      // 全角・半角を正規化（検索用）
+      const normalizedSearchTerm = this.normalizePropertyNumber(folderName);
+      
       // 1. まずマイドライブを検索
-      console.log(`🔍 Searching for folder containing "${folderName}" in My Drive`);
+      console.log(`🔍 Searching for folder containing "${folderName}" (normalized: "${normalizedSearchTerm}") in My Drive`);
       
       const myDriveResponse = await drive.files.list({
         q: `name contains '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -827,6 +843,14 @@ export class GoogleDriveService extends BaseRepository {
       if (files.length > 0) {
         console.log(`📋 Found ${files.length} folders in My Drive containing "${folderName}":`);
         files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
+        
+        // フォルダ名を正規化してマッチング
+        const matchingFolder = this.findMatchingFolder(files, normalizedSearchTerm);
+        
+        if (matchingFolder) {
+          console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
+          return matchingFolder.id || null;
+        }
       } else {
         // 2. マイドライブで見つからなければ共有ドライブも検索
         console.log(`📁 Not found in My Drive, searching in Shared Drives...`);
@@ -845,36 +869,14 @@ export class GoogleDriveService extends BaseRepository {
         if (files.length > 0) {
           console.log(`📋 Found ${files.length} folders in Shared Drives containing "${folderName}":`);
           files.forEach(f => console.log(`  - ${f.name} (${f.id})`));
-        }
-      }
-      
-      if (files.length > 0) {
-        // 優先順位:
-        // 1. 物件番号で始まるフォルダ（例: AA13069_xxx）
-        // 2. プレフィックス付きで物件番号を含むフォルダ（例: U_AA13069_xxx）
-        // 3. その他、物件番号を含むフォルダ
-        
-        // 1. 物件番号で始まるフォルダを優先
-        let matchingFolder = files.find(f => f.name?.startsWith(folderName));
-        
-        // 2. プレフィックス付きフォルダを検索（例: U_AA13069, S_AA13069など）
-        if (!matchingFolder) {
-          matchingFolder = files.find(f => {
-            const name = f.name || '';
-            // プレフィックス_物件番号 のパターンにマッチ
-            const prefixPattern = new RegExp(`^[A-Z]_${folderName}`);
-            return prefixPattern.test(name);
-          });
-        }
-        
-        // 3. その他、物件番号を含むフォルダ（最後の手段）
-        if (!matchingFolder) {
-          matchingFolder = files.find(f => f.name?.includes(folderName));
-        }
-        
-        if (matchingFolder) {
-          console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
-          return matchingFolder.id || null;
+          
+          // フォルダ名を正規化してマッチング
+          const matchingFolder = this.findMatchingFolder(files, normalizedSearchTerm);
+          
+          if (matchingFolder) {
+            console.log(`✅ Selected folder: ${matchingFolder.name} (${matchingFolder.id})`);
+            return matchingFolder.id || null;
+          }
         }
       }
       
@@ -884,6 +886,88 @@ export class GoogleDriveService extends BaseRepository {
       console.error('Error searching folder:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * 物件番号を正規化（全角→半角、大文字化）
+   * @param propertyNumber 物件番号
+   * @returns 正規化された物件番号
+   */
+  private normalizePropertyNumber(propertyNumber: string): string {
+    return propertyNumber
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => {
+        // 全角英数字を半角に変換
+        return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+      })
+      .toUpperCase();
+  }
+
+  /**
+   * フォルダリストから物件番号にマッチするフォルダを検索
+   * 優先順位（完全一致を優先）:
+   * 1. 物件番号_xxx または 物件番号.xxx で始まるフォルダ（例: AA13069_xxx, AA13069.xxx）
+   * 2. プレフィックス_物件番号_xxx で始まるフォルダ（例: U_AA13069_xxx, I_AA13069_xxx）
+   * 3. 物件番号で始まるフォルダ（フォールバック、例: AA13069xxx）
+   * 4. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+   * 
+   * @param files フォルダリスト
+   * @param normalizedSearchTerm 正規化された検索キーワード
+   * @returns マッチしたフォルダ、見つからない場合はundefined
+   */
+  private findMatchingFolder(
+    files: Array<{ id?: string | null; name?: string | null; parents?: string[] | null }>,
+    normalizedSearchTerm: string
+  ): { id?: string | null; name?: string | null } | undefined {
+    // 1. 完全一致を優先: 物件番号_xxx または 物件番号.xxx で始まるフォルダ
+    // これにより、CC10を検索した時にCC100, CC101, CC102などを除外できる
+    let matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.startsWith(normalizedSearchTerm + '_') ||
+             normalizedName.startsWith(normalizedSearchTerm + '.');
+    });
+    
+    if (matchingFolder) {
+      console.log(`✅ Found exact match: ${matchingFolder.name}`);
+      return matchingFolder;
+    }
+    
+    // 2. プレフィックス付き完全一致: プレフィックス_物件番号_xxx または プレフィックス_物件番号.xxx
+    // 例: U_AA13069_xxx, I_AA13069_xxx
+    matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      // プレフィックス_物件番号_ または プレフィックス_物件番号. のパターンにマッチ
+      const prefixPattern = new RegExp(`^[A-Z]_${normalizedSearchTerm}[_\\.]`);
+      return prefixPattern.test(normalizedName);
+    });
+    
+    if (matchingFolder) {
+      console.log(`✅ Found prefix match: ${matchingFolder.name}`);
+      return matchingFolder;
+    }
+    
+    // 3. 物件番号で始まるフォルダ（フォールバック）
+    // 注意: これはCC10がCC100にマッチする可能性があるため、最後の手段
+    matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.startsWith(normalizedSearchTerm);
+    });
+    
+    if (matchingFolder) {
+      console.log(`⚠️ Found partial match (may be incorrect): ${matchingFolder.name}`);
+      return matchingFolder;
+    }
+    
+    // 4. その他、物件番号を含むフォルダ（最も柔軟なマッチング）
+    matchingFolder = files.find(f => {
+      const normalizedName = this.normalizePropertyNumber(f.name || '');
+      return normalizedName.includes(normalizedSearchTerm);
+    });
+    
+    if (matchingFolder) {
+      console.log(`⚠️ Found loose match (may be incorrect): ${matchingFolder.name}`);
+    }
+    
+    return matchingFolder;
   }
 
   /**

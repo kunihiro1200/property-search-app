@@ -1,0 +1,802 @@
+﻿[f3ae229]
+  backend/api/auth-callback.ts
+  backend/api/auth-me.ts
+  backend/api/index.ts
+  backend/api/main.ts
+  backend/src/index.ts
+  backend/src/routes/auth.supabase.ts
+  backend/vercel.json
+
+[2feb0cd]
+  backend/src/services/BuyerService.ts
+  frontend/src/components/NearbyBuyersList.tsx
+
+[0b849fb]
+  backend/src/services/BuyerService.ts
+  frontend/src/components/NearbyBuyersList.tsx
+
+[41f1529]
+  backend/src/services/BuyerService.ts
+
+[ea1c08a]
+  backend/src/services/BuyerService.ts
+  frontend/src/components/NearbyBuyersList.tsx
+
+[7162fb0]
+  backend/src/services/BuyerService.ts
+  frontend/src/components/NearbyBuyersList.tsx
+  frontend/src/pages/CallModePage.tsx
+
+[3af9b39]
+  backend/src/services/BuyerLinkageService.ts
+  frontend/src/components/PageNavigation.tsx
+
+[93a8413]
+  backend/check-buyer-6978.ts
+  backend/check-buyer-6980-6981.ts
+  backend/check-deleted-buyers.ts
+  backend/check-next-buyer-number.ts
+  backend/fix-buyer-6980-6981.ts
+  backend/list-spreadsheet-sheets.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+  backend/sync-buyer-to-spreadsheet.ts
+  backend/sync-deleted-buyers.ts
+  backend/test-buyer-create-with-property.ts
+
+[2bc903e]
+  backend/src/services/BuyerService.ts
+
+[8bbe8d2]
+  backend/src/services/BuyerService.ts
+
+[e4baff3]
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+
+[6a9b42f]
+  backend/src/services/BuyerService.ts
+
+[a63c261]
+  backend/src/services/BuyerService.ts
+  backend/src/services/BuyerWriteService.ts
+
+[30d0e49]
+  backend/src/services/BuyerService.ts
+
+[966e231]
+  backend/src/services/BuyerService.ts
+
+[0ed71bc]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+
+[0708461]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+  frontend/src/pages/NewBuyerPage.tsx
+
+[12a1621]
+  backend/src/services/BuyerLinkageService.ts
+  frontend/src/components/CompactBuyerListForProperty.tsx
+
+[e9e6b96]
+  backend/src/services/BuyerLinkageService.ts
+
+[0955686]
+  backend/src/routes/emails.ts
+  backend/src/services/EmailService.ts
+  backend/src/services/EnhancedBuyerDistributionService.ts
+  frontend/src/components/BuyerFilterSummaryModal.tsx
+  frontend/src/components/GmailDistributionButton.tsx
+  frontend/src/services/gmailDistributionService.ts
+
+[28d6656]
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[b372025]
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[1ab3695]
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[f8c12f6]
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[6adc2f6]
+  frontend/src/components/EmailConfirmationModal.tsx
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[0662c92]
+  frontend/src/components/EmailConfirmationModal.tsx
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[34675b3]
+  backend/.env.twilio.example
+  backend/TWILIO_SETUP_GUIDE.md
+  backend/package-lock.json
+  backend/package.json
+  backend/src/index.ts
+  backend/src/routes/sms.ts
+  backend/src/services/TwilioSmsService.ts
+  frontend/src/pages/BuyerCandidateListPage.tsx
+
+[9cc5f6b]
+  backend/add-distribution-areas-column.sql
+  backend/calculate-distribution-areas-aa13475.ts
+  backend/check-aa4393.ts
+  backend/check-area-mapping-tables.ts
+  backend/check-buyer-1553-in-candidates.ts
+  backend/check-buyer-1553-in-db.ts
+  backend/check-buyer-1553-matching.ts
+  backend/check-buyer-1938-matching.ts
+  backend/check-buyer-2003-matching.ts
+  backend/check-buyer-2042-matching.ts
+  backend/check-buyer-6941.ts
+  backend/check-buyer-candidates-aa13249.ts
+  backend/check-property-aa13249.ts
+  backend/check-property-aa13475.ts
+  backend/check-property-listings-columns.ts
+  backend/debug-buyer-query.ts
+  backend/debug-performance-aa13249.ts
+  backend/src/services/BuyerCandidateService.ts
+  backend/src/services/EnhancedBuyerDistributionService.ts
+  backend/test-area-numbers-aa13249.ts
+  backend/test-beppu-area-mapping-aa13249.ts
+  backend/test-price-range-parse.ts
+  frontend/src/components/DistributionAreaField.tsx
+  frontend/src/components/GmailDistributionButton.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[75b0284]
+  backend/check-buyer-6941-in-candidates.ts
+  backend/check-buyer-6941.ts
+  backend/restore-buyer-6941.ts
+  backend/src/services/BuyerCandidateService.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/src/services/GeolocationService.ts
+  backend/test-buyer-detection.ts
+  frontend/src/App.tsx
+  frontend/src/pages/BuyerCandidateListPage.tsx
+  frontend/src/pages/PropertyListingDetailPage.tsx
+  frontend/src/services/api.ts
+
+[0906002]
+  backend/api/src/services/__tests__/PropertyListingSyncService.test.ts
+  backend/check-buyer-6913.ts
+  backend/check-buyer-6951.ts
+  backend/migrations/add-sidebar-status-column.sql
+  backend/migrations/add-sidebar-status-index.sql
+  backend/revert-buyer-6951-assignee.ts
+  backend/src/config/buyer-status-definitions.ts
+  backend/src/services/BuyerStatusCalculator.ts
+  backend/update-buyer-6951-assignee.ts
+  frontend/src/components/PropertySidebarStatus.tsx
+  frontend/src/pages/PropertyListingsPage.tsx
+
+[aec3da4]
+  backend/src/services/BuyerService.ts
+
+[d8cf61d]
+  backend/check-buyer-6939.ts
+  backend/src/config/buyer-status-definitions.ts
+  backend/src/services/BuyerStatusCalculator.ts
+  backend/src/utils/dateHelpers.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[7b20dac]
+  backend/check-buyer-4216-desired-type.ts
+  backend/check-buyer-4216-property.ts
+  backend/find-buyer-with-apartment.ts
+  backend/find-buyer-with-house.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+  backend/test-buyer-4216-apartment-sync.ts
+  backend/test-buyer-4216-house-sync.ts
+  backend/test-buyer-4216-inquiry-hearing-sync.ts
+  backend/test-inquiry-hearing-api.ts
+  backend/test-inquiry-hearing-save.ts
+  backend/update-buyer-4216-desired-type.ts
+
+[bee0f63]
+  backend/src/services/BuyerService.ts
+
+[0476a6c]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[8b0dccf]
+  backend/src/services/BuyerService.ts
+
+[8d446c3]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[edaccdd]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[59163e3]
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+  backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  backend/test-inquiry-hearing-update.ts
+
+[b759f9a]
+  backend/execute-migration-direct.ts
+  backend/run-migration-field-updated-at.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+  backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  backend/test-inquiry-hearing-integration.ts
+  backend/test-inquiry-hearing-parser.ts
+  backend/verify-field-updated-at-columns.ts
+
+[d1f0737]
+  backend/add-pet-allowed-column-direct.ts
+  backend/check-bb-column-header.ts
+  backend/check-property-listings-schema.ts
+  backend/debug-aa505-price.ts
+  backend/debug-aa505-property-about.ts
+  backend/debug-buyer-6954-nearby.ts
+  backend/run-migration-field-updated-at.ts
+  backend/run-migration-pet-allowed.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/InquiryHearingParser.ts
+  backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  backend/supabase/migrations/20260211_add_pet_allowed_to_property_listings.sql
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[71cdde0]
+  backend/src/routes/buyers.ts
+
+[2d05a54]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[ac26464]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[7d2516d]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[21a59c8]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+  frontend/src/utils/buyerLatestStatusOptions.ts
+
+[637db1e]
+  frontend/src/components/InlineEditableField.tsx
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[39ee01e]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[664591b]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[f7542b8]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[2bb4bd4]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/utils/buyerDetailFieldOptions.ts
+  frontend/src/utils/buyerInquirySourceOptions.ts
+
+[1870fb9]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[4112b44]
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[3073725]
+  frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[a4642c0]
+  backend/src/config/buyer-column-mapping.json
+
+[9fb6713]
+  backend/src/config/buyer-column-mapping.json
+  backend/src/services/BuyerColumnMapper.ts
+
+[45f4a1b]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[396542c]
+  backend/src/services/BuyerService.ts
+
+[3cb2f0d]
+  frontend/src/components/InlineEditableField.tsx
+  frontend/src/pages/BuyerDesiredConditionsPage.tsx
+
+[f78d04c]
+  backend/src/services/BuyerStatusCalculator.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[a04052f]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[8176ce1]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[0b197b7]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[c596f48]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyersPage.tsx
+
+[69f9c1a]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyersPage.tsx
+
+[ac805ae]
+  backend/check-buyer-6951-broker-survey.ts
+  backend/check-buyer-6951-data.sql
+  backend/check-buyer-6951-simple.ts
+  backend/check-buyer-6951.ts
+  backend/check-buyers-columns.ts
+  backend/migrations/105_EXECUTION_GUIDE.md
+  backend/migrations/run-105-migration.ts
+  backend/sync-buyer-6951-broker-survey.ts
+  backend/test-buyer-6951-api.ts
+  backend/verify-buyer-6951-status.ts
+
+[60eb069]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[c054cd6]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[0463a8a]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[c7dd950]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[244920e]
+  backend/check-buyer-6951-broker-survey.ts
+  backend/check-buyer-6951-data.sql
+  backend/check-buyer-6951-simple.ts
+  backend/check-buyer-6951.ts
+  backend/check-buyers-columns.ts
+  backend/migrations/105_EXECUTION_GUIDE.md
+  backend/migrations/105_add_broker_survey_to_buyers.sql
+  backend/migrations/run-105-migration.ts
+  backend/sync-buyer-6951-broker-survey.ts
+  backend/test-buyer-6951-api.ts
+  backend/verify-buyer-6951-status.ts
+
+[2f0da0a]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[2712cdd]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+
+[1f8c746]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+
+[c7319b4]
+  frontend/src/components/InlineEditableField.tsx
+  frontend/src/pages/BuyerDesiredConditionsPage.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerViewingResultPage.tsx
+  frontend/src/pages/CallModePage.tsx
+
+[889b5cd]
+  backend/api/index.ts
+  backend/check-aa2408-nearby.ts
+  backend/src/services/BuyerService.ts
+  frontend/src/hooks/usePublicProperties.ts
+  frontend/src/pages/PublicPropertyListingPage.tsx
+  frontend/src/types/publicProperty.ts
+
+[9d927c5]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[281689c]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[3c163f7]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[b4c7a8e]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/services/api.ts
+
+[116729e]
+  frontend/src/pages/PublicPropertyDetailPage.tsx
+  frontend/src/services/api.ts
+
+[a15aeaa]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[d197c8e]
+  backend/api/redirect.ts
+  backend/src/index.ts
+  backend/vercel.json
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/PublicPropertiesPage.tsx
+
+[b02cf64]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+
+[ea7a1e7]
+  backend/src/services/BuyerService.ts
+
+[ebe9094]
+  frontend/src/pages/BuyersPage.tsx
+
+[68c537f]
+  frontend/src/pages/BuyersPage.tsx
+
+[d86e10d]
+  backend/src/services/BuyerService.ts
+  frontend/src/pages/BuyersPage.tsx
+
+[8cb2382]
+  backend/src/services/BuyerColumnMapper.ts
+
+[7580191]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[310b01b]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[05d104d]
+  backend/check-nearby-properties.ts
+  backend/src/services/BuyerService.ts
+  backend/test-nearby-api.ts
+  frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[3819b51]
+  backend/src/services/BuyerService.ts
+
+[7160e8c]
+  backend/src/services/BuyerService.ts
+
+[6dd500a]
+  backend/src/services/BuyerService.ts
+
+[86c14a2]
+  backend/src/services/BuyerService.ts
+
+[b4d7257]
+  backend/src/services/BuyerService.ts
+
+[28e6830]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[3973666]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[30cc309]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+  frontend/src/App.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[6753778]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[5c2dea1]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[7b5a0cb]
+  backend/src/services/BuyerService.ts
+
+[4b583be]
+  backend/src/services/BuyerService.ts
+
+[08a13fa]
+  backend/debug-buyer-6927.ts
+  backend/restore-buyer-6927.ts
+  backend/src/config/buyer-status-definitions.ts
+  backend/src/services/BuyerStatusCalculator.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+
+[6f34c62]
+  backend/check-buyer-6929-detailed.ts
+  backend/check-buyer-6929.ts
+  backend/check-buyers-with-deleted.ts
+  backend/migrations/104_add_buyer_logical_deletion.sql
+  backend/run-migration-104.ts
+  backend/src/config/buyer-appsheet-mapping.ts
+  backend/src/config/buyer-status-definitions.ts
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/BuyerStatusCalculator.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/src/types/deletion.ts
+  backend/src/utils/dateHelpers.ts
+  backend/src/utils/fieldHelpers.ts
+  backend/test-buyer-deletion-sync.ts
+  frontend/src/components/BuyerStatusSidebar.tsx
+  frontend/src/pages/BuyersPage.tsx
+
+[b3bdcdb]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[4e69182]
+  backend/migrations/102_cleanup_buyer_field_values.sql
+  backend/migrations/103_add_business_inquiry_column.sql
+  backend/migrations/check-102-before-migration.ts
+  backend/migrations/run-102-migration.ts
+  backend/migrations/run-103-migration.ts
+  backend/update-three-calls-values.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[19f9f72]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[7c7466c]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[79a8c6e]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[a8e1d8a]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[9908941]
+  backend/src/routes/buyer-appointments.ts
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[4ee722b]
+  backend/check-admin-user.ts
+  backend/check-calendar-tokens-table.ts
+  backend/check-calendar-tokens-via-rest.ts
+  backend/check-company-calendar-connection.ts
+  backend/check-employee-calendar-token.ts
+  backend/delete-calendar-token-direct.ts
+  backend/delete-old-calendar-token.ts
+  backend/set-admin-user.ts
+  backend/setup-tenant-account.ts
+  backend/src/index.ts
+  backend/src/routes/buyer-appointments.ts
+  backend/src/routes/googleCalendar.ts
+  backend/src/services/CalendarService.supabase.ts
+  backend/src/services/GoogleAuthService.ts
+  frontend/src/pages/BuyerViewingResultPage.tsx
+  frontend/src/services/CalendarLinkGenerator.ts
+  frontend/src/services/ValidationService.ts
+  frontend/src/services/__tests__/CalendarLinkGenerator.test.ts
+  frontend/src/services/__tests__/ValidationService.test.ts
+
+[831231c]
+  backend/migrations/100_add_viewing_promotion_email_to_buyers.sql
+  backend/migrations/101_add_viewing_mobile_to_buyers.sql
+  backend/package-lock.json
+  backend/package.json
+  backend/src/routes/auth.ts
+  backend/src/services/AuthService.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/BuyerTemplateService.ts
+  frontend/src/components/InlineEditableField.tsx
+  frontend/src/pages/BuyerDesiredConditionsPage.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerViewingResultPage.tsx
+  frontend/src/utils/buyerDesiredConditionsOptions.ts
+  frontend/src/utils/buyerDetailFieldOptions.ts
+  frontend/src/utils/buyerEnumOptions.ts
+
+[a134f2f]
+  backend/migrations/100_alter_activity_logs_target_id_to_varchar.sql
+  backend/src/index.ts
+  backend/src/routes/activityLogs.ts
+  backend/src/routes/buyers.ts
+  backend/src/services/ActivityLogService.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[1485108]
+  backend/check-confirmation-column.ts
+  backend/check-staff-columns.ts
+  backend/check-staff-webhook.ts
+  backend/list-staff-members.ts
+  backend/migrations/run-100-migration.ts
+  backend/test-send-confirmation-endpoint.ts
+  backend/verify-staff-management.ts
+
+[dc487bf]
+  backend/check-staff-spreadsheet.ts
+  backend/find-testable-buyer.ts
+  backend/migrations/100_add_confirmation_to_assignee.sql
+  backend/src/routes/buyers.ts
+  backend/src/services/GoogleChatService.ts
+  backend/src/services/StaffManagementService.ts
+  frontend/src/components/ConfirmationToAssignee.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[46c869a]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerTemplateService.ts
+  backend/src/services/EmailService.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[7bffaef]
+  backend/src/routes/buyers.ts
+
+[4e4ce8d]
+  backend/src/services/BuyerTemplateService.ts
+
+[c0e7c7b]
+  backend/src/services/BuyerTemplateService.ts
+
+[dc74be2]
+  backend/src/routes/buyers.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[bd8ad5d]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[4f234f5]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[fe85259]
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerTemplateService.ts
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[f0fa221]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[f1db9a9]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[113fa71]
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[a5d94f9]
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerViewingResultPage.tsx
+
+[d725843]
+  backend/check-all-buyer-dates.ts
+  backend/compare-buyer-data-6663-6660-6655.ts
+  backend/fix-aa12369-property-type.ts
+  backend/fix-aa12449-distribution.ts
+  backend/fix-aa12766-distribution-areas.ts
+  backend/fix-aa12766-sellers-table.ts
+  backend/fix-aa12903-data.ts
+  backend/fix-aa12903-missing-fields.ts
+  backend/fix-aa12923-correct-name.ts
+  backend/fix-aa12923-double-encryption.ts
+  backend/fix-aa12923-email.ts
+  backend/fix-aa12923-final.ts
+  backend/fix-aa1301-inquiry-date.ts
+  backend/fix-aa13129-aa18-image-urls.ts
+  backend/fix-aa13129-data.ts
+  backend/fix-aa13129-distribution-areas-correct.ts
+  backend/fix-aa13129-distribution-areas.ts
+  backend/fix-aa13129-storage-location-rest.ts
+  backend/fix-aa13129-storage-location.ts
+  backend/fix-aa13149-beppu-area.ts
+  backend/fix-aa13149-distribution-areas.ts
+  backend/fix-aa13154-storage-from-gyomu-sheet.ts
+  backend/fix-aa13226-storage-location.ts
+  backend/fix-aa13244-property-direct.ts
+  backend/fix-aa13245-seller-situation.ts
+  backend/fix-aa13424-visit-assignee.ts
+  backend/fix-aa13453-property-about.ts
+  backend/fix-aa13509-valuation.ts
+  backend/fix-aa13528-current-status.ts
+  backend/fix-aa13528-data.ts
+  backend/fix-aa18-storage-location.ts
+  backend/fix-aa376-property-data.ts
+  backend/fix-aa4885-atbb-status.ts
+  backend/fix-aa5128-2-storage-url.ts
+  backend/fix-aa5222-duplicates.ts
+  backend/fix-aa5852-address-and-areas.ts
+  backend/fix-aa5852-distribution-areas.ts
+  backend/fix-aa5852-property-address-and-areas.ts
+  backend/fix-aa5852-property-listing.ts
+  backend/fix-aa5852-with-property-address.ts
+  backend/fix-aa6369-property.ts
+  backend/fix-aa9313-atbb-status-v2.ts
+  backend/fix-aa9313-atbb-status.ts
+  backend/fix-aa9313-image-url.ts
+  backend/fix-all-beppu-areas-add-36.ts
+  backend/fix-all-buyer-distribution-types.ts
+  backend/fix-all-dates.ts
+  backend/fix-all-inquiry-dates-with-year.ts
+  backend/fix-all-missing-properties-v2.ts
+  backend/fix-all-missing-seller-situations.ts
+  backend/fix-all-next-call-dates.ts
+  backend/fix-all-property-type-mismatches.ts
+  backend/fix-auto-sync-issues.ts
+  backend/fix-buyer-2044-distribution-type.ts
+  backend/fix-cc10-storage-location.ts
+  backend/fix-cc104-coordinates.ts
+  backend/fix-cc104-price.ts
+  backend/fix-cc105-coordinates.ts
+  backend/fix-cc105-price.ts
+  backend/fix-cc23-coordinates.ts
+  backend/fix-cc6-storage-location-correct.ts
+  backend/fix-hidden-images-column.ts
+  backend/fix-hidden-images-direct-connection.ts
+  backend/fix-incorrect-valuation-amounts.ts
+  backend/fix-inquiry-dates-batch.ts
+  backend/fix-inquiry-dates-from-sheet.ts
+  backend/fix-invalid-dates.ts
+  backend/fix-ishigaki-higashi-mapping.ts
+  backend/fix-missing-distribution-areas.ts
+  backend/fix-missing-properties-batch.ts
+  backend/fix-missing-properties.ts
+  backend/fix-null-buyer-ids.ts
+  backend/fix-ougiyama-area-mapping.ts
+  backend/fix-property-types.ts
+  backend/fix-remaining-missing-properties.ts
+  backend/fix-seller-names-from-sheet.ts
+  backend/fix-seller-property-linkage.ts
+  backend/fix-single-seller-name.ts
+  backend/fix-site-field-efficient.ts
+  backend/fix-site-field.ts
+  backend/fix-specific-sellers.ts
+  backend/fix-status-from-sheet.ts
+  backend/fix-storage-location-for-any-property.ts
+  backend/fix-sync-schema-issues.ts
+  backend/fix-tsuneyuki-distribution-areas.ts
+  backend/fix-valuation-amounts-unit.ts
+  backend/force-sync-buyer-6648-with-schema-reload.ts
+  backend/force-sync-buyer-6648.ts
+  backend/run-buyer-auto-sync.ts
+  backend/src/index.ts
+  backend/src/routes/buyers.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  backend/verify-buyer-2064-exists.ts
+  backend/verify-buyer-6648-schema.ts
+  backend/verify-buyer-6648.ts
+  backend/verify-buyer-sync-logic.ts
+
+[23621fe]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[440805e]
+  backend/src/services/BuyerColumnMapper.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+
+[e483ce4]
+  frontend/src/components/PropertyInfoCard.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+
+[27b01b9]
+  backend/src/routes/sellers.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/OitaCityAreaMappingService.ts
+  backend/test-oita-takasaki-area.ts
+  frontend/src/App.tsx
+  frontend/src/components/CollapsibleSection.tsx
+  frontend/src/components/NearbyBuyersList.tsx
+  frontend/src/pages/CallModePage.tsx
+  frontend/src/pages/NearbyBuyersPage.tsx
+
+[6d6e3f9]
+  backend/src/routes/sellers.ts
+  backend/src/services/BeppuAreaMappingService.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/CityNameExtractor.ts
+  backend/src/services/OitaCityAreaMappingService.ts
+  backend/src/services/PropertyDistributionAreaCalculator.ts
+  frontend/src/components/NearbyBuyersList.tsx
+
+[8ff331a]
+  backend/migrations/run-094-migration.ts
+  backend/src/index.ts
+  backend/src/routes/buyers.ts
+  backend/src/routes/employees.ts
+  backend/src/services/BuyerService.ts
+  backend/src/services/EnhancedAutoSyncService.ts
+  frontend/src/App.tsx
+  frontend/src/components/InlineEditableField.tsx
+  frontend/src/pages/BuyerDesiredConditionsPage.tsx
+  frontend/src/pages/BuyerDetailPage.tsx
+  frontend/src/pages/BuyerInquiryHistoryPage.tsx
+  frontend/src/pages/BuyerViewingResultPage.tsx
+

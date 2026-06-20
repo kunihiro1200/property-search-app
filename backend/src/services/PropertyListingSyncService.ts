@@ -45,6 +45,8 @@ export class PropertyListingSyncService {
   private diagnosticService: DataIntegrityDiagnosticService;
   private sheetsClient?: GoogleSheetsClient;
   private columnMapper: PropertyListingColumnMapper;
+  private gyomuListService?: any; // GyomuListServiceのインスタンスをキャッシュ
+  private driveService?: any; // GoogleDriveServiceのインスタンスをキャッシュ
 
   constructor(sheetsClient?: GoogleSheetsClient) {
     this.supabase = createClient(
@@ -100,7 +102,7 @@ export class PropertyListingSyncService {
       }
 
       // Map seller fields to property_listing fields
-      const propertyListingData = this.mapSellerToPropertyListing(seller);
+      const propertyListingData = await this.mapSellerToPropertyListing(seller);
 
       // Insert into property_listings
       const { error: insertError } = await this.supabase
@@ -168,20 +170,40 @@ export class PropertyListingSyncService {
   }
 
   /**
-   * 業務リストから格納先URLを取得
+   * 業務リストから格納先URLを取得し、athome公開フォルダのURLを返す
    * 
    * @param propertyNumber 物件番号
-   * @returns 格納先URL（業務リストから取得）
+   * @returns athome公開フォルダのURL（見つからない場合は親フォルダURL）
    */
   private async getStorageUrlFromGyomuList(propertyNumber: string): Promise<string | null> {
     try {
-      const { GyomuListService } = await import('./GyomuListService');
-      const gyomuListService = new GyomuListService();
+      // 業務リストサービスのインスタンスを初回のみ作成（キャッシュ）
+      if (!this.gyomuListService) {
+        const { GyomuListService } = await import('./GyomuListService');
+        this.gyomuListService = new GyomuListService();
+      }
       
-      const gyomuData = await gyomuListService.getByPropertyNumber(propertyNumber);
+      // Google Driveサービスのインスタンスを初回のみ作成（キャッシュ）
+      if (!this.driveService) {
+        const { GoogleDriveService } = await import('./GoogleDriveService');
+        this.driveService = new GoogleDriveService();
+      }
+      
+      const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
       
       if (gyomuData && gyomuData.storageUrl) {
         console.log(`[PropertyListingSyncService] Found storage_url in 業務リスト for ${propertyNumber}: ${gyomuData.storageUrl}`);
+        
+        // 親フォルダURLからathome公開フォルダのURLを取得
+        const athomePublicUrl = await this.findAthomePublicFolderUrl(gyomuData.storageUrl, propertyNumber, this.driveService);
+        
+        if (athomePublicUrl) {
+          console.log(`[PropertyListingSyncService] Found athome公開 folder URL for ${propertyNumber}: ${athomePublicUrl}`);
+          return athomePublicUrl;
+        }
+        
+        // athome公開フォルダが見つからない場合は親フォルダURLを返す
+        console.log(`[PropertyListingSyncService] athome公開 folder not found, using parent folder URL for ${propertyNumber}`);
         return gyomuData.storageUrl;
       }
       
@@ -195,12 +217,121 @@ export class PropertyListingSyncService {
   }
 
   /**
+   * 親フォルダURLからathome公開フォルダのURLを取得
+   * 
+   * @param parentFolderUrl 親フォルダのURL
+   * @param propertyNumber 物件番号
+   * @param driveService GoogleDriveServiceインスタンス
+   * @returns athome公開フォルダのURL、見つからない場合はnull
+   */
+  private async findAthomePublicFolderUrl(
+    parentFolderUrl: string,
+    propertyNumber: string,
+    driveService: any
+  ): Promise<string | null> {
+    try {
+      // URLからフォルダIDを抽出
+      const folderIdMatch = parentFolderUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      if (!folderIdMatch) {
+        console.log(`[PropertyListingSyncService] Invalid folder URL format: ${parentFolderUrl}`);
+        return null;
+      }
+      
+      const parentFolderId = folderIdMatch[1];
+      console.log(`[PropertyListingSyncService] Searching for athome公開 in parent folder: ${parentFolderId}`);
+      
+      // 1. 物件番号を含むサブフォルダを検索
+      const propertyFolderId = await this.findPropertyFolderInParent(parentFolderId, propertyNumber, driveService);
+      
+      if (!propertyFolderId) {
+        console.log(`[PropertyListingSyncService] Property folder not found for ${propertyNumber} in ${parentFolderId}`);
+        return null;
+      }
+      
+      console.log(`[PropertyListingSyncService] Found property folder: ${propertyFolderId}`);
+      
+      // 2. 物件フォルダ内でathome公開フォルダを検索
+      const athomeFolderId = await driveService.findFolderByName(propertyFolderId, 'athome公開', true);
+      
+      if (!athomeFolderId) {
+        console.log(`[PropertyListingSyncService] athome公開 folder not found in property folder: ${propertyFolderId}`);
+        return null;
+      }
+      
+      // 3. athome公開フォルダのURLを生成
+      const athomePublicUrl = `https://drive.google.com/drive/folders/${athomeFolderId}`;
+      return athomePublicUrl;
+      
+    } catch (error: any) {
+      console.error(`[PropertyListingSyncService] Error finding athome公開 folder:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 親フォルダ内で物件番号を含むサブフォルダを検索
+   * 
+   * @param parentFolderId 親フォルダID
+   * @param propertyNumber 物件番号
+   * @param driveService GoogleDriveServiceインスタンス
+   * @returns 物件フォルダID、見つからない場合はnull
+   */
+  private async findPropertyFolderInParent(
+    parentFolderId: string,
+    propertyNumber: string,
+    driveService: any
+  ): Promise<string | null> {
+    try {
+      // サブフォルダ一覧を取得
+      const subfolders = await driveService.listSubfolders(parentFolderId);
+      
+      console.log(`[PropertyListingSyncService] Found ${subfolders.length} subfolders in parent`);
+      
+      // 物件番号を含むフォルダを検索
+      const propertyFolder = subfolders.find((folder: any) => 
+        folder.name && folder.name.includes(propertyNumber)
+      );
+      
+      if (propertyFolder) {
+        console.log(`[PropertyListingSyncService] Found property folder: ${propertyFolder.name} (${propertyFolder.id})`);
+        return propertyFolder.id;
+      }
+      
+      return null;
+      
+    } catch (error: any) {
+      console.error(`[PropertyListingSyncService] Error finding property folder:`, error.message);
+      return null;
+    }
+  }
+
+  /**
    * Map seller fields to property_listing fields
    * 
    * Maps data from sellers table to property_listings table format.
    * Note: storage_location uses site_url (preferred) with fallback to site
+   * 
+   * ⚠️ 重要: storage_locationは親フォルダURLのため、
+   * 実際の画像取得時にはathome公開フォルダを検索する必要がある
    */
-  private mapSellerToPropertyListing(seller: any): any {
+  private async mapSellerToPropertyListing(seller: any): Promise<any> {
+    // storage_locationの取得（athome公開フォルダURLを優先）
+    let storageLocation = seller.site_url || seller.site;
+    
+    // 業務リストからathome公開フォルダURLを取得を試みる
+    if (storageLocation) {
+      try {
+        const athomePublicUrl = await this.getStorageUrlFromGyomuList(seller.property_number);
+        if (athomePublicUrl) {
+          storageLocation = athomePublicUrl;
+          console.log(`[PropertyListingSyncService] Using athome公開 URL for ${seller.property_number}: ${storageLocation}`);
+        }
+      } catch (error: any) {
+        console.error(`[PropertyListingSyncService] Error getting athome公開 URL for ${seller.property_number}:`, error.message);
+        // エラーの場合は元のURLを使用
+      }
+    }
+    
     return {
       property_number: seller.property_number,
       seller_number: seller.seller_number,
@@ -243,8 +374,8 @@ export class PropertyListingSyncService {
       seller_situation: seller.seller_situation,
       site: seller.site,
       google_map_url: seller.google_map_url,
-      // Storage location: uses site_url (preferred) or falls back to site
-      storage_location: seller.site_url || seller.site,
+      // Storage location: athome公開フォルダURL（取得できた場合）または親フォルダURL
+      storage_location: storageLocation,
       other_section_1: seller.other_section_1,
       other_section_2: seller.other_section_2,
       other_section_3: seller.other_section_3,
@@ -443,6 +574,19 @@ export class PropertyListingSyncService {
 
       console.log(`📊 Detected ${updates.length} properties with changes`);
 
+      // 1.5. 業務リストのキャッシュを事前にリフレッシュ（Google Sheets APIクォータ対策）
+      console.log('📋 Pre-loading 業務リスト cache to avoid API quota issues...');
+      try {
+        const { GyomuListService } = await import('./GyomuListService');
+        const gyomuListService = new GyomuListService();
+        // ダミーの物件番号で呼び出してキャッシュをリフレッシュ
+        await gyomuListService.getByPropertyNumber('DUMMY');
+        console.log('✅ 業務リスト cache pre-loaded');
+      } catch (error: any) {
+        console.warn('⚠️ Failed to pre-load 業務リスト cache:', error.message);
+        // エラーでも続行（業務リスト取得は必須ではない）
+      }
+
       // 2. Process in batches
       const BATCH_SIZE = 10;
       const results: UpdateResult[] = [];
@@ -471,6 +615,7 @@ export class PropertyListingSyncService {
               }
 
               // 業務リストから格納先URLを取得（storage_locationが空の場合）
+              // キャッシュが事前にロードされているため、API呼び出しは発生しない
               if (!changedFieldsOnly.storage_location || changedFieldsOnly.storage_location === null) {
                 const storageUrlFromGyomu = await this.getStorageUrlFromGyomuList(update.property_number);
                 if (storageUrlFromGyomu) {
@@ -480,8 +625,8 @@ export class PropertyListingSyncService {
               }
 
               // 追加データも取得して保存（初回から高速表示のため）
-              // 一時的に無効化: sellersテーブルのcommentsカラムエラーを回避
-              // await this.updatePropertyDetailsFromSheets(update.property_number);
+              // エラーが発生しても処理を続行（エラーハンドリング済み）
+              await this.updatePropertyDetailsFromSheets(update.property_number);
 
               return await this.updatePropertyListing(
                 update.property_number,
@@ -660,6 +805,18 @@ export class PropertyListingSyncService {
         continue;
       }
 
+      // ⚠️ 重要: image_urlは手動更新ボタンで管理されるため、自動同期から除外
+      if (dbField === 'image_url') {
+        console.log(`[PropertyListingSyncService] Skipping image_url comparison (managed by manual refresh)`);
+        continue;
+      }
+
+      // ⚠️ 重要: storage_locationは手動更新ボタンで管理されるため、自動同期から除外
+      if (dbField === 'storage_location') {
+        console.log(`[PropertyListingSyncService] Skipping storage_location comparison (managed by manual refresh)`);
+        continue;
+      }
+
       const dbValue = dbProperty[dbField];
       const normalizedSpreadsheetValue = this.normalizeValue(spreadsheetValue);
       const normalizedDbValue = this.normalizeValue(dbValue);
@@ -748,9 +905,12 @@ export class PropertyListingSyncService {
   /**
    * Detect new properties that exist in spreadsheet but not in database
    * 
-   * @returns Array of property numbers that need to be added
+   * @returns Object containing new property numbers and spreadsheet row data (to avoid double readAll() calls)
    */
-  async detectNewProperties(): Promise<string[]> {
+  async detectNewProperties(): Promise<{
+    newPropertyNumbers: string[];
+    spreadsheetRows: Map<string, any>;
+  }> {
     if (!this.sheetsClient) {
       throw new Error('GoogleSheetsClient not configured');
     }
@@ -760,6 +920,13 @@ export class PropertyListingSyncService {
     // 1. Read all properties from spreadsheet
     const spreadsheetData = await this.sheetsClient.readAll();
     const spreadsheetPropertyNumbers = new Set<string>();
+
+    // スプレッドシートデータをMapとして保持（syncNewPropertiesで再利用するため）
+    const spreadsheetRows = new Map<string, any>(
+      spreadsheetData
+        .filter(row => String(row['物件番号'] || '').trim() !== '')
+        .map(row => [String(row['物件番号'] || '').trim(), row])
+    );
     
     for (const row of spreadsheetData) {
       const propertyNumber = String(row['物件番号'] || '').trim();
@@ -814,10 +981,14 @@ export class PropertyListingSyncService {
       }
     }
 
-    // Sort by property number
+    // Sort by property number（全プレフィックス形式に対応した汎用ソート）
     newProperties.sort((a, b) => {
-      const numA = parseInt(a.replace('AA', ''), 10);
-      const numB = parseInt(b.replace('AA', ''), 10);
+      const prefixA = a.replace(/[0-9]/g, '');
+      const prefixB = b.replace(/[0-9]/g, '');
+      const numA = parseInt(a.replace(/^[A-Za-z]+/, ''), 10);
+      const numB = parseInt(b.replace(/^[A-Za-z]+/, ''), 10);
+      if (prefixA !== prefixB) return prefixA.localeCompare(prefixB);
+      if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
       return numA - numB;
     });
 
@@ -826,7 +997,7 @@ export class PropertyListingSyncService {
       console.log(`   First few: ${newProperties.slice(0, 5).join(', ')}${newProperties.length > 5 ? '...' : ''}`);
     }
 
-    return newProperties;
+    return { newPropertyNumbers: newProperties, spreadsheetRows };
   }
 
   /**
@@ -903,8 +1074,8 @@ export class PropertyListingSyncService {
     try {
       console.log('🆕 Starting new property addition sync...');
 
-      // 1. Detect new properties
-      const newPropertyNumbers = await this.detectNewProperties();
+      // 1. Detect new properties（スプレッドシートデータも同時に取得して再利用）
+      const { newPropertyNumbers, spreadsheetRows: spreadsheetMap } = await this.detectNewProperties();
 
       if (newPropertyNumbers.length === 0) {
         console.log('✅ No new properties detected');
@@ -918,14 +1089,7 @@ export class PropertyListingSyncService {
 
       console.log(`📊 Detected ${newPropertyNumbers.length} new properties`);
 
-      // 2. Get spreadsheet data for new properties
-      const spreadsheetData = await this.sheetsClient!.readAll();
-      const spreadsheetMap = new Map(
-        spreadsheetData.map(row => [
-          String(row['物件番号'] || '').trim(),
-          row
-        ])
-      );
+      // 2. spreadsheetMapはdetectNewProperties()から取得済み（readAll()の二重呼び出しを回避）
 
       // 3. Process in batches
       const BATCH_SIZE = 10;

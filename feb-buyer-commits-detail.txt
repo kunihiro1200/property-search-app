@@ -1,0 +1,540 @@
+﻿[0b849fb] perf: 霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ螟ｧ蟷・隼蝟・41f15296efed71a38c16d73ff63229b88563257f perf: 霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ謾ｹ蝟・ea1c08a952d64521d9a578b765fa29fff5d3697d feat: 霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医・陦ｨ遉ｺ謾ｹ蝟・7162fb0109470a561be2bd5180818554c8096d43 feat: 騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｮ繝倥ャ繝繝ｼ繝懊ち繝ｳ繧偵瑚ｿ鷹團雋ｷ荳ｻ縲阪↓螟画峩縺励∬ｿ鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝医↓蝠丞粋縺帙◆迚ｩ莉ｶ縺ｮ謇蝨ｨ蝨ｰ蛻励ｒ霑ｽ蜉
+  - backend/src/services/BuyerService.ts
+  - frontend/src/components/NearbyBuyersList.tsx
+
+[3af9b39] fix: 蜑企勁貂医∩雋ｷ荳ｻ繧堤黄莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺九ｉ髯､螟悶∝・髢狗黄莉ｶ繧ｵ繧､繝医・繧ｿ繝ｳ繧貞炎髯､
+  - backend/src/services/BuyerLinkageService.ts
+  - frontend/src/components/PageNavigation.tsx
+
+[8bbe8d2] fix: 蟶梧悍遞ｮ蛻･縺梧里縺ｫ險ｭ螳壹＆繧後※縺・ｋ蝣ｴ蜷医ｂ萓｡譬ｼ蟶ｯ縺ｨ繧ｨ繝ｪ繧｢繧定・蜍戊ｨｭ螳・e4baff3a354648c3ab424afbd17446637f91b0b2 feat: 蝠丞粋縺帷黄莉ｶ縺九ｉ萓｡譬ｼ蟶ｯ縺ｨ蟶梧悍繧ｨ繝ｪ繧｢繧定・蜍戊ｨｭ螳・6a9b42ff11c47cebf0b2499088d6ade59c0b8d2a feat: 蝠丞粋縺帷黄莉ｶ縺ｮ遞ｮ蛻･縺九ｉ蟶梧悍遞ｮ蛻･繧定・蜍戊ｨｭ螳壹＠縲∝撫蜷医○繝偵い繝ｪ繝ｳ繧ｰ縺九ｉ萓｡譬ｼ蟶ｯ繧定・蜍募渚譏
+  - backend/src/services/BuyerService.ts
+
+[a63c261] fix: 雋ｷ荳ｻ譁ｰ隕冗匳骭ｲ譎ゅ・繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝亥酔譛溘ｒ菫ｮ豁｣
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/BuyerWriteService.ts
+
+[30d0e49] fix: 雋ｷ荳ｻ逡ｪ蜿ｷ逕滓・縺ｧE蛻励ｒ蜿ら・縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+  - backend/src/services/BuyerService.ts
+
+[966e231] 雋ｷ荳ｻ逡ｪ蜿ｷ逕滓・縺ｫ繝・ヰ繝・げ繝ｭ繧ｰ繧定ｿｽ蜉
+  - backend/src/services/BuyerService.ts
+
+[0ed71bc] 雋ｷ荳ｻ逡ｪ蜿ｷ閾ｪ蜍慕函謌・ 蜈ｬ髢九Γ繧ｽ繝・ラ繧定ｿｽ蜉縺励※繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝医°繧画ｭ｣縺励＞譛螟ｧ蛟､+1繧貞叙蠕・070846164edf7bbcbca10dd8a6337019d6b67777 feat: 雋ｷ荳ｻ逡ｪ蜿ｷ縺ｮ閾ｪ蜍慕函謌舌→繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝亥酔譛溘ｒ螳溯｣・12a162190d36ac7bf170fe4df911ffdd7a4dfda4 雋ｷ荳ｻ繝ｪ繧ｹ繝医ｒ繝・・繝悶Ν蠖｢蠑上↓螟画峩: 豌丞錐繝ｻ蜿嶺ｻ俶律繝ｻ蜀・ｦｧ譌･繝ｻ譎る俣繝ｻ譛譁ｰ迥ｶ豕√ｒ陦ｨ遉ｺ
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerService.ts
+
+[e9e6b96] 雋ｷ荳ｻ繝ｪ繧ｹ繝亥叙蠕励・菫ｮ豁｣: buyer_id縺ｨbuyer_number縺ｮ荳｡譁ｹ繧定ｿ斐☆繧医≧縺ｫ螟画峩
+  - backend/src/services/BuyerLinkageService.ts
+
+[0955686] feat: 迚ｩ莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｮ荳諡ｬ驟堺ｿ｡繧貞句挨騾∽ｿ｡・亥錐蜑榊・繧奇ｼ峨↓螟画峩
+  - backend/src/routes/emails.ts
+  - backend/src/services/EmailService.ts
+  - backend/src/services/EnhancedBuyerDistributionService.ts
+  - frontend/src/components/BuyerFilterSummaryModal.tsx
+  - frontend/src/components/GmailDistributionButton.tsx
+  - frontend/src/services/gmailDistributionService.ts
+
+[28d6656] fix: SMS騾∽ｿ｡繧貞｣ｲ荳ｻ繝ｪ繧ｹ繝医→蜷後§莉慕ｵ・∩縺ｫ螟画峩
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[b372025] feat: 雋ｷ荳ｻ蛟呵｣懊Μ繧ｹ繝医↓蛟句挨SMS騾∽ｿ｡讖溯・繧定ｿｽ蜉
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[1ab3695] feat: 繝｡繝ｼ繝ｫ譛ｬ譁・↓迚ｩ莉ｶ縺ｮ遞ｮ蛻･縺ｨ萓｡譬ｼ繧定・蜍戊ｿｽ蜉
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[f8c12f6] refactor: SMS荳諡ｬ騾∽ｿ｡讖溯・繧貞炎髯､
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[6adc2f6] feat: 繝｡繝ｼ繝ｫ遒ｺ隱阪Δ繝ｼ繝繝ｫ縺ｧ雋ｷ荳ｻ蜷阪ｒ閾ｪ蜍戊｡ｨ遉ｺ
+  - frontend/src/components/EmailConfirmationModal.tsx
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[0662c92] feat: 雋ｷ荳ｻ蛟呵｣懊Μ繧ｹ繝医↓繝｡繝ｼ繝ｫ騾∽ｿ｡遒ｺ隱阪Δ繝ｼ繝繝ｫ繧堤ｵｱ蜷・34675b3824e42d287e0c4a5f301f6110711d8ba6 Twilio SMS荳諡ｬ騾∽ｿ｡讖溯・縺ｨ繝｡繝ｼ繝ｫ蛟句挨騾∽ｿ｡讖溯・縺ｮ螳溯｣・9cc5f6b622fc6048dd44c0d8d31f1f8f777f3428 Gmail驟堺ｿ｡讖溯・縺ｮ謾ｹ蝟・→UI蜷台ｸ・75b02849a70b729ade2df522b740555179e9cd65 fix: 雋ｷ荳ｻ閾ｪ蜍募炎髯､縺ｮ隱､讀懷・繧剃ｿｮ豁｣
+  - frontend/src/components/EmailConfirmationModal.tsx
+  - frontend/src/pages/BuyerCandidateListPage.tsx
+
+[0906002] feat: Add sidebar status logic for property list management
+  - backend/api/src/services/__tests__/PropertyListingSyncService.test.ts
+  - backend/check-buyer-6913.ts
+  - backend/check-buyer-6951.ts
+  - backend/migrations/add-sidebar-status-column.sql
+  - backend/migrations/add-sidebar-status-index.sql
+  - backend/revert-buyer-6951-assignee.ts
+  - backend/src/config/buyer-status-definitions.ts
+  - backend/src/services/BuyerStatusCalculator.ts
+  - backend/update-buyer-6951-assignee.ts
+  - frontend/src/components/PropertySidebarStatus.tsx
+  - frontend/src/pages/PropertyListingsPage.tsx
+
+[aec3da4] fix: 蜍慕噪縺ｫ逕滓・縺輔ｌ縺滓球蠖薙き繝・ざ繝ｪ繝ｼ繧偵し繧､繝峨ヰ繝ｼ縺ｫ陦ｨ遉ｺ
+  - backend/src/services/BuyerService.ts
+
+[d8cf61d] fix: 雋ｷ荳ｻ繧ｹ繝・・繧ｿ繧ｹ縲瑚ｦ∝・隕ｧ菫・ｲ螳｢縲阪・陦ｨ遉ｺ鬆・ｺ上→譚｡莉ｶ繧剃ｿｮ豁｣
+  - backend/check-buyer-6939.ts
+  - backend/src/config/buyer-status-definitions.ts
+  - backend/src/services/BuyerStatusCalculator.ts
+  - backend/src/utils/dateHelpers.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[7b20dac] fix: 萓｡譬ｼ蟶ｯ繧貞ｸ梧悍遞ｮ蛻･縺ｫ蠢懊§縺ｦ驕ｩ蛻・↑繝輔ぅ繝ｼ繝ｫ繝峨・縺ｿ縺ｫ蜿肴丐縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+  - backend/check-buyer-4216-desired-type.ts
+  - backend/check-buyer-4216-property.ts
+  - backend/find-buyer-with-apartment.ts
+  - backend/find-buyer-with-house.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/InquiryHearingParser.ts
+  - backend/test-buyer-4216-apartment-sync.ts
+  - backend/test-buyer-4216-house-sync.ts
+  - backend/test-buyer-4216-inquiry-hearing-sync.ts
+  - backend/test-inquiry-hearing-api.ts
+  - backend/test-inquiry-hearing-save.ts
+  - backend/update-buyer-4216-desired-type.ts
+
+[bee0f63] 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ閾ｪ蜍募渚譏: updateWithSync()繝｡繧ｽ繝・ラ縺ｫ閾ｪ蜍輔ヱ繝ｼ繧ｹ蜃ｦ逅・ｒ霑ｽ蜉
+  - backend/src/services/BuyerService.ts
+
+[0476a6c] debug(buyer): 菫晏ｭ倥・繧ｿ繝ｳ縺ｮ繝・ヰ繝・げ繝ｭ繧ｰ繧定ｿｽ蜉
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[8b0dccf] debug(buyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ閾ｪ蜍輔ヱ繝ｼ繧ｹ縺ｮ繝ｭ繧ｰ蜃ｺ蜉帙ｒ霑ｽ蜉
+  - backend/src/services/BuyerService.ts
+
+[8d446c3] fix(buyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺ｮ閾ｪ蜍穂ｿ晏ｭ倥ｒ辟｡蜉ｹ蛹・a0aff531bcdf8bee399d2b8840f3c8f127801a57 docs(spec): 繧ｿ繧ｹ繧ｯ5.2繧定ｿｽ蜉・井ｿ晏ｭ倥・繧ｿ繝ｳ縺ｮ螳溯｣・ｼ・edaccdd1695423a86ae43e816e9b2428851e3104 feat(buyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺ｫ菫晏ｭ倥・繧ｿ繝ｳ繧定ｿｽ蜉
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[59163e3] fix: 萓｡譬ｼ蟶ｯ繝輔ぅ繝ｼ繝ｫ繝峨ｒ迚ｩ莉ｶ遞ｮ蛻･縺ｫ蠢懊§縺ｦ蜿肴丐縺吶ｋ繧医≧縺ｫ菫ｮ豁｣
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/InquiryHearingParser.ts
+  - backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  - backend/test-inquiry-hearing-update.ts
+
+[b759f9a] fix: 鬧占ｻ雁ｴ蟶梧悍蜿ｰ謨ｰ縺ｮ繧ｫ繝ｩ繝蜷阪ｒparking_spaces縺ｫ菫ｮ豁｣
+  - backend/execute-migration-direct.ts
+  - backend/run-migration-field-updated-at.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/InquiryHearingParser.ts
+  - backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  - backend/test-inquiry-hearing-integration.ts
+  - backend/test-inquiry-hearing-parser.ts
+  - backend/verify-field-updated-at-columns.ts
+
+[d1f0737] feat(buyer): 蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺九ｉ蟶梧悍譚｡莉ｶ縺ｸ縺ｮ閾ｪ蜍募渚譏讖溯・繧貞ｮ溯｣・71cdde0fce16751aadb938642dfb43466ba866ba feat(buyer): 雋ｷ荳ｻ蜀・ｦｧ邨先棡繝壹・繧ｸ縺ｮ蜈ｨ讖溯・螳溯｣・ｮ御ｺ・2d05a5422920cbe48f4b0e035178d31d7ffb4250 fix(buyer): 騾壼ｸｸ縺ｮ雋ｷ莉倥〒繧りｲｷ莉倥メ繝｣繝・ヨ騾∽ｿ｡繧貞ｿ・亥喧
+  - backend/add-pet-allowed-column-direct.ts
+  - backend/check-bb-column-header.ts
+  - backend/check-property-listings-schema.ts
+  - backend/debug-aa505-price.ts
+  - backend/debug-aa505-property-about.ts
+  - backend/debug-buyer-6954-nearby.ts
+  - backend/run-migration-field-updated-at.ts
+  - backend/run-migration-pet-allowed.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/InquiryHearingParser.ts
+  - backend/supabase/migrations/20260211_add_field_updated_at_columns.sql
+  - backend/supabase/migrations/20260211_add_pet_allowed_to_property_listings.sql
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[ac26464] feat(buyer): 雋ｷ莉倥さ繝｡繝ｳ繝医ヵ繧｣繝ｼ繝ｫ繝峨↓繝励Ξ繝ｼ繧ｹ繝帙Ν繝繝ｼ繧定ｿｽ蜉縺励・壼ｸｸ縺ｮ雋ｷ莉倥〒繧ょｿ・亥喧
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[7d2516d] feat(buyer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧貞ｮ悟・縺ｫ菫ｮ豁｣
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[21a59c8] feat(buyer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧呈隼蝟・637db1ea4230737d772f7e23f61158d0c16d1faf fix(buyer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・縺ｨ繝峨Ο繝・・繝繧ｦ繝ｳ陦ｨ遉ｺ繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+  - frontend/src/utils/buyerLatestStatusOptions.ts
+
+[39ee01e] feat(buyer): 雋ｷ莉伜､悶ｌ縺ｾ縺励◆讖溯・繧呈隼蝟・664591bf9b5e284bb5e69f15a6765f83f6be667d feat(buyer): 譛譁ｰ迥ｶ豕√↓縲瑚ｲｷ莉伜､悶ｌ縺ｾ縺励◆縲阪・繧ｿ繝ｳ繧定ｿｽ蜉
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[f7542b8] fix(buyer): hasMailInquiry縺ｮ驥崎､・ｮ｣險繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[2bb4bd4] feat(buyer): 蜈ｨ縺ｦ縺ｮ繝峨Ο繝・・繝繧ｦ繝ｳ縺ｫ遨ｺ谺・∈謚櫁い繧定ｿｽ蜉縲・蝗樊楔髮ｻ繝舌Μ繝・・繧ｷ繝ｧ繝ｳ菫ｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/utils/buyerDetailFieldOptions.ts
+  - frontend/src/utils/buyerInquirySourceOptions.ts
+
+[1870fb9] fix(buyer): 譛譁ｰ迥ｶ豕√・繝峨Ο繝・・繝繧ｦ繝ｳ縺ｫ遨ｺ谺・∈謚櫁い繧定ｿｽ蜉
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[4112b44] feat(buyer): 譛譁ｰ迥ｶ豕√・驕ｸ謚櫁い繧堤黄莉ｶ縺ｮatbb_status縺ｫ蠢懊§縺ｦ蜍慕噪繝輔ぅ繝ｫ繧ｿ繝ｪ繝ｳ繧ｰ
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[3073725] feat(buyer): 雋ｷ荳ｻ霑鷹團迚ｩ莉ｶ荳隕ｧ縺ｮ繝・・繝悶Ν陦ｨ遉ｺ鬆・岼繧貞､画峩
+  - frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[a4642c0] fix: 雋ｷ荳ｻ繝ｪ繧ｹ繝医・蜀・ｦｧ蠖｢諷九ヵ繧｣繝ｼ繝ｫ繝峨ｒviewing_mobile縺ｫ繝槭ャ繝斐Φ繧ｰ菫ｮ豁｣
+  - backend/src/config/buyer-column-mapping.json
+
+[9fb6713] fix: 雋ｷ荳ｻ繝ｪ繧ｹ繝医・蜀・ｦｧ譎る俣繝輔ぅ繝ｼ繝ｫ繝峨・Excel繧ｷ繝ｪ繧｢繝ｫ蛟､螟画鋤縺ｫ蟇ｾ蠢・45f4a1b1100d0219aee7ac4e9155df50f705af63 style: 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ蜀・ｦｧ繝懊ち繝ｳ繧堤岼遶九▽繧医≧縺ｫ螟画峩
+  - backend/src/config/buyer-column-mapping.json
+  - backend/src/services/BuyerColumnMapper.ts
+
+[396542c] feat: 雋ｷ荳ｻ繝ｪ繧ｹ繝郁ｿ鷹團迚ｩ莉ｶ讀懃ｴ｢繧呈僑蠑ｵ・郁ｷ晞屬繝吶・繧ｹ+驟堺ｿ｡繧ｨ繝ｪ繧｢繝吶・繧ｹ・・3cb2f0d8226562738a3687c84d1370ed66db9635 fix: 雋ｷ荳ｻ蟶梧悍譚｡莉ｶ繝壹・繧ｸ縺ｮUI謾ｹ蝟・- 繝峨Ο繝・・繝繧ｦ繝ｳ騾上￠蝠城｡瑚ｧ｣豎ｺ縺ｨ繝・じ繧､繝ｳ邨ｱ荳
+  - backend/src/services/BuyerService.ts
+
+[f78d04c] feat: 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢縺ｮ縲仙撫蜷医Γ繝ｼ繝ｫ縲鷹崕隧ｱ蟇ｾ蠢懊ヵ繧｣繝ｼ繝ｫ繝峨↓縲御ｸ崎ｦ√埼∈謚櫁い繧定ｿｽ蜉
+  - backend/src/services/BuyerStatusCalculator.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[a04052f] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝峨ｒ邱題牡縺ｫ螟画峩
+  - frontend/src/components/PropertyInfoCard.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[8176ce1] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ蜈ｨ縺ｦ縺ｮ繝懊ち繝ｳ縺ｨ繧｢繧､繧ｳ繝ｳ繧堤ｷ題牡縺ｫ邨ｱ荳
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[0b197b7] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮEmail/SMS/繧｢繧ｯ繧ｷ繝ｧ繝ｳ繝懊ち繝ｳ繧堤ｷ題牡縺ｫ邨ｱ荳
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[c596f48] feat: 雋ｷ荳ｻ繝壹・繧ｸ縺ｮ蜈ｨ隕∫ｴ縺ｫ邱題牡繝・・繝槭ｒ驕ｩ逕ｨ
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyersPage.tsx
+
+[69f9c1a] feat: 雋ｷ荳ｻ繝壹・繧ｸ縺ｫ邱題牡繝・・繝槭ｒ驕ｩ逕ｨ
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyersPage.tsx
+
+[ac805ae] chore: 荳崎ｦ√↑繝峨く繝･繝｡繝ｳ繝医→繝・せ繝医せ繧ｯ繝ｪ繝励ヨ繧貞炎髯､
+  - backend/check-buyer-6951-broker-survey.ts
+  - backend/check-buyer-6951-data.sql
+  - backend/check-buyer-6951-simple.ts
+  - backend/check-buyer-6951.ts
+  - backend/check-buyers-columns.ts
+  - backend/migrations/105_EXECUTION_GUIDE.md
+  - backend/migrations/run-105-migration.ts
+  - backend/sync-buyer-6951-broker-survey.ts
+  - backend/test-buyer-6951-api.ts
+  - backend/verify-buyer-6951-status.ts
+
+[60eb069] fix: 讌ｭ閠・髄縺代い繝ｳ繧ｱ繝ｼ繝医ヵ繧｣繝ｼ繝ｫ繝峨・蟷・ｒ蜊雁・縺ｫ螟画峩
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[c054cd6] fix: gridSize蛻晄悄蛹悶お繝ｩ繝ｼ繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[0463a8a] fix: 讌ｭ閠・髄縺代い繝ｳ繧ｱ繝ｼ繝医ヵ繧｣繝ｼ繝ｫ繝峨ｒ繝懊ち繝ｳ陦ｨ遉ｺ縺ｫ螳溯｣・c7dd95041c98e4d866ae7a16f0b44f4c7bc63800 fix: 讌ｭ閠・髄縺代い繝ｳ繧ｱ繝ｼ繝医ヵ繧｣繝ｼ繝ｫ繝峨ｒ繝懊ち繝ｳ陦ｨ遉ｺ縺ｫ螟画峩
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[244920e] feat: 讌ｭ閠・髄縺代い繝ｳ繧ｱ繝ｼ繝医ヵ繧｣繝ｼ繝ｫ繝峨ｒ繝・・繧ｿ繝吶・繧ｹ縺ｫ霑ｽ蜉縺怜酔譛溷ｮ御ｺ・2f0da0a2d54d25a9ab3f5aa5a398ba7e731d1bdc feat: 讌ｭ閠・髄縺代い繝ｳ繧ｱ繝ｼ繝医ヵ繧｣繝ｼ繝ｫ繝峨ｒ蝠丞粋縺帶凾繝偵い繝ｪ繝ｳ繧ｰ縺ｮ逶ｴ荳九↓陦ｨ遉ｺ
+  - backend/check-buyer-6951-broker-survey.ts
+  - backend/check-buyer-6951-data.sql
+  - backend/check-buyer-6951-simple.ts
+  - backend/check-buyer-6951.ts
+  - backend/check-buyers-columns.ts
+  - backend/migrations/105_EXECUTION_GUIDE.md
+  - backend/migrations/105_add_broker_survey_to_buyers.sql
+  - backend/migrations/run-105-migration.ts
+  - backend/sync-buyer-6951-broker-survey.ts
+  - backend/test-buyer-6951-api.ts
+  - backend/verify-buyer-6951-status.ts
+
+[2712cdd] perf: buyer_number繝吶・繧ｹ縺ｫ螳悟・遘ｻ陦・- 莠碁㍾讀懃ｴ｢繧貞炎髯､
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerService.ts
+
+[1f8c746] fix: 雋ｷ荳ｻ6951縺ｮ迚ｩ莉ｶ諠・ｱ陦ｨ遉ｺ菫ｮ豁｣ - buyer_number繝吶・繧ｹ縺ｫ螟画峩
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerService.ts
+
+[c7319b4] feat: 雋ｷ荳ｻ繝ｪ繧ｹ繝医→螢ｲ荳ｻ繝ｪ繧ｹ繝医↓繝ｯ繝ｳ繧ｯ繝ｪ繝・け繝峨Ο繝・・繝繧ｦ繝ｳ讖溯・繧定ｿｽ蜉
+  - frontend/src/components/InlineEditableField.tsx
+  - frontend/src/pages/BuyerDesiredConditionsPage.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+  - frontend/src/pages/CallModePage.tsx
+
+[889b5cd] Fix nearby properties filter: exclude '螟ｧ蟄・ from town name extraction and add nearby parameter support
+  - backend/api/index.ts
+  - backend/check-aa2408-nearby.ts
+  - backend/src/services/BuyerService.ts
+  - frontend/src/hooks/usePublicProperties.ts
+  - frontend/src/pages/PublicPropertyListingPage.tsx
+  - frontend/src/types/publicProperty.ts
+
+[9d927c5] feat: 迚ｩ莉ｶ遞ｮ蛻･縺ｫ蠢懊§縺欖MS繝・Φ繝励Ξ繝ｼ繝医・繝輔ぅ繝ｫ繧ｿ繝ｪ繝ｳ繧ｰ讖溯・繧貞ｮ溯｣・281689c97b28ea566c3d75220c8edb01458a3aac fix: SMS繝・Φ繝励Ξ繝ｼ繝医・驥崎､・枚險繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[3c163f7] feat: SMS繝・Φ繝励Ξ繝ｼ繝医・謾ｹ蝟・b4c7a8ee919e7a7c8249c272eb5b82271dddc20f feat: 雋ｷ荳ｻSMS霑鷹團迚ｩ莉ｶ繝ｪ繝ｳ繧ｯ讖溯・縺ｮ螳梧・
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[116729e] Fix: Change default API URL to port 3001
+  - frontend/src/pages/PublicPropertyDetailPage.tsx
+  - frontend/src/services/api.ts
+
+[a15aeaa] debug: SMS騾∽ｿ｡譎ゅ・linkedProperties縺ｨ繝励Ξ繝ｼ繧ｹ繝帙Ν繝繝ｼ縺ｮ迥ｶ諷九ｒ遒ｺ隱阪☆繧九Ο繧ｰ繧定ｿｽ蜉
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[d197c8e] feat: 雋ｷ荳ｻSMS霑鷹團迚ｩ莉ｶ繝ｪ繝ｳ繧ｯ霑ｽ蜉讖溯・・医が繝励す繝ｧ繝ｳ3・壼腰荳繝ｪ繝ｳ繧ｯ譁ｹ蠑擾ｼ・b02cf64d98e457ed37deba30065eca5296aa252f 雋ｷ荳ｻ荳隕ｧ繝壹・繧ｸ縺ｮ繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ繧貞､ｧ蟷・↓謾ｹ蝟・& 霑鷹團迚ｩ莉ｶ讀懃ｴ｢繧剃ｿｮ豁｣
+  - backend/api/redirect.ts
+  - backend/src/index.ts
+  - backend/vercel.json
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/PublicPropertiesPage.tsx
+
+[ea7a1e7] 雋ｷ荳ｻ荳隕ｧ繝壹・繧ｸ縺ｮ繝代ヵ繧ｩ繝ｼ繝槭Φ繧ｹ繧呈怙驕ｩ蛹・ebe90943b476783d89a44121099bb56abb888ab3 雋ｷ荳ｻ荳隕ｧ繝壹・繧ｸ縺ｧ荳闊ｬ迚ｩ莉ｶ縺ｮ陦後↓閭梧勹濶ｲ繧定ｿｽ蜉
+  - backend/src/services/BuyerService.ts
+
+[68c537f] 雋ｷ荳ｻ荳隕ｧ繝壹・繧ｸ縺ｮatbb_status陦ｨ遉ｺ繧堤ｰ｡逡･蛹・d86e10db639e80bf55fbc8193cb61ab1cc179006 雋ｷ荳ｻ荳隕ｧ繝壹・繧ｸ縺ｮ繝・・繝悶Ν陦ｨ遉ｺ繧呈隼蝟・8cb238285029b45838ac49f211cf3244a46b0cb0 雋ｷ荳ｻ繝ｪ繧ｹ繝医・蜿嶺ｻ俶律繝代・繧ｹ蜃ｦ逅・ｒ菫ｮ豁｣
+  - frontend/src/pages/BuyersPage.tsx
+
+[7580191] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝倥ャ繝繝ｼ縺ｫ霑鷹團迚ｩ莉ｶ謨ｰ繧定｡ｨ遉ｺ
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[310b01b] 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢: 霑鷹團迚ｩ莉ｶ繝懊ち繝ｳ縺ｫ莉ｶ謨ｰ繧定｡ｨ遉ｺ
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[05d104d] 霑鷹團迚ｩ莉ｶ: price繧ｫ繝ｩ繝縺九ｉ萓｡譬ｼ蜿門ｾ励√・繝・ム繝ｼ縺ｫ莉ｶ謨ｰ陦ｨ遉ｺ
+  - backend/check-nearby-properties.ts
+  - backend/src/services/BuyerService.ts
+  - backend/test-nearby-api.ts
+  - frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[3819b51] 霑鷹團迚ｩ莉ｶ: sales_price縺系ull縺ｮ蝣ｴ蜷医・price繧剃ｽｿ逕ｨ
+  - backend/src/services/BuyerService.ts
+
+[7160e8c] 霑鷹團迚ｩ莉ｶ: 蟶ょ玄逕ｺ譚・逕ｺ蜷阪〒讀懃ｴ｢・井ｾ具ｼ壼､ｧ蛻・ｸよ・驥趣ｼ・6dd500a12f587ff9f3027cc0682d9bc580119218 霑鷹團迚ｩ莉ｶ: 繧ｨ繝ｪ繧｢險育ｮ励ｒ蟒・ｭ｢縲∝ｸょ玄逕ｺ譚代・繝ｼ繧ｹ縺ｧ讀懃ｴ｢・医す繝ｳ繝励Ν蛹厄ｼ・86c14a2b097f2e775304b3538dfa453a7a3753ba 霑鷹團迚ｩ莉ｶ: 菴乗園縺九ｉ繧ｨ繝ｪ繧｢繧貞虚逧・↓險育ｮ励＠縺ｦ讀懃ｴ｢・・istribution_areas繧ｫ繝ｩ繝荳崎ｦ・ｼ・b4d72576e4d97683cfdd4e664a4d06bfbf53b13e 霑鷹團迚ｩ莉ｶ: 蝓ｺ貅也黄莉ｶ縺ｨ蜷後§遞ｮ蛻･・域虻蟒ｺ縺ｦ縲√・繝ｳ繧ｷ繝ｧ繝ｳ遲会ｼ峨・縺ｿ繧呈､懃ｴ｢
+  - backend/src/services/BuyerService.ts
+
+[28e6830] 霑鷹團迚ｩ莉ｶ: 繝懊ち繝ｳ蜷阪ｒ螟画峩縲∝ｮｶ繧｢繧､繧ｳ繝ｳ霑ｽ蜉縲∫黄莉ｶ隧ｳ邏ｰ逕ｻ髱｢縺ｸ縺ｮ繝ｪ繝ｳ繧ｯ菫ｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[3973666] 迚ｩ莉ｶ霑鷹團迚ｩ莉ｶ: 繝懊ち繝ｳ繧貞挨繧ｿ繝悶〒髢九￥縲∫黄莉ｶ繧ｯ繝ｪ繝・け縺ｧ隧ｳ邏ｰ逕ｻ髱｢縺ｫ驕ｷ遘ｻ
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[30cc309] 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢: 迚ｩ莉ｶ霑鷹團迚ｩ莉ｶ讖溯・繧定ｿｽ蜉・医お繝ｪ繧｢萓｡譬ｼ蟶ｯ繧ｹ繝・・繧ｿ繧ｹ縺ｧ讀懃ｴ｢・・6753778fd1f1f58cdaab9a7561a999645be45b32 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢: 蝠上＞蜷医ｏ縺帛・螳ｹ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｫ譛譁ｰ迥ｶ豕√ヵ繧｣繝ｼ繝ｫ繝峨ｒ霑ｽ蜉・亥・隕ｧ繝壹・繧ｸ縺ｨ逶ｸ莠貞酔譛滂ｼ・5c2dea1cdd3e9235e4e68edc178b4314f174bbb0 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢: 繝倥ャ繝繝ｼ縺ｮ繧ｹ繝・・繧ｿ繧ｹ陦ｨ遉ｺ繧呈隼蝟・ｼ磯ｭ譁・ｭ励・縺ｿ縲∵怙譁ｰ遒ｺ蠎ｦ蜆ｪ蜈医∫ｴｫ濶ｲ・・7b5a0cb82f25c5d61480fc11f04bc419c44d5de3 fix: 雋ｷ荳ｻ繝ｪ繧ｹ繝医→繧ｹ繝・・繧ｿ繧ｹ繧ｫ繝・ざ繝ｪ繝ｼ縺ｮSupabase 1000莉ｶ蛻ｶ髯舌ｒ螳悟・隗｣髯､
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerService.ts
+  - frontend/src/App.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerNearbyPropertiesPage.tsx
+
+[4b583be] fix(buyer): BuyerService縺ｧPriority 17-37縺ｮ繧ｹ繝・・繧ｿ繧ｹ險育ｮ励ｒ霑ｽ蜉
+  - backend/src/services/BuyerService.ts
+
+[08a13fa] feat(buyer): 雋ｷ荳ｻ繧ｹ繝・・繧ｿ繧ｹ險育ｮ励Ο繧ｸ繝・け縺ｮ螳悟・譖ｸ縺咲峩縺励→蜑企勁蜷梧悄縺ｮ隱､蜑企勁髦ｲ豁｢讖溯・縺ｮ螳溯｣・6f34c62629ba4250eb3b45f103e082443467e78c feat: 雋ｷ荳ｻ繧ｵ繧､繝峨ヰ繝ｼ繧ｹ繝・・繧ｿ繧ｹ陦ｨ遉ｺ縺ｨ隲也炊蜑企勁讖溯・繧貞ｮ溯｣・b3bdcdbf7370fdbb37e2f3dbb207a588c45c1410 fix: 繝壹・繧ｸ驕ｷ遘ｻ譎ゅ・繝舌Μ繝・・繧ｷ繝ｧ繝ｳ繝ｭ繧ｸ繝・け繧剃ｿｮ豁｣
+  - backend/debug-buyer-6927.ts
+  - backend/restore-buyer-6927.ts
+  - backend/src/config/buyer-status-definitions.ts
+  - backend/src/services/BuyerStatusCalculator.ts
+  - backend/src/services/EnhancedAutoSyncService.ts
+
+[4e69182] 讌ｭ閠・撫蜷医○繝輔ぅ繝ｼ繝ｫ繝峨ｒ霑ｽ蜉
+  - backend/migrations/102_cleanup_buyer_field_values.sql
+  - backend/migrations/103_add_business_inquiry_column.sql
+  - backend/migrations/check-102-before-migration.ts
+  - backend/migrations/run-102-migration.ts
+  - backend/migrations/run-103-migration.ts
+  - backend/update-three-calls-values.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[19f9f72] 繝懊ち繝ｳ蠖｢蠑上ヵ繧｣繝ｼ繝ｫ繝峨・蜿榊ｿ憺溷ｺｦ繧呈隼蝟・7c7466c94b54daf501e3227a6e851d6bf7932853 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ蠢・医ヵ繧｣繝ｼ繝ｫ繝画擅莉ｶ繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[79a8c6e] fix: 3蝗樊楔髮ｻ遒ｺ隱肴ｸ医∩縺ｮ陦ｨ遉ｺ譚｡莉ｶ繧剃ｿｮ豁｣
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[a8e1d8a] feat: 蠢・医ヵ繧｣繝ｼ繝ｫ繝峨↓*蠢・医・繝ｼ繧ｯ繧定ｿｽ蜉
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[9908941] fix: 繧ｫ繝ｬ繝ｳ繝繝ｼ繧､繝吶Φ繝医・雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸURL繧剃ｿｮ豁｣
+  - backend/src/routes/buyer-appointments.ts
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[4ee722b] feat: 雋ｷ荳ｻ蜀・ｦｧ繧ｫ繝ｬ繝ｳ繝繝ｼ逋ｻ骭ｲ讖溯・繧貞ｮ溯｣・831231cfb0b7f5aaa82eff51e71e8b8a12037508 feat: 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｨ蜀・ｦｧ邨先棡繝壹・繧ｸ縺ｮ讖溯・霑ｽ蜉
+  - backend/check-admin-user.ts
+  - backend/check-calendar-tokens-table.ts
+  - backend/check-calendar-tokens-via-rest.ts
+  - backend/check-company-calendar-connection.ts
+  - backend/check-employee-calendar-token.ts
+  - backend/delete-calendar-token-direct.ts
+  - backend/delete-old-calendar-token.ts
+  - backend/set-admin-user.ts
+  - backend/setup-tenant-account.ts
+  - backend/src/index.ts
+  - backend/src/routes/buyer-appointments.ts
+  - backend/src/routes/googleCalendar.ts
+  - backend/src/services/CalendarService.supabase.ts
+  - backend/src/services/GoogleAuthService.ts
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+  - frontend/src/services/CalendarLinkGenerator.ts
+  - frontend/src/services/ValidationService.ts
+  - frontend/src/services/__tests__/CalendarLinkGenerator.test.ts
+  - frontend/src/services/__tests__/ValidationService.test.ts
+
+[a134f2f] Fix: 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ繝｡繝ｼ繝ｫSMS騾∽ｿ｡螻･豁ｴ讖溯・繧剃ｿｮ豁｣
+  - backend/migrations/100_alter_activity_logs_target_id_to_varchar.sql
+  - backend/src/index.ts
+  - backend/src/routes/activityLogs.ts
+  - backend/src/routes/buyers.ts
+  - backend/src/services/ActivityLogService.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[1485108] chore: 荳崎ｦ√↑讀懆ｨｼ繧ｹ繧ｯ繝ｪ繝励ヨ繧貞炎髯､
+  - backend/check-confirmation-column.ts
+  - backend/check-staff-columns.ts
+  - backend/check-staff-webhook.ts
+  - backend/list-staff-members.ts
+  - backend/migrations/run-100-migration.ts
+  - backend/test-send-confirmation-endpoint.ts
+  - backend/verify-staff-management.ts
+
+[dc487bf] feat: 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｫ諡・ｽ薙∈縺ｮ遒ｺ隱堺ｺ矩・∽ｿ｡讖溯・繧定ｿｽ蜉
+  - backend/check-staff-spreadsheet.ts
+  - backend/find-testable-buyer.ts
+  - backend/migrations/100_add_confirmation_to_assignee.sql
+  - backend/src/routes/buyers.ts
+  - backend/src/services/GoogleChatService.ts
+  - backend/src/services/StaffManagementService.ts
+  - frontend/src/components/ConfirmationToAssignee.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[46c869a] feat(buyer): 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮEmail/SMS騾∽ｿ｡讖溯・縺ｮ謾ｹ蝟・7bffaefa5ca292ce77636f6d54e0f798e56f7444 buyers繝ｫ繝ｼ繝・ /templates繧ｨ繝ｳ繝峨・繧､繝ｳ繝医ｒ/:id縺ｮ蜑阪↓遘ｻ蜍・4e4ce8d6d0ca42d0a9924d9715b95219f580ae75 BuyerTemplateService: 驥崎､・さ繝ｼ繝峨ｒ蜑企勁
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerTemplateService.ts
+  - backend/src/services/EmailService.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[c0e7c7b] BuyerTemplateService: GoogleSheetsClient縺ｮ隱崎ｨｼ繧定ｿｽ蜉
+  - backend/src/services/BuyerTemplateService.ts
+
+[dc74be2] 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹Γ繝ｼ繝ｫSMS騾∽ｿ｡API繧貞ｮ溯｣・bd8ad5d95f7a2908c2ee097bff3de3bdffaa27b7 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹・繝ｬ繝ｼ繧ｹ繝帙Ν繝繝ｼ鄂ｮ謠帶ｩ溯・繧貞ｮ溯｣・4f234f5d1e51b5e7b34429e268052c2f4766a55a 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹Γ繝ｼ繝ｫSMS騾∽ｿ｡讖溯・繧貞ｮ溯｣・fe85259b357373c8b13d27b93b1e54840a74b80b 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹せ繝励Ξ繝・ラ繧ｷ繝ｼ繝医°繧峨ユ繝ｳ繝励Ξ繝ｼ繝医ｒ蜿門ｾ・f0fa221e2a9d0460631d958999c920a280c0fda4 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹・繝・ム繝ｼ縺ｫEmail騾∽ｿ｡縲ヾMS騾∽ｿ｡縲・崕隧ｱ逡ｪ蜿ｷ繝懊ち繝ｳ繧定ｿｽ蜉
+  - backend/src/routes/buyers.ts
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[f1db9a9] 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壹Μ繝ｭ繝ｼ繝画凾縺ｮ隱ｭ縺ｿ霎ｼ縺ｿ騾溷ｺｦ繧呈隼蝟・113fa71018ab98932579f1bcadc3dfc957d006cb 雋ｷ荳ｻ隧ｳ邏ｰ逕ｻ髱｢・壼・繝輔ぅ繝ｼ繝ｫ繝峨ｒDB繧ｹ繝励Ξ繝・ラ繧ｷ繝ｼ繝医↓蜊ｳ蠎ｧ縺ｫ蜷梧悄
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[a5d94f9] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ: 縺昴・莉悶そ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ繝輔ぅ繝ｼ繝ｫ繝牙炎髯､縺ｨ蜀・ｦｧ邨先棡繝壹・繧ｸ縺ｸ縺ｮ繧ｯ繧､繝・け繝懊ち繝ｳ霑ｽ蜉
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+
+[d725843] spec繝峨く繝･繝｡繝ｳ繝医ｒ蜑企勁・亥ｮ溯｣・ｮ御ｺ・ｼ・23621fec4e0745c6a77ea3e99e80bda1d472ab2e 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮUI謾ｹ蝟・ 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ鬆・ｺ丞､画峩縲・蛻励Ξ繧､繧｢繧ｦ繝医∫峡遶九せ繧ｯ繝ｭ繝ｼ繝ｫ縲∫黄莉ｶ諠・ｱ繧ｫ繝ｼ繝画隼蝟・440805e5877294bfb5c4804d4476fc8aaf4e52c3 fix: 雋ｷ荳ｻ繝ｪ繧ｹ繝亥酔譛溘→繧ｽ繝ｼ繝磯・・菫ｮ豁｣
+  - backend/check-all-buyer-dates.ts
+  - backend/compare-buyer-data-6663-6660-6655.ts
+  - backend/fix-aa12369-property-type.ts
+  - backend/fix-aa12449-distribution.ts
+  - backend/fix-aa12766-distribution-areas.ts
+  - backend/fix-aa12766-sellers-table.ts
+  - backend/fix-aa12903-data.ts
+  - backend/fix-aa12903-missing-fields.ts
+  - backend/fix-aa12923-correct-name.ts
+  - backend/fix-aa12923-double-encryption.ts
+  - backend/fix-aa12923-email.ts
+  - backend/fix-aa12923-final.ts
+  - backend/fix-aa1301-inquiry-date.ts
+  - backend/fix-aa13129-aa18-image-urls.ts
+  - backend/fix-aa13129-data.ts
+  - backend/fix-aa13129-distribution-areas-correct.ts
+  - backend/fix-aa13129-distribution-areas.ts
+  - backend/fix-aa13129-storage-location-rest.ts
+  - backend/fix-aa13129-storage-location.ts
+  - backend/fix-aa13149-beppu-area.ts
+  - backend/fix-aa13149-distribution-areas.ts
+  - backend/fix-aa13154-storage-from-gyomu-sheet.ts
+  - backend/fix-aa13226-storage-location.ts
+  - backend/fix-aa13244-property-direct.ts
+  - backend/fix-aa13245-seller-situation.ts
+  - backend/fix-aa13424-visit-assignee.ts
+  - backend/fix-aa13453-property-about.ts
+  - backend/fix-aa13509-valuation.ts
+  - backend/fix-aa13528-current-status.ts
+  - backend/fix-aa13528-data.ts
+  - backend/fix-aa18-storage-location.ts
+  - backend/fix-aa376-property-data.ts
+  - backend/fix-aa4885-atbb-status.ts
+  - backend/fix-aa5128-2-storage-url.ts
+  - backend/fix-aa5222-duplicates.ts
+  - backend/fix-aa5852-address-and-areas.ts
+  - backend/fix-aa5852-distribution-areas.ts
+  - backend/fix-aa5852-property-address-and-areas.ts
+  - backend/fix-aa5852-property-listing.ts
+  - backend/fix-aa5852-with-property-address.ts
+  - backend/fix-aa6369-property.ts
+  - backend/fix-aa9313-atbb-status-v2.ts
+  - backend/fix-aa9313-atbb-status.ts
+  - backend/fix-aa9313-image-url.ts
+  - backend/fix-all-beppu-areas-add-36.ts
+  - backend/fix-all-buyer-distribution-types.ts
+  - backend/fix-all-dates.ts
+  - backend/fix-all-inquiry-dates-with-year.ts
+  - backend/fix-all-missing-properties-v2.ts
+  - backend/fix-all-missing-seller-situations.ts
+  - backend/fix-all-next-call-dates.ts
+  - backend/fix-all-property-type-mismatches.ts
+  - backend/fix-auto-sync-issues.ts
+  - backend/fix-buyer-2044-distribution-type.ts
+  - backend/fix-cc10-storage-location.ts
+  - backend/fix-cc104-coordinates.ts
+  - backend/fix-cc104-price.ts
+  - backend/fix-cc105-coordinates.ts
+  - backend/fix-cc105-price.ts
+  - backend/fix-cc23-coordinates.ts
+  - backend/fix-cc6-storage-location-correct.ts
+  - backend/fix-hidden-images-column.ts
+  - backend/fix-hidden-images-direct-connection.ts
+  - backend/fix-incorrect-valuation-amounts.ts
+  - backend/fix-inquiry-dates-batch.ts
+  - backend/fix-inquiry-dates-from-sheet.ts
+  - backend/fix-invalid-dates.ts
+  - backend/fix-ishigaki-higashi-mapping.ts
+  - backend/fix-missing-distribution-areas.ts
+  - backend/fix-missing-properties-batch.ts
+  - backend/fix-missing-properties.ts
+  - backend/fix-null-buyer-ids.ts
+  - backend/fix-ougiyama-area-mapping.ts
+  - backend/fix-property-types.ts
+  - backend/fix-remaining-missing-properties.ts
+  - backend/fix-seller-names-from-sheet.ts
+  - backend/fix-seller-property-linkage.ts
+  - backend/fix-single-seller-name.ts
+  - backend/fix-site-field-efficient.ts
+  - backend/fix-site-field.ts
+  - backend/fix-specific-sellers.ts
+  - backend/fix-status-from-sheet.ts
+  - backend/fix-storage-location-for-any-property.ts
+  - backend/fix-sync-schema-issues.ts
+  - backend/fix-tsuneyuki-distribution-areas.ts
+  - backend/fix-valuation-amounts-unit.ts
+  - backend/force-sync-buyer-6648-with-schema-reload.ts
+  - backend/force-sync-buyer-6648.ts
+  - backend/run-buyer-auto-sync.ts
+  - backend/src/index.ts
+  - backend/src/routes/buyers.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/EnhancedAutoSyncService.ts
+  - backend/verify-buyer-2064-exists.ts
+  - backend/verify-buyer-6648-schema.ts
+  - backend/verify-buyer-6648.ts
+  - backend/verify-buyer-sync-logic.ts
+
+[e483ce4] 雋ｷ荳ｻ隧ｳ邏ｰ繝壹・繧ｸ縺ｮ謾ｹ蝟・ 迚ｩ莉ｶ諠・ｱ繧ｫ繝ｼ繝画ｩ溯・霑ｽ蜉縺ｨ繝・・繧ｿ讒矩謾ｹ蝟・27b01b96ad8a4bf64119e189d8b02d1604da7a07 feat: 騾夊ｩｱ繝｢繝ｼ繝峨・繝ｼ繧ｸ縺ｫ霑鷹團雋ｷ荳ｻ繝ｪ繧ｹ繝域ｩ溯・繧定ｿｽ蜉縲∫ｨｮ蛻･繝輔ぅ繝ｫ繧ｿ繝ｪ繝ｳ繧ｰ繧剃ｿｮ豁｣
+  - frontend/src/components/PropertyInfoCard.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+
+[6d6e3f9] Fix: Implement pagination to fetch all buyers for nearby buyers list
+  - backend/src/routes/sellers.ts
+  - backend/src/services/BeppuAreaMappingService.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/CityNameExtractor.ts
+  - backend/src/services/OitaCityAreaMappingService.ts
+  - backend/src/services/PropertyDistributionAreaCalculator.ts
+  - frontend/src/components/NearbyBuyersList.tsx
+
+[8ff331a] feat: 雋ｷ荳ｻ閾ｪ蜍募酔譛滓ｩ溯・縺ｮ螳溯｣・
+  - backend/migrations/run-094-migration.ts
+  - backend/src/index.ts
+  - backend/src/routes/buyers.ts
+  - backend/src/routes/employees.ts
+  - backend/src/services/BuyerService.ts
+  - backend/src/services/EnhancedAutoSyncService.ts
+  - frontend/src/App.tsx
+  - frontend/src/components/InlineEditableField.tsx
+  - frontend/src/pages/BuyerDesiredConditionsPage.tsx
+  - frontend/src/pages/BuyerDetailPage.tsx
+  - frontend/src/pages/BuyerInquiryHistoryPage.tsx
+  - frontend/src/pages/BuyerViewingResultPage.tsx
+

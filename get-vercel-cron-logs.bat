@@ -1,0 +1,3 @@
+@echo off
+echo Vercel Cron Job logs を取得中...
+vercel logs --follow --output=raw property-site-frontend

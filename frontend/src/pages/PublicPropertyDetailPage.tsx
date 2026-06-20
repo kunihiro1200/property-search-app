@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
@@ -23,14 +23,95 @@ import publicApi from '../services/publicApi';
 import PublicInquiryForm from '../components/PublicInquiryForm';
 import PropertyImageGallery from '../components/PropertyImageGallery';
 import PublicPropertyHeader from '../components/PublicPropertyHeader';
+import { RefreshButtons } from '../components/RefreshButtons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
 import { getBadgeType } from '../utils/propertyStatusUtils';
 import { SEOHead } from '../components/SEOHead';
 import { StructuredData } from '../components/StructuredData';
 import { generatePropertyStructuredData } from '../utils/structuredData';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
+import { useGoogleMaps } from '../contexts/GoogleMapsContext';
+import { useAuthStore } from '../store/authStore';
 import '../styles/print.css';
 
+/**
+ * Google Map URLから座標を抽出する関数
+ * 対応フォーマット:
+ * - https://maps.google.com/maps?q=33.2820604,131.4869034
+ * - https://www.google.com/maps/search/33.231233,+131.576897
+ * - https://www.google.com/maps/place/33.2820604,131.4869034
+ * - https://www.google.com/maps/@33.2820604,131.4869034,15z
+ * - https://maps.app.goo.gl/xxxxx (短縮URL - バックエンド経由でリダイレクト先を取得)
+ */
+async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: number; lng: number } | null> {
+  if (!url) return null;
+  
+  try {
+    // 短縮URL（goo.gl）の場合、バックエンド経由でリダイレクト先を取得
+    if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
+      console.log('🔗 Detected shortened URL, fetching redirect via backend...');
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const response = await fetch(
+          `${apiUrl}/api/url-redirect/resolve?url=${encodeURIComponent(url)}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🔗 Redirected URL:', data.redirectedUrl);
+          url = data.redirectedUrl;
+        } else {
+          console.warn('⚠️ Failed to fetch redirect URL from backend, trying to extract from original URL');
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch redirect URL from backend:', error);
+        // リダイレクト取得に失敗した場合、元のURLから抽出を試みる
+      }
+    }
+    
+    // パターン1: ?q=lat,lng
+    const qMatch = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (qMatch) {
+      return {
+        lat: parseFloat(qMatch[1]),
+        lng: parseFloat(qMatch[2]),
+      };
+    }
+    
+    // パターン2: /search/lat,lng
+    const searchMatch = url.match(/\/search\/(-?\d+\.?\d*),\+?(-?\d+\.?\d*)/);
+    if (searchMatch) {
+      return {
+        lat: parseFloat(searchMatch[1]),
+        lng: parseFloat(searchMatch[2]),
+      };
+    }
+    
+    // パターン3: /place/lat,lng
+    const placeMatch = url.match(/\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (placeMatch) {
+      return {
+        lat: parseFloat(placeMatch[1]),
+        lng: parseFloat(placeMatch[2]),
+      };
+    }
+    
+    // パターン4: /@lat,lng,zoom
+    const atMatch = url.match(/\/@(-?\d+\.?\d*),(-?\d+\.?\d*),/);
+    if (atMatch) {
+      return {
+        lat: parseFloat(atMatch[1]),
+        lng: parseFloat(atMatch[2]),
+      };
+    }
+    
+    console.warn('⚠️ Could not extract coordinates from Google Map URL:', url);
+    return null;
+  } catch (error) {
+    console.error('❌ Error extracting coordinates from Google Map URL:', error);
+    return null;
+  }
+}
 
 const PublicPropertyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,25 +120,35 @@ const PublicPropertyDetailPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ判定（600px未満）
   
+  // 認証状態を取得（管理者モード判定用）
+  const { isAuthenticated } = useAuthStore();
+  
+  // URLクエリパラメータから管理者モードを判定（location.searchが変わるたびに再計算）
+  const isAdminMode = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const canHideParam = searchParams.get('canHide') === 'true';
+    return isAuthenticated && canHideParam;
+  }, [location.search, isAuthenticated]);
+  
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const { isLoaded: isMapLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    language: 'ja',
-    region: 'JP',
-  });
+  console.log('🗺️ [Google Maps] API Key:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NOT SET');
+  
+  const { isLoaded: isMapLoaded, loadError } = useGoogleMaps();
+  
+  console.log('🗺️ [Google Maps] isLoaded:', isMapLoaded, 'loadError:', loadError);
   
   // 全データの状態管理
   const [completeData, setCompleteData] = useState<any>(null);
-  const [isLoadingComplete, setIsLoadingComplete] = useState(true);
   
   // パノラマURLの状態管理
   const [panoramaUrl, setPanoramaUrl] = useState<string | null>(null);
-  const [isLoadingPanorama, setIsLoadingPanorama] = useState(true);
   
   // 概算書PDF生成の状態管理
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // 地図表示用の座標（Google Map URLまたは住所から取得）
+  const [mapCoordinates, setMapCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: property, isLoading, isError, error } = usePublicProperty(id);
 
@@ -74,7 +165,6 @@ const PublicPropertyDetailPage: React.FC = () => {
     if (!id) return;
     
     const fetchCompleteData = async () => {
-      setIsLoadingComplete(true);
       try {
         // publicApiインスタンスを使用（ベースURLが自動的に追加される）
         console.log(`[publicProperty:"${property?.property_number || id}"] Fetching complete data from: /api/public/properties/${id}/complete`);
@@ -84,65 +174,173 @@ const PublicPropertyDetailPage: React.FC = () => {
         console.log(`[publicProperty:"${property?.property_number || id}"] recommendedComments:`, response.data?.recommendedComments);
         console.log(`[publicProperty:"${property?.property_number || id}"] propertyAbout:`, response.data?.propertyAbout);
         console.log(`[publicProperty:"${property?.property_number || id}"] athomeData:`, response.data?.athomeData);
+        console.log(`[publicProperty:"${property?.property_number || id}"] panoramaUrl:`, response.data?.panoramaUrl);
+        
         setCompleteData(response.data);
+        
+        // パノラマURLを/completeレスポンスから取得（別途APIを呼ばない）
+        if (response.data?.panoramaUrl) {
+          setPanoramaUrl(response.data.panoramaUrl);
+          console.log('Panorama URL loaded from /complete:', response.data.panoramaUrl);
+        }
+        
+        // コメントデータが空の場合、バックグラウンドで同期をトリガー（UIをブロックしない）
+        if (response.data?.needsSync) {
+          console.log(`[publicProperty:"${property?.property_number || id}"] needsSync=true, triggering background sync...`);
+          publicApi.post(`/api/public/properties/${id}/sync-comments`)
+            .then((syncResponse) => {
+              if (syncResponse.data?.success) {
+                console.log(`[publicProperty:"${property?.property_number || id}"] Background sync complete, updating state`);
+                setCompleteData((prev: any) => ({
+                  ...prev,
+                  favoriteComment: syncResponse.data.favoriteComment,
+                  recommendedComments: syncResponse.data.recommendedComments,
+                  athomeData: syncResponse.data.athomeData,
+                  propertyAbout: syncResponse.data.propertyAbout,
+                  needsSync: false,
+                }));
+                if (syncResponse.data.athomeData && Array.isArray(syncResponse.data.athomeData)) {
+                  const athome = syncResponse.data.athomeData;
+                  let newPanoramaUrl = null;
+                  if (athome.length > 1 && athome[1]) {
+                    newPanoramaUrl = athome[1];
+                  } else if (athome[0] && typeof athome[0] === 'string' && athome[0].includes('vrpanorama.athome.jp')) {
+                    newPanoramaUrl = athome[0];
+                  }
+                  if (newPanoramaUrl) setPanoramaUrl(newPanoramaUrl);
+                }
+              }
+            })
+            .catch((syncError) => {
+              console.warn(`[publicProperty:"${property?.property_number || id}"] Background sync failed:`, syncError);
+            });
+        }
       } catch (error) {
         console.error(`[publicProperty:"${property?.property_number || id}"] Failed to fetch complete data:`, error);
-      } finally {
-        setIsLoadingComplete(false);
       }
     };
     
     fetchCompleteData();
   }, [id]); // idのみに依存（property?.property_numberを削除して無限ループを防ぐ）
   
-  // パノラマURLを取得
+  // 地図表示用の座標を取得（Google Map URLまたはデータベースの座標から）
   useEffect(() => {
-    if (!property?.property_number) return;
-    
-    const fetchPanoramaUrl = async () => {
-      setIsLoadingPanorama(true);
-      try {
-        // publicApiインスタンスを使用
-        const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
-        if (response.data.success && response.data.panoramaUrl) {
-          setPanoramaUrl(response.data.panoramaUrl);
-          console.log('Panorama URL loaded:', response.data.panoramaUrl);
-        }
-      } catch (error) {
-        console.error('Failed to fetch panorama URL:', error);
-      } finally {
-        setIsLoadingPanorama(false);
-      }
-    };
-    
-    fetchPanoramaUrl();
-  }, [property?.property_number]);
-  
-  const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
     if (!property) return;
     
+    const fetchMapCoordinates = async () => {
+      console.log('🗺️ [Map Coordinates] Starting coordinate extraction...');
+      
+      // 1. データベースに座標がある場合はそれを使用（最優先）
+      if (property.latitude && property.longitude) {
+        console.log('🗺️ [Map Coordinates] Using coordinates from database:', {
+          lat: property.latitude,
+          lng: property.longitude,
+        });
+        setMapCoordinates({
+          lat: property.latitude,
+          lng: property.longitude,
+        });
+        return;
+      }
+      
+      // 2. Google Map URLから座標を抽出
+      if (property.google_map_url) {
+        console.log('🗺️ [Map Coordinates] Extracting from Google Map URL:', property.google_map_url);
+        const coords = await extractCoordinatesFromGoogleMapUrl(property.google_map_url);
+        if (coords) {
+          console.log('🗺️ [Map Coordinates] Successfully extracted:', coords);
+          setMapCoordinates(coords);
+          
+          // DBに座標を保存（次回から高速化・地図ビューでも表示されるように）
+          try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            await fetch(`${apiUrl}/api/public/properties/${property.property_number}/save-coordinates`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+            });
+            console.log('🗺️ [Map Coordinates] Coordinates saved to database');
+          } catch (saveError) {
+            console.warn('🗺️ [Map Coordinates] Failed to save coordinates (display not affected):', saveError);
+          }
+          return;
+        }
+      }
+      
+      // 3. 住所から座標を取得（Geocoding API - 未実装）
+      // TODO: 必要に応じて実装
+      console.log('🗺️ [Map Coordinates] No coordinates available for this property');
+      setMapCoordinates(null);
+    };
+    
+    fetchMapCoordinates();
+  }, [property?.property_number, property?.google_map_url, property?.latitude, property?.longitude]);
+  // パノラマURLを取得（削除：/completeから取得するため不要）
+  // useEffect(() => {
+  //   if (!property?.property_number) return;
+  //   
+  //   const fetchPanoramaUrl = async () => {
+  //     setIsLoadingPanorama(true);
+  //     try {
+  //       // publicApiインスタンスを使用
+  //       const response = await publicApi.get(`/api/public/properties/${property.property_number}/panorama-url`);
+  //       if (response.data.success && response.data.panoramaUrl) {
+  //         setPanoramaUrl(response.data.panoramaUrl);
+  //         console.log('Panorama URL loaded:', response.data.panoramaUrl);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch panorama URL:', error);
+  //     } finally {
+  //       setIsLoadingPanorama(false);
+  //     }
+  //   };
+  //   
+  //   fetchPanoramaUrl();
+  // }, [property?.property_number]);
+  
+  const handleGenerateEstimatePdf = async (mode: 'preview' | 'download' = 'preview') => {
+    console.log('🔘 [Estimate PDF] Button clicked!', { property: property?.property_number, mode });
+    
+    if (!property) {
+      console.error('❌ [Estimate PDF] No property data available');
+      return;
+    }
+    
     setIsGeneratingPdf(true);
+    console.log('⏳ [Estimate PDF] Generating PDF...');
+    
     try {
-      // publicApiインスタンスを使用
-      const response = await publicApi.post(`/api/public/properties/${property.property_number}/estimate-pdf`);
+      // PDFをバイナリで直接受け取る
+      console.log('📡 [Estimate PDF] Sending request to:', `/api/public/properties/${property.property_number}/estimate-pdf`);
+      const response = await publicApi.post(
+        `/api/public/properties/${property.property_number}/estimate-pdf`,
+        {},
+        { responseType: 'blob' }
+      );
+      
+      console.log('✅ [Estimate PDF] PDF received, size:', response.data.size);
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
       
       if (mode === 'preview') {
-        // プレビュー：新しいタブで開く
-        window.open(response.data.pdfUrl, '_blank');
+        // 同じタブで開く（ポップアップブロッカー回避）
+        window.location.href = url;
       } else {
-        // ダウンロード：ファイルとしてダウンロード
         const link = document.createElement('a');
-        link.href = response.data.pdfUrl;
-        link.download = `概算書_${property.property_number}.pdf`;
+        link.href = url;
+        link.download = `estimate-${property.property_number}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
     } catch (error: any) {
-      console.error('Failed to generate estimate PDF:', error);
-      alert(error.response?.data?.message || '概算書の生成に失敗しました');
+      console.error('❌ [Estimate PDF] Failed:', error);
+      alert(error.response?.data?.message || error.message || error.details || '概算書の生成に失敗しました');
     } finally {
       setIsGeneratingPdf(false);
+      console.log('🏁 [Estimate PDF] Process completed');
     }
   };
 
@@ -254,8 +452,8 @@ const PublicPropertyDetailPage: React.FC = () => {
               buildYear: property.construction_year_month ? parseInt(property.construction_year_month.substring(0, 4)) : undefined,
               rooms: property.floor_plan,
               images: property.images?.map(url => ({ url })),
-              latitude: property.latitude,
-              longitude: property.longitude,
+              latitude: mapCoordinates?.lat || property.latitude,
+              longitude: mapCoordinates?.lng || property.longitude,
             })}
           />
         </>
@@ -269,6 +467,19 @@ const PublicPropertyDetailPage: React.FC = () => {
       />
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
         <Container maxWidth="lg">
+          {/* 更新ボタン（管理者モードのみ表示） */}
+          {isAdminMode && (
+            <Box className="no-print" sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+              <RefreshButtons
+                propertyId={property?.property_number || ''}
+                onRefreshComplete={(data) => {
+                  console.log('[PublicPropertyDetailPage] Refresh complete, updating state');
+                  setCompleteData(data);
+                }}
+                canRefresh={isAdminMode}
+              />
+            </Box>
+          )}
           {/* 印刷ボタン（右上に固定、スマホでは非表示） */}
           <Box
             className="no-print"
@@ -336,7 +547,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   <PropertyImageGallery
                     propertyId={property.property_number}
                     canDelete={false}
-                    canHide={false}
+                    canHide={isAdminMode}
                     showHiddenImages={false}
                     isPublicSite={true}
                   />
@@ -494,7 +705,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             </Paper>
 
             {/* 地図セクション（独立したPaper） */}
-            {(property.google_map_url || (property.latitude && property.longitude && isMapLoaded)) && (
+            {(property.google_map_url || mapCoordinates) && (
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}> {/* 5番目 */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   地図
@@ -509,60 +720,55 @@ const PublicPropertyDetailPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     fullWidth
-                    sx={{ mb: property.latitude && property.longitude && isMapLoaded ? 2 : 0 }}
+                    sx={{ mb: mapCoordinates && isMapLoaded ? 2 : 0 }}
                   >
                     Google Mapで見る
                   </Button>
                 )}
 
                 {/* 地図表示（座標がある場合） */}
-                {property.latitude && property.longitude && isMapLoaded && (
-                  <Box
-                    sx={{
-                      width: '100%',
-                      height: '400px',
-                      borderRadius: 1,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <GoogleMap
-                      mapContainerStyle={{ width: '100%', height: '100%' }}
-                      center={{
-                        lat: property.latitude,
-                        lng: property.longitude,
-                      }}
-                      zoom={15}
-                      options={{
-                        zoomControl: true,
-                        streetViewControl: false,
-                        mapTypeControl: false,
-                        fullscreenControl: true,
+                {mapCoordinates && isMapLoaded && (
+                  <>
+                    {console.log('🗺️ [Rendering Map] mapCoordinates:', mapCoordinates, 'isMapLoaded:', isMapLoaded)}
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '400px',
+                        borderRadius: 1,
+                        overflow: 'hidden',
                       }}
                     >
-                      {/* マーカー表示 */}
-                      <Marker
-                        position={{
-                          lat: property.latitude,
-                          lng: property.longitude,
+                      <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '100%' }}
+                        center={{
+                          lat: mapCoordinates.lat,
+                          lng: mapCoordinates.lng,
                         }}
-                        icon={{
-                          path: window.google.maps.SymbolPath.CIRCLE,
-                          fillColor: (() => {
-                            // バッジの色に合わせてマーカーの色を決定
-                            const badgeType = getBadgeType(property.atbb_status);
-                            if (badgeType === 'pre_publish') return '#ff9800'; // オレンジ（公開前情報）
-                            if (badgeType === 'private') return '#f44336'; // 赤（非公開物件）
-                            if (badgeType === 'sold') return '#9e9e9e'; // グレー（成約済み）
-                            return '#2196F3'; // 青（販売中物件）
-                          })(),
-                          fillOpacity: 1,
-                          strokeColor: '#fff',
-                          strokeWeight: 2,
-                          scale: 10,
+                        zoom={15}
+                        options={{
+                          zoomControl: true,
+                          streetViewControl: false,
+                          mapTypeControl: false,
+                          fullscreenControl: true,
+                          clickableIcons: false,
                         }}
-                      />
-                    </GoogleMap>
-                  </Box>
+                        onLoad={(map) => {
+                          console.log('🗺️ [Map Loaded] Map instance created');
+                          
+                          // 直接Google Maps APIを使用してマーカーを追加
+                          const marker = new google.maps.Marker({
+                            position: { lat: mapCoordinates.lat, lng: mapCoordinates.lng },
+                            map: map,
+                            title: property.address,
+                          });
+                          
+                          console.log('🗺️ [Direct Marker] Marker created:', marker);
+                        }}
+                      >
+                        {/* マーカーは onLoad で直接追加 */}
+                      </GoogleMap>
+                    </Box>
+                  </>
                 )}
               </Paper>
             )}
@@ -617,11 +823,37 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments.map((comment: string | string[], commentIndex: number) => (
-                    <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
-                      {Array.isArray(comment) ? comment.join(' ') : comment}
-                    </Typography>
-                  ))}
+                  {completeData.recommendedComments
+                    .filter((comment: any) => {
+                      // 内部メモ行を除外（←で始まる、または特定のキーワードを含む）
+                      const flatten = (c: any): string => {
+                        if (Array.isArray(c)) return c.map(flatten).join(' ');
+                        return String(c ?? '');
+                      };
+                      const text = flatten(comment).trim();
+                      return !text.startsWith('←') && 
+                             !text.includes('一般媒介で、担当もついている場合') &&
+                             !text.startsWith('＼') && !text.endsWith('／');
+                    })
+                    .map((comment: any, commentIndex: number) => {
+                      // commentが文字列の場合はそのまま表示
+                      if (typeof comment === 'string') {
+                        return (
+                          <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                            {comment}
+                          </Typography>
+                        );
+                      }
+                      // commentが配列の場合は結合して表示
+                      if (Array.isArray(comment)) {
+                        return (
+                          <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8, color: 'text.primary' }}>
+                            {comment.join(' ')}
+                          </Typography>
+                        );
+                      }
+                      return null;
+                    })}
                 </Box>
               </Paper>
             )}
@@ -647,14 +879,18 @@ const PublicPropertyDetailPage: React.FC = () => {
                 onClick={() => handleGenerateEstimatePdf('preview')}
                 disabled={isGeneratingPdf}
                 fullWidth
+                sx={{ mb: isGeneratingPdf ? 2 : 0 }}
               >
                 {isGeneratingPdf ? '生成中...' : '概算書を表示'}
               </Button>
               
               {isGeneratingPdf && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-                  概算書を生成しています。少々お待ちください...
-                </Typography>
+                <Box sx={{ textAlign: 'center' }}>
+                  <CircularProgress size={24} sx={{ mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    概算書を生成しています。10秒ほどお待ちください...
+                  </Typography>
+                </Box>
               )}
             </Paper>
 
