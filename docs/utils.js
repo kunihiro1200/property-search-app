@@ -19,8 +19,8 @@ function convertToHalfWidth(text) {
 function validatePropertyNumber(number) {
     if (!number) return false;
     
-    // Allow hyphens in property numbers (e.g., AA9862-2)
-    const pattern = /^(AA|BB|CC)[\d\-]+$/;
+    // Allow hyphens in property numbers (e.g., AA9862-2, FI567)
+    const pattern = /^(AA|BB|CC|FI)[\d\-]+$/;
     return pattern.test(number);
 }
 
