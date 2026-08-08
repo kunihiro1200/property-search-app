@@ -201,7 +201,7 @@ export const generateGreetingSMS = (
   const sellerNumber = (seller.sellerNumber || '').toUpperCase();
   const companyName = sellerNumber.includes('FI') ? '(株)くじら不動産' : '(株)いふう';
   
-  return `${name}様[改行]お世話になっております。${companyName}の${assigneeName}です。今後ともどうぞよろしくお願いいたします。`;
+  return `${name}様[改行]お世話になっております。${companyName}の${assigneeName}です。[改行]今後ともどうぞよろしくお願いいたします。`;
 };
 
 /**
