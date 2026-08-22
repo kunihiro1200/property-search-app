@@ -560,7 +560,8 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       })(),
       athomeData: dbDetails.athome_data,
       settlementDate,
-      propertyAbout: dbDetails.property_about,
+      // 内覧前伝達事項は独自サイトに表示しない
+      propertyAbout: null,
       panoramaUrl,
       needsSync: dbDetails.needsSync || false, // フロントエンドが非同期同期をトリガーするためのフラグ
     });
@@ -634,7 +635,8 @@ app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
       favoriteComment: updatedDetails.favorite_comment,
       recommendedComments: updatedDetails.recommended_comments,
       athomeData: updatedDetails.athome_data,
-      propertyAbout: updatedDetails.property_about,
+      // 内覧前伝達事項は独自サイトに表示しない
+      propertyAbout: null,
     });
   } catch (error: any) {
     console.error('[Sync Comments API] Error:', error);
@@ -1183,7 +1185,8 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
         favoriteComment: dbDetails.favorite_comment,
         athomeData: dbDetails.athome_data,
         panoramaUrl,
-        propertyAbout: dbDetails.property_about
+        // 内覧前伝達事項は独自サイトに表示しない
+        propertyAbout: null
       },
       message: '全てのデータを更新しました（データベースにも保存しました）'
     });

@@ -183,6 +183,28 @@ export const generateCallReminderSMS = (
 };
 
 /**
+ * 8. 挨拶SMS
+ * AA → (株)いふう、FI → (株)くじら不動産
+ */
+export const generateGreetingSMS = (
+  seller: Seller,
+  property: PropertyInfo | null,
+  employees?: Employee[]
+): string => {
+  const name = seller.name || '';
+  
+  // 担当者名を解決
+  const assigneeIdentifier = seller.assignedTo || '';
+  const assigneeName = getEmployeeName(assigneeIdentifier, employees);
+  
+  // 売主番号でAA/FI判定
+  const sellerNumber = (seller.sellerNumber || '').toUpperCase();
+  const companyName = sellerNumber.includes('FI') ? '(株)くじら不動産' : '(株)いふう';
+  
+  return `${name}様[改行]お世話になっております。${companyName}の${assigneeName}です。[改行][改行]今後ともどうぞよろしくお願いいたします。`;
+};
+
+/**
  * 改行プレースホルダーを実際の改行文字に変換
  */
 export const convertLineBreaks = (message: string): string => {

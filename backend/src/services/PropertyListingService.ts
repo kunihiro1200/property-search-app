@@ -591,7 +591,8 @@ export class PropertyListingService {
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
         // property_detailsテーブルからのデータを含める
-        property_about: details.property_about,
+        // 内覧前伝達事項は独自サイトに表示しないためnullにする
+        property_about: null,
         recommended_comments: details.recommended_comments,
         athome_data: details.athome_data,
         favorite_comment: details.favorite_comment
@@ -647,7 +648,8 @@ export class PropertyListingService {
         storage_location: storageLocation,  // work_tasksから取得したstorage_urlで上書き
         property_type: this.convertPropertyTypeToEnglish(data.property_type),
         // property_detailsテーブルからのデータを含める
-        property_about: details.property_about,
+        // 内覧前伝達事項は独自サイトに表示しないためnullにする
+        property_about: null,
         recommended_comments: details.recommended_comments,
         athome_data: details.athome_data,
         favorite_comment: details.favorite_comment
