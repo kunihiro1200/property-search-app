@@ -113,7 +113,7 @@ class PropertyForm {
 
         // Validate format
         if (!validatePropertyNumber(value)) {
-            this.showError('物件番号の形式が正しくありません（AA、BB、CC、FIから始まる番号を入力してください）');
+            this.showError('物件番号の形式が正しくありません（アルファベット2文字 + 数字の形式で入力してください。例：AA12345）');
             this.clearPropertyData();
             this.disableFormButton();
             this.currentPropertyNumber = null;

@@ -14,13 +14,13 @@ function convertToHalfWidth(text) {
 /**
  * Validate property number format
  * @param {string} number - Property number to validate
- * @returns {boolean} True if valid format (AA/BB/CC followed by digits and optional hyphen)
+ * @returns {boolean} True if valid format (2 alphabetic characters followed by digits and optional hyphen)
  */
 function validatePropertyNumber(number) {
     if (!number) return false;
     
-    // Allow hyphens in property numbers (e.g., AA9862-2, FI567)
-    const pattern = /^(AA|BB|CC|FI)[\d\-]+$/;
+    // Allow any 2 alphabetic characters followed by digits and hyphens (e.g., AA9862-2, FI567, XY123)
+    const pattern = /^[A-Z]{2}[\d\-]+$/;
     return pattern.test(number);
 }
 
