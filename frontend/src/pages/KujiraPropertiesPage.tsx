@@ -23,6 +23,7 @@ import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
 import { SEOHead } from '../components/SEOHead';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface PaginationInfo {
   total: number;
@@ -34,6 +35,7 @@ interface PaginationInfo {
 const KujiraPropertiesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const { isLoaded: isMapLoaded, loadError: mapLoadError } = useGoogleMaps();
 
@@ -416,7 +418,7 @@ const KujiraPropertiesPage: React.FC = () => {
       <Box sx={{ minHeight: '100vh', bgcolor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
           <CircularProgress size={48} sx={{ color: '#1565C0' }} />
-          <Typography sx={{ mt: 2 }} color="text.secondary">読み込み中...</Typography>
+          <Typography sx={{ mt: 2 }} color="text.secondary">{t('message.loading')}</Typography>
         </Box>
       </Box>
     );
@@ -426,8 +428,8 @@ const KujiraPropertiesPage: React.FC = () => {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
-          <Typography color="error" variant="h6">{error}</Typography>
-          <Button variant="contained" onClick={fetchProperties} sx={{ mt: 2, bgcolor: '#1565C0' }}>再試行</Button>
+          <Typography color="error" variant="h6">{t('message.error')}{error}</Typography>
+          <Button variant="contained" onClick={fetchProperties} sx={{ mt: 2, bgcolor: '#1565C0' }}>{t('pagination.retry')}</Button>
         </Box>
       </Box>
     );
@@ -451,10 +453,10 @@ const KujiraPropertiesPage: React.FC = () => {
         <Paper elevation={1} sx={{ bgcolor: 'white' }}>
           <Container maxWidth="lg" sx={{ py: 3 }}>
             <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom sx={{ color: '#0D47A1' }}>
-              物件一覧
+              {t('page.propertyList')}
             </Typography>
             <Typography variant="body1" color="text.secondary" gutterBottom>
-              {pagination && `全${pagination.total}件の物件`}
+              {pagination && `${t('pagination.total')}${pagination.total}${t('pagination.properties')}`}
             </Typography>
 
             {/* 検索バー */}
@@ -472,11 +474,11 @@ const KujiraPropertiesPage: React.FC = () => {
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onSearch={handleSearch}
-                  placeholder="所在地で検索"
+                  placeholder={t('search.placeholder')}
                 />
                 {searchType && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {searchType === 'property_number' ? '物件番号で検索中' : '所在地で検索中'}
+                    {searchType === 'property_number' ? t('search.byPropertyNumber') : t('search.byLocation')}
                   </Typography>
                 )}
               </Box>
@@ -507,7 +509,7 @@ const KujiraPropertiesPage: React.FC = () => {
                   setShouldScrollToMap(true);
                 }}
               >
-                {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
+                {viewMode === 'map' ? `✓ ${t('view.mapSearching')}` : t('view.switchToMap')}
               </Button>
             </Box>
           </Container>
@@ -517,7 +519,7 @@ const KujiraPropertiesPage: React.FC = () => {
         <Container maxWidth="lg" sx={{ py: 3 }}>
           <Paper elevation={1} sx={{ p: 0, overflow: 'hidden' }}>
             <Box sx={{ backgroundColor: '#1565C0', color: '#fff', p: 2 }}>
-              <Typography variant="h6" fontWeight="600">物件を絞り込む</Typography>
+              <Typography variant="h6" fontWeight="600">{t('filter.title')}</Typography>
             </Box>
             <Box sx={{ p: 3 }}>
               <Stack spacing={3} sx={{ mt: 2 }}>
@@ -530,12 +532,12 @@ const KujiraPropertiesPage: React.FC = () => {
                 {/* 価格帯フィルター */}
                 <Box>
                   <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
-                    価格帯（万円）
+                    {t('filter.priceRange')}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <TextField
                       type="number"
-                      placeholder="最低価格"
+                      placeholder={t('filter.minPrice')}
                       size="small"
                       fullWidth
                       value={minPrice}
@@ -545,7 +547,7 @@ const KujiraPropertiesPage: React.FC = () => {
                     <Typography color="text.secondary">〜</Typography>
                     <TextField
                       type="number"
-                      placeholder="最高価格"
+                      placeholder={t('filter.maxPrice')}
                       size="small"
                       fullWidth
                       value={maxPrice}
@@ -558,12 +560,12 @@ const KujiraPropertiesPage: React.FC = () => {
                 {/* 築年数フィルター */}
                 <Box>
                   <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
-                    築年数（年）
+                    {t('filter.ageRange')}
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <TextField
                       type="number"
-                      placeholder="最小築年数"
+                      placeholder={t('filter.minAge')}
                       size="small"
                       fullWidth
                       value={minAge}
@@ -573,7 +575,7 @@ const KujiraPropertiesPage: React.FC = () => {
                     <Typography color="text.secondary">〜</Typography>
                     <TextField
                       type="number"
-                      placeholder="最大築年数"
+                      placeholder={t('filter.maxAge')}
                       size="small"
                       fullWidth
                       value={maxAge}
@@ -604,7 +606,7 @@ const KujiraPropertiesPage: React.FC = () => {
                     }}
                     fullWidth
                   >
-                    {showPublicOnly ? '✓ 公開中のみ表示' : '公開中のみ表示'}
+                    {showPublicOnly ? `✓ ${t('filter.publicOnlyActive')}` : t('filter.publicOnly')}
                   </Button>
                 </Box>
 
@@ -625,9 +627,9 @@ const KujiraPropertiesPage: React.FC = () => {
                         bgcolor: hasActiveFilters() ? '#0D47A1' : '#EEF2FF',
                       },
                     }}
-                    aria-label="すべてのフィルター条件をクリア"
+                    aria-label={t('search.clearFilters')}
                   >
-                    {hasActiveFilters() ? '✓ 条件をクリア' : 'すべての条件をクリア'}
+                    {hasActiveFilters() ? `✓ ${t('filter.clearActive')}` : t('search.clearFilters')}
                   </Button>
                 </Box>
               </Stack>
@@ -640,7 +642,7 @@ const KujiraPropertiesPage: React.FC = () => {
           {filterLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
               <CircularProgress size={24} sx={{ mr: 1, color: '#1565C0' }} />
-              <Typography color="text.secondary">フィルター適用中...</Typography>
+              <Typography color="text.secondary">{t('filter.applying')}</Typography>
             </Box>
           )}
 
@@ -670,7 +672,7 @@ const KujiraPropertiesPage: React.FC = () => {
                   },
                 }}
               >
-                リスト表示に戻る
+                {t('view.switchToList')}
               </Button>
             </Box>
           )}
@@ -681,7 +683,7 @@ const KujiraPropertiesPage: React.FC = () => {
               {isLoadingAllProperties ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
                   <CircularProgress sx={{ color: '#1565C0' }} />
-                  <Typography sx={{ mt: 2 }} color="text.secondary">全物件データを取得中...</Typography>
+                  <Typography sx={{ mt: 2 }} color="text.secondary">{t('message.loadingAll')}</Typography>
                 </Box>
               ) : (
                 <PropertyMapView
@@ -719,14 +721,14 @@ const KujiraPropertiesPage: React.FC = () => {
             <>
               {properties.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="h6" color="text.secondary">現在公開中の物件はありません</Typography>
+                  <Typography variant="h6" color="text.secondary">{t('message.noResults')}</Typography>
                 </Box>
               ) : (
                 <>
                   {filterLoading && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 8, gap: 2 }}>
                       <CircularProgress size={48} sx={{ color: '#1565C0' }} />
-                      <Typography color="text.secondary" variant="h6">次のページを読み込み中...</Typography>
+                      <Typography color="text.secondary" variant="h6">{t('message.loadingNext')}</Typography>
                     </Box>
                   )}
 
@@ -778,7 +780,7 @@ const KujiraPropertiesPage: React.FC = () => {
                         disabled={currentPage === 1 || filterLoading}
                         sx={{ borderColor: '#1565C0', color: '#1565C0' }}
                       >
-                        前へ
+                        {t('pagination.prev')}
                       </Button>
                       <Typography sx={{ px: 2 }}>
                         {currentPage} / {pagination.totalPages}
@@ -799,7 +801,7 @@ const KujiraPropertiesPage: React.FC = () => {
                         disabled={currentPage === pagination.totalPages || filterLoading}
                         sx={{ borderColor: '#1565C0', color: '#1565C0' }}
                       >
-                        次へ
+                        {t('pagination.next')}
                       </Button>
                     </Box>
                   )}

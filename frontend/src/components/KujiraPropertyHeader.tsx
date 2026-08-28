@@ -4,8 +4,10 @@ import { Button, Box, useMediaQuery, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
+import LanguageIcon from '@mui/icons-material/Language';
 import KujiraPropertyLogo from './KujiraPropertyLogo';
 import { getBadgeType, BADGE_CONFIG } from '../utils/propertyStatusUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 import './KujiraPropertyHeader.css';
 
 interface KujiraPropertyHeaderProps {
@@ -26,6 +28,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const badgeType = getBadgeType(atbbStatus);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleBackClick = () => {
     const searchParams = new URLSearchParams(location.search);
@@ -53,6 +56,10 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
     window.location.href = 'tel:0924015331';
   };
 
+  const handleLanguageToggle = () => {
+    setLanguage(language === 'ja' ? 'en' : 'ja');
+  };
+
   const renderBadge = () => {
     if (!atbbStatus) return null;
     if (badgeType === 'none') return null;
@@ -60,7 +67,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
     const config = BADGE_CONFIG[badgeType as keyof typeof BADGE_CONFIG];
     if (!config) return null;
 
-    const displayText = badgeType === 'pre_release' ? '公開前情報！！' : config.text;
+    const displayText = badgeType === 'pre_release' ? t('status.preRelease') : config.text;
 
     return (
       <Box
@@ -107,7 +114,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
                 },
               }}
             >
-              {isMobile ? '一覧' : '物件一覧'}
+              {isMobile ? t('header.backToListMobile') : t('header.backToList')}
             </Button>
           )}
           {/* スマホ版のみお問合せボタンを表示 */}
@@ -131,7 +138,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
                 },
               }}
             >
-              お問合せ
+              {t('header.inquiry')}
             </Button>
           )}
           {/* スマホ版のみTELボタンを表示 */}
@@ -155,7 +162,7 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
                 },
               }}
             >
-              TEL
+              {t('header.tel')}
             </Button>
           )}
         </div>
@@ -163,6 +170,27 @@ const KujiraPropertyHeader: React.FC<KujiraPropertyHeaderProps> = ({
           {renderBadge()}
         </div>
         <div className="kujira-header-right">
+          <Button
+            startIcon={<LanguageIcon />}
+            onClick={handleLanguageToggle}
+            sx={{
+              backgroundColor: '#2E7D32',
+              color: '#fff',
+              border: '1px solid #1B5E20',
+              minWidth: 'auto',
+              whiteSpace: 'nowrap',
+              mr: 2,
+              '&:hover': {
+                backgroundColor: '#1B5E20',
+                borderColor: '#1B5E20',
+              },
+              '& .MuiButton-startIcon': {
+                marginRight: '4px',
+              },
+            }}
+          >
+            {language === 'ja' ? 'ENGLISH' : '日本語'}
+          </Button>
           <KujiraPropertyLogo />
         </div>
       </div>

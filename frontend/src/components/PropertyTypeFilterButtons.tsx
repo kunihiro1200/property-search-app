@@ -1,16 +1,9 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 物件タイプの型定義（日本語に変更）
 export type PropertyType = '戸建' | 'マンション' | '土地' | '収益物件';
-
-// 物件タイプのラベルマッピング（日本語をそのまま使用）
-export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
-  '戸建': '戸建て',
-  'マンション': 'マンション',
-  '土地': '土地',
-  '収益物件': '収益物件',
-};
 
 interface PropertyTypeFilterButtonsProps {
   selectedTypes: PropertyType[];
@@ -23,7 +16,18 @@ export const PropertyTypeFilterButtons: React.FC<PropertyTypeFilterButtonsProps>
   onTypeToggle,
   disabled = false,
 }) => {
+  const { t } = useLanguage();
   const propertyTypes: PropertyType[] = ['戸建', 'マンション', '土地', '収益物件'];
+  
+  const getTypeLabel = (type: PropertyType): string => {
+    const typeMap: Record<PropertyType, string> = {
+      '戸建': t('propertyType.house'),
+      'マンション': t('propertyType.mansion'),
+      '土地': t('propertyType.land'),
+      '収益物件': t('propertyType.income'),
+    };
+    return typeMap[type] || type;
+  };
 
   return (
     <Box>
@@ -35,11 +39,12 @@ export const PropertyTypeFilterButtons: React.FC<PropertyTypeFilterButtonsProps>
           mb: 1.5,
         }}
       >
-        物件タイプ
+        {t('filter.propertyType')}
       </Typography>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         {propertyTypes.map((type) => {
           const isSelected = selectedTypes.includes(type);
+          const label = getTypeLabel(type);
           return (
             <Button
               key={type}
@@ -73,9 +78,9 @@ export const PropertyTypeFilterButtons: React.FC<PropertyTypeFilterButtonsProps>
                     }),
               }}
               aria-pressed={isSelected}
-              aria-label={`${PROPERTY_TYPE_LABELS[type]}で絞り込む`}
+              aria-label={`${label}${t('filter.filterBy')}`}
             >
-              {PROPERTY_TYPE_LABELS[type]}
+              {label}
             </Button>
           );
         })}

@@ -14,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { inquirySchema, InquiryFormData } from '../schemas/inquirySchema';
 import { useSubmitInquiry } from '../hooks/usePublicProperties';
 import { ApiError } from '../types/publicProperty';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface PublicInquiryFormProps {
   propertyId: string;
@@ -33,6 +34,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
   phoneNumber = '097-533-2022',
   phoneHours = '10：00～17：30（定休日：水曜日）',
 }) => {
+  const { t, language } = useLanguage();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [rateLimitInfo, setRateLimitInfo] = useState<string | null>(null);
@@ -81,11 +83,13 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
         if (retryAfter) {
           const minutes = Math.ceil(retryAfter / 60);
           setRateLimitInfo(
-            `送信回数の上限に達しました。${minutes}分後に再度お試しください。`
+            language === 'ja' 
+              ? `送信回数の上限に達しました。${minutes}分後に再度お試しください。`
+              : `Rate limit exceeded. Please try again in ${minutes} minutes.`
           );
         } else {
           setRateLimitInfo(
-            '送信回数の上限に達しました。しばらくしてから再度お試しください。'
+            t('inquiry.rateLimit')
           );
         }
       } else {
@@ -96,8 +100,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
           details: apiError.details,
         });
         setSubmitError(
-          apiError.message || 
-          'お問い合わせの送信に失敗しました。入力内容をご確認の上、再度お試しください。'
+          apiError.message || t('inquiry.submitError')
         );
       }
     }
@@ -106,12 +109,12 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
   return (
     <Paper elevation={2} sx={{ p: 3 }} className="public-inquiry-form">
       <Typography variant="h6" sx={{ mb: 2 }}>
-        この物件についてお問い合わせ
+        {t('inquiry.aboutThisProperty')}
       </Typography>
 
       {propertyNumber && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
-          物件番号: {propertyNumber}
+          {t('detail.propertyNumber')}: {propertyNumber}
         </Typography>
       )}
 
@@ -121,7 +124,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
 
       {submitSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          お問い合わせを受け付けました。担当者より折り返しご連絡いたします。
+          {t('inquiry.success')}
         </Alert>
       )}
 
@@ -146,7 +149,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             render={({ field }) => (
               <TextField
                 {...field}
-                label="お名前"
+                label={t('inquiry.name')}
                 required
                 error={!!errors.name}
                 helperText={errors.name?.message}
@@ -163,7 +166,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             render={({ field }) => (
               <TextField
                 {...field}
-                label="メールアドレス"
+                label={t('inquiry.email')}
                 type="email"
                 required
                 error={!!errors.email}
@@ -181,7 +184,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             render={({ field }) => (
               <TextField
                 {...field}
-                label="電話番号"
+                label={t('inquiry.phone')}
                 type="tel"
                 required
                 error={!!errors.phone}
@@ -199,7 +202,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             render={({ field }) => (
               <TextField
                 {...field}
-                label="お問い合わせ内容"
+                label={t('inquiry.message')}
                 multiline
                 rows={6}
                 required
@@ -236,10 +239,10 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
             {submitInquiryMutation.isPending ? (
               <>
                 <CircularProgress size={20} sx={{ mr: 1 }} />
-                送信中...
+                {t('inquiry.submitting')}
               </>
             ) : (
-              'お問い合わせを送信'
+              t('inquiry.submit')
             )}
           </Button>
         </Box>
@@ -248,7 +251,7 @@ const PublicInquiryForm: React.FC<PublicInquiryFormProps> = ({
       {/* 電話でのお問い合わせボタン */}
       <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #E0E0E0' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-          お急ぎの方はお電話でもお問い合わせいただけます
+          {t('inquiry.phonePrompt')}
         </Typography>
         <Button
           variant="outlined"

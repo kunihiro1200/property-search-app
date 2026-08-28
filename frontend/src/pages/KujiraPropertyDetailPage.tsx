@@ -31,6 +31,7 @@ import { generatePropertyStructuredData } from '../utils/structuredData';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 import { useAuthStore } from '../store/authStore';
+import { useLanguage } from '../contexts/LanguageContext';
 import '../styles/print.css';
 
 /**
@@ -78,6 +79,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t, language } = useLanguage();
 
   const { isAuthenticated } = useAuthStore();
 
@@ -199,16 +201,19 @@ const KujiraPropertyDetailPage: React.FC = () => {
   };
 
   const formatPrice = (price: number | undefined) => {
-    if (!price) return '価格応談';
-    return `${(price / 10000).toLocaleString()}万円`;
+    if (!price) return t('detail.priceNegotiable');
+    if (language === 'en') {
+      return `¥${(price / 10000).toLocaleString()}0,000`;
+    }
+    return `${(price / 10000).toLocaleString()}${t('property.priceUnit')}`;
   };
 
   const getPropertyTypeLabel = (type: string) => {
     const typeMap: Record<string, string> = {
-      'detached_house': '一戸建て',
-      'apartment': 'マンション',
-      'land': '土地',
-      'other': 'その他',
+      'detached_house': t('propertyType.house'),
+      'apartment': t('propertyType.mansion'),
+      'land': t('propertyType.land'),
+      'other': t('detail.other'),
     };
     return typeMap[type] || type;
   };
@@ -237,10 +242,10 @@ const KujiraPropertyDetailPage: React.FC = () => {
     return (
       <Container maxWidth="md" sx={{ py: 8 }}>
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error?.status === 404 ? 'お探しの物件が見つかりませんでした' : error?.message || '物件の読み込みに失敗しました'}
+          {error?.status === 404 ? t('detail.notFound') : error?.message || t('detail.loadError')}
         </Alert>
         <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={handleBackClick} sx={{ bgcolor: '#1565C0' }}>
-          物件一覧に戻る
+          {t('header.backToList')}
         </Button>
       </Container>
     );
@@ -339,7 +344,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 物件画像ギャラリー */}
               <Paper elevation={2} sx={{ mb: 3, p: 2, order: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
-                  物件画像
+                  {t('detail.propertyImages')}
                 </Typography>
                 {property.property_number && (
                   <PropertyImageGallery
@@ -355,7 +360,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* パノラマビュー */}
               {panoramaUrl && (
                 <Paper elevation={2} sx={{ mb: 3, p: 2, order: 3 }} className="no-print">
-                  <Typography variant="h6" sx={{ mb: 2 }}>360°パノラマビュー</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.panorama')}</Typography>
                   <Box sx={{ position: 'relative', width: '100%', paddingTop: { xs: '75%', sm: '56.25%' }, overflow: 'hidden', borderRadius: 1 }}>
                     <iframe
                       src={panoramaUrl}
@@ -389,31 +394,31 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 <Grid container spacing={2}>
                   {showConstructionDate && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">新築年月</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.constructionDate')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{formattedConstructionDate}</Typography>
                     </Grid>
                   )}
                   {property.land_area && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">土地面積</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.landArea')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.land_area}㎡</Typography>
                     </Grid>
                   )}
                   {property.building_area && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">建物面積</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.buildingArea')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.building_area}㎡</Typography>
                     </Grid>
                   )}
                   {(property as any).building_age !== undefined && (property as any).building_age !== null && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">築年数</Typography>
-                      <Typography variant="body1" fontWeight="medium">築{(property as any).building_age}年</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.buildingAge')}</Typography>
+                      <Typography variant="body1" fontWeight="medium">{t('property.age')}{(property as any).building_age}{t('property.ageUnit')}</Typography>
                     </Grid>
                   )}
                   {property.floor_plan && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">間取り</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.floorPlan')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.floor_plan}</Typography>
                     </Grid>
                   )}
@@ -422,7 +427,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 {(property as any).description && (
                   <>
                     <Divider sx={{ my: 3 }} />
-                    <Typography variant="h6" sx={{ mb: 2 }}>物件の説明</Typography>
+                    <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.description')}</Typography>
                     <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{(property as any).description}</Typography>
                   </>
                 )}
@@ -431,7 +436,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 地図セクション */}
               {(property.google_map_url || mapCoordinates) && (
                 <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>地図</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.map')}</Typography>
 
                   {property.google_map_url && (
                     <Button
@@ -443,7 +448,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                       fullWidth
                       sx={{ mb: mapCoordinates && isMapLoaded ? 2 : 0, borderColor: '#1565C0', color: '#1565C0' }}
                     >
-                      Google Mapで見る
+                      {t('detail.viewOnGoogleMap')}
                     </Button>
                   )}
 
@@ -470,14 +475,14 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 成約済み情報 */}
               {isSold && (
                 <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>成約情報</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.contractInfo')}</Typography>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">物件番号</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('detail.propertyNumber')}</Typography>
                     <Typography variant="body1" fontWeight="medium">{property.property_number}</Typography>
                   </Box>
                   {completeData?.settlementDate && (
                     <Box>
-                      <Typography variant="body2" color="text.secondary">成約日</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.contractDate')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{formatSettlementDate(completeData.settlementDate)}</Typography>
                     </Box>
                   )}
@@ -491,7 +496,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                   sx={{ p: 3, mb: 3, backgroundColor: '#EEF2FF', borderLeft: '4px solid #1565C0', order: 6 }}
                 >
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#1565C0' }}>
-                    おすすめポイント
+                    {t('detail.highlights')}
                   </Typography>
                   <Box>
                     {completeData.recommendedComments
@@ -522,7 +527,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
 
               {/* 概算書 */}
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print">
-                <Typography variant="h6" sx={{ mb: 2 }}>概算書</Typography>
+                <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.estimate')}</Typography>
                 <Button
                   variant="contained"
                   onClick={handleGenerateEstimatePdf}
@@ -530,13 +535,13 @@ const KujiraPropertyDetailPage: React.FC = () => {
                   fullWidth
                   sx={{ bgcolor: '#1565C0', '&:hover': { bgcolor: '#0D47A1' }, mb: isGeneratingPdf ? 2 : 0 }}
                 >
-                  {isGeneratingPdf ? '生成中...' : '概算書を表示'}
+                  {isGeneratingPdf ? t('detail.estimateGenerating') : t('detail.viewEstimate')}
                 </Button>
                 {isGeneratingPdf && (
                   <Box sx={{ textAlign: 'center' }}>
                     <CircularProgress size={24} sx={{ mb: 1, color: '#1565C0' }} />
                     <Typography variant="body2" color="text.secondary">
-                      概算書を生成しています。10秒ほどお待ちください...
+                      {t('detail.estimateWait')}
                     </Typography>
                   </Box>
                 )}

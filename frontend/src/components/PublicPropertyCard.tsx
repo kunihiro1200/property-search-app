@@ -6,6 +6,7 @@ import { NavigationState } from '../types/navigationState';
 import { PROPERTY_FEATURE_ICONS } from '../utils/propertyIcons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
 import { getBadgeType, BADGE_CONFIG, isPropertyClickable } from '../utils/propertyStatusUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 import './PublicPropertyCard.css';
 
 interface PublicPropertyCardProps {
@@ -25,6 +26,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t, language } = useLanguage();
 
   // 🔍 デバッグ: propertyオブジェクトをログ出力
   console.log('[PublicPropertyCard] Rendering:', {
@@ -107,16 +109,19 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
       isFalsy: !price,
     });
     
-    if (!price) return '価格応談';
-    return `${(price / 10000).toLocaleString()}万円`;
+    if (!price) return t('detail.priceNegotiable');
+    if (language === 'en') {
+      return `¥${(price / 10000).toLocaleString()}0,000`;
+    }
+    return `${(price / 10000).toLocaleString()}${t('property.priceUnit')}`;
   };
 
   const getPropertyTypeConfig = (type: string) => {
     const configs = {
-      'detached_house': { label: '一戸建て', color: '#8B5CF6', bgColor: '#EDE9FE' },
-      'apartment': { label: 'マンション', color: '#EC4899', bgColor: '#FCE7F3' },
-      'land': { label: '土地', color: '#14B8A6', bgColor: '#CCFBF1' },
-      'other': { label: 'その他', color: '#6B7280', bgColor: '#F3F4F6' },
+      'detached_house': { label: t('propertyType.house'), color: '#8B5CF6', bgColor: '#EDE9FE' },
+      'apartment': { label: t('propertyType.mansion'), color: '#EC4899', bgColor: '#FCE7F3' },
+      'land': { label: t('propertyType.land'), color: '#14B8A6', bgColor: '#CCFBF1' },
+      'other': { label: t('detail.other'), color: '#6B7280', bgColor: '#F3F4F6' },
     };
     return configs[type as keyof typeof configs] || configs.other;
   };
