@@ -1516,8 +1516,16 @@ const CallModePage = () => {
 
       setSuccessMessage('ステータスを更新しました');
       
-      // 売主情報を再読み込み
-      await loadAllData();
+      // 売主情報のみを軽量に再取得（キャッシュクリアなし）
+      try {
+        const sellerResponse = await api.get(`/api/sellers/${id}`);
+        const sellerData = sellerResponse.data;
+        setSeller(sellerData);
+        setUnreachableStatus(sellerData.unreachableStatus || null);
+      } catch (reloadErr) {
+        console.error('売主情報の再読み込みに失敗:', reloadErr);
+        // エラーは無視して続行（更新自体は成功している）
+      }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'ステータスの更新に失敗しました');
     } finally {
