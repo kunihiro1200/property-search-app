@@ -66,6 +66,7 @@ const translations: Record<Language, Record<string, string>> = {
     'property.landArea': '土地',
     'property.buildingArea': '建物',
     'property.floorPlan': '間取り',
+    'property.noImage': '画像なし',
     
     // ページネーション
     'pagination.showing': '件中',
@@ -184,6 +185,7 @@ const translations: Record<Language, Record<string, string>> = {
     'property.landArea': 'Land',
     'property.buildingArea': 'Building',
     'property.floorPlan': 'Layout',
+    'property.noImage': 'No Image',
     
     // Pagination
     'pagination.showing': ' of ',

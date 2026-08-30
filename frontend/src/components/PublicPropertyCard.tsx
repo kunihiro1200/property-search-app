@@ -28,6 +28,32 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   const [searchParams] = useSearchParams();
   const { t, language } = useLanguage();
 
+  // 簡易翻訳関数（住所などを翻訳）
+  const translateText = (text: string | null | undefined): string => {
+    if (!text) return '';
+    if (language === 'ja') return text;
+    
+    const translations: Record<string, string> = {
+      '福岡県糸島市志摩船越': 'Funakoshi, Shima, Itoshima City, Fukuoka',
+      '福岡県': 'Fukuoka Prefecture',
+      '糸島市': 'Itoshima City',
+      '大分県': 'Oita Prefecture',
+      '別府市': 'Beppu City',
+      '土地': 'Land',
+      '建物': 'Building',
+      '（今回は住所を非公開にさせていただくために、主要部までを非表示とします。内覧時に伝えますので、お気軽にお問い合わせください）': '(For privacy, the full address is not displayed publicly. The exact location will be provided during property viewing. Please feel free to contact us)',
+    };
+    
+    if (translations[text]) return translations[text];
+    
+    let translated = text;
+    for (const [japanese, english] of Object.entries(translations)) {
+      translated = translated.replace(new RegExp(japanese, 'g'), english);
+    }
+    
+    return translated;
+  };
+
   // 🔍 デバッグ: propertyオブジェクトをログ出力
   console.log('[PublicPropertyCard] Rendering:', {
     property_number: property.property_number,
@@ -201,7 +227,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
           />
         ) : (
           <Box className="property-card-image" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f5f5f5', color: '#999', fontSize: '0.8rem' }}>
-            画像なし
+            {t('property.noImage')}
           </Box>
         )}
         <Box className="property-card-image-overlay" />
@@ -226,7 +252,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
         </Typography>
         
         <Typography className="property-address">
-          {property.display_address || property.address}
+          {translateText(property.display_address || property.address)}
         </Typography>
         
         <Box className="property-features">
@@ -239,13 +265,13 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
           {property.land_area && (
             <Box className="property-feature">
               <LandIcon className="property-feature-icon" size={16} />
-              <span>土地: {property.land_area}㎡</span>
+              <span>{t('property.landArea')}: {property.land_area}㎡</span>
             </Box>
           )}
           {property.building_area && (
             <Box className="property-feature">
               <BuildingIcon className="property-feature-icon" size={16} />
-              <span>建物: {property.building_area}㎡</span>
+              <span>{t('property.buildingArea')}: {property.building_area}㎡</span>
             </Box>
           )}
           {!!property.building_age && (

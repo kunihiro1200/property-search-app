@@ -91,6 +91,36 @@ const KujiraPropertyDetailPage: React.FC = () => {
       // お気に入り文言の翻訳例
       'イオンまで車で約2分が便利な立地。海と山の景が多彩を査定をに認じる者を安い住環境です。裏山は駒場代がため自由がありますから。広い駐車と相談の駐車スペースなど多彩なプランでご提供いたします。': 'Conveniently located about 2 minutes by car from Aeon. Enjoy diverse views of the sea and mountains in a comfortable residential environment. The backyard offers flexible garden space. We offer various plans including spacious parking and consultation parking space.',
       
+      // おすすめポイントの翻訳
+      '●近くに港湾部材が林立しあり、陸と空と空気を眺眺り時しす。整は設計の背景スペースを確保中。ご家族で絶景をお楽しみ願いますと計されています。': '● Port facilities are nearby, allowing you to enjoy views of land, sky, and air. Design background space is secured. Enjoy the spectacular views with your family.',
+      '●わとりあるPropertyの地形を生かし、擁壁の環境スペースを確保中。ご家族で優雅なお庭をお楽しみください！': '● Taking advantage of the property terrain, retaining wall environment space is secured. Enjoy an elegant garden with your family!',
+      '●市街化調整区域ですが、外来からのりとゆる未地域の移軽安を省る移置異部分が設置れています。': '● Although it is in the urbanization control area, measures have been taken to ease restrictions from outside.',
+      '●後是が是メールで受け取ることができます！': '● You can receive updates via email!',
+      '●各住所はミール式送る会金でとどこにできます！': '● Addresses can be sent via meal-style delivery!',
+      '住宅ローンのお支払いについて': 'About Housing Loan Payments',
+      '住モローンの今支払について': 'About Current Loan Payments',
+      
+      // よく使われるフレーズ
+      '近くに': 'Nearby',
+      '港湾': 'port',
+      'スペース': 'space',
+      '確保': 'secured',
+      '眺望': 'view',
+      '景色': 'scenery',
+      '海': 'sea',
+      '山': 'mountain',
+      'ご家族': 'family',
+      '便利': 'convenient',
+      '立地': 'location',
+      '環境': 'environment',
+      '地域': 'area',
+      '市街化調整区域': 'urbanization control area',
+      '住宅ローン': 'housing loan',
+      '支払い': 'payment',
+      'お支払い': 'payment',
+      'メール': 'email',
+      '受け取る': 'receive',
+      
       // 住所関連
       '福岡県糸島市志摩船越': 'Funakoshi, Shima, Itoshima City, Fukuoka Prefecture',
       '福岡県': 'Fukuoka Prefecture',
