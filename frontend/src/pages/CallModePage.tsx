@@ -4935,6 +4935,18 @@ HP：https://ifoo-oita.com/
                   {seller?.comments || 'コメントはありません'}
                 </Typography>
               </Paper>
+              
+              {/* 市街化調整区域の警告メッセージ */}
+              {seller?.comments && seller.comments.includes('⚠市街化調整区域？') && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    ⚠️ 市街化調整区域の可能性があります
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    除外して追客してください
+                  </Typography>
+                </Alert>
+              )}
             </Box>
 
             {/* 不通フィールド（inquiry_date >= 2026-01-01の売主のみ表示） */}
