@@ -86,21 +86,53 @@ const KujiraPropertyDetailPage: React.FC = () => {
     if (!text) return '';
     if (language === 'ja') return text;
     
-    // よく使われるフレーズの翻訳マッピング
-    const translations: Record<string, string> = {
-      // お気に入り文言の翻訳例
-      'イオンまで車で約2分が便利な立地。海と山の景が多彩を査定をに認じる者を安い住環境です。裏山は駒場代がため自由がありますから。広い駐車と相談の駐車スペースなど多彩なプランでご提供いたします。': 'Conveniently located about 2 minutes by car from Aeon. Enjoy diverse views of the sea and mountains in a comfortable residential environment. The backyard offers flexible garden space. We offer various plans including spacious parking and consultation parking space.',
+    // 完全一致の翻訳マッピング（優先度高）
+    const exactTranslations: Record<string, string> = {
+      // お気に入り文言の完全一致翻訳
+      '売主が応募者登録や用途の確認environment control real estateでは、転職や転職など転職を経験します。': 'Registered applicants can experience various career changes in the environment control real estate field.',
       
-      // おすすめポイントの翻訳
+      // おすすめポイントの完全一致翻訳
+      '●市街化調整区域ですが、外来からのりとゆる未地域の移軽安を省る移置異部分が設置れています。': '● Although it is in the urbanization control area, measures have been taken to ease restrictions from outside.',
       '●近くに港湾部材が林立しあり、陸と空と空気を眺眺り時しす。整は設計の背景スペースを確保中。ご家族で絶景をお楽しみ願いますと計されています。': '● Port facilities are nearby, allowing you to enjoy views of land, sky, and air. Design background space is secured. Enjoy the spectacular views with your family.',
       '●わとりあるPropertyの地形を生かし、擁壁の環境スペースを確保中。ご家族で優雅なお庭をお楽しみください！': '● Taking advantage of the property terrain, retaining wall environment space is secured. Enjoy an elegant garden with your family!',
-      '●市街化調整区域ですが、外来からのりとゆる未地域の移軽安を省る移置異部分が設置れています。': '● Although it is in the urbanization control area, measures have been taken to ease restrictions from outside.',
       '●後是が是メールで受け取ることができます！': '● You can receive updates via email!',
       '●各住所はミール式送る会金でとどこにできます！': '● Addresses can be sent via meal-style delivery!',
-      '住宅ローンのお支払いについて': 'About Housing Loan Payments',
-      '住モローンの今支払について': 'About Current Loan Payments',
       
-      // よく使われるフレーズ
+      // 住所の完全一致翻訳
+      '福岡県糸島市志摩船越': 'Funakoshi, Shima, Itoshima City, Fukuoka Prefecture',
+      '（今回は住所を非公開にさせていただくために、主要部までを非表示とします。内覧時に伝えますので、お気軽にお問い合わせください）': '(For privacy, the full address is not displayed publicly. The exact location will be provided during property viewing. Please feel free to contact us)',
+      
+      // その他のフレーズ
+      '住宅ローンのお支払いについて': 'About Housing Loan Payments',
+      '閑静な住宅街': 'Quiet residential area',
+      '駅近': 'Near station',
+      '南向き': 'South-facing',
+      '日当たり良好': 'Good sunlight',
+      '築浅': 'Recently built',
+      'リフォーム済み': 'Renovated',
+      '眺望良好': 'Great view',
+      'ペット可': 'Pets allowed',
+      'オートロック': 'Auto-lock',
+      'エレベーター': 'Elevator',
+      'バルコニー': 'Balcony',
+      'システムキッチン': 'System kitchen',
+      '床暖房': 'Floor heating',
+      '追い焚き機能': 'Bath reheating function',
+      'ウォークインクローゼット': 'Walk-in closet',
+    };
+    
+    // 完全一致する翻訳があればそれを使用
+    if (exactTranslations[text]) {
+      return exactTranslations[text];
+    }
+    
+    // 部分一致の翻訳マッピング（フォールバック）
+    const partialTranslations: Record<string, string> = {
+      '福岡県': 'Fukuoka Prefecture',
+      '糸島市': 'Itoshima City',
+      '志摩船越': 'Funakoshi, Shima',
+      '大分県': 'Oita Prefecture',
+      '別府市': 'Beppu City',
       '近くに': 'Nearby',
       '港湾': 'port',
       'スペース': 'space',
@@ -120,34 +152,8 @@ const KujiraPropertyDetailPage: React.FC = () => {
       'お支払い': 'payment',
       'メール': 'email',
       '受け取る': 'receive',
-      
-      // 住所関連
-      '福岡県糸島市志摩船越': 'Funakoshi, Shima, Itoshima City, Fukuoka Prefecture',
-      '福岡県': 'Fukuoka Prefecture',
-      '糸島市': 'Itoshima City',
-      '志摩船越': 'Funakoshi, Shima',
-      '大分県': 'Oita Prefecture',
-      '別府市': 'Beppu City',
-      '（今回は住所を非公開にさせていただくために、主要部までを非表示とします。内覧時に伝えますので、お気軽にお問い合わせください）': '(For privacy, the full address is not displayed publicly. The exact location will be provided during property viewing. Please feel free to contact us)',
-      
-      // 一般的なフレーズの翻訳
-      '閑静な住宅街': 'Quiet residential area',
-      '駅近': 'Near station',
-      '南向き': 'South-facing',
-      '日当たり良好': 'Good sunlight',
-      '築浅': 'Recently built',
-      'リフォーム済み': 'Renovated',
       '駐車場': 'Parking',
-      '眺望良好': 'Great view',
-      'ペット可': 'Pets allowed',
-      'オートロック': 'Auto-lock',
-      'エレベーター': 'Elevator',
-      'バルコニー': 'Balcony',
-      'システムキッチン': 'System kitchen',
-      '床暖房': 'Floor heating',
-      '追い焚き機能': 'Bath reheating function',
       '収納': 'Storage',
-      'ウォークインクローゼット': 'Walk-in closet',
       '敷地': 'Property',
       '土地': 'Land',
       '建物': 'Building',
@@ -162,14 +168,9 @@ const KujiraPropertyDetailPage: React.FC = () => {
       '公園': 'Park',
     };
     
-    // 完全一致する翻訳があればそれを使用
-    if (translations[text]) {
-      return translations[text];
-    }
-    
     // 部分一致の翻訳を適用
     let translated = text;
-    for (const [japanese, english] of Object.entries(translations)) {
+    for (const [japanese, english] of Object.entries(partialTranslations)) {
       translated = translated.replace(new RegExp(japanese, 'g'), english);
     }
     
