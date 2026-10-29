@@ -2113,6 +2113,18 @@ app.get('/api/cron-property-sync', async (req, res) => {
   }
 });
 
+// Read-only, no-side-effect authentication probe for GitHub Actions.
+// Validates the same production secret as the protected legacy Cron routes.
+// Never initiates synchronization or returns secrets, hashes or employee data.
+app.get('/api/internal/property-sync-auth-check', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).end();
+  }
+  return res.status(204).end();
+});
+
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
 app.post('/api/sync/trigger', async (req, res) => {
