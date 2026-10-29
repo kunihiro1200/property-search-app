@@ -53,8 +53,6 @@ export class GoogleDriveService extends BaseRepository {
       // 1. 環境変数から直接読み込み（Vercel用）
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         console.log('📝 [GoogleDriveService] Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
-        console.log(`   Length: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars`);
-        console.log(`   First 50 chars: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50)}`);
         
         let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
         
@@ -70,13 +68,11 @@ export class GoogleDriveService extends BaseRepository {
           try {
             jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
             console.log('✅ [GoogleDriveService] Successfully decoded Base64');
-            console.log(`   Decoded length: ${jsonString.length} chars`);
             keyFile = JSON.parse(jsonString);
             console.log('✅ [GoogleDriveService] Successfully parsed decoded JSON');
           } catch (decodeError: any) {
             console.error('❌ [GoogleDriveService] Failed to decode Base64 or parse JSON:', decodeError.message);
             console.error('❌ [GoogleDriveService] Original parse error:', parseError.message);
-            console.error('❌ [GoogleDriveService] First 100 chars of env var:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
             throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
           }
         }
@@ -87,10 +83,6 @@ export class GoogleDriveService extends BaseRepository {
             keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
           }
           console.log('✅ [GoogleDriveService] Service account key parsed successfully:');
-          console.log(`   - project_id: ${keyFile.project_id || '(not found)'}`);
-          console.log(`   - client_email: ${keyFile.client_email || '(not found)'}`);
-          console.log(`   - private_key: ${keyFile.private_key ? '(exists, length: ' + keyFile.private_key.length + ')' : '(not found)'}`);
-          console.log(`   - type: ${keyFile.type || '(not found)'}`);
         }
       } 
       // 2. ファイルから読み込み（ローカル環境用）
