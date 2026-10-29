@@ -1627,11 +1627,14 @@ app.post('/api/public/inquiries', async (req, res) => {
 // Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
 app.get('/api/cron/sync-inquiries', async (req, res) => {
   try {
+    // A publicly reachable Cron URL must authenticate its caller.
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     console.log('[Cron] Starting inquiry sync job...');
-    
-    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
-    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
-    
+
     // pending状態の問合せを取得（最大10件）
     const { data: pendingInquiries, error: fetchError } = await supabase
       .from('property_inquiries')
