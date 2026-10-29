@@ -1987,7 +1987,7 @@ app.get('/api/admin/sync-distribution-dates', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -2066,17 +2066,11 @@ app.get('/api/admin/sync-distribution-dates', async (req, res) => {
 // Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
 app.get('/api/cron-property-sync', async (req, res) => {
   try {
-    // Cron Secretの検証
-    // Vercel Cron Jobは Authorization ヘッダーを送らないため、
-    // x-vercel-cron ヘッダーまたは Authorization ヘッダーのどちらかを許可
+    // Vercel Cron automatically sends Authorization: Bearer <CRON_SECRET>.
+    // Never trust a client-provided x-vercel-cron header or an empty secret.
     const authHeader = req.headers['authorization'];
-    const vercelCronHeader = req.headers['x-vercel-cron'];
     const cronSecret = process.env.CRON_SECRET;
-
-    // Vercel Cron Jobからのリクエスト（x-vercel-cronヘッダーあり）は認証スキップ
-    // または Authorization: Bearer <secret> で認証
-    const isVercelCron = vercelCronHeader === '1';
-    const isAuthorized = !cronSecret || isVercelCron || authHeader === `Bearer ${cronSecret}`;
+    const isAuthorized = Boolean(cronSecret) && authHeader === `Bearer ${cronSecret}`;
 
     if (!isAuthorized) {
       console.error('❌ Unauthorized cron request');
