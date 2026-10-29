@@ -691,7 +691,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 });
 
 // 画像キャッシュクリアエンドポイント（特定の物件または全体）
-app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res) => {
+app.post('/api/public/properties/:identifier/clear-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -782,7 +782,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
 });
 
 // 全物件の画像キャッシュをクリア
-app.post('/api/public/clear-all-image-cache', async (req, res) => {
+app.post('/api/public/clear-all-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
@@ -814,7 +814,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
 });
 
 // 格納先URLを更新
-app.post('/api/public/properties/:identifier/update-storage-url', async (req, res) => {
+app.post('/api/public/properties/:identifier/update-storage-url', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     const { storageUrl } = req.body;
