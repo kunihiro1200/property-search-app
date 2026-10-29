@@ -2,28 +2,37 @@ name: Periodic Full Sync
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとに実行
-  workflow_dispatch: # 手動実行も可能
+    - cron: '*/30 * * * *'  # every 30 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Call full sync endpoint
+      - name: Call authenticated property-sync endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST "${{ secrets.BACKEND_URL }}/api/sync/trigger-async" \
-            -H "Content-Type: application/json" \
-            --max-time 30)
-
-          echo "HTTP Status: $response"
-          echo "Response body:"
-          cat /tmp/response.json
-
-          if [ "$response" != "200" ]; then
-            echo "❌ Sync trigger failed with status $response"
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Sync not started: GitHub Actions CRON_SECRET is not configured"
             exit 1
           fi
 
-          echo "✅ Full sync triggered successfully"
+          # This is the confirmed production origin. The old /api/sync/trigger-async
+          # path returned HTTP 404 in scheduled runs; /api/sync/trigger exists.
+          url="https://property-site-frontend-kappa.vercel.app/api/sync/trigger"
+          status=$(curl --silent --show-error --output /tmp/property-sync-response.json \
+            --write-out "%{http_code}" --request POST "$url" \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            --header "Content-Type: application/json" \
+            --data '{}' --max-time 30)
+          echo "Sync trigger HTTP status: $status"
+          if [ "$status" != "200" ]; then
+            echo "Sync trigger failed; check backend domain, CRON_SECRET, and Vercel runtime logs"
+            exit 1
+          fi
+          echo "Sync request accepted (HTTP 200). Verify asynchronous completion separately."
