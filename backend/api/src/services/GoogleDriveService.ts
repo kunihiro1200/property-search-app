@@ -54,7 +54,6 @@ export class GoogleDriveService extends BaseRepository {
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         console.log('📝 [GoogleDriveService] Loading service account from GOOGLE_SERVICE_ACCOUNT_JSON environment variable');
         console.log(`   Length: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length} chars`);
-        console.log(`   First 50 chars: ${process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50)}`);
         
         let jsonString = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
         
@@ -76,7 +75,6 @@ export class GoogleDriveService extends BaseRepository {
           } catch (decodeError: any) {
             console.error('❌ [GoogleDriveService] Failed to decode Base64 or parse JSON:', decodeError.message);
             console.error('❌ [GoogleDriveService] Original parse error:', parseError.message);
-            console.error('❌ [GoogleDriveService] First 100 chars of env var:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 100));
             throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
           }
         }
@@ -93,7 +91,17 @@ export class GoogleDriveService extends BaseRepository {
           console.log(`   - type: ${keyFile.type || '(not found)'}`);
         }
       } 
-      // 2. ファイルから読み込み（ローカル環境用）
+      // 2. Some backend deployments store the service account as two private env vars.
+      // Never log or commit credential values; Vercel injects them at runtime.
+      else if (process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+        keyFile = {
+          type: 'service_account',
+          client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        };
+        console.log('✅ [GoogleDriveService] Loading service account from private Vercel environment variables');
+      }
+      // 3. Load a local credential file only for development.
       else {
         const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json';
         const absolutePath = path.resolve(__dirname, '../../', keyPath);
