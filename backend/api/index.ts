@@ -16,6 +16,7 @@ import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
+import { authenticate } from './src/middleware/auth';
 
 
 const app = express();
@@ -77,6 +78,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 認証ルート（社員ログイン用）
 app.use('/auth', authRoutes);
+
+// Public property browsing remains anonymous. Only administrator mutations require auth.
+// Unattended clients may authenticate with a server-side CRON_SECRET.
+const requireStaffOrMachine: express.RequestHandler = (req, res, next) => {
+  const machineSecret = process.env.CRON_SECRET;
+  if (machineSecret && req.headers.authorization === `Bearer ${machineSecret}`) {
+    next();
+    return;
+  }
+  void authenticate(req, res, next);
+};
+
+
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -694,7 +708,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 });
 
 // 画像キャッシュクリアエンドポイント（特定の物件または全体）
-app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res) => {
+app.post('/api/public/properties/:identifier/clear-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -785,7 +799,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
 });
 
 // 全物件の画像キャッシュをクリア
-app.post('/api/public/clear-all-image-cache', async (req, res) => {
+app.post('/api/public/clear-all-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
@@ -817,7 +831,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
 });
 
 // 格納先URLを更新
-app.post('/api/public/properties/:identifier/update-storage-url', async (req, res) => {
+app.post('/api/public/properties/:identifier/update-storage-url', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     const { storageUrl } = req.body;

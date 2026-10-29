@@ -109,7 +109,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     setIsClearingCache(true);
     try {
       // publicApiインスタンスを使用
-      const response = await publicApi.post(`/api/public/properties/${propertyId}/clear-image-cache`);
+      const response = await api.post(`/api/public/properties/${propertyId}/clear-image-cache`);
       
       if (response.data.success) {
         // キャッシュクリア成功後、画像を再取得
@@ -151,9 +151,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     
     setIsUpdatingStorageUrl(true);
     try {
-      // 公開サイトのエンドポイントなので、publicApiを使用（認証不要）
-      const apiClient = publicApi;
-      console.log('[handleUpdateStorageUrl] Using API client: publicApi (no auth)');
+      // 管理者操作はログイン済み社員のセッショントークンで認証
+      const apiClient = api;
+      console.log('[handleUpdateStorageUrl] Using employee-authenticated API client');
       
       const url = `/api/public/properties/${propertyId}/update-storage-url`;
       console.log('[handleUpdateStorageUrl] Request URL:', url);
