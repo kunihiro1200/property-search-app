@@ -1,0 +1,50 @@
+name: Scheduled Property Sync (protected)
+
+on:
+  schedule:
+    - cron: '17,47 * * * *' # once every 30 minutes, away from top-of-hour congestion
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-property-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check whether the Cron credential is configured
+        id: config
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CRON_SECRET is not configured for GitHub Actions; no sync request will be sent."
+            echo "### Sync skipped: GitHub Actions CRON_SECRET is missing" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Start authenticated property sync
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          url="https://property-site-frontend-kappa.vercel.app/api/sync/trigger"
+          status=$(curl --silent --show-error --output /tmp/property-sync-response.json \
+            --write-out "%{http_code}" --request POST "$url" \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            --header "Content-Type: application/json" \
+            --data '{}' --max-time 30)
+          echo "Sync trigger HTTP status: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Sync trigger failed. Check URL, configured keys and backend logs."
+            exit 1
+          fi
+          echo "### Sync request accepted (HTTP 200)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Confirm asynchronous sync completion in Vercel logs; HTTP 200 is only acceptance." >> "$GITHUB_STEP_SUMMARY"
