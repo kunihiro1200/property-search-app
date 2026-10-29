@@ -1803,7 +1803,7 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
 });
 
 // 手動同期エンドポイント（第3層）- コメントデータの緊急同期用
-app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
+app.post('/api/admin/sync-comments/:propertyNumber', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     
@@ -1877,7 +1877,7 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
 });
 
 // 一括手動同期エンドポイント - 複数物件のコメントデータを同期
-app.post('/api/admin/sync-comments-batch', async (req, res) => {
+app.post('/api/admin/sync-comments-batch', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumbers } = req.body;
     
