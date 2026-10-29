@@ -314,7 +314,10 @@ export class PropertyListingService {
       let query = this.supabase
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' })
-        .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
+        .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        // Public listings must never include private, pre-release or sold properties.
+        // Non-public detail URLs remain accessible through getPublicPropertyById/ByNumber.
+        .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -781,6 +784,8 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, atbb_status')
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        // Site maps may list only openly advertised properties.
+        .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
         .order('created_at', { ascending: false });
       
       if (error) {
