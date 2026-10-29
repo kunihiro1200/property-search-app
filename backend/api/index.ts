@@ -2049,17 +2049,12 @@ app.get('/api/admin/sync-distribution-dates', async (req, res) => {
 // Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
 app.get('/api/cron-property-sync', async (req, res) => {
   try {
-    // Cron Secretの検証
-    // Vercel Cron Jobは Authorization ヘッダーを送らないため、
-    // x-vercel-cron ヘッダーまたは Authorization ヘッダーのどちらかを許可
-    const authHeader = req.headers['authorization'];
-    const vercelCronHeader = req.headers['x-vercel-cron'];
+    // Require a configured secret and a matching bearer token for every cron caller.
+    // Vercel Cron sends Authorization: Bearer <CRON_SECRET> when configured.
+    // The x-vercel-cron header is not authentication: arbitrary callers can forge it.
+    const authHeader = req.headers.authorization;
     const cronSecret = process.env.CRON_SECRET;
-
-    // Vercel Cron Jobからのリクエスト（x-vercel-cronヘッダーあり）は認証スキップ
-    // または Authorization: Bearer <secret> で認証
-    const isVercelCron = vercelCronHeader === '1';
-    const isAuthorized = !cronSecret || isVercelCron || authHeader === `Bearer ${cronSecret}`;
+    const isAuthorized = Boolean(cronSecret) && authHeader === `Bearer ${cronSecret}`;
 
     if (!isAuthorized) {
       console.error('❌ Unauthorized cron request');
