@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Read-only Cron credential presence check
+        id: config
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -32,10 +33,27 @@ jobs:
           if [ -z "$CRON_SECRET" ]; then
             echo "::warning::GitHub Actions CRON_SECRET is not configured; scheduled sync will be skipped."
             echo "### Action needed: CRON_SECRET is missing from repository Actions secrets." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "::notice::GitHub Actions CRON_SECRET is configured (value hidden)."
             echo "### CRON_SECRET is configured; no sync was invoked by this diagnostic." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Verify GitHub Cron credential matches production (read only)
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            --request GET "https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-auth-check" \
+            --header "Authorization: Bearer $CRON_SECRET" --max-time 15)
+          if [ "$status" != "204" ]; then
+            echo "::error::Read-only production Cron credential check failed (HTTP $status); no sync was started."
+            exit 1
+          fi
+          echo "::notice::GitHub Actions CRON_SECRET matches production Vercel (value hidden)."
+          echo "### Production Cron credential verified; no sync was started." >> "$GITHUB_STEP_SUMMARY"
 
   sync:
     # A push to the workflow file must never trigger a data sync.
@@ -54,6 +72,19 @@ jobs:
             echo "### Sync skipped: GitHub Actions CRON_SECRET is missing" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Cron credential before data sync (read only)
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            --request GET "https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-auth-check" \
+            --header "Authorization: Bearer $CRON_SECRET" --max-time 15)
+          if [ "$status" != "204" ]; then
+            echo "::error::Production Cron credential verification failed (HTTP $status). Sync will not start."
+            exit 1
           fi
 
       - name: Start authenticated property sync
