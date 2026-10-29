@@ -2116,6 +2116,12 @@ app.get('/api/cron-property-sync', async (req, res) => {
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
 app.post('/api/sync/trigger', async (req, res) => {
+  // Only callers with the configured production Cron secret may request a sync.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const triggeredAt = new Date().toISOString();
   console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
 
