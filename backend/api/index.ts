@@ -107,17 +107,33 @@ app.get('/api/url-redirect/resolve', async (req, res) => {
       return res.status(400).json({ error: 'URL parameter is required' });
     }
     
-    console.log('🔗 Resolving shortened URL:', url);
-    
-    // HTTPSリクエストでリダイレクト先を取得
+    // Only resolve genuine Google Maps short links. Arbitrary target URLs could
+    // otherwise make the public backend send requests to internal endpoints.
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid Google Maps URL' });
+    }
+    const isGoogleMapsShortLink =
+      parsedUrl.hostname === 'maps.app.goo.gl' ||
+      (parsedUrl.hostname === 'goo.gl' && parsedUrl.pathname.startsWith('/maps/'));
+    if (
+      url.length > 2048 ||
+      parsedUrl.protocol !== 'https:' ||
+      !!parsedUrl.port ||
+      !!parsedUrl.username ||
+      !!parsedUrl.password ||
+      !isGoogleMapsShortLink
+    ) {
+      return res.status(400).json({ error: 'Only HTTPS Google Maps short links are supported' });
+    }
+
+    // Resolve a single Google redirect; do not follow the destination.
     const https = await import('https');
-    const urlModule = await import('url');
-    
-    const parsedUrl = urlModule.parse(url);
-    
     const options = {
       hostname: parsedUrl.hostname,
-      path: parsedUrl.path,
+      path: parsedUrl.pathname + parsedUrl.search,
       method: 'HEAD',
       headers: {
         'User-Agent': 'Mozilla/5.0',
@@ -139,6 +155,7 @@ app.get('/api/url-redirect/resolve', async (req, res) => {
         }
       });
       
+      request.setTimeout(5000, () => request.destroy(new Error('Google Maps link resolution timed out')));
       request.on('error', (error) => {
         console.error('❌ Error resolving URL:', error);
         reject(error);
