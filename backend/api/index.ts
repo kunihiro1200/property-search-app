@@ -1761,11 +1761,15 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
 // Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
 app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
+    // Requests claiming to be Vercel Cron are not inherently authenticated.
+    // Reject missing/mismatched secrets before any sync activity.
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     console.log('[Cron] Starting property listings sync job...');
-    
-    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
-    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
-    
+
     // PropertyListingSyncServiceを使用してフル同期を実行
     const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
