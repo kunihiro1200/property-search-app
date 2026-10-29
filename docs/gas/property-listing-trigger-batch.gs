@@ -12,6 +12,10 @@ var BACKEND_URL = 'https://property-site-frontend-kappa.vercel.app';
  * GASの実行時間制限（6分）内で完了するように調整
  */
 function syncAllNow() {
+  // Run only after the production GAS project has a matching Script Property.
+  if (!PropertiesService.getScriptProperties().getProperty('CRON_SECRET')) {
+    throw new Error('CRON_SECRET is not configured in GAS Script Properties');
+  }
   console.log('🔄 全件同期を開始します...');
   
   var maxIterations = 50; // 最大50回（5000件）
@@ -51,10 +55,15 @@ function syncAllNow() {
  */
 function triggerFullSync() {
   var url = BACKEND_URL + '/api/sync/trigger';
+  var secret = PropertiesService.getScriptProperties().getProperty('CRON_SECRET');
+  if (!secret) {
+    throw new Error('CRON_SECRET is not configured in GAS Script Properties');
+  }
 
   var options = {
     method: 'post',
     contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + secret },
     payload: JSON.stringify({}),
     muteHttpExceptions: true,
   };
