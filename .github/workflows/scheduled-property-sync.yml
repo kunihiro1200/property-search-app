@@ -1,6 +1,12 @@
 name: Scheduled Property Sync (protected)
 
 on:
+  # One safe diagnostic run after changing this workflow on the default branch.
+  # It never starts a property synchronization.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/scheduled-property-sync.yml'
   schedule:
     - cron: '17,47 * * * *' # once every 30 minutes, away from top-of-hour congestion
   workflow_dispatch:
@@ -13,7 +19,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check_config_on_push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read-only Cron credential presence check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # Never print, hash, compare, transmit or otherwise expose the key.
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::GitHub Actions CRON_SECRET is not configured; scheduled sync will be skipped."
+            echo "### Action needed: CRON_SECRET is missing from repository Actions secrets." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::notice::GitHub Actions CRON_SECRET is configured (value hidden)."
+            echo "### CRON_SECRET is configured; no sync was invoked by this diagnostic." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   sync:
+    # A push to the workflow file must never trigger a data sync.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
