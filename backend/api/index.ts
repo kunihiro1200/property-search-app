@@ -16,6 +16,7 @@ import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
+import { authenticate } from './src/middleware/auth';
 
 
 const app = express();
@@ -77,6 +78,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 認証ルート（社員ログイン用）
 app.use('/auth', authRoutes);
+
+// Staff sessions are reused from the existing employee login.
+// Machine-driven syncs can use the server-side CRON_SECRET without interactive login.
+const requireStaffOrMachine: express.RequestHandler = (req, res, next) => {
+  const secret = process.env.CRON_SECRET;
+  if (secret && req.headers.authorization === `Bearer ${secret}`) {
+    next();
+    return;
+  }
+  void authenticate(req, res, next);
+};
+
+
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -694,7 +708,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 });
 
 // 画像キャッシュクリアエンドポイント（特定の物件または全体）
-app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res) => {
+app.post('/api/public/properties/:identifier/clear-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -785,7 +799,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
 });
 
 // 全物件の画像キャッシュをクリア
-app.post('/api/public/clear-all-image-cache', async (req, res) => {
+app.post('/api/public/clear-all-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
@@ -817,7 +831,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
 });
 
 // 格納先URLを更新
-app.post('/api/public/properties/:identifier/update-storage-url', async (req, res) => {
+app.post('/api/public/properties/:identifier/update-storage-url', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     const { storageUrl } = req.body;
@@ -1789,7 +1803,7 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
 });
 
 // 手動同期エンドポイント（第3層）- コメントデータの緊急同期用
-app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
+app.post('/api/admin/sync-comments/:propertyNumber', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     
@@ -1863,7 +1877,7 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
 });
 
 // 一括手動同期エンドポイント - 複数物件のコメントデータを同期
-app.post('/api/admin/sync-comments-batch', async (req, res) => {
+app.post('/api/admin/sync-comments-batch', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumbers } = req.body;
     
