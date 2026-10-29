@@ -60,3 +60,15 @@ dump.rdb
 
 .vercel
 .env*.local
+
+# Never commit environment or credential material (including production env files)
+**/.env*
+!**/.env.example
+!**/.env.sample
+**/*service-account*.json
+**/*service-account*.txt
+**/*SERVICE_ACCOUNT*.txt
+**/VERCEL_ENV_*
+**/*.pem
+**/*.p12
+**/*.pfx
