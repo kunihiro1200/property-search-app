@@ -2235,6 +2235,8 @@ app.get('/api/kujira/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
+      // Public maps must hide non-public, sold and pre-release inventory.
+      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       // FI物件のみ（大文字小文字を区別しない）
@@ -2306,6 +2308,8 @@ app.get('/api/public/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
+      // Public maps must hide non-public, sold and pre-release inventory.
+      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       // いふうサイトではFI物件を除外（くじら不動産サイト専用）

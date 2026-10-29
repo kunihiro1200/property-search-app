@@ -926,32 +926,9 @@ const PublicPropertiesPage: React.FC = () => {
               </Stack>
             </Box>
             
-            {/* 公開中のみ表示ボタン */}
+            {/* 公開中の物件だけを掲載（サーバー側でも強制） */}
             <Box>
-              <Button
-                variant={showPublicOnly ? "contained" : "outlined"}
-                onClick={() => {
-                  setShowPublicOnly(!showPublicOnly);
-                  // 状態復元中でない場合のみページを1に戻す
-                  if (!isRestoringState.current) {
-                    setCurrentPage(1);
-                  }
-                }}
-                disabled={filterLoading}
-                sx={{
-                  borderColor: '#4CAF50',
-                  color: showPublicOnly ? '#ffffff' : '#4CAF50',
-                  backgroundColor: showPublicOnly ? '#4CAF50' : 'transparent',
-                  fontWeight: 600,
-                  '&:hover': {
-                    borderColor: '#45A049',
-                    backgroundColor: showPublicOnly ? '#45A049' : 'rgba(76, 175, 80, 0.08)',
-                  },
-                }}
-                fullWidth
-              >
-                {showPublicOnly ? '✓ 公開中のみ表示' : '公開中のみ表示'}
-              </Button>
+              <Typography variant="body2" color="text.secondary">✓ 公開中の物件のみ掲載しています</Typography>
             </Box>
             
             {/* すべての条件をクリアボタン */}

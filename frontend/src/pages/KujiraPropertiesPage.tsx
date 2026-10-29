@@ -585,29 +585,9 @@ const KujiraPropertiesPage: React.FC = () => {
                   </Stack>
                 </Box>
 
-                {/* 公開中のみ表示 */}
+                {/* 公開中の物件だけを掲載（サーバー側でも強制） */}
                 <Box>
-                  <Button
-                    variant={showPublicOnly ? 'contained' : 'outlined'}
-                    onClick={() => {
-                      setShowPublicOnly(!showPublicOnly);
-                      if (!isRestoringState.current) setCurrentPage(1);
-                    }}
-                    disabled={filterLoading}
-                    sx={{
-                      borderColor: '#1565C0',
-                      color: showPublicOnly ? '#fff' : '#1565C0',
-                      backgroundColor: showPublicOnly ? '#1565C0' : 'transparent',
-                      fontWeight: 600,
-                      '&:hover': {
-                        borderColor: '#0D47A1',
-                        backgroundColor: showPublicOnly ? '#0D47A1' : '#EEF2FF',
-                      },
-                    }}
-                    fullWidth
-                  >
-                    {showPublicOnly ? `✓ ${t('filter.publicOnlyActive')}` : t('filter.publicOnly')}
-                  </Button>
+                  <Typography variant="body2" color="text.secondary">✓ {t('filter.publicOnlyActive')}</Typography>
                 </Box>
 
                 {/* 条件クリア */}
