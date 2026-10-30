@@ -14,20 +14,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { PropertyImageService } from './PropertyImageService';
 import { GoogleDriveService } from './GoogleDriveService';
-
-/**
- * 配信日の文字列をパースして有効な日付文字列またはnullを返す
- * 「なし」「不要」「予定」などの無効な値はnullとして扱う
- */
-function parseDistributionDate(value: any): string | null {
-  if (!value) return null;
-  const str = String(value).trim();
-  if (!str) return null;
-  // 日付として有効かチェック（YYYY/MM/DD または YYYY-MM-DD 形式）
-  const datePattern = /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/;
-  if (!datePattern.test(str)) return null;
-  return str;
-}
+import { parseDistributionDate } from '../utils/parseDistributionDate';
 
 export interface PropertyListingSyncResult {
   success: boolean;
