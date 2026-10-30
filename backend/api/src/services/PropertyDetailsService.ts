@@ -1,5 +1,6 @@
 // 物件追加詳細情報サービス（property_detailsテーブル専用）
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { AthomeSourceSnapshot, createNonDestructiveAthomePatch } from '../utils/nonDestructiveAthomeSync';
 
 export interface PropertyDetails {
   property_number: string;
@@ -119,6 +120,57 @@ export class PropertyDetailsService {
         athome_data: null,
         favorite_comment: null
       };
+    }
+  }
+
+  /**
+   * Google Athome comment sync: update ONLY nonempty source fields.
+   *
+   * Unlike getPropertyDetails(), this method never treats a failed DB read
+   * as an empty record. Only fields present in the generated patch are sent
+   * to PostgREST, so blank source values cannot clear unrelated DB fields.
+   */
+  async syncAthomeSnapshotNonDestructively(
+    propertyNumber: string,
+    source: AthomeSourceSnapshot
+  ): Promise<boolean> {
+    try {
+      const { data: existing, error: readError } = await this.supabase
+        .from('property_details')
+        .select('property_number, athome_data')
+        .eq('property_number', propertyNumber)
+        .limit(1)
+        .maybeSingle();
+
+      if (readError) {
+        console.error('[PropertyDetailsService] Comment sync DB read failed');
+        return false;
+      }
+
+      const patch = createNonDestructiveAthomePatch(source, existing?.athome_data ?? null);
+      if (Object.keys(patch).length === 0) {
+        return true;
+      }
+
+      // Use a true partial UPDATE for existing rows. The general upsert
+      // method merges all columns and could carry nulls from a failed read.
+      const { error: writeError } = existing
+        ? await this.supabase
+            .from('property_details')
+            .update(patch)
+            .eq('property_number', propertyNumber)
+        : await this.supabase
+            .from('property_details')
+            .insert({ property_number: propertyNumber, ...patch });
+
+      if (writeError) {
+        console.error('[PropertyDetailsService] Comment sync DB write failed');
+        return false;
+      }
+      return true;
+    } catch {
+      console.error('[PropertyDetailsService] Comment sync unexpected DB error');
+      return false;
     }
   }
 
