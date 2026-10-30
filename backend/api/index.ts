@@ -694,6 +694,26 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid property type' });
     }
 
+    // An unauthenticated visitor must never initiate Google Sheets access
+    // unless the published property has an individual source in work_tasks.
+    // This is a load guard, not authorization. Staff and machine-triggered
+    // backfills use their separate authenticated route.
+    const { data: sourceTask, error: sourceLookupError } = await supabase
+      .from('work_tasks')
+      .select('spreadsheet_url')
+      .eq('property_number', property.property_number)
+      .maybeSingle();
+
+    if (sourceLookupError) {
+      console.error('[Sync Comments API] Public comment source lookup failed');
+      return res.status(503).json({ success: false, message: 'Comment refresh unavailable' });
+    }
+    if (!isTrustedCommentSourceLink(sourceTask?.spreadsheet_url)) {
+      // Preserve the public detail GET and any existing comments/panorama.
+      // If there is no individual Sheet, retries cannot repair the record.
+      return res.json({ success: false, message: 'Comment source is not configured' });
+    }
+
     // Anonymous public visitors may still request a missing-comments refresh
     // during this transition. Coalesce concurrent requests and throttle
     // repeats on this one serverless instance to reduce accidental load.
@@ -704,7 +724,8 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
         const athomeSheetSyncService = new AthomeSheetSyncService();
         return athomeSheetSyncService.syncPropertyComments(
           property.property_number,
-          englishPropertyType
+          englishPropertyType,
+          1 // Never retry a failing Google Sheets read for each anonymous visitor
         );
       }
     );
@@ -721,22 +742,8 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
     const propertyDetailsService = new PropertyDetailsService();
     const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
 
-    // Preserve the existing property_about update for the internal DB, but
-    // never expose it in a public API response.
-    if (!updatedDetails.property_about) {
-      try {
-        const propertyService = new PropertyService();
-        const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
-        if (propertyAbout) {
-          await propertyDetailsService.upsertPropertyDetails(property.property_number, {
-            property_about: propertyAbout
-          });
-          updatedDetails.property_about = propertyAbout;
-        }
-      } catch {
-        console.error('[Sync Comments API] Property-about backfill failed');
-      }
-    }
+    // property_about contains private, internal notes. The public visitor
+    // does not need to refresh it. Never initiate that privileged write here.
 
     return res.json({
       success: true,
