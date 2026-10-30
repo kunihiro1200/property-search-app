@@ -15,7 +15,7 @@ status="$(curl --silent --show-error --request POST \
   "https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-and-wait" \
   --header "Authorization: Bearer $CRON_SECRET" \
   --header "Content-Type: application/json" \
-  --data '{}' --max-time 80 --retry 0 \
+  --data '{}' --connect-timeout 15 --max-time 330 --retry 0 \
   --output "$response_file" --write-out '%{http_code}')"
 
 if [ "$status" != "200" ]; then
