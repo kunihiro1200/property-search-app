@@ -13,8 +13,11 @@ export function needsPublicCommentSync(
   favoriteComment: unknown,
   recommendedComments: unknown
 ): boolean {
-  return !favoriteComment ||
-    !recommendedComments ||
+  // The favorite phrase is optional in actual Athome source sheets. When
+  // recommendations are already populated, auto-syncing solely because the
+  // favorite is empty causes an endless Google Sheets read cycle.
+  // Staff can explicitly refresh favorites through the authenticated API.
+  return !recommendedComments ||
     (Array.isArray(recommendedComments) && recommendedComments.length === 0);
 }
 
