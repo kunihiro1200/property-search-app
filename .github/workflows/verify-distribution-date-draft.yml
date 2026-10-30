@@ -1,0 +1,47 @@
+name: Verify Property Distribution Date Fix (draft only)
+
+# CI is isolated to this branch. It never uses production secrets,
+# performs data synchronization or writes to an external service.
+on:
+  push:
+    branches:
+      - fix/scheduled-sync-date-normalization-20261031
+    paths:
+      - 'backend/api/src/utils/parseDistributionDate.ts'
+      - 'backend/api/src/services/PropertyListingSyncService.ts'
+      - 'backend/api/__tests__/parseDistributionDate.test.ts'
+      - '.github/workflows/verify-distribution-date-draft.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-date-parser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout isolated draft branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+
+      - name: Install dependencies without scripts
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run no-network distribution date regression tests
+        working-directory: backend/api
+        env:
+          CI: 'true'
+          CRON_SECRET: ''
+          SUPABASE_URL: ''
+          SUPABASE_SERVICE_ROLE_KEY: ''
+          GOOGLE_SERVICE_ACCOUNT_JSON: ''
+        run: ./node_modules/.bin/jest --config jest.config.js --runInBand __tests__/parseDistributionDate.test.ts
