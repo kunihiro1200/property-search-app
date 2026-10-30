@@ -1,0 +1,41 @@
+name: Verify Staged Comment Sync Cutover (draft only)
+
+on:
+  push:
+    branches:
+      - security/explicit-comment-sync-cutover-20261031
+    paths:
+      - '.github/workflows/verify-comment-sync-cutover-draft.yml'
+      - 'backend/api/index.ts'
+      - 'backend/api/src/utils/commentBackfillPolicy.ts'
+      - 'backend/api/__tests__/commentBackfillPolicy.test.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-comment-cutover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+      - name: Install test dependencies without scripts
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Unit and source contract tests (no network, no production data)
+        working-directory: backend/api
+        env:
+          CI: 'true'
+          COMMENT_BACKFILL_EXECUTION_ENABLED: ''
+          PUBLIC_COMMENT_SYNC_DISABLED: ''
+          SUPABASE_URL: ''
+          SUPABASE_SERVICE_ROLE_KEY: ''
+          GOOGLE_SERVICE_ACCOUNT_JSON: ''
+        run: ./node_modules/.bin/jest --config jest.config.js --runInBand __tests__/commentBackfillPolicy.test.ts
