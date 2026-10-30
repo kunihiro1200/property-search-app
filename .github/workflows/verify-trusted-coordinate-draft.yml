@@ -1,0 +1,37 @@
+name: Verify Trusted Coordinate Backfill (draft only)
+
+# No secrets, no live API calls, no data sync, and no deployment steps.
+# Keep this workflow on its isolated draft branch; do not merge to main.
+on:
+  push:
+    branches:
+      - security/trusted-coordinate-backfill-20261031
+    paths:
+      - '.github/workflows/verify-trusted-coordinate-draft.yml'
+      - 'backend/api/index.ts'
+      - 'backend/api/src/utils/trustedPropertyCoordinates.ts'
+      - 'backend/api/__tests__/trustedCoordinateBackfill.test.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-no-network-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout draft only
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies without lifecycle scripts
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run isolated parser and source contract tests
+        working-directory: backend/api
+        run: ./node_modules/.bin/jest --runInBand __tests__/trustedCoordinateBackfill.test.ts
