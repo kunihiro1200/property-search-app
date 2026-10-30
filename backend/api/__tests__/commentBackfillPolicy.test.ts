@@ -98,7 +98,7 @@ describe('trusted individual comment source URL', () => {
 });
 
 describe('comment backfill candidacy', () => {
-  it('matches the existing missing-comments definition', () => {
+  it('internal staff backfill still detects missing favorite while public auto-sync does not', () => {
     expect(propertyNeedsCommentBackfill(null)).toBe(true);
     expect(propertyNeedsCommentBackfill(undefined)).toBe(true);
     expect(propertyNeedsCommentBackfill({ favorite_comment: null, recommended_comments: null })).toBe(true);

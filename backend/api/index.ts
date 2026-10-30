@@ -418,9 +418,10 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
           });
           
           // コメントデータが空かどうかをフラグとして返す（同期はフロントエンドから非同期で行う）
-          const needsSync = !details.favorite_comment || 
-                           !details.recommended_comments || 
-                           (Array.isArray(details.recommended_comments) && details.recommended_comments.length === 0);
+          const needsSync = needsPublicCommentSync(
+            details.favorite_comment,
+            details.recommended_comments
+          );
           
           if (needsSync) {
             console.log(`[Complete API] Comment data is missing or empty (needsSync=true). Frontend will trigger async sync.`);

@@ -218,15 +218,12 @@ export class AthomeSheetSyncService {
         // Athomeシートからコメントデータを取得
         const comments = await this.fetchCommentsFromAthomeSheet(spreadsheetId, propertyType);
 
-        // athome_dataを構築（パノラマURLを含む）
-        const athomeData = comments.panoramaUrl ? [comments.panoramaUrl] : [];
-
-        // データベースに保存（property_aboutは含めない - 物件シートから取得するため）
-        const success = await this.propertyDetailsService.upsertPropertyDetails(propertyNumber, {
-          favorite_comment: comments.favoriteComment,
-          recommended_comments: comments.recommendedComments,
-          athome_data: athomeData,
-        });
+        // Partial DB writes are handled by a method that fails closed on
+        // read errors and never clears existing values for blank source cells.
+        const success = await this.propertyDetailsService.syncAthomeSnapshotNonDestructively(
+          propertyNumber,
+          comments
+        );
 
         if (success) {
           console.log(`[AthomeSheetSyncService] ✅ Successfully synced comments for ${propertyNumber} (attempt ${attempt})`);
