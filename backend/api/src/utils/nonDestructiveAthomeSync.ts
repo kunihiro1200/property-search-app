@@ -57,6 +57,12 @@ export function createNonDestructiveAthomePatch(
 
   if (!isNonemptyString(source.panoramaUrl)) return patch;
 
+  // Treat unknown legacy JSON shapes as read-only rather than replacing them.
+  if (existingAthomeData !== null && existingAthomeData !== undefined &&
+      !Array.isArray(existingAthomeData)) {
+    return patch;
+  }
+
   const existing = Array.isArray(existingAthomeData) ? existingAthomeData : [];
   if (existing.includes(source.panoramaUrl)) return patch;
 
