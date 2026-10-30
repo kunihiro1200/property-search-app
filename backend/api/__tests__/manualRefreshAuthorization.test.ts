@@ -20,7 +20,7 @@ describe('manual public-site refresh authorization contract', () => {
       expect(apiSource).toContain(
         `app.post('/api/public/properties/:identifier/${endpoint}', requireStaffOrMachine, async (req, res) => {`
       );
-      expect(refreshHook).toContain(`/api/public/properties/${propertyId}/${endpoint}`);
+      expect(refreshHook).toContain('`/api/public/properties/${propertyId}/' + endpoint + '`');
     }
   );
 
