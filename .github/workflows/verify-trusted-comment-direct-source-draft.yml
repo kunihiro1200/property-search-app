@@ -1,0 +1,45 @@
+name: Verify Trusted Comment Direct Source (draft only)
+
+on:
+  push:
+    branches:
+      - security/trusted-comment-direct-source-20261031
+    paths:
+      - '.github/workflows/verify-trusted-comment-direct-source-draft.yml'
+      - 'backend/api/index.ts'
+      - 'backend/api/src/services/AthomeSheetSyncService.ts'
+      - 'backend/api/src/utils/commentBackfillPolicy.ts'
+      - 'backend/api/__tests__/trustedCommentSourceRouting.test.ts'
+      - 'backend/api/__tests__/publicCommentSourceGuard.test.ts'
+      - 'backend/api/__tests__/commentBackfillPolicy.test.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-unit-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+      - name: Install test dependencies without lifecycle scripts
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run no-network direct-source, comments, backfill and preservation checks
+        working-directory: backend/api
+        env:
+          CI: 'true'
+          CRON_SECRET: ''
+          GOOGLE_SERVICE_ACCOUNT_JSON: ''
+          SUPABASE_URL: ''
+          SUPABASE_SERVICE_ROLE_KEY: ''
+          PUBLIC_COMMENT_SYNC_DISABLED: ''
+          COMMENT_BACKFILL_EXECUTION_ENABLED: ''
+        run: ./node_modules/.bin/jest --config jest.config.js --runInBand __tests__/trustedCommentSourceRouting.test.ts __tests__/publicCommentSourceGuard.test.ts __tests__/publicCommentSyncGuard.test.ts __tests__/commentBackfillPolicy.test.ts __tests__/nonDestructiveAthomeSync.test.ts
