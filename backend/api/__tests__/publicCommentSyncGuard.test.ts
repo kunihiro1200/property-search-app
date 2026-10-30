@@ -124,6 +124,19 @@ describe('anonymous comment route source contract', () => {
     expect(route).not.toContain('error.message');
   });
 
+  test('GET /complete redacts nested raw property_details as well as top-level comments', () => {
+    const getBegin = index.indexOf("app.get('/api/public/properties/:id/complete', async (req, res) => {");
+    const getEnd = index.indexOf("app.post('/api/public/properties/:id/sync-comments'", getBegin);
+    expect(getBegin).toBeGreaterThan(0);
+    expect(getEnd).toBeGreaterThan(getBegin);
+    const getComplete = index.slice(getBegin, getEnd);
+    expect(getComplete).toContain('property_about: null,');
+    expect(getComplete).toContain('recommended_comments: filterPublicRecommendedComments(property.recommended_comments)');
+    expect(getComplete).toContain('recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments)');
+    expect(getComplete).toContain('propertyAbout: null');
+    expect(getComplete).not.toContain('recommendedComments: dbDetails.recommended_comments,');
+  });
+
   test('preserves both public pages and panorama synchronization', () => {
     expect(oita).toContain("publicApi.post(\`/api/public/properties/\${id}/sync-comments\`)");
     expect(kujira).toContain("publicApi.post(\`/api/public/properties/\${id}/sync-comments\`)");
