@@ -489,7 +489,14 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
 
     // レスポンスを返す
     res.json({
-      property,
+      // This nested property came from getPublicPropertyById and contains
+      // raw property_details fields. Sanitize it too; filtering only the
+      // top-level recommendedComments would still leak internal notes.
+      property: {
+        ...property,
+        property_about: null,
+        recommended_comments: filterPublicRecommendedComments(property.recommended_comments),
+      },
       favoriteComment: dbDetails.favorite_comment,
       recommendedComments: (() => {
         // 内部メモ行（←で始まる行）をフィルタリング
