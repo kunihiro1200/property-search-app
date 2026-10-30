@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { waitUntil } from '@vercel/functions';
 
 
 const app = express();
@@ -2129,29 +2130,39 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
 app.post('/api/sync/trigger', requireStaffOrMachine, async (req, res) => {
   const triggeredAt = new Date().toISOString();
-  console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
+  console.log('[Sync Trigger] Authorized property listing sync accepted at', triggeredAt);
 
-  // 即座にレスポンスを返す（タイムアウト防止）
-  res.json({
-    success: true,
-    message: 'Sync started in background',
-    triggeredAt,
-  });
-
-  // バックグラウンドで同期を実行（レスポンス後に処理継続）
-  (async () => {
+  // Keep the async sync inside the Vercel Function lifecycle after returning 200.
+  // HTTP 200 means only accepted, not that properties have finished synchronizing.
+  // waitUntil still respects the configured maxDuration (currently 60 seconds).
+  const syncTask = (async () => {
     try {
+      console.log('[Sync Trigger] Background sync starting');
       const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
       const syncService = getPropertyListingSyncService();
       await syncService.initialize();
 
       const result = await syncService.runScheduledSync();
+      const durationMs = result.endTime.getTime() - result.startTime.getTime();
+      if (!result.success || result.failed > 0) {
+        console.error(`[Sync Trigger] Sync finished with errors: updated=${result.successfullyUpdated}, added=${result.successfullyAdded}, failed=${result.failed}, durationMs=${durationMs}`);
+        return;
+      }
 
-      console.log(`✅ [Sync Trigger] Sync completed: added=${result.successfullyAdded}, updated=${result.successfullyUpdated}, failed=${result.failed}, duration=${result.endTime.getTime() - result.startTime.getTime()}ms`);
+      console.log(`[Sync Trigger] Sync completed successfully: updated=${result.successfullyUpdated}, added=${result.successfullyAdded}, failed=0, durationMs=${durationMs}`);
     } catch (error: any) {
-      console.error('❌ [Sync Trigger] Background sync failed:', error.message);
+      console.error('[Sync Trigger] Background sync failed:', error?.message || 'Unknown error');
     }
   })();
+
+  // Registration must happen before the HTTP response is sent.
+  waitUntil(syncTask);
+  res.status(200).json({
+    success: true,
+    accepted: true,
+    message: 'Sync accepted for background processing; completion is not yet confirmed',
+    triggeredAt,
+  });
 });
 
 // 公開物件の座標を保存（詳細ページでGoogle Map URLから取得した座標をDBに保存）
