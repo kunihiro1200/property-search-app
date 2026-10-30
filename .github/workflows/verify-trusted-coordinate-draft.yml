@@ -11,6 +11,8 @@ on:
       - 'backend/api/index.ts'
       - 'backend/api/src/utils/trustedPropertyCoordinates.ts'
       - 'backend/api/__tests__/trustedCoordinateBackfill.test.ts'
+      - 'backend/api/src/utils/coordinateBackfillBatch.ts'
+      - 'backend/api/__tests__/coordinateBackfillBatch.test.ts'
 
 permissions:
   contents: read
@@ -34,4 +36,4 @@ jobs:
 
       - name: Run isolated parser and source contract tests
         working-directory: backend/api
-        run: ./node_modules/.bin/jest --runInBand __tests__/trustedCoordinateBackfill.test.ts
+        run: ./node_modules/.bin/jest --runInBand __tests__/trustedCoordinateBackfill.test.ts __tests__/coordinateBackfillBatch.test.ts
