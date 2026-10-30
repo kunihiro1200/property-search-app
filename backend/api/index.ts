@@ -2131,9 +2131,11 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
 app.post('/api/internal/property-sync-and-wait', createVerifiedPropertySyncHandler({
   getMachineSecret: () => process.env.CRON_SECRET,
   runSync: async () => {
+    const startedAt = Date.now();
     const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
-    await syncService.initialize();
+    await syncService.initializeForScheduledSync();
+    console.log('[Sync Verified] Property sheet authentication durationMs=', Date.now() - startedAt);
     return await syncService.runScheduledSync();
   },
 }));
