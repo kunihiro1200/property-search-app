@@ -19,7 +19,7 @@ export function parseBackfillBatchOptions(value: unknown): BackfillBatchOptions 
   const body = value as Record<string, unknown>;
   const limit = body.limit === undefined ? 5 : body.limit;
   const after = body.after === undefined || body.after === null ? null : body.after;
-  if (!Number.isInteger(limit) || Number(limit) < 1 || Number(limit) > 5) return null;
+  if (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 1 || limit > 5) return null;
   if (after !== null && (typeof after !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(after))) return null;
   if (body.dryRun !== undefined && typeof body.dryRun !== 'boolean') return null;
   if (body.execute !== undefined && typeof body.execute !== 'boolean') return null;
