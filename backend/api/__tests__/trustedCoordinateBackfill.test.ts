@@ -112,6 +112,7 @@ describe('backfill route safety contract (source only)', () => {
   test('derives from persisted URL and rejects overwrites and races', () => {
     expect(route).toContain('.select(\'property_number, google_map_url, latitude, longitude\')');
     expect(route).toContain('deriveTrustedPropertyCoordinates(property.google_map_url)');
+    expect(route).toContain('.eq(\'google_map_url\', property.google_map_url)');
     expect(route).toContain('.is(\'latitude\', null)');
     expect(route).toContain('.is(\'longitude\', null)');
     expect(route).toContain('.maybeSingle()');
