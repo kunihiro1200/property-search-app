@@ -9,6 +9,9 @@ on:
     paths:
       - 'backend/api/__tests__/propertySyncCompletion.test.ts'
       - 'backend/api/__tests__/verifiedPropertySyncHttp.test.ts'
+      - 'backend/api/__tests__/scheduledSyncInitialization.test.ts'
+      - 'backend/api/index.ts'
+      - 'backend/api/src/services/PropertyListingSyncService.ts'
       - 'backend/api/src/routes/verifiedPropertySync.ts'
       - 'backend/api/src/utils/propertySyncCompletion.ts'
       - '.github/workflows/verify-property-sync-draft.yml'
@@ -47,4 +50,5 @@ jobs:
         run: |
           ./node_modules/.bin/jest --config jest.config.js --runInBand --verbose \
             __tests__/propertySyncCompletion.test.ts \
-            __tests__/verifiedPropertySyncHttp.test.ts
+            __tests__/verifiedPropertySyncHttp.test.ts \
+            __tests__/scheduledSyncInitialization.test.ts
