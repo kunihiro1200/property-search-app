@@ -90,7 +90,7 @@ describe('trusted individual comment source URL', () => {
     'https://docs.google.com:8080/spreadsheets/d/abcde12345',
     'https://docs.google.com/spreadsheets/d/short',
     'https://docs.google.com/document/d/abcde12345/edit',
-    'https://docs.google.com/spreadsheets/d/abcde12345evil/different',
+    'https://docs.google.com/spreadsheets/d/abcde12345.bad/edit',
     'javascript:alert(1)',
   ])('rejects untrusted non-sheet sources %o', (value) => {
     expect(isTrustedCommentSourceLink(value)).toBe(false);
