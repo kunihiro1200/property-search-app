@@ -87,21 +87,31 @@ jobs:
             exit 1
           fi
 
-      - name: Start authenticated property sync
+      - name: Run and verify completed property sync
         if: steps.config.outputs.ready == 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          url="https://property-site-frontend-kappa.vercel.app/api/sync/trigger"
-          status=$(curl --silent --show-error --output /tmp/property-sync-response.json \
+          # This endpoint only returns HTTP 200 AFTER runScheduledSync completes.
+          # Do not call the GAS-compatible /api/sync/trigger (HTTP 200 is just acceptance).
+          # Do not print the secret, individual property details or error bodies.
+          url="https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-and-wait"
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status=$(curl --silent --show-error --output "$response_file" \
             --write-out "%{http_code}" --request POST "$url" \
             --header "Authorization: Bearer $CRON_SECRET" \
             --header "Content-Type: application/json" \
-            --data '{}' --max-time 30)
-          echo "Sync trigger HTTP status: $status"
+            --data '{}' --max-time 80)
+          echo "Completed-sync API HTTP status: $status"
           if [ "$status" != "200" ]; then
-            echo "::error::Sync trigger failed. Check URL, configured keys and backend logs."
+            echo "::error::Property sync did not confirm completion (HTTP $status)."
             exit 1
           fi
-          echo "### Sync request accepted (HTTP 200)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Confirm asynchronous sync completion in Vercel logs; HTTP 200 is only acceptance." >> "$GITHUB_STEP_SUMMARY"
+          if ! jq -e '.success == true and .complete == true and .failed == 0 and (.successfullyUpdated | type == "number" and . > 0)' "$response_file" >/dev/null; then
+            echo "::error::Property sync response did not confirm successful full-list completion."
+            exit 1
+          fi
+          updated="$(jq -r '.successfullyUpdated' "$response_file")"
+          echo "::notice::Verified property synchronization completed ($updated records updated, no failures)."
+          echo "### Verified sync completed: $updated records updated (HTTP 200)" >> "$GITHUB_STEP_SUMMARY"
