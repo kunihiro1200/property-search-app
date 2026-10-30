@@ -18,7 +18,7 @@ import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
-import { isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
+import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
@@ -551,7 +551,9 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
       .order('property_number', { ascending: true })
       .limit(options.limit + 1);
 
-    if (options.after) {
+    if (options.propertyNumbers) {
+      query = query.in('property_number', options.propertyNumbers);
+    } else if (options.after) {
       query = query.gt('property_number', options.after);
     }
 
@@ -561,7 +563,7 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
     }
 
     const candidates = (candidateRows || []).slice(0, options.limit);
-    const hasMore = (candidateRows || []).length > options.limit;
+    const hasMore = !options.propertyNumbers && (candidateRows || []).length > options.limit;
     const nextCursor = hasMore && candidates.length
       ? candidates[candidates.length - 1].property_number
       : null;
@@ -569,12 +571,12 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
     let missing = 0;
     let alreadyComplete = 0;
     let skippedUnsupportedType = 0;
+    let missingTrustedSource = 0;
     let synchronized = 0;
     let throttled = 0;
     let failed = 0;
 
-    // The private preview deliberately omits addresses, full comments and
-    // spreadsheet URLs. It never calls AthomeSheetSyncService.
+    // Preview is DB SELECT-only and NEVER calls Google Sheets or mutates data.
     for (const candidate of candidates) {
       const { data: details, error: detailsError } = await supabase
         .from('property_details')
@@ -598,11 +600,30 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
         continue;
       }
 
+      // Use the same source-of-truth as GyomuListService. Do not try to
+      // backfill a property without an explicit individual spreadsheet.
+      const { data: workTask, error: workTaskError } = await supabase
+        .from('work_tasks')
+        .select('spreadsheet_url')
+        .eq('property_number', candidate.property_number)
+        .maybeSingle();
+
+      if (workTaskError) {
+        failed++;
+        continue;
+      }
+      if (!isTrustedCommentSourceLink(workTask?.spreadsheet_url)) {
+        missingTrustedSource++;
+        continue;
+      }
+
       if (options.mode === 'preview') continue;
 
+      // A real write requires BOTH a server-only opt-in and one or two exact
+      // property numbers in the authenticated request. Never scan and write
+      // the entire inventory as a side effect of pagination.
       const attempt = await runLimitedPublicCommentSync(candidate.property_number, () => {
         const service = new AthomeSheetSyncService();
-        // Avoid multi-retry overload within a single serverless request.
         return service.syncPropertyComments(candidate.property_number, propertyType, 1);
       });
 
@@ -611,8 +632,12 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
       else failed++;
     }
 
-    // 502 enables an authenticated automated runner to detect partial failure
-    // instead of treating HTTP 200 as success.
+    // Reflect selected properties that were not public / not found in
+    // aggregated counts only. Never disclose private listing details.
+    const notPublicOrNotFound = options.propertyNumbers
+      ? Math.max(0, options.propertyNumbers.length - candidates.length)
+      : 0;
+
     return res.status(failed ? 502 : 200).json({
       success: failed === 0,
       mode: options.mode,
@@ -620,6 +645,8 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
       missing,
       alreadyComplete,
       skippedUnsupportedType,
+      missingTrustedSource,
+      notPublicOrNotFound,
       synchronized,
       throttled,
       failed,
@@ -633,7 +660,15 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
 });
 
 // コメントデータをAthomeシートから同期（非同期トリガー用）
-app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
+// The switch is OFF by default: visitors retain the old behavior until
+// authenticated backfill and panorama display are verified. Only an exact
+// server-side flag disables visitor-triggered writes.
+app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
+  if (isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED)) {
+    return res.status(403).json({ success: false, message: 'Visitor comment sync is disabled' });
+  }
+  next();
+}, async (req, res) => {
   try {
     const { id } = req.params;
     const property = await propertyListingService.getPublicPropertyById(id);
