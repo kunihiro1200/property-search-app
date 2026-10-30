@@ -74,6 +74,21 @@ export function isTrustedCommentSourceLink(value: unknown): boolean {
   }
 }
 
+/**
+ * Return only the individual Sheet ID from a previously validated internal
+ * work_tasks URL. Never accept a URL from the anonymous request body.
+ */
+export function extractTrustedCommentSpreadsheetId(value: unknown): string | null {
+  if (!isTrustedCommentSourceLink(value)) return null;
+  try {
+    const parsed = new URL(String(value).trim());
+    const match = /^\/spreadsheets\/d\/([A-Za-z0-9_-]{10,})(?:\/|$)/.exec(parsed.pathname);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function isCommentBackfillWriteEnabled(flag: string | undefined): boolean {
   return flag === 'true';
 }
