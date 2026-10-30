@@ -5,7 +5,6 @@
  * The new internal route is staff/machine authenticated, previews by default,
  * and requires a second, server-side opt-in before any backfill write.
  */
-import { needsPublicCommentSync } from './publicCommentSyncGuard';
 
 export interface CommentBackfillOptions {
   mode: 'preview' | 'execute';
@@ -84,5 +83,10 @@ export function propertyNeedsCommentBackfill(details: {
   recommended_comments?: unknown;
 } | null | undefined): boolean {
   if (!details) return true;
-  return needsPublicCommentSync(details.favorite_comment, details.recommended_comments);
+  // Internal, authenticated backfill can be explicitly requested for a
+  // missing favorite phrase. Public visitor-triggered sync is deliberately
+  // narrower: it should not loop forever on intentionally blank favorites.
+  return !details.favorite_comment ||
+    !details.recommended_comments ||
+    (Array.isArray(details.recommended_comments) && details.recommended_comments.length === 0);
 }
