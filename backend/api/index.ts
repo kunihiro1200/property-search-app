@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
@@ -2169,31 +2170,43 @@ app.post('/api/sync/trigger', (req, res, next) => {
   })();
 });
 
-// 公開物件の座標を保存（詳細ページでGoogle Map URLから取得した座標をDBに保存）
+// 公開物件ページの座標キャッシュ（初回のみ登録・既存座標は上書き禁止）
+// 匿名クライアントの値は信用できないため、登録済み座標の保護を優先。
+// 完全な対策はURL由来の座標をサーバー側で検証して匿名書込を終了すること。
 app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
-    const { latitude, longitude } = req.body;
-
-    if (!latitude || !longitude) {
-      return res.status(400).json({ success: false, error: 'latitude and longitude are required' });
+    const valid = validatePublicCoordinateInput(req.body);
+    if (!valid) {
+      return res.status(400).json({ success: false, error: 'Valid latitude and longitude are required' });
     }
 
-    const { error } = await supabase
+    // The condition is evaluated atomically in the DB. Even simultaneous or
+    // stale client requests cannot overwrite either pre-existing coordinate.
+    // Only non-hidden records that already have a Google Map URL can be cached.
+    const { data: updated, error } = await supabase
       .from('property_listings')
-      .update({ latitude, longitude })
-      .eq('property_number', propertyNumber);
+      .update({ latitude: valid.latitude, longitude: valid.longitude })
+      .eq('property_number', propertyNumber)
+      .eq('is_hidden', false)
+      .not('google_map_url', 'is', null)
+      .neq('google_map_url', '')
+      .is('latitude', null)
+      .is('longitude', null)
+      .select('property_number')
+      .maybeSingle();
 
     if (error) {
-      console.error(`[Save Coordinates] Failed to save coordinates for ${propertyNumber}:`, error);
-      return res.status(500).json({ success: false, error: error.message });
+      console.error('[Save Coordinates] Fill-only DB update failed');
+      return res.status(500).json({ success: false, error: 'Unable to store coordinates' });
     }
 
-    console.log(`[Save Coordinates] Saved coordinates for ${propertyNumber}: (${latitude}, ${longitude})`);
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error('[Save Coordinates] Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    // A no-op is not an error for a public detail page: another request may
+    // have already populated the coordinates, or this row is not eligible.
+    return res.json({ success: true, updated: updated !== null });
+  } catch {
+    console.error('[Save Coordinates] Unexpected fill-only update failure');
+    return res.status(500).json({ success: false, error: 'Unable to store coordinates' });
   }
 });
 
