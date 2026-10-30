@@ -34,7 +34,7 @@ describe('parseDistributionDate - no invalid dates reach PostgreSQL', () => {
     '2024/13/1', '2024/0/1', '2024/2/30',
     '2023/2/29', '2024/9/31', '2024/9/190',
     '2024/9/0', '0000/1/1', '2024/1/999',
-    'abc 2024/9/19', '2024/09/19abc123' + '4',
+    'abc 2024/9/19', '2024/09/1900abc',
   ];
 
   test.each(bad)('rejects invalid input %s', (input) => {
