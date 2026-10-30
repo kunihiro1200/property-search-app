@@ -59,7 +59,7 @@ jobs:
     # A push to the workflow file must never trigger a data sync.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Check whether the Cron credential is configured
         id: config
@@ -102,7 +102,7 @@ jobs:
             --write-out "%{http_code}" --request POST "$url" \
             --header "Authorization: Bearer $CRON_SECRET" \
             --header "Content-Type: application/json" \
-            --data '{}' --max-time 80)
+            --data '{}' --connect-timeout 15 --max-time 330 --retry 0)
           echo "Completed-sync API HTTP status: $status"
           if [ "$status" != "200" ]; then
             echo "::error::Property sync did not confirm completion (HTTP $status)."
