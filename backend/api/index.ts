@@ -15,6 +15,7 @@ import { PropertyService } from './src/services/PropertyService';
 import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { deriveTrustedPropertyCoordinates } from './src/utils/trustedPropertyCoordinates';
+import { classifyStoredMapUrl, isCoordinateBackfillWriteEnabled, parseBackfillBatchOptions } from './src/utils/coordinateBackfillBatch';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
@@ -2166,6 +2167,11 @@ app.post('/api/sync/trigger', async (req, res) => {
  */
 app.post('/api/admin/properties/:propertyNumber/derive-coordinates', requireStaffOrMachine, async (req, res) => {
   try {
+    // This new write path stays inert until an explicit server-side opt-in.
+    if (!isCoordinateBackfillWriteEnabled(process.env.PROPERTY_COORDINATE_BACKFILL_ENABLED)) {
+      return res.status(503).json({ success: false, error: 'Coordinate backfill is disabled' });
+    }
+
     const { propertyNumber } = req.params;
     if (!/^[A-Za-z0-9_-]{1,40}$/.test(propertyNumber)) {
       return res.status(400).json({ success: false, error: 'Invalid property number' });
@@ -2216,6 +2222,109 @@ app.post('/api/admin/properties/:propertyNumber/derive-coordinates', requireStaf
     return res.json({ success: true, updated: true });
   } catch {
     return res.status(500).json({ success: false, error: 'Coordinate backfill failed' });
+  }
+});
+
+/**
+ * Staff-/machine-only, cursor-paged backfill batch.
+ *
+ * Preview is default and NEVER sends a shortlink HTTP request or writes to
+ * the database. Actual writes require both { execute:true, dryRun:false } and
+ * a server-side PROPERTY_COORDINATE_BACKFILL_ENABLED=true opt-in.
+ * Max five rows per request so this remains bounded on Vercel serverless.
+ */
+app.post('/api/admin/properties/coordinate-backfill-batch', requireStaffOrMachine, async (req, res) => {
+  try {
+    const options = parseBackfillBatchOptions(req.body);
+    if (!options) {
+      return res.status(400).json({ success: false, error: 'Invalid batch options' });
+    }
+
+    const writeEnabled = isCoordinateBackfillWriteEnabled(process.env.PROPERTY_COORDINATE_BACKFILL_ENABLED);
+    if (options.mode === 'execute' && !writeEnabled) {
+      return res.status(503).json({ success: false, error: 'Coordinate backfill writes are disabled' });
+    }
+
+    let query = supabase
+      .from('property_listings')
+      .select('property_number, google_map_url, latitude, longitude')
+      .is('latitude', null)
+      .is('longitude', null)
+      .not('google_map_url', 'is', null)
+      .neq('google_map_url', '')
+      .order('property_number', { ascending: true })
+      .limit(options.limit + 1);
+
+    if (options.after) {
+      query = query.gt('property_number', options.after);
+    }
+
+    const { data: matches, error: lookupError } = await query;
+    if (lookupError) {
+      return res.status(500).json({ success: false, error: 'Backfill candidates could not be retrieved' });
+    }
+
+    const rows = (matches || []).slice(0, options.limit);
+    const nextCursor = (matches || []).length > options.limit && rows.length
+      ? rows[rows.length - 1].property_number
+      : null;
+
+    let directCoordinates = 0;
+    let shortlinks = 0;
+    let unsupported = 0;
+    let unresolved = 0;
+    let updated = 0;
+    let conflict = 0;
+    let failed = 0;
+
+    // No requests to external URLs and no writes are performed in preview.
+    for (const property of rows) {
+      const kind = classifyStoredMapUrl(property.google_map_url);
+      if (kind === 'direct_coordinates') directCoordinates++;
+      else if (kind === 'google_shortlink') shortlinks++;
+      else unsupported++;
+
+      if (options.mode === 'preview' || kind === 'unsupported') continue;
+      const coordinates = await deriveTrustedPropertyCoordinates(property.google_map_url);
+      if (!coordinates) {
+        unresolved++;
+        continue;
+      }
+
+      // Only write when source URL and both missing fields are unchanged.
+      const { data: changed, error: updateError } = await supabase
+        .from('property_listings')
+        .update({ latitude: coordinates.lat, longitude: coordinates.lng })
+        .eq('property_number', property.property_number)
+        .eq('google_map_url', property.google_map_url)
+        .is('latitude', null)
+        .is('longitude', null)
+        .select('property_number')
+        .maybeSingle();
+
+      if (updateError) failed++;
+      else if (!changed) conflict++;
+      else updated++;
+    }
+
+    return res.status(failed ? 500 : 200).json({
+      success: failed === 0,
+      mode: options.mode,
+      scanned: rows.length,
+      directCoordinates,
+      shortlinks,
+      unsupported,
+      unresolved,
+      updated,
+      conflict,
+      failed,
+      hasMore: nextCursor !== null,
+      nextCursor,
+      // This response is available only to authenticated staff or machine.
+      // Do not disclose raw property URLs, addresses or secret values.
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Coordinate batch failed' });
   }
 });
 
