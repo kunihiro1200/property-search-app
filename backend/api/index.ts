@@ -18,6 +18,7 @@ import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
+import { isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
@@ -518,6 +519,116 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       message: 'Failed to fetch complete property data',
       error: error.message 
     });
+  }
+});
+
+/**
+ * Authenticated replacement for visitor-triggered comment synchronization.
+ * Stage one: a bounded preview, with execution explicitly disabled unless
+ * COMMENT_BACKFILL_EXECUTION_ENABLED=true is configured on the server.
+ *
+ * Scan only listed/public, non-hidden properties, at most two per request.
+ * Preview only reads property_listings and property_details; it makes no
+ * Google Sheet calls and does not mutate Supabase.
+ */
+app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (req, res) => {
+  try {
+    const options = parseCommentBackfillOptions(req.body);
+    if (!options) {
+      return res.status(400).json({ success: false, error: 'Invalid backfill options' });
+    }
+
+    const mayExecute = isCommentBackfillWriteEnabled(process.env.COMMENT_BACKFILL_EXECUTION_ENABLED);
+    if (options.mode === 'execute' && !mayExecute) {
+      return res.status(503).json({ success: false, error: 'Comment backfill writes are disabled' });
+    }
+
+    let query = supabase
+      .from('property_listings')
+      .select('property_number, property_type')
+      .eq('is_hidden', false)
+      .in('atbb_status', PUBLIC_COMMENT_BACKFILL_STATUSES)
+      .order('property_number', { ascending: true })
+      .limit(options.limit + 1);
+
+    if (options.after) {
+      query = query.gt('property_number', options.after);
+    }
+
+    const { data: candidateRows, error: candidatesError } = await query;
+    if (candidatesError) {
+      return res.status(500).json({ success: false, error: 'Unable to list backfill candidates' });
+    }
+
+    const candidates = (candidateRows || []).slice(0, options.limit);
+    const hasMore = (candidateRows || []).length > options.limit;
+    const nextCursor = hasMore && candidates.length
+      ? candidates[candidates.length - 1].property_number
+      : null;
+
+    let missing = 0;
+    let alreadyComplete = 0;
+    let skippedUnsupportedType = 0;
+    let synchronized = 0;
+    let throttled = 0;
+    let failed = 0;
+
+    // The private preview deliberately omits addresses, full comments and
+    // spreadsheet URLs. It never calls AthomeSheetSyncService.
+    for (const candidate of candidates) {
+      const { data: details, error: detailsError } = await supabase
+        .from('property_details')
+        .select('favorite_comment, recommended_comments')
+        .eq('property_number', candidate.property_number)
+        .maybeSingle();
+
+      if (detailsError) {
+        failed++;
+        continue;
+      }
+      if (!propertyNeedsCommentBackfill(details)) {
+        alreadyComplete++;
+        continue;
+      }
+
+      missing++;
+      const propertyType = convertPropertyTypeToEnglish(candidate.property_type);
+      if (!propertyType) {
+        skippedUnsupportedType++;
+        continue;
+      }
+
+      if (options.mode === 'preview') continue;
+
+      const attempt = await runLimitedPublicCommentSync(candidate.property_number, () => {
+        const service = new AthomeSheetSyncService();
+        // Avoid multi-retry overload within a single serverless request.
+        return service.syncPropertyComments(candidate.property_number, propertyType, 1);
+      });
+
+      if (attempt.status === 'throttled') throttled++;
+      else if (attempt.success) synchronized++;
+      else failed++;
+    }
+
+    // 502 enables an authenticated automated runner to detect partial failure
+    // instead of treating HTTP 200 as success.
+    return res.status(failed ? 502 : 200).json({
+      success: failed === 0,
+      mode: options.mode,
+      scanned: candidates.length,
+      missing,
+      alreadyComplete,
+      skippedUnsupportedType,
+      synchronized,
+      throttled,
+      failed,
+      hasMore,
+      nextCursor,
+    });
+  } catch {
+    console.error('[Comment Backfill] Internal processing failed');
+    return res.status(500).json({ success: false, error: 'Comment backfill failed' });
   }
 });
 
