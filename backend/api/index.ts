@@ -18,6 +18,7 @@ import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
 import { waitUntil } from '@vercel/functions';
+import { isVerifiedSyncComplete } from './src/utils/propertySyncCompletion';
 
 
 const app = express();
@@ -2145,10 +2146,7 @@ app.post('/api/internal/property-sync-and-wait', async (req, res) => {
     await syncService.initialize();
     const result = await syncService.runScheduledSync();
 
-    const completed = result.success === true &&
-      result.failed === 0 &&
-      result.successfullyUpdated > 0 &&
-      result.errors.length === 0;
+    const completed = isVerifiedSyncComplete(result);
     const durationMs = Date.now() - startedAt.getTime();
     const summary = {
       success: completed,
