@@ -2,6 +2,7 @@
 import { google } from 'googleapis';
 import { PropertyDetailsService } from './PropertyDetailsService';
 import { GyomuListService } from './GyomuListService';
+import { extractTrustedCommentSpreadsheetId } from '../utils/commentBackfillPolicy';
 
 /**
  * 物件種別に応じたセル位置マッピング
@@ -128,6 +129,8 @@ export class AthomeSheetSyncService {
   ): Promise<AthomeCommentData> {
     // 実際のシート名を動的に取得（スペースの有無に対応）
     const sheetName = await this.getActualSheetName(spreadsheetId);
+    // Sheet titles may have trailing spaces; quote the exact tab name in A1.
+    const a1SheetName = "'" + sheetName.replace(/'/g, "''") + "'";
     const cellPositions = CELL_MAPPING[propertyType];
 
     if (!cellPositions) {
@@ -143,14 +146,14 @@ export class AthomeSheetSyncService {
       // お気に入り文言を取得
       const favoriteResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!${cellPositions.favoriteComment}`,
+        range: `${a1SheetName}!${cellPositions.favoriteComment}`,
       });
       const favoriteComment = favoriteResponse.data.values?.[0]?.[0] || null;
 
       // アピールポイントを取得
       const recommendedResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!${cellPositions.recommendedComments}`,
+        range: `${a1SheetName}!${cellPositions.recommendedComments}`,
       });
       const recommendedRows = recommendedResponse.data.values || [];
       const recommendedComments: string[] = [];
@@ -165,7 +168,7 @@ export class AthomeSheetSyncService {
       // パノラマURLを取得（athomeシートのN1セル）
       const panoramaResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!N1`,
+        range: `${a1SheetName}!N1`,
       });
       const panoramaUrl = panoramaResponse.data.values?.[0]?.[0] || null;
 
@@ -183,6 +186,37 @@ export class AthomeSheetSyncService {
     } catch (error: any) {
       console.error(`[AthomeSheetSyncService] Error fetching comments from ${spreadsheetId}:`, error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Sync exactly one staff-authorized or DB-source-verified listing.
+   *
+   * The individual source URL must come from work_tasks.spreadsheet_url,
+   * never from a public user's POST body. This avoids re-reading the entire
+   * 業務依頼 Sheet after the database has already verified the source.
+   * No retry and no write if the URL or Google Sheet is invalid.
+   */
+  async syncPropertyCommentsFromTrustedSource(
+    propertyNumber: string,
+    propertyType: 'land' | 'detached_house' | 'apartment',
+    sourceSpreadsheetUrl: unknown
+  ): Promise<boolean> {
+    const spreadsheetId = extractTrustedCommentSpreadsheetId(sourceSpreadsheetUrl);
+    if (!spreadsheetId) {
+      console.warn('[AthomeSheetSyncService] Trusted comment source was not configured');
+      return false;
+    }
+
+    try {
+      const comments = await this.fetchCommentsFromAthomeSheet(spreadsheetId, propertyType);
+      return await this.propertyDetailsService.syncAthomeSnapshotNonDestructively(
+        propertyNumber, comments
+      );
+    } catch {
+      // Never print Google Sheet IDs, URLs, credentials or raw provider errors.
+      console.error('[AthomeSheetSyncService] Trusted comment sync failed');
+      return false;
     }
   }
 

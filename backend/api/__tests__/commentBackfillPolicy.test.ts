@@ -138,7 +138,7 @@ describe('private internal API and anonymous cutoff contracts', () => {
     expect(internal).toContain("isTrustedCommentSourceLink(workTask?.spreadsheet_url)");
     expect(internal).toContain("if (options.mode === 'preview') continue;");
     expect(internal.indexOf("if (options.mode === 'preview') continue;")).toBeLessThan(internal.indexOf("new AthomeSheetSyncService()"));
-    expect(internal).toContain("return service.syncPropertyComments(candidate.property_number, propertyType, 1)");
+    expect(internal).toContain('return service.syncPropertyCommentsFromTrustedSource(');
   });
 
   it('returns counts only and never confidential URLs or comments', () => {
@@ -157,7 +157,7 @@ describe('private internal API and anonymous cutoff contracts', () => {
     expect(publicRoute).toContain("return res.status(403)");
     expect(publicRoute).toContain("next();");
     expect(publicRoute).toContain("app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {");
-    expect(publicRoute).toContain("return athomeSheetSyncService.syncPropertyComments(");
+    expect(publicRoute).toContain('return athomeSheetSyncService.syncPropertyCommentsFromTrustedSource(');
     expect(index).toContain("app.get('/api/public/properties/:id/complete', async (req, res) => {");
   });
 });

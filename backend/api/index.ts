@@ -625,7 +625,9 @@ app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (r
       // the entire inventory as a side effect of pagination.
       const attempt = await runLimitedPublicCommentSync(candidate.property_number, () => {
         const service = new AthomeSheetSyncService();
-        return service.syncPropertyComments(candidate.property_number, propertyType, 1);
+        return service.syncPropertyCommentsFromTrustedSource(
+          candidate.property_number, propertyType, workTask!.spreadsheet_url
+        );
       });
 
       if (attempt.status === 'throttled') throttled++;
@@ -722,10 +724,10 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
       property.property_number,
       async () => {
         const athomeSheetSyncService = new AthomeSheetSyncService();
-        return athomeSheetSyncService.syncPropertyComments(
+        return athomeSheetSyncService.syncPropertyCommentsFromTrustedSource(
           property.property_number,
           englishPropertyType,
-          1 // Never retry a failing Google Sheets read for each anonymous visitor
+          sourceTask!.spreadsheet_url
         );
       }
     );

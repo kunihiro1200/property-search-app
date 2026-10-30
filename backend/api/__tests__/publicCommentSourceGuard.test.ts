@@ -52,10 +52,10 @@ describe('anonymous public sync route contract', () => {
   });
 
   test('limits visitor-triggered Sheets sync to one attempt, keeps staff route independent', () => {
-    expect(publicRoute).toContain('1 // Never retry a failing Google Sheets read for each anonymous visitor');
+    expect(publicRoute).toContain('return athomeSheetSyncService.syncPropertyCommentsFromTrustedSource(');
     expect(publicRoute).toContain('runLimitedPublicCommentSync(');
     expect(privateRoute).toContain('runLimitedPublicCommentSync(');
-    expect(privateRoute).toContain('return service.syncPropertyComments(candidate.property_number, propertyType, 1)');
+    expect(privateRoute).toContain('return service.syncPropertyCommentsFromTrustedSource(');
     expect(publicRoute).toContain("isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED)");
     expect(publicRoute).toContain('next();');
   });
