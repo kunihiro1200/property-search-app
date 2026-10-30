@@ -2,7 +2,6 @@
 import { google } from 'googleapis';
 import { PropertyDetailsService } from './PropertyDetailsService';
 import { GyomuListService } from './GyomuListService';
-import { createNonDestructiveAthomePatch } from '../utils/nonDestructiveAthomeSync';
 
 /**
  * 物件種別に応じたセル位置マッピング
@@ -219,20 +218,12 @@ export class AthomeSheetSyncService {
         // Athomeシートからコメントデータを取得
         const comments = await this.fetchCommentsFromAthomeSheet(spreadsheetId, propertyType);
 
-        // Do not clear existing values when Athome's optional source fields
-        // are blank. Preserve Drive-folder links and legacy athome_data slots.
-        const existingAthomeData = comments.panoramaUrl
-          ? (await this.propertyDetailsService.getPropertyDetails(propertyNumber)).athome_data
-          : null;
-        const update = createNonDestructiveAthomePatch(comments, existingAthomeData);
-
-        if (Object.keys(update).length === 0) {
-          // A successfully read, completely blank source is not a DB update.
-          console.info('[AthomeSheetSyncService] No nonempty comment fields to synchronize');
-          return true;
-        }
-
-        const success = await this.propertyDetailsService.upsertPropertyDetails(propertyNumber, update);
+        // Partial DB writes are handled by a method that fails closed on
+        // read errors and never clears existing values for blank source cells.
+        const success = await this.propertyDetailsService.syncAthomeSnapshotNonDestructively(
+          propertyNumber,
+          comments
+        );
 
         if (success) {
           console.log(`[AthomeSheetSyncService] ✅ Successfully synced comments for ${propertyNumber} (attempt ${attempt})`);
