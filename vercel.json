@@ -12,12 +12,28 @@
       "src": "backend/api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/api/src/**"],
+        "includeFiles": [
+          "backend/api/src/**"
+        ],
         "maxDuration": 60
+      }
+    },
+    {
+      "src": "backend/api/sync-verified.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "backend/api/src/**"
+        ],
+        "maxDuration": 300
       }
     }
   ],
   "routes": [
+    {
+      "src": "/api/internal/property-sync-and-wait/?",
+      "dest": "/backend/api/sync-verified.ts"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/backend/api/index.ts"
