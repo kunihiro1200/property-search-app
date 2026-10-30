@@ -498,17 +498,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
         recommended_comments: filterPublicRecommendedComments(property.recommended_comments),
       },
       favoriteComment: dbDetails.favorite_comment,
-      recommendedComments: (() => {
-        // 内部メモ行（←で始まる行）をフィルタリング
-        const raw: any[] = Array.isArray(dbDetails.recommended_comments) ? dbDetails.recommended_comments : [];
-        return raw.filter((c: any) => {
-          const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
-          const trimmed = text.trim();
-          return !trimmed.startsWith('←') && 
-                 !trimmed.includes('一般媒介で、担当もついている場合') &&
-                 !(trimmed.startsWith('＼') && trimmed.endsWith('／'));
-        });
-      })(),
+      recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments),
       athomeData: dbDetails.athome_data,
       settlementDate,
       // 内覧前伝達事項は独自サイトに表示しない
