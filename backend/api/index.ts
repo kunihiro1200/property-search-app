@@ -14,6 +14,7 @@ import { PropertyDetailsService } from './src/services/PropertyDetailsService';
 import { PropertyService } from './src/services/PropertyService';
 import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
+import { deriveTrustedPropertyCoordinates } from './src/utils/trustedPropertyCoordinates';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
@@ -2152,6 +2153,69 @@ app.post('/api/sync/trigger', async (req, res) => {
       console.error('❌ [Sync Trigger] Background sync failed:', error.message);
     }
   })();
+});
+
+/**
+ * Employee-/machine-only coordinate backfill.
+ *
+ * This endpoint NEVER accepts latitude/longitude from the caller. It derives
+ * them from the existing server-side property_listings.google_map_url and
+ * fills only rows where BOTH coordinates are currently absent. The public
+ * browser's existing save-coordinates route is intentionally unchanged during
+ * this migration stage to avoid breaking newly published map markers.
+ */
+app.post('/api/admin/properties/:propertyNumber/derive-coordinates', requireStaffOrMachine, async (req, res) => {
+  try {
+    const { propertyNumber } = req.params;
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(propertyNumber)) {
+      return res.status(400).json({ success: false, error: 'Invalid property number' });
+    }
+
+    const { data: property, error: lookupError } = await supabase
+      .from('property_listings')
+      .select('property_number, google_map_url, latitude, longitude')
+      .eq('property_number', propertyNumber)
+      .maybeSingle();
+
+    if (lookupError) {
+      return res.status(500).json({ success: false, error: 'Coordinate lookup failed' });
+    }
+    if (!property) {
+      return res.status(404).json({ success: false, error: 'Property not found' });
+    }
+
+    // Do not overwrite a previously assigned coordinate, including zero.
+    if (property.latitude !== null && property.latitude !== undefined ||
+        property.longitude !== null && property.longitude !== undefined) {
+      return res.json({ success: true, updated: false, reason: 'Already has coordinates' });
+    }
+
+    const coordinates = await deriveTrustedPropertyCoordinates(property.google_map_url);
+    if (!coordinates) {
+      return res.status(422).json({ success: false, error: 'No verified Google Maps coordinates in saved URL' });
+    }
+
+    // Atomic fill-only condition: concurrent requests cannot overwrite a row.
+    const { data: updated, error: updateError } = await supabase
+      .from('property_listings')
+      .update({ latitude: coordinates.lat, longitude: coordinates.lng })
+      .eq('property_number', propertyNumber)
+      .is('latitude', null)
+      .is('longitude', null)
+      .select('property_number')
+      .maybeSingle();
+
+    if (updateError) {
+      return res.status(500).json({ success: false, error: 'Coordinate backfill failed' });
+    }
+    if (!updated) {
+      return res.status(409).json({ success: false, error: 'Coordinates changed concurrently' });
+    }
+
+    return res.json({ success: true, updated: true });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Coordinate backfill failed' });
+  }
 });
 
 // 公開物件の座標を保存（詳細ページでGoogle Map URLから取得した座標をDBに保存）
