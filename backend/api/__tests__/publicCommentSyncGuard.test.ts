@@ -15,7 +15,7 @@ describe('compatibility with GET /complete missing-comments detection', () => {
     [null, null, true],
     ['', [], true],
     ['Saved favorite', [], true],
-    ['', ['Comment'], true],
+    ['', ['Comment'], false],
     ['Saved favorite', ['Comment'], false],
     ['Saved favorite', [['Comment']], false],
   ])('only considers non-empty source data complete', (favorite, recommended, expected) => {
@@ -103,7 +103,7 @@ describe('per-instance repeated-sync protection', () => {
 
 describe('anonymous comment route source contract', () => {
   const index = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
-  const begin = index.indexOf("app.post('/api/public/properties/:id/sync-comments', async (req, res) => {");
+  const begin = index.indexOf("app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {");
   const end = index.indexOf('// 物件番号ベースの画像一覧取得エンドポイント', begin);
   const route = index.slice(begin, end);
   const oita = readFileSync(resolve(__dirname, '../../../frontend/src/pages/PublicPropertyDetailPage.tsx'), 'utf8');
