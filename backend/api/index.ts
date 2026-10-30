@@ -2200,6 +2200,7 @@ app.post('/api/admin/properties/:propertyNumber/derive-coordinates', requireStaf
       .from('property_listings')
       .update({ latitude: coordinates.lat, longitude: coordinates.lng })
       .eq('property_number', propertyNumber)
+      .eq('google_map_url', property.google_map_url)
       .is('latitude', null)
       .is('longitude', null)
       .select('property_number')
