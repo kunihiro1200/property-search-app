@@ -2126,6 +2126,69 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
   return res.status(204).end();
 });
 
+// GitHub Actions only: a synchronous, authenticated completion contract.
+// HTTP 200 means the *entire lightweight scheduled sync* completed without errors,
+// not simply that a background task was accepted.
+// Distinct from the legacy GAS endpoint; do not switch existing GAS clients here.
+app.post('/api/internal/property-sync-and-wait', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).end();
+  }
+
+  const startedAt = new Date();
+  console.log('[Sync Verified] Authenticated scheduled sync started at', startedAt.toISOString());
+  try {
+    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
+    const syncService = getPropertyListingSyncService();
+    await syncService.initialize();
+    const result = await syncService.runScheduledSync();
+
+    const completed = result.success === true &&
+      result.failed === 0 &&
+      result.successfullyUpdated > 0 &&
+      result.errors.length === 0;
+    const durationMs = Date.now() - startedAt.getTime();
+    const summary = {
+      success: completed,
+      complete: completed,
+      successfullyAdded: result.successfullyAdded,
+      successfullyUpdated: result.successfullyUpdated,
+      failed: result.failed,
+      durationMs,
+      completedAt: new Date().toISOString(),
+    };
+
+    if (!completed) {
+      // A spreadsheet read failure, empty source or partial write is NOT HTTP 200.
+      // Avoid logging individual property records or external API error details.
+      console.error('[Sync Verified] Sync failed or incomplete', {
+        added: result.successfullyAdded,
+        updated: result.successfullyUpdated,
+        failed: result.failed,
+        durationMs,
+      });
+      return res.status(502).json(summary);
+    }
+
+    console.log('[Sync Verified] Sync completed successfully', {
+      added: result.successfullyAdded,
+      updated: result.successfullyUpdated,
+      failed: 0,
+      durationMs,
+    });
+    return res.status(200).json(summary);
+  } catch (_error) {
+    console.error('[Sync Verified] Scheduled sync threw an exception');
+    return res.status(500).json({
+      success: false,
+      complete: false,
+      error: 'Scheduled sync did not complete',
+    });
+  }
+});
+
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
 app.post('/api/sync/trigger', requireStaffOrMachine, async (req, res) => {
