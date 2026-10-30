@@ -10,6 +10,11 @@ on:
       - 'backend/api/__tests__/propertySyncCompletion.test.ts'
       - 'backend/api/__tests__/verifiedPropertySyncHttp.test.ts'
       - 'backend/api/__tests__/scheduledSyncInitialization.test.ts'
+      - 'backend/api/__tests__/dedicatedSyncEntrypoint.test.ts'
+      - 'backend/api/__tests__/dedicatedSyncConfig.test.ts'
+      - 'backend/api/sync-verified.ts'
+      - 'vercel.json'
+      - '.github/workflows/scheduled-property-sync.yml'
       - 'backend/api/index.ts'
       - 'backend/api/src/services/PropertyListingSyncService.ts'
       - 'backend/api/src/routes/verifiedPropertySync.ts'
@@ -51,4 +56,6 @@ jobs:
           ./node_modules/.bin/jest --config jest.config.js --runInBand --verbose \
             __tests__/propertySyncCompletion.test.ts \
             __tests__/verifiedPropertySyncHttp.test.ts \
-            __tests__/scheduledSyncInitialization.test.ts
+            __tests__/scheduledSyncInitialization.test.ts \
+            __tests__/dedicatedSyncEntrypoint.test.ts \
+            __tests__/dedicatedSyncConfig.test.ts
