@@ -1,77 +1,61 @@
 /**
- * 公開物件サイト 物件同期用 Google Apps Script（バッチ実行版）
+ * 公開物件サイト 物件同期用 Google Apps Script（移行用サンプル）
  *
- * 【使用方法】
- *   関数 syncAllNow() を実行すると、全件同期が完了するまで繰り返し実行します
+ * 注意：このファイルはGitHub上のサンプルであり、稼働中GASへの変更ではありません。
+ * 事前に稼働中の全呼び出し元を確認してから適用してください。
+ *
+ * Script Properties に CRON_SECRET を設定してください。
+ * 秘密情報をコードに直接書かず、ログにも出さないでください。
+ *
+ * /api/sync/trigger はHTTP 200で「受付」を返します。
+ * 同期が最後まで完了したという意味ではありません。
  */
 
 var BACKEND_URL = 'https://property-site-frontend-kappa.vercel.app';
 
 /**
- * 全件を今すぐ同期（50回実行 = 5000件）
- * GASの実行時間制限（6分）内で完了するように調整
+ * 同期リクエストを1回だけ送信します。
+ * 旧サンプルの50回連続呼び出しは、同一の全件同期を重複起動するおそれがあるため廃止。
  */
 function syncAllNow() {
-  console.log('🔄 全件同期を開始します...');
-  
-  var maxIterations = 50; // 最大50回（5000件）
-  var successCount = 0;
-  var errorCount = 0;
-  
-  for (var i = 1; i <= maxIterations; i++) {
-    console.log('バッチ ' + i + '/' + maxIterations + ' を実行中...');
-    
-    try {
-      var result = triggerFullSync();
-      if (result.success) {
-        successCount++;
-        console.log('  ✅ 成功');
-      } else {
-        errorCount++;
-        console.log('  ❌ 失敗');
-      }
-    } catch (error) {
-      errorCount++;
-      console.log('  ❌ エラー: ' + error.toString());
-    }
-    
-    // 少し待機（API制限対策）
-    Utilities.sleep(2000); // 2秒待機
+  var result = triggerFullSync();
+  if (result.accepted) {
+    console.log('✅ 物件同期リクエストを受け付けました。完了はVercelログ等で別途確認してください。');
+  } else {
+    console.error('❌ 同期の受付に失敗しました: ' + (result.error || 'HTTP ' + result.status));
   }
-  
-  console.log('');
-  console.log('✅ 全件同期が完了しました！');
-  console.log('  成功: ' + successCount + ' 回');
-  console.log('  失敗: ' + errorCount + ' 回');
-  console.log('  推定同期件数: ' + (successCount * 100) + ' 件');
+  return result;
 }
 
 /**
- * フル同期APIを呼び出す
+ * 認証されたフル同期APIの受付を要求します。実行の完了確認は別途必要です。
  */
 function triggerFullSync() {
-  var url = BACKEND_URL + '/api/sync/trigger';
+  var secret = PropertiesService.getScriptProperties().getProperty('CRON_SECRET');
+  if (!secret || !secret.trim()) {
+    console.error('CRON_SECRET is not configured in Script Properties; no sync request was sent.');
+    return { accepted: false, error: 'CRON_SECRET is not configured' };
+  }
 
+  var url = BACKEND_URL + '/api/sync/trigger';
   var options = {
     method: 'post',
+    headers: { 'Authorization': 'Bearer ' + secret.trim() },
     contentType: 'application/json',
     payload: JSON.stringify({}),
-    muteHttpExceptions: true,
+    muteHttpExceptions: true
   };
 
   try {
     var response = UrlFetchApp.fetch(url, options);
     var status = response.getResponseCode();
-    var body = response.getContentText();
-
     if (status === 200) {
-      return { success: true, body: body };
-    } else {
-      console.error('❌ HTTP ' + status + ': ' + body);
-      return { success: false, body: body };
+      return { accepted: true, status: status, checkedAt: new Date().toISOString() };
     }
+    console.error('Sync trigger rejected: HTTP ' + status);
+    return { accepted: false, status: status, error: 'HTTP ' + status };
   } catch (error) {
-    console.error('triggerFullSync エラー:', error.toString());
-    return { success: false, error: error.toString() };
+    console.error('Sync trigger request failed: ' + String(error));
+    return { accepted: false, error: 'Request failed' };
   }
 }
