@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
 const app = express();
@@ -2127,7 +2128,21 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
 
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
-app.post('/api/sync/trigger', async (req, res) => {
+// The audit does not log credentials, IPs or property information.
+// The auth switch stays OFF by default until every live GAS caller is confirmed.
+// Set LEGACY_SYNC_TRIGGER_AUTH_REQUIRED=true only after the GAS migration.
+app.post('/api/sync/trigger', (req, res, next) => {
+  const enforcementEnabled = isLegacySyncAuthEnforced(process.env.LEGACY_SYNC_TRIGGER_AUTH_REQUIRED);
+  const authorizationKind = classifyLegacySyncAuthorization(
+    req.headers.authorization,
+    process.env.CRON_SECRET
+  );
+  console.info('[Legacy Sync Auth Audit]', { enforcementEnabled, authorizationKind });
+  if (enforcementEnabled) {
+    return requireStaffOrMachine(req, res, next);
+  }
+  next();
+}, async (req, res) => {
   const triggeredAt = new Date().toISOString();
   console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
 
