@@ -98,12 +98,12 @@ describe('trusted individual comment source URL', () => {
 });
 
 describe('comment backfill candidacy', () => {
-  it('matches the existing missing-comments definition', () => {
+  it('internal staff backfill still detects missing favorite while public auto-sync does not', () => {
     expect(propertyNeedsCommentBackfill(null)).toBe(true);
     expect(propertyNeedsCommentBackfill(undefined)).toBe(true);
     expect(propertyNeedsCommentBackfill({ favorite_comment: null, recommended_comments: null })).toBe(true);
     expect(propertyNeedsCommentBackfill({ favorite_comment: 'Text', recommended_comments: [] })).toBe(true);
-    expect(propertyNeedsCommentBackfill({ favorite_comment: '', recommended_comments: ['One'] })).toBe(false);
+    expect(propertyNeedsCommentBackfill({ favorite_comment: '', recommended_comments: ['One'] })).toBe(true);
     expect(propertyNeedsCommentBackfill({ favorite_comment: 'Ready', recommended_comments: ['One'] })).toBe(false);
   });
   it('scans only explicitly public statuses', () => {
