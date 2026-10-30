@@ -35,7 +35,7 @@ export function parseCommentBackfillOptions(value: unknown): CommentBackfillOpti
   return {
     mode: input.execute === true && input.dryRun === false ? 'execute' : 'preview',
     limit,
-    after,
+    after: typeof after === 'string' ? after : null,
   };
 }
 
