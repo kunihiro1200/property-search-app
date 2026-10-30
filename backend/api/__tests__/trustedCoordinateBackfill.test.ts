@@ -19,7 +19,7 @@ describe('direct trusted Google Maps coordinate parsing', () => {
     ['https://www.google.com/maps?q=33.2%2C131.4', 33.2, 131.4],
     ['https://www.google.co.jp/maps?q=0,0', 0, 0],
   ])('parses genuine Google Maps URL', (url, lat, lng) => {
-    expect(parseTrustedGoogleMapCoordinates(url)).toEqual({ lat, lng });
+    expect(parseTrustedGoogleMapCoordinates(String(url))).toEqual({ lat: Number(lat), lng: Number(lng) });
   });
 
   test.each([
