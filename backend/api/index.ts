@@ -17,7 +17,6 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
-import { createVerifiedPropertySyncHandler } from './src/routes/verifiedPropertySync';
 
 
 const app = express();
@@ -2125,20 +2124,6 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
   }
   return res.status(204).end();
 });
-
-// GitHub Actions: authenticated property sync with an explicit completion response.
-// Deliberately separate from the existing GAS-compatible /api/sync/trigger.
-app.post('/api/internal/property-sync-and-wait', createVerifiedPropertySyncHandler({
-  getMachineSecret: () => process.env.CRON_SECRET,
-  runSync: async () => {
-    const startedAt = Date.now();
-    const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
-    const syncService = getPropertyListingSyncService();
-    await syncService.initializeForScheduledSync();
-    console.log('[Sync Verified] Property sheet authentication durationMs=', Date.now() - startedAt);
-    return await syncService.runScheduledSync();
-  },
-}));
 
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
