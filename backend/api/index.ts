@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
@@ -488,19 +489,16 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
 
     // レスポンスを返す
     res.json({
-      property,
+      // This nested property came from getPublicPropertyById and contains
+      // raw property_details fields. Sanitize it too; filtering only the
+      // top-level recommendedComments would still leak internal notes.
+      property: {
+        ...property,
+        property_about: null,
+        recommended_comments: filterPublicRecommendedComments(property.recommended_comments),
+      },
       favoriteComment: dbDetails.favorite_comment,
-      recommendedComments: (() => {
-        // 内部メモ行（←で始まる行）をフィルタリング
-        const raw: any[] = Array.isArray(dbDetails.recommended_comments) ? dbDetails.recommended_comments : [];
-        return raw.filter((c: any) => {
-          const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
-          const trimmed = text.trim();
-          return !trimmed.startsWith('←') && 
-                 !trimmed.includes('一般媒介で、担当もついている場合') &&
-                 !(trimmed.startsWith('＼') && trimmed.endsWith('／'));
-        });
-      })(),
+      recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments),
       athomeData: dbDetails.athome_data,
       settlementDate,
       // 内覧前伝達事項は独自サイトに表示しない
@@ -527,35 +525,57 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
 app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    console.log(`[Sync Comments API] Triggered for: ${id}`);
-    
     const property = await propertyListingService.getPublicPropertyById(id);
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
-    
-    const propertyDetailsService = new PropertyDetailsService();
-    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
-    
-    if (!englishPropertyType) {
-      return res.status(400).json({ success: false, message: `Invalid property type: ${property.property_type}` });
+
+    // getPublicPropertyById already reads stored property_details. If the
+    // comments are complete, avoid a Google Sheets read or DB mutation.
+    if (!needsPublicCommentSync(property.favorite_comment, property.recommended_comments)) {
+      return res.json({
+        success: true,
+        favoriteComment: property.favorite_comment,
+        recommendedComments: filterPublicRecommendedComments(property.recommended_comments),
+        athomeData: property.athome_data,
+        propertyAbout: null,
+      });
     }
-    
-    const athomeSheetSyncService = new AthomeSheetSyncService();
-    const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+
+    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+    if (!englishPropertyType) {
+      return res.status(400).json({ success: false, message: 'Invalid property type' });
+    }
+
+    // Anonymous public visitors may still request a missing-comments refresh
+    // during this transition. Coalesce concurrent requests and throttle
+    // repeats on this one serverless instance to reduce accidental load.
+    // This is NOT distributed rate limiting or authorization.
+    const attempt = await runLimitedPublicCommentSync(
       property.property_number,
-      englishPropertyType
+      async () => {
+        const athomeSheetSyncService = new AthomeSheetSyncService();
+        return athomeSheetSyncService.syncPropertyComments(
+          property.property_number,
+          englishPropertyType
+        );
+      }
     );
-    
-    if (!syncSuccess) {
+
+    if (attempt.status === 'throttled') {
+      return res.json({ success: false, message: 'Comment refresh temporarily limited' });
+    }
+    if (!attempt.success) {
       return res.json({ success: false, message: 'Sync failed' });
     }
-    
-    // 同期後のデータを取得
+
+    // Reload the synchronized details. Both new and existing comments must
+    // apply the same public redaction as GET /api/public/properties/:id/complete.
+    const propertyDetailsService = new PropertyDetailsService();
     const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-    
-    // property_aboutがまだnullの場合、物件スプレッドシートから取得
+
+    // Preserve the existing property_about update for the internal DB, but
+    // never expose it in a public API response.
     if (!updatedDetails.property_about) {
       try {
         const propertyService = new PropertyService();
@@ -566,24 +586,22 @@ app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
           });
           updatedDetails.property_about = propertyAbout;
         }
-      } catch (err: any) {
-        console.error(`[Sync Comments API] Error syncing property_about:`, err.message);
+      } catch {
+        console.error('[Sync Comments API] Property-about backfill failed');
       }
     }
-    
-    console.log(`[Sync Comments API] Sync complete for ${property.property_number}`);
-    
-    res.json({
+
+    return res.json({
       success: true,
       favoriteComment: updatedDetails.favorite_comment,
-      recommendedComments: updatedDetails.recommended_comments,
+      recommendedComments: filterPublicRecommendedComments(updatedDetails.recommended_comments),
       athomeData: updatedDetails.athome_data,
-      // 内覧前伝達事項は独自サイトに表示しない
+      // Internal notes are never shown on the public property site.
       propertyAbout: null,
     });
-  } catch (error: any) {
-    console.error('[Sync Comments API] Error:', error);
-    res.status(500).json({ success: false, message: error.message });
+  } catch {
+    console.error('[Sync Comments API] Comment refresh failed');
+    return res.status(500).json({ success: false, message: 'Comment refresh failed' });
   }
 });
 
