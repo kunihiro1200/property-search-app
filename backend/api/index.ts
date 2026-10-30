@@ -507,6 +507,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
       propertyAbout: null,
       panoramaUrl,
       needsSync: dbDetails.needsSync || false, // フロントエンドが非同期同期をトリガーするためのフラグ
+      visitorCommentSyncEnabled: !isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED),
     });
     
   } catch (error: any) {
