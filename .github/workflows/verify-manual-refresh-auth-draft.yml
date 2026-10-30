@@ -1,0 +1,39 @@
+name: Verify Manual Refresh Authentication (draft only)
+
+# This workflow runs only on this isolated draft branch.
+# Never deploy, trigger sync, load secrets, or access live data.
+on:
+  push:
+    branches:
+      - security/require-staff-on-property-refresh-20261031
+    paths:
+      - '.github/workflows/verify-manual-refresh-auth-draft.yml'
+      - 'backend/api/index.ts'
+      - 'backend/api/__tests__/manualRefreshAuthorization.test.ts'
+      - 'frontend/src/hooks/usePropertyRefresh.ts'
+      - 'frontend/src/services/api.ts'
+      - 'frontend/src/pages/PublicPropertyDetailPage.tsx'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-mock-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout draft
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install test dependencies without lifecycle scripts
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run source-only authorization regression test
+        working-directory: backend/api
+        run: ./node_modules/.bin/jest --runInBand __tests__/manualRefreshAuthorization.test.ts
