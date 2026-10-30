@@ -902,7 +902,7 @@ app.post('/api/public/properties/:identifier/update-storage-url', requireStaffOr
 });
 
 // 画像・基本情報を更新（軽量版）
-app.post('/api/public/properties/:identifier/refresh-essential', async (req, res) => {
+app.post('/api/public/properties/:identifier/refresh-essential', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -1010,7 +1010,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
 });
 
 // 全て更新（完全版）
-app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
+app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
