@@ -2127,7 +2127,7 @@ app.get('/api/internal/property-sync-auth-check', (req, res) => {
 
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
-app.post('/api/sync/trigger', async (req, res) => {
+app.post('/api/sync/trigger', requireStaffOrMachine, async (req, res) => {
   const triggeredAt = new Date().toISOString();
   console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
 
