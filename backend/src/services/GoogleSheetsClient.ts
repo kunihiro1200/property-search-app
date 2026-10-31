@@ -185,7 +185,7 @@ export class GoogleSheetsClient {
    * Environment Contract準拠: Vercel環境用（フォールバック）
    */
   private async authenticateWithServiceAccountEnv(): Promise<void> {
-    console.log('[GoogleSheetsClient] Authenticating with GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY');
+    console.log('[GoogleSheetsClient] Authenticating with environment credentials');
     
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY!;
