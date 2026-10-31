@@ -252,16 +252,18 @@ const PublicPropertyDetailPage: React.FC = () => {
           setMapCoordinates(coords);
           
           // DBに座標を保存（次回から高速化・地図ビューでも表示されるように）
-          try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            await fetch(`${apiUrl}/api/public/properties/${property.property_number}/save-coordinates`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
-            });
-            console.log('🗺️ [Map Coordinates] Coordinates saved to database');
-          } catch (saveError) {
-            console.warn('🗺️ [Map Coordinates] Failed to save coordinates (display not affected):', saveError);
+          if (property.visitorCoordinateSaveEnabled !== false) {
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+              await fetch(`${apiUrl}/api/public/properties/${property.property_number}/save-coordinates`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+              });
+              console.log('🗺️ [Map Coordinates] Coordinates saved to database');
+            } catch (saveError) {
+              console.warn('🗺️ [Map Coordinates] Failed to save coordinates (display not affected):', saveError);
+            }
           }
           return;
         }
