@@ -19,6 +19,8 @@ export interface PublicProperty {
   features?: string[];
   images?: string[];
   google_map_url?: string;
+  /** Server-derived flag: false skips DB cache POST, not local map rendering. */
+  visitorCoordinateSaveEnabled?: boolean;
   latitude?: number;  // 緯度（地図表示用）
   longitude?: number;  // 経度（地図表示用）
   atbb_status: string;  // atbb_statusを追加

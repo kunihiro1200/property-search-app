@@ -19,7 +19,7 @@ import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
 import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
-import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
+import { isAnonymousCoordinateSaveDisabled, validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
@@ -371,6 +371,7 @@ app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {
       property: {
         ...property,
         images,
+        visitorCoordinateSaveEnabled: !isAnonymousCoordinateSaveDisabled(process.env.PUBLIC_COORDINATE_SAVE_DISABLED),
         ...(price !== undefined ? { price } : {})
       }
     });
@@ -2349,6 +2350,11 @@ app.post('/api/sync/trigger', (req, res, next) => {
 // 匿名クライアントの値は信用できないため、登録済み座標の保護を優先。
 // 完全な対策はURL由来の座標をサーバー側で検証して匿名書込を終了すること。
 app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {
+  // Opt-in cutoff: keep existing visitors working until trusted backfill is verified.
+  // Reject before parsing input or accessing DB, including requests from cached clients.
+  if (isAnonymousCoordinateSaveDisabled(process.env.PUBLIC_COORDINATE_SAVE_DISABLED)) {
+    return res.status(403).json({ success: false, error: 'Visitor coordinate saving is disabled' });
+  }
   try {
     const { propertyNumber } = req.params;
     const valid = validatePublicCoordinateInput(req.body);

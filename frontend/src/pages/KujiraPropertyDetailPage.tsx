@@ -249,15 +249,17 @@ const KujiraPropertyDetailPage: React.FC = () => {
         if (coords) {
           setMapCoordinates(coords);
 
-          try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-            await fetch(`${apiUrl}/api/public/properties/${property.property_number}/save-coordinates`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
-            });
-          } catch (saveError) {
-            console.warn('Failed to save coordinates:', saveError);
+          if (property.visitorCoordinateSaveEnabled !== false) {
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+              await fetch(`${apiUrl}/api/public/properties/${property.property_number}/save-coordinates`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+              });
+            } catch (saveError) {
+              console.warn('Failed to save coordinates:', saveError);
+            }
           }
         }
       }

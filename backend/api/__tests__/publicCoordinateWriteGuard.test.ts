@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { validatePublicCoordinateInput } from '../src/utils/publicCoordinateWriteGuard';
+import { isAnonymousCoordinateSaveDisabled, validatePublicCoordinateInput } from '../src/utils/publicCoordinateWriteGuard';
 
 describe('anonymous coordinate cache input validation', () => {
   test.each([
@@ -68,5 +68,49 @@ describe('public coordinate cache source contract', () => {
     expect(source).toContain("app.post('/api/sync/trigger', (req, res, next) => {");
     expect(source).not.toContain("app.post('/api/admin/properties/coordinate-backfill-batch'");
     expect(source).not.toContain('PROPERTY_COORDINATE_BACKFILL_ENABLED');
+  });
+});
+
+describe('opt-in visitor coordinate write cutoff (offline regression)', () => {
+  const api = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
+  const ifu = readFileSync(resolve(__dirname, '../../../frontend/src/pages/PublicPropertyDetailPage.tsx'), 'utf8');
+  const kujira = readFileSync(resolve(__dirname, '../../../frontend/src/pages/KujiraPropertyDetailPage.tsx'), 'utf8');
+
+  test.each([
+    [undefined, false], ['', false], ['false', false],
+    ['TRUE', false], ['1', false], ['true', true],
+  ])('server flag %s switches cutoff only for exact true', (flag, disabled) => {
+    expect(isAnonymousCoordinateSaveDisabled(flag)).toBe(disabled);
+  });
+
+  test('backend rejects writes before input validation or DB access', () => {
+    const start = api.indexOf("app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {");
+    const end = api.indexOf('// Error handling middleware', start);
+    const route = api.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(route).toContain('isAnonymousCoordinateSaveDisabled(process.env.PUBLIC_COORDINATE_SAVE_DISABLED)');
+    expect(route).toContain("res.status(403).json({ success: false, error: 'Visitor coordinate saving is disabled' })");
+    expect(route.indexOf('isAnonymousCoordinateSaveDisabled')).toBeLessThan(route.indexOf('validatePublicCoordinateInput(req.body)'));
+    expect(route.indexOf('isAnonymousCoordinateSaveDisabled')).toBeLessThan(route.indexOf(".from('property_listings')"));
+  });
+
+  test('public property GET carries flag without removing property details', () => {
+    const start = api.indexOf("app.get('/api/public/properties/:propertyIdentifier', async (req, res) => {");
+    const end = api.indexOf('// 公開物件の完全な詳細情報取得', start);
+    const route = api.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(route).toContain('visitorCoordinateSaveEnabled: !isAnonymousCoordinateSaveDisabled(process.env.PUBLIC_COORDINATE_SAVE_DISABLED)');
+    expect(route).toContain('...property,');
+    expect(route).toContain('images,');
+  });
+
+  test.each([['ifu', ifu], ['kujira', kujira]])('%s shows the map independently of visitor DB writes', (_, page) => {
+    const display = page.indexOf('setMapCoordinates(coords);');
+    const guard = page.indexOf('if (property.visitorCoordinateSaveEnabled !== false) {');
+    const post = page.indexOf('/save-coordinates');
+    expect(display).toBeGreaterThan(0);
+    expect(guard).toBeGreaterThan(display);
+    expect(post).toBeGreaterThan(guard);
+    expect(page).toContain('latitude: coords.lat, longitude: coords.lng');
   });
 });
