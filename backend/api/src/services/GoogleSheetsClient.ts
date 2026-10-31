@@ -66,8 +66,8 @@ export class GoogleSheetsClient {
       else {
         throw new Error('No valid authentication credentials provided');
       }
-    } catch (error: any) {
-      throw new Error(`Google Sheets authentication failed: ${error.message}`);
+    } catch {
+      throw new Error('Google Sheets authentication failed');
     }
   }
 
@@ -128,7 +128,7 @@ export class GoogleSheetsClient {
     const keyPath = path.resolve(process.cwd(), this.config.serviceAccountKeyPath!);
     
     if (!fs.existsSync(keyPath)) {
-      throw new Error(`Service account key file not found: ${keyPath}`);
+      throw new Error('Service account key file not found');
     }
 
     const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
