@@ -161,3 +161,29 @@ describe('private internal API and anonymous cutoff contracts', () => {
     expect(index).toContain("app.get('/api/public/properties/:id/complete', async (req, res) => {");
   });
 });
+
+
+describe('public detail pages respect the server-side comment sync switch', () => {
+  const api = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
+  const ifu = readFileSync(resolve(__dirname, '../../../frontend/src/pages/PublicPropertyDetailPage.tsx'), 'utf8');
+  const kujira = readFileSync(resolve(__dirname, '../../../frontend/src/pages/KujiraPropertyDetailPage.tsx'), 'utf8');
+  const condition = 'response.data?.needsSync && response.data?.visitorCommentSyncEnabled !== false';
+
+  it('returns a server-derived switch without changing needsSync calculation', () => {
+    expect(api).toContain('visitorCommentSyncEnabled: !isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED)');
+    expect(api).toContain('needsSync: dbDetails.needsSync || false');
+  });
+
+  test.each([['ifu', ifu], ['kujira', kujira]])('%s avoids comment POST when disabled and keeps GET data', (_, source) => {
+    expect(source).toContain(condition);
+    expect(source).toContain('setCompleteData(response.data)');
+    expect(source).toContain('response.data?.panoramaUrl');
+    expect(source).toContain('publicApi.post(`/api/public/properties/${id}/sync-comments`)');
+  });
+
+  it('keeps visitor sync enabled by default, disables only exact server flag', () => {
+    expect(isAnonymousCommentSyncDisabled(undefined)).toBe(false);
+    expect(isAnonymousCommentSyncDisabled('false')).toBe(false);
+    expect(isAnonymousCommentSyncDisabled('true')).toBe(true);
+  });
+});

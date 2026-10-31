@@ -210,7 +210,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
         }
 
         // バックグラウンドで同期
-        if (response.data?.needsSync) {
+        if (response.data?.needsSync && response.data?.visitorCommentSyncEnabled !== false) {
           publicApi.post(`/api/public/properties/${id}/sync-comments`)
             .then((syncResponse) => {
               if (syncResponse.data?.success) {
