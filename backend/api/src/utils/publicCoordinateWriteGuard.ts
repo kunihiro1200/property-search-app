@@ -31,3 +31,8 @@ export function validatePublicCoordinateInput(
 
   return { latitude, longitude };
 }
+
+/** Exact server-side opt-in; enable only after trusted backfill and map-pin checks. */
+export function isAnonymousCoordinateSaveDisabled(flag: string | undefined): boolean {
+  return flag === 'true';
+}
