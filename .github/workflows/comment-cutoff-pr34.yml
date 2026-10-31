@@ -1,0 +1,25 @@
+name: PR34 comment cutoff offline regression
+on:
+  push:
+    branches:
+      - fix/public-comment-cutoff-client-20261031
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+      - name: Install dependencies without credentials
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run offline comment cutoff regression
+        working-directory: backend/api
+        run: npx jest --runInBand --runTestsByPath __tests__/commentBackfillPolicy.test.ts
