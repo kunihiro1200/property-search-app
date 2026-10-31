@@ -20,6 +20,8 @@ import { authenticate } from './src/middleware/auth';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
 import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
+import { deriveTrustedPropertyCoordinates } from './src/utils/trustedPropertyCoordinates';
+import { classifyStoredMapUrl, COORDINATE_PUBLIC_STATUSES, isBackfillWriteEnabled, parseBackfillOptions } from './src/utils/coordinateBackfillPolicy';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
@@ -2343,6 +2345,99 @@ app.post('/api/sync/trigger', (req, res, next) => {
       console.error('❌ [Sync Trigger] Background sync failed:', error.message);
     }
   })();
+});
+
+/**
+ * Protected, aggregate-only coordinate backfill preview / explicitly gated execution.
+ * POST is admin/machine only. Preview is the default and never expands links or writes.
+ * This endpoint is not called by the public web pages or scheduled sync.
+ */
+app.post('/api/internal/coordinate-backfill', requireStaffOrMachine, async (req, res) => {
+  try {
+    const options = parseBackfillOptions(req.body);
+    if (!options) {
+      return res.status(400).json({ success: false, error: 'Invalid backfill options' });
+    }
+    if (options.mode === 'execute' &&
+        !isBackfillWriteEnabled(process.env.PROPERTY_COORDINATE_BACKFILL_ENABLED)) {
+      return res.status(503).json({ success: false, error: 'Backfill writes are disabled' });
+    }
+
+    // Public listings only; no property contents leave this internal API.
+    let query = supabase
+      .from('property_listings')
+      .select('property_number, google_map_url')
+      .eq('is_hidden', false)
+      .in('atbb_status', COORDINATE_PUBLIC_STATUSES)
+      .is('latitude', null)
+      .is('longitude', null);
+
+    if (options.propertyNumbers) {
+      query = query.in('property_number', options.propertyNumbers);
+    } else {
+      query = query.order('property_number', { ascending: true }).limit(options.limit + 1);
+      if (options.after) query = query.gt('property_number', options.after);
+    }
+
+    const { data: matches, error: readError } = await query;
+    if (readError) {
+      return res.status(500).json({ success: false, error: 'Backfill preview unavailable' });
+    }
+    const rows = (matches || []).slice(0, options.limit);
+    const nextCursor = !options.propertyNumbers && (matches || []).length > options.limit && rows.length
+      ? rows[rows.length - 1].property_number
+      : null;
+    let direct = 0, shortlinks = 0, unsupported = 0;
+    let updated = 0, unresolved = 0, skipped = 0, failed = 0;
+
+    for (const property of rows) {
+      const sourceKind = classifyStoredMapUrl(property.google_map_url);
+      if (sourceKind === 'direct_coordinates') direct++;
+      else if (sourceKind === 'google_shortlink') shortlinks++;
+      else unsupported++;
+
+      // No shortlink expansion, external network traffic or DB writes in preview.
+      if (options.mode === 'preview') continue;
+      if (sourceKind === 'unsupported') { skipped++; continue; }
+
+      // Coordinates must come from the saved, allowlisted URL, not req.body.
+      const coordinates = await deriveTrustedPropertyCoordinates(property.google_map_url);
+      if (!coordinates) { unresolved++; continue; }
+
+      const { data: changed, error: writeError } = await supabase
+        .from('property_listings')
+        .update({ latitude: coordinates.lat, longitude: coordinates.lng })
+        .eq('property_number', property.property_number)
+        .eq('google_map_url', property.google_map_url)
+        .eq('is_hidden', false)
+        .in('atbb_status', COORDINATE_PUBLIC_STATUSES)
+        .is('latitude', null)
+        .is('longitude', null)
+        .select('property_number')
+        .maybeSingle();
+      if (writeError) failed++;
+      else if (!changed) skipped++;
+      else updated++;
+    }
+
+    return res.status(failed ? 500 : 200).json({
+      success: failed === 0,
+      mode: options.mode,
+      scanned: rows.length,
+      direct,
+      shortlinks,
+      unsupported,
+      updated,
+      unresolved,
+      skipped,
+      failed,
+      hasMore: nextCursor !== null,
+      nextCursor,
+    });
+  } catch {
+    // Do not return raw URLs, credentials, property IDs or database exceptions.
+    return res.status(500).json({ success: false, error: 'Coordinate backfill unavailable' });
+  }
 });
 
 // 公開物件ページの座標キャッシュ（初回のみ登録・既存座標は上書き禁止）
