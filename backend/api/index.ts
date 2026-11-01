@@ -1624,11 +1624,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     // 物件情報を取得（propertyIdが指定されている場合）
     let propertyNumber = null;
     if (propertyId) {
-      console.log('[Inquiry API] Fetching property:', propertyId);
       const property = await propertyListingService.getPublicPropertyById(propertyId);
       if (property) {
         propertyNumber = property.property_number;
-        console.log('[Inquiry API] Property found:', propertyNumber);
       }
     }
     
@@ -1638,18 +1636,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     try {
       console.log('[Inquiry API] Getting buyer number from spreadsheet...');
       
-      // 環境変数の詳細ログ
       const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
-      console.log('[Inquiry API] Environment check:', {
-        hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-        googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        spreadsheetId: spreadsheetId,
-        spreadsheetIdType: typeof spreadsheetId,
-        spreadsheetIdLength: spreadsheetId?.length || 0,
-        sheetName: sheetName,
-      });
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
@@ -1665,16 +1654,12 @@ app.post('/api/public/inquiries', async (req, res) => {
       const allRows = await sheetsClient.readAll();
       const lastRow = allRows.length > 0 ? allRows[allRows.length - 1] : null;
       
-      console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
       
       if (lastRow) {
         const lastBuyerNumber = lastRow['買主番号'];
-        console.log('[Inquiry API] Last buyer number value:', lastBuyerNumber);
-        console.log('[Inquiry API] Last row keys:', Object.keys(lastRow));
         
         if (lastBuyerNumber) {
           nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
-          console.log('[Inquiry API] Last buyer number from spreadsheet:', lastBuyerNumber);
         } else {
           console.log('[Inquiry API] 買主番号 key not found in last row');
         }
@@ -1682,10 +1667,8 @@ app.post('/api/public/inquiries', async (req, res) => {
         console.log('[Inquiry API] Last row is null');
       }
       
-      console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
-    } catch (error: any) {
-      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error.message);
-      console.error('[Inquiry API] Error stack:', error.stack);
+    } catch {
+      console.error('[Inquiry API] Buyer number lookup failed; using database fallback');
       // フォールバック: データベースから取得
       const { data: latestInquiry } = await supabase
         .from('property_inquiries')
@@ -1697,7 +1680,6 @@ app.post('/api/public/inquiries', async (req, res) => {
       
       if (latestInquiry?.buyer_number) {
         nextBuyerNumber = latestInquiry.buyer_number + 1;
-        console.log('[Inquiry API] Next buyer number from database:', nextBuyerNumber);
       } else {
         nextBuyerNumber = 1;
         console.log('[Inquiry API] No buyer numbers found, starting from 1');
@@ -1710,16 +1692,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
       
-      // 環境変数の詳細ログ
       const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
-      console.log('[Inquiry API] Sync environment check:', {
-        spreadsheetId: spreadsheetId,
-        spreadsheetIdType: typeof spreadsheetId,
-        spreadsheetIdLength: spreadsheetId?.length || 0,
-        sheetName: sheetName,
-      });
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
@@ -1757,8 +1732,8 @@ app.post('/api/public/inquiries', async (req, res) => {
       await sheetsClient.appendRow(rowData);
       console.log('[Inquiry API] Spreadsheet sync completed successfully');
       
-    } catch (syncError: any) {
-      console.error('[Inquiry API] Spreadsheet sync error:', syncError);
+    } catch {
+      console.error('[Inquiry API] Spreadsheet sync failed');
       sheetSyncStatus = 'failed';
       // エラーが発生してもデータベースには保存する
     }
@@ -1781,7 +1756,7 @@ app.post('/api/public/inquiries', async (req, res) => {
       .single();
     
     if (saveError) {
-      console.error('[Inquiry API] Database save error:', saveError);
+      console.error('[Inquiry API] Database save failed');
       throw saveError;
     }
     
@@ -1792,8 +1767,8 @@ app.post('/api/public/inquiries', async (req, res) => {
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
     });
-  } catch (error: any) {
-    console.error('[Inquiry API] Error:', error);
+  } catch {
+    console.error('[Inquiry API] Request failed');
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
@@ -1821,7 +1796,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
       .limit(10);
     
     if (fetchError) {
-      console.error('[Cron] Error fetching pending inquiries:', fetchError);
+      console.error('[Cron] Failed to fetch pending inquiries');
       throw fetchError;
     }
     
@@ -1862,7 +1837,6 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     
     for (const inquiry of pendingInquiries) {
       try {
-        console.log(`[Cron] Syncing inquiry ${inquiry.id} (${inquiry.name})...`);
         
         // 電話番号を正規化
         const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
@@ -1900,12 +1874,11 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
           })
           .eq('id', inquiry.id);
         
-        console.log(`[Cron] Synced inquiry ${inquiry.id} with buyer number ${nextBuyerNumber}`);
         syncedCount++;
         nextBuyerNumber++;
         
-      } catch (error) {
-        console.error(`[Cron] Failed to sync inquiry ${inquiry.id}:`, error);
+      } catch {
+        console.error('[Cron] Failed to sync pending inquiry');
         
         // 失敗をデータベースに記録
         await supabase
@@ -1930,7 +1903,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     });
     
   } catch (error: any) {
-    console.error('[Cron] Error in sync job:', error);
+    console.error('[Cron] Inquiry sync job failed');
     res.status(500).json({
       success: false,
       error: error.message
