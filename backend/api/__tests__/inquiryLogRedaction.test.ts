@@ -21,10 +21,10 @@ const bothRoutes = inquiryRoute + cronRoute;
 
 describe('inquiry and buyer data log privacy', () => {
   test('never prints buyer rows, names, buyer IDs, sheet identifiers or raw exceptions', () => {
-    const logCalls = bothRoutes.match(/console\\.(?:log|warn|error|info|debug)\\([\\s\\S]*?\\);/g) || [];
+    const logCalls = bothRoutes.match(/console\.(?:log|warn|error|info|debug)\([\s\S]*?\);/g) || [];
     expect(logCalls.length).toBeGreaterThan(0);
 
-    const unsafeArguments = /\\b(?:lastRow|lastBuyerNumber|nextBuyerNumber|propertyId|propertyNumber|spreadsheetId|sheetName|savedInquiry|syncError|saveError|fetchError|inquiry\\.|error\\.(?:message|stack|errors))\\b/;
+    const unsafeArguments = /\b(?:lastRow|lastBuyerNumber|nextBuyerNumber|propertyId|propertyNumber|spreadsheetId|sheetName|savedInquiry|syncError|saveError|fetchError|inquiry\.|error\.(?:message|stack|errors))\b/;
     const unsafeCalls = logCalls.filter((call) => unsafeArguments.test(call));
     expect(unsafeCalls).toEqual([]);
   });
