@@ -20,6 +20,7 @@ import { authenticate } from './src/middleware/auth';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
 import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
+import { toPublicEstimateData } from './src/utils/publicEstimateData';
 import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
@@ -1477,73 +1478,45 @@ app.get('/api/public/images/:fileId', async (req, res) => {
 });
 
 // 概算書PDF生成（スプレッドシート不依存・直接PDF生成）
+// Public estimate: resolve only fields already used by the public detail API.
+ // Keep existing calculation/layout and anonymous PDF button behavior.
 app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res) => {
   const { propertyNumber } = req.params;
-  console.log(`[Estimate PDF v2] Starting for property: ${propertyNumber}`);
+  res.setHeader('Cache-Control', 'no-store');
+
+  // The identifier also becomes part of Content-Disposition; reject unsafe characters.
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(propertyNumber)) {
+    return res.status(400).json({ success: false, message: '物件番号が正しくありません' });
+  }
 
   try {
-    // --- スプレッドシートから物件データを取得 ---
-    const SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
-    const SHEET_NAME = '物件';
+    // Use the same current price, display address and visible-row guard as
+    // GET /api/public/properties/:propertyIdentifier. Do not read private Sheets.
+    const { data: property, error } = await supabase
+      .from('property_listings')
+      .select('property_number, display_address, address, property_type, sales_price, listing_price')
+      .eq('property_number', propertyNumber)
+      .eq('is_hidden', false)
+      .maybeSingle();
 
-    const sheetsClient = new GoogleSheetsClient({
-      spreadsheetId: SPREADSHEET_ID,
-      sheetName: SHEET_NAME,
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json',
-    });
-
-    await sheetsClient.authenticate();
-    console.log(`[Estimate PDF v2] Authenticated`);
-
-    // 物件番号で行を検索（B列）
-    const rowIndex = await sheetsClient.findRowByColumn('物件番号', propertyNumber);
-    if (!rowIndex) {
-      return res.status(404).json({ success: false, message: `物件番号 ${propertyNumber} が見つかりませんでした` });
+    if (error) {
+      throw error;
+    }
+    if (!property) {
+      return res.status(404).json({ success: false, message: '物件が見つかりませんでした' });
     }
 
-    // ZZ列まで読み取り
-    const rows = await sheetsClient.readRange(`A${rowIndex}:ZZ${rowIndex}`);
-    if (!rows || rows.length === 0) {
-      return res.status(404).json({ success: false, message: '物件データが取得できませんでした' });
-    }
-
-    const row = rows[0];
-    console.log(`[Estimate PDF v2] Row data keys:`, Object.keys(row).slice(0, 20));
-
-    // 物件名: G列（住居表示）、なければF列（所在地）
-    const propertyName = (row['住居表示（ATBB登録住所）'] || row['所在地'] || '') as string;
-    // 種別: C列
-    const propertyType = (row['種別'] || '') as string;
-    // 物件価格: BS列
-    const priceRaw = row['価格'];
-    const price = priceRaw ? Number(String(priceRaw).replace(/[^0-9]/g, '')) : 0;
-
-    console.log(`[Estimate PDF v2] Data: name="${propertyName}", type="${propertyType}", price=${price}`);
-
-    // --- PDF生成 ---
     const { generateEstimatePdfBuffer } = await import('./src/services/EstimatePdfService.js');
-    const pdfBuffer = await generateEstimatePdfBuffer({
-      propertyNumber,
-      propertyName,
-      propertyType,
-      price,
-    });
+    const pdfBuffer = await generateEstimatePdfBuffer(toPublicEstimateData(property));
 
-    console.log(`[Estimate PDF v2] PDF generated, size: ${pdfBuffer.length} bytes`);
-
-    // PDFをレスポンスとして直接返す
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="estimate-${propertyNumber}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
-    res.send(pdfBuffer);
-
-  } catch (error: any) {
-    console.error('[Estimate PDF v2] Error:', error.message);
-    res.status(500).json({
-      success: false,
-      message: '概算書の生成に失敗しました',
-      details: error.message,
-    });
+    return res.send(pdfBuffer);
+  } catch {
+    // Do not reveal internal spreadsheet, customer, database, or file paths.
+    console.error('[Estimate PDF] Generation failed');
+    return res.status(500).json({ success: false, message: '概算書の生成に失敗しました' });
   }
 });
 
