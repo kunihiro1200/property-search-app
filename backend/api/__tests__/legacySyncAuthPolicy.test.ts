@@ -44,7 +44,7 @@ describe('legacy GAS sync authentication migration policy', () => {
 describe('legacy sync production route remains compatibility-safe by default', () => {
   const source = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
   const legacyStart = source.indexOf("app.post('/api/sync/trigger', (req, res, next) => {");
-  const legacyEnd = source.indexOf('// 公開物件の座標を保存', legacyStart);
+  const legacyEnd = source.indexOf("app.post('/api/public/properties/:propertyNumber/save-coordinates'", legacyStart);
   const legacy = source.slice(legacyStart, legacyEnd);
 
   test('audit executes before existing GAS sync handler and logs only categories', () => {
