@@ -70,3 +70,28 @@ describe('legacy sync production route remains compatibility-safe by default', (
     expect(source).toContain("app.get('/api/public/properties'");
   });
 });
+
+describe('reference GAS sample: safe migration only (no live calls)', () => {
+  const sample = readFileSync(resolve(__dirname, '../../../docs/gas/property-listing-trigger-batch.gs'), 'utf8');
+
+  test('reads the machine credential from Script Properties and sends a Bearer header', () => {
+    expect(sample).toContain("getProperty('CRON_SECRET')");
+    expect(sample).toContain("Authorization: 'Bearer ' + cronSecret");
+    expect(sample).toContain("if (!cronSecret || !String(cronSecret).trim())");
+    expect(sample).not.toContain("console.log(cronSecret)");
+    expect(sample).not.toContain("console.log(response.getContentText())");
+  });
+
+  test('treats an HTTP 200 as accepted only, never as completed', () => {
+    expect(sample).toContain("accepted: status === 200");
+    expect(sample).toContain("complete: false");
+    expect(sample).not.toContain("successCount * 100");
+  });
+
+  test('does not loop or retry the legacy POST endpoint', () => {
+    const requests = sample.match(/UrlFetchApp\.fetch\(/g) || [];
+    expect(requests).toHaveLength(1);
+    expect(sample).not.toContain("maxIterations");
+    expect(sample).not.toContain("Utilities.sleep");
+  });
+});
