@@ -44,7 +44,7 @@ describe('legacy GAS sync authentication migration policy', () => {
 describe('legacy sync production route remains compatibility-safe by default', () => {
   const source = readFileSync(resolve(__dirname, '../index.ts'), 'utf8');
   const legacyStart = source.indexOf("app.post('/api/sync/trigger', (req, res, next) => {");
-  const legacyEnd = source.indexOf('// 公開物件の座標を保存', legacyStart);
+  const legacyEnd = source.indexOf("app.post('/api/public/properties/:propertyNumber/save-coordinates'", legacyStart);
   const legacy = source.slice(legacyStart, legacyEnd);
 
   test('audit executes before existing GAS sync handler and logs only categories', () => {
@@ -68,5 +68,30 @@ describe('legacy sync production route remains compatibility-safe by default', (
   test('new verified sync function and anonymous public display routes are untouched', () => {
     expect(source).toContain("app.get('/api/internal/property-sync-auth-check', (req, res) => {");
     expect(source).toContain("app.get('/api/public/properties'");
+  });
+});
+
+describe('reference GAS sample: safe migration only (no live calls)', () => {
+  const sample = readFileSync(resolve(__dirname, '../../../docs/gas/property-listing-trigger-batch.gs'), 'utf8');
+
+  test('reads the machine credential from Script Properties and sends a Bearer header', () => {
+    expect(sample).toContain("getProperty('CRON_SECRET')");
+    expect(sample).toContain("Authorization: 'Bearer ' + cronSecret");
+    expect(sample).toContain("if (!cronSecret || !String(cronSecret).trim())");
+    expect(sample).not.toContain("console.log(cronSecret)");
+    expect(sample).not.toContain("console.log(response.getContentText())");
+  });
+
+  test('treats an HTTP 200 as accepted only, never as completed', () => {
+    expect(sample).toContain("accepted: status === 200");
+    expect(sample).toContain("complete: false");
+    expect(sample).not.toContain("successCount * 100");
+  });
+
+  test('does not loop or retry the legacy POST endpoint', () => {
+    const requests = sample.match(/UrlFetchApp\.fetch\(/g) || [];
+    expect(requests).toHaveLength(1);
+    expect(sample).not.toContain("maxIterations");
+    expect(sample).not.toContain("Utilities.sleep");
   });
 });
