@@ -1,0 +1,35 @@
+name: Inquiry log privacy regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/api/index.ts'
+      - 'backend/api/__tests__/inquiryLogRedaction.test.ts'
+      - '.github/workflows/inquiry-log-privacy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/api/index.ts'
+      - 'backend/api/__tests__/inquiryLogRedaction.test.ts'
+      - '.github/workflows/inquiry-log-privacy.yml'
+permissions:
+  contents: read
+jobs:
+  offline-inquiry-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+      - name: Install dependencies without scripts or secrets
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify no raw inquiry or buyer data is logged
+        working-directory: backend/api
+        run: npx jest --runInBand --runTestsByPath __tests__/inquiryLogRedaction.test.ts

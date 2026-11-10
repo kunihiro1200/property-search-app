@@ -7,6 +7,7 @@ import { GoogleDriveService } from './GoogleDriveService.js';
 import { GeocodingService } from './GeocodingService.js';
 import { PropertyDetailsService } from './PropertyDetailsService.js';
 import { GoogleSheetsClient } from './GoogleSheetsClient.js';
+import { WorkTasksStorageCache } from '../utils/WorkTasksStorageCache.js';
 
 export class PropertyListingService {
   private supabase;
@@ -314,7 +315,10 @@ export class PropertyListingService {
       let query = this.supabase
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' })
-        .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
+        .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        // Public listings must never include private, pre-release or sold properties.
+        // Non-public detail URLs remain accessible through getPublicPropertyById/ByNumber.
+        .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -803,6 +807,8 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, atbb_status')
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        // Site maps may list only openly advertised properties.
+        .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -836,65 +842,36 @@ export class PropertyListingService {
     return true;
   }
 
-  // 業務リスト（業務依頼）スプレッドシートからstorage_urlを取得するヘルパーメソッド
-  // キャッシュを使用してパフォーマンスを最適化
-  private gyomuListCache: Map<string, string> | null = null;
-  private gyomuListCacheExpiry: number = 0;
-  private readonly GYOMU_LIST_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
-  
+  // One shared loader for this service instance. All simultaneous detail
+  // requests for a missing storage_location share the same Sheet read.
+  private readonly workTasksStorageCache = new WorkTasksStorageCache();
+
   private async getStorageUrlFromWorkTasks(propertyNumber: string): Promise<string | null> {
-    try {
-      // キャッシュが有効な場合は使用
-      const now = Date.now();
-      if (this.gyomuListCache && now < this.gyomuListCacheExpiry) {
-        const cachedUrl = this.gyomuListCache.get(propertyNumber);
-        if (cachedUrl) {
-          console.log(`[PropertyListingService] Found storage_url for ${propertyNumber} in cache`);
-          return cachedUrl;
-        }
-        // キャッシュにない場合はnullを返す（業務リストに存在しない）
-        return null;
-      }
-      
-      console.log(`[PropertyListingService] Loading 業務リスト（業務依頼） into cache...`);
-      
-      // 業務リスト（業務依頼）スプレッドシートに接続
-      const gyomuListClient = new GoogleSheetsClient({
+    return this.workTasksStorageCache.lookup(propertyNumber, async () => {
+      const client = new GoogleSheetsClient({
         spreadsheetId: process.env.GYOMU_LIST_SPREADSHEET_ID || '1MO2vs0mDUFCgM-rjXXPRIy3pKKdfIFvUDwacM-2174g',
         sheetName: '業務依頼',
         serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './google-service-account.json',
       });
-      
-      await gyomuListClient.authenticate();
-      
-      // すべての行を取得してキャッシュに保存
-      const rows = await gyomuListClient.readAll();
-      this.gyomuListCache = new Map();
-      
+
+      await client.authenticate();
+      const rows = await client.readAll();
+      const urls = new Map<string, string>();
       for (const row of rows) {
-        const propNumber = row['物件番号'];
-        const storageUrl = row['格納先URL'];
-        if (propNumber && storageUrl) {
-          this.gyomuListCache.set(propNumber as string, storageUrl as string);
+        const number = row['物件番号'];
+        const url = row['格納先URL'];
+        if (number && url) {
+          urls.set(String(number), String(url));
         }
       }
-      
-      this.gyomuListCacheExpiry = now + this.GYOMU_LIST_CACHE_TTL;
-      console.log(`[PropertyListingService] Loaded ${this.gyomuListCache.size} entries from 業務リスト（業務依頼）`);
-      
-      // キャッシュから取得
-      const storageUrl = this.gyomuListCache.get(propertyNumber);
-      if (storageUrl) {
-        console.log(`[PropertyListingService] Found storage_url for ${propertyNumber}: ${storageUrl}`);
-        return storageUrl;
-      } else {
-        // 業務リストに存在しない場合は静かに失敗（ログを減らす）
-        return null;
-      }
-    } catch (error: any) {
-      console.error(`[PropertyListingService] Error in getStorageUrlFromWorkTasks:`, error);
-      return null;
-    }
+
+      // Avoid logging URLs, Sheets request metadata, or secret-bearing
+      // exceptions. Cache includes misses, as in the previous behavior.
+      console.info('[PropertyListingService] Work-tasks storage URL cache refreshed', {
+        entries: urls.size,
+      });
+      return urls;
+    });
   }
 
   /**

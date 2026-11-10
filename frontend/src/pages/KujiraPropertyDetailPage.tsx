@@ -31,6 +31,7 @@ import { generatePropertyStructuredData } from '../utils/structuredData';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 import { useAuthStore } from '../store/authStore';
+import { useLanguage } from '../contexts/LanguageContext';
 import '../styles/print.css';
 
 /**
@@ -78,6 +79,103 @@ const KujiraPropertyDetailPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t, language } = useLanguage();
+
+  // 簡易翻訳関数（日本語テキストを英語に変換）
+  const translateContent = (text: string | null | undefined): string => {
+    if (!text) return '';
+    if (language === 'ja') return text;
+    
+    // 完全一致の翻訳マッピング（優先度高）
+    const exactTranslations: Record<string, string> = {
+      // お気に入り文言の完全一致翻訳
+      '売主が応募者登録や用途の確認environment control real estateでは、転職や転職など転職を経験します。': 'Registered applicants can experience various career changes in the environment control real estate field.',
+      
+      // おすすめポイントの完全一致翻訳
+      '●市街化調整区域ですが、外来からのりとゆる未地域の移軽安を省る移置異部分が設置れています。': '● Although it is in the urbanization control area, measures have been taken to ease restrictions from outside.',
+      '●近くに港湾部材が林立しあり、陸と空と空気を眺眺り時しす。整は設計の背景スペースを確保中。ご家族で絶景をお楽しみ願いますと計されています。': '● Port facilities are nearby, allowing you to enjoy views of land, sky, and air. Design background space is secured. Enjoy the spectacular views with your family.',
+      '●わとりあるPropertyの地形を生かし、擁壁の環境スペースを確保中。ご家族で優雅なお庭をお楽しみください！': '● Taking advantage of the property terrain, retaining wall environment space is secured. Enjoy an elegant garden with your family!',
+      '●後是が是メールで受け取ることができます！': '● You can receive updates via email!',
+      '●各住所はミール式送る会金でとどこにできます！': '● Addresses can be sent via meal-style delivery!',
+      
+      // 住所の完全一致翻訳
+      '福岡県糸島市志摩船越': 'Funakoshi, Shima, Itoshima City, Fukuoka Prefecture',
+      '（今回は住所を非公開にさせていただくために、主要部までを非表示とします。内覧時に伝えますので、お気軽にお問い合わせください）': '(For privacy, the full address is not displayed publicly. The exact location will be provided during property viewing. Please feel free to contact us)',
+      
+      // その他のフレーズ
+      '住宅ローンのお支払いについて': 'About Housing Loan Payments',
+      '閑静な住宅街': 'Quiet residential area',
+      '駅近': 'Near station',
+      '南向き': 'South-facing',
+      '日当たり良好': 'Good sunlight',
+      '築浅': 'Recently built',
+      'リフォーム済み': 'Renovated',
+      '眺望良好': 'Great view',
+      'ペット可': 'Pets allowed',
+      'オートロック': 'Auto-lock',
+      'エレベーター': 'Elevator',
+      'バルコニー': 'Balcony',
+      'システムキッチン': 'System kitchen',
+      '床暖房': 'Floor heating',
+      '追い焚き機能': 'Bath reheating function',
+      'ウォークインクローゼット': 'Walk-in closet',
+    };
+    
+    // 完全一致する翻訳があればそれを使用
+    if (exactTranslations[text]) {
+      return exactTranslations[text];
+    }
+    
+    // 部分一致の翻訳マッピング（フォールバック）
+    const partialTranslations: Record<string, string> = {
+      '福岡県': 'Fukuoka Prefecture',
+      '糸島市': 'Itoshima City',
+      '志摩船越': 'Funakoshi, Shima',
+      '大分県': 'Oita Prefecture',
+      '別府市': 'Beppu City',
+      '近くに': 'Nearby',
+      '港湾': 'port',
+      'スペース': 'space',
+      '確保': 'secured',
+      '眺望': 'view',
+      '景色': 'scenery',
+      '海': 'sea',
+      '山': 'mountain',
+      'ご家族': 'family',
+      '便利': 'convenient',
+      '立地': 'location',
+      '環境': 'environment',
+      '地域': 'area',
+      '市街化調整区域': 'urbanization control area',
+      '住宅ローン': 'housing loan',
+      '支払い': 'payment',
+      'お支払い': 'payment',
+      'メール': 'email',
+      '受け取る': 'receive',
+      '駐車場': 'Parking',
+      '収納': 'Storage',
+      '敷地': 'Property',
+      '土地': 'Land',
+      '建物': 'Building',
+      '間取り': 'Floor plan',
+      '築年数': 'Building age',
+      '交通': 'Transportation',
+      '学区': 'School district',
+      'スーパー': 'Supermarket',
+      'コンビニ': 'Convenience store',
+      '病院': 'Hospital',
+      '学校': 'School',
+      '公園': 'Park',
+    };
+    
+    // 部分一致の翻訳を適用
+    let translated = text;
+    for (const [japanese, english] of Object.entries(partialTranslations)) {
+      translated = translated.replace(new RegExp(japanese, 'g'), english);
+    }
+    
+    return translated;
+  };
 
   const { isAuthenticated } = useAuthStore();
 
@@ -112,7 +210,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
         }
 
         // バックグラウンドで同期
-        if (response.data?.needsSync) {
+        if (response.data?.needsSync && response.data?.visitorCommentSyncEnabled !== false) {
           publicApi.post(`/api/public/properties/${id}/sync-comments`)
             .then((syncResponse) => {
               if (syncResponse.data?.success) {
@@ -199,16 +297,19 @@ const KujiraPropertyDetailPage: React.FC = () => {
   };
 
   const formatPrice = (price: number | undefined) => {
-    if (!price) return '価格応談';
-    return `${(price / 10000).toLocaleString()}万円`;
+    if (!price) return t('detail.priceNegotiable');
+    if (language === 'en') {
+      return `¥${(price / 10000).toLocaleString()}0,000`;
+    }
+    return `${(price / 10000).toLocaleString()}${t('property.priceUnit')}`;
   };
 
   const getPropertyTypeLabel = (type: string) => {
     const typeMap: Record<string, string> = {
-      'detached_house': '一戸建て',
-      'apartment': 'マンション',
-      'land': '土地',
-      'other': 'その他',
+      'detached_house': t('propertyType.house'),
+      'apartment': t('propertyType.mansion'),
+      'land': t('propertyType.land'),
+      'other': t('detail.other'),
     };
     return typeMap[type] || type;
   };
@@ -237,10 +338,10 @@ const KujiraPropertyDetailPage: React.FC = () => {
     return (
       <Container maxWidth="md" sx={{ py: 8 }}>
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error?.status === 404 ? 'お探しの物件が見つかりませんでした' : error?.message || '物件の読み込みに失敗しました'}
+          {error?.status === 404 ? t('detail.notFound') : error?.message || t('detail.loadError')}
         </Alert>
         <Button variant="contained" startIcon={<ArrowBackIcon />} onClick={handleBackClick} sx={{ bgcolor: '#1565C0' }}>
-          物件一覧に戻る
+          {t('header.backToList')}
         </Button>
       </Container>
     );
@@ -330,7 +431,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                   }}>
                     <Box component="span" sx={{ mr: 1.5, fontSize: '24px' }}>🐋</Box>
                     <Box component="span" sx={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#0D47A1' }}>
-                      {completeData.favoriteComment}
+                      {translateContent(completeData.favoriteComment)}
                     </Box>
                   </Box>
                 </Box>
@@ -339,7 +440,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 物件画像ギャラリー */}
               <Paper elevation={2} sx={{ mb: 3, p: 2, order: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
-                  物件画像
+                  {t('detail.propertyImages')}
                 </Typography>
                 {property.property_number && (
                   <PropertyImageGallery
@@ -355,7 +456,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* パノラマビュー */}
               {panoramaUrl && (
                 <Paper elevation={2} sx={{ mb: 3, p: 2, order: 3 }} className="no-print">
-                  <Typography variant="h6" sx={{ mb: 2 }}>360°パノラマビュー</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.panorama')}</Typography>
                   <Box sx={{ position: 'relative', width: '100%', paddingTop: { xs: '75%', sm: '56.25%' }, overflow: 'hidden', borderRadius: 1 }}>
                     <iframe
                       src={panoramaUrl}
@@ -380,7 +481,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <LocationOnIcon sx={{ mr: 1, color: '#1565C0' }} />
                   <Typography variant="h6" color="text.secondary">
-                    {(property as any).display_address || property.address}
+                    {translateContent((property as any).display_address || property.address)}
                   </Typography>
                 </Box>
 
@@ -389,31 +490,31 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 <Grid container spacing={2}>
                   {showConstructionDate && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">新築年月</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.constructionDate')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{formattedConstructionDate}</Typography>
                     </Grid>
                   )}
                   {property.land_area && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">土地面積</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.landArea')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.land_area}㎡</Typography>
                     </Grid>
                   )}
                   {property.building_area && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">建物面積</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.buildingArea')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.building_area}㎡</Typography>
                     </Grid>
                   )}
                   {(property as any).building_age !== undefined && (property as any).building_age !== null && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">築年数</Typography>
-                      <Typography variant="body1" fontWeight="medium">築{(property as any).building_age}年</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.buildingAge')}</Typography>
+                      <Typography variant="body1" fontWeight="medium">{t('property.age')}{(property as any).building_age}{t('property.ageUnit')}</Typography>
                     </Grid>
                   )}
                   {property.floor_plan && (
                     <Grid item xs={6} sm={4}>
-                      <Typography variant="body2" color="text.secondary">間取り</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('property.floorPlan')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{property.floor_plan}</Typography>
                     </Grid>
                   )}
@@ -422,8 +523,8 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 {(property as any).description && (
                   <>
                     <Divider sx={{ my: 3 }} />
-                    <Typography variant="h6" sx={{ mb: 2 }}>物件の説明</Typography>
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{(property as any).description}</Typography>
+                    <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.description')}</Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{translateContent((property as any).description)}</Typography>
                   </>
                 )}
               </Paper>
@@ -431,7 +532,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 地図セクション */}
               {(property.google_map_url || mapCoordinates) && (
                 <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>地図</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.map')}</Typography>
 
                   {property.google_map_url && (
                     <Button
@@ -443,7 +544,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                       fullWidth
                       sx={{ mb: mapCoordinates && isMapLoaded ? 2 : 0, borderColor: '#1565C0', color: '#1565C0' }}
                     >
-                      Google Mapで見る
+                      {t('detail.viewOnGoogleMap')}
                     </Button>
                   )}
 
@@ -470,14 +571,14 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 成約済み情報 */}
               {isSold && (
                 <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>成約情報</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.contractInfo')}</Typography>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">物件番号</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('detail.propertyNumber')}</Typography>
                     <Typography variant="body1" fontWeight="medium">{property.property_number}</Typography>
                   </Box>
                   {completeData?.settlementDate && (
                     <Box>
-                      <Typography variant="body2" color="text.secondary">成約日</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('detail.contractDate')}</Typography>
                       <Typography variant="body1" fontWeight="medium">{formatSettlementDate(completeData.settlementDate)}</Typography>
                     </Box>
                   )}
@@ -491,7 +592,7 @@ const KujiraPropertyDetailPage: React.FC = () => {
                   sx={{ p: 3, mb: 3, backgroundColor: '#EEF2FF', borderLeft: '4px solid #1565C0', order: 6 }}
                 >
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#1565C0' }}>
-                    おすすめポイント
+                    {t('detail.highlights')}
                   </Typography>
                   <Box>
                     {completeData.recommendedComments
@@ -501,11 +602,14 @@ const KujiraPropertyDetailPage: React.FC = () => {
                         return !text.startsWith('←') && !text.includes('一般媒介で、担当もついている場合') && !text.startsWith('＼') && !text.endsWith('／');
                       })
                       .map((comment: any, commentIndex: number) => {
+                        const commentText = typeof comment === 'string' ? comment : (Array.isArray(comment) ? comment.join(' ') : '');
+                        const translatedComment = translateContent(commentText);
+                        
                         if (typeof comment === 'string') {
-                          return <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8 }}>{comment}</Typography>;
+                          return <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8 }}>{translatedComment}</Typography>;
                         }
                         if (Array.isArray(comment)) {
-                          return <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8 }}>{comment.join(' ')}</Typography>;
+                          return <Typography key={commentIndex} variant="body1" sx={{ mb: 1, lineHeight: 1.8 }}>{translatedComment}</Typography>;
                         }
                         return null;
                       })}
@@ -516,13 +620,13 @@ const KujiraPropertyDetailPage: React.FC = () => {
               {/* 物件についての説明 */}
               {completeData?.propertyAbout && (
                 <Paper elevation={2} sx={{ p: 3, mb: 3, order: 7 }}>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{completeData.propertyAbout}</Typography>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{translateContent(completeData.propertyAbout)}</Typography>
                 </Paper>
               )}
 
               {/* 概算書 */}
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print">
-                <Typography variant="h6" sx={{ mb: 2 }}>概算書</Typography>
+                <Typography variant="h6" sx={{ mb: 2 }}>{t('detail.estimate')}</Typography>
                 <Button
                   variant="contained"
                   onClick={handleGenerateEstimatePdf}
@@ -530,13 +634,13 @@ const KujiraPropertyDetailPage: React.FC = () => {
                   fullWidth
                   sx={{ bgcolor: '#1565C0', '&:hover': { bgcolor: '#0D47A1' }, mb: isGeneratingPdf ? 2 : 0 }}
                 >
-                  {isGeneratingPdf ? '生成中...' : '概算書を表示'}
+                  {isGeneratingPdf ? t('detail.estimateGenerating') : t('detail.viewEstimate')}
                 </Button>
                 {isGeneratingPdf && (
                   <Box sx={{ textAlign: 'center' }}>
                     <CircularProgress size={24} sx={{ mb: 1, color: '#1565C0' }} />
                     <Typography variant="body2" color="text.secondary">
-                      概算書を生成しています。10秒ほどお待ちください...
+                      {t('detail.estimateWait')}
                     </Typography>
                   </Box>
                 )}
@@ -560,10 +664,10 @@ const KujiraPropertyDetailPage: React.FC = () => {
                 <Box sx={{ position: 'sticky', top: 16 }}>
                   <PublicInquiryForm
                     propertyId={property.id}
-                    propertyAddress={(property as any).display_address || property.address}
+                    propertyAddress={translateContent((property as any).display_address || property.address)}
                     propertyNumber={property.property_number}
                     phoneNumber="092-401-5331"
-                    phoneHours="お気軽にお問い合わせください"
+                    phoneHours={language === 'en' ? 'Feel free to contact us anytime' : 'お気軽にお問い合わせください'}
                   />
                 </Box>
               </Grid>

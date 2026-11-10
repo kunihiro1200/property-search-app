@@ -27,6 +27,7 @@ import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboa
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -37,16 +38,17 @@ function App() {
   }, [checkAuth]);
   
   return (
-    <GoogleMapsProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        {/* Public routes - no authentication required */}
-        <Route path="/public/properties" element={<PublicPropertiesPage />} />
-        <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
-        {/* くじら不動産サイト（FI物件専用） */}
-        <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
-        <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
+    <LanguageProvider>
+      <GoogleMapsProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          {/* Public routes - no authentication required */}
+          <Route path="/public/properties" element={<PublicPropertiesPage />} />
+          <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
+          {/* くじら不動産サイト（FI物件専用） */}
+          <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
+          <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
         <Route
           path="/"
           element={
@@ -185,7 +187,8 @@ function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </GoogleMapsProvider>
+      </GoogleMapsProvider>
+    </LanguageProvider>
   );
 }
 

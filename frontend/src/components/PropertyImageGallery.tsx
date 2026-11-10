@@ -31,6 +31,7 @@ import ImageDeleteButton from './ImageDeleteButton';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import api, { propertyImageApi } from '../services/api';
 import publicApi from '../services/publicApi';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface PropertyImageGalleryProps {
   propertyId: string;
@@ -58,6 +59,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const { t, language } = useLanguage();
   
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -111,7 +113,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     setIsClearingCache(true);
     try {
       // publicApiインスタンスを使用
-      const response = await publicApi.post(`/api/public/properties/${propertyId}/clear-image-cache`);
+      const response = await api.post(`/api/public/properties/${propertyId}/clear-image-cache`);
       
       if (response.data.success) {
         // キャッシュクリア成功後、画像を再取得
@@ -153,9 +155,9 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     
     setIsUpdatingStorageUrl(true);
     try {
-      // 公開サイトのエンドポイントなので、publicApiを使用（認証不要）
-      const apiClient = publicApi;
-      console.log('[handleUpdateStorageUrl] Using API client: publicApi (no auth)');
+      // 管理者操作はログイン済み社員のセッショントークンで認証
+      const apiClient = api;
+      console.log('[handleUpdateStorageUrl] Using employee-authenticated API client');
       
       const url = `/api/public/properties/${propertyId}/update-storage-url`;
       console.log('[handleUpdateStorageUrl] Request URL:', url);
@@ -796,7 +798,10 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
                 fontWeight: 'medium',
               }}
             >
-              他の画像を見る（残り{filteredImages.length - INITIAL_IMAGE_COUNT}枚）
+              {language === 'ja' 
+                ? `他の画像を見る（残り${filteredImages.length - INITIAL_IMAGE_COUNT}枚）`
+                : `View More Images (${filteredImages.length - INITIAL_IMAGE_COUNT} remaining)`
+              }
             </Button>
           </Box>
         )}
@@ -815,7 +820,7 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
                 fontWeight: 'medium',
               }}
             >
-              閉じる
+              {language === 'ja' ? '閉じる' : 'Close'}
             </Button>
           </Box>
         )}

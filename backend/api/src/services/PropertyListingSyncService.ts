@@ -14,20 +14,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GoogleSheetsClient } from './GoogleSheetsClient';
 import { PropertyImageService } from './PropertyImageService';
 import { GoogleDriveService } from './GoogleDriveService';
-
-/**
- * 配信日の文字列をパースして有効な日付文字列またはnullを返す
- * 「なし」「不要」「予定」などの無効な値はnullとして扱う
- */
-function parseDistributionDate(value: any): string | null {
-  if (!value) return null;
-  const str = String(value).trim();
-  if (!str) return null;
-  // 日付として有効かチェック（YYYY/MM/DD または YYYY-MM-DD 形式）
-  const datePattern = /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/;
-  if (!datePattern.test(str)) return null;
-  return str;
-}
+import { parseDistributionDate } from '../utils/parseDistributionDate';
 
 export interface PropertyListingSyncResult {
   success: boolean;
@@ -47,6 +34,7 @@ export class PropertyListingSyncService {
   private gyomuListSheetsClient: GoogleSheetsClient | null = null;
   private propertyImageService: PropertyImageService;
   private isInitialized = false;
+  private propertyListReady = false;
   private gyomuListCache: Array<Record<string, any>> | null = null;
 
   constructor(supabaseUrl: string, supabaseKey: string) {
@@ -67,6 +55,7 @@ export class PropertyListingSyncService {
       }
       this.propertyListSheetsClient = new GoogleSheetsClient(propertyListConfig);
       await this.propertyListSheetsClient.authenticate();
+      this.propertyListReady = true;
       console.log('✅ Property list spreadsheet client initialized');
 
       const gyomuListConfig: any = {
@@ -85,6 +74,35 @@ export class PropertyListingSyncService {
     } catch (error: any) {
       console.error('❌ PropertyListingSyncService initialization failed:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Verified GitHub/Railway scheduled sync only.
+   * The lightweight runScheduledSync() uses the property list, not the
+   * business-request (業務依頼) sheet. Avoid its extra OAuth authorization.
+   * The existing initialize() (full mode) is deliberately unchanged.
+   */
+  async initializeForScheduledSync(): Promise<void> {
+    if (this.isInitialized || this.propertyListReady) return;
+
+    const propertyListConfig: any = {
+      spreadsheetId: process.env.PROPERTY_LISTING_SPREADSHEET_ID!,
+      sheetName: process.env.PROPERTY_LISTING_SHEET_NAME || '物件',
+    };
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH) {
+      propertyListConfig.serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+    }
+
+    try {
+      const client = new GoogleSheetsClient(propertyListConfig);
+      await client.authenticate();
+      this.propertyListSheetsClient = client;
+      this.propertyListReady = true;
+      console.log('[Sync Verified] Property sheet authenticated (business-request sheet skipped)');
+    } catch (_error) {
+      console.error('[Sync Verified] Property sheet authentication failed');
+      throw _error;
     }
   }
 

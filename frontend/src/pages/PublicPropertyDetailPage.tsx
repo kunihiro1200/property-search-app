@@ -185,7 +185,7 @@ const PublicPropertyDetailPage: React.FC = () => {
         }
         
         // コメントデータが空の場合、バックグラウンドで同期をトリガー（UIをブロックしない）
-        if (response.data?.needsSync) {
+        if (response.data?.needsSync && response.data?.visitorCommentSyncEnabled !== false) {
           console.log(`[publicProperty:"${property?.property_number || id}"] needsSync=true, triggering background sync...`);
           publicApi.post(`/api/public/properties/${id}/sync-comments`)
             .then((syncResponse) => {

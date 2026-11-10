@@ -4,7 +4,10 @@ import axios from 'axios';
 dotenv.config();
 
 async function testCronJobManual() {
-  console.log('🧪 Cron Jobエンドポイントを手動でテスト中...\n');
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error('CRON_SECRET is missing');
+  if (process.env.ALLOW_LIVE_CRON_TEST !== 'YES') throw new Error('This test triggers a live sync; set ALLOW_LIVE_CRON_TEST=YES to opt in');
+  console.log('🧪 認証付きCron APIを手動実行します...');
 
   try {
     // 本番環境のURLを使用
@@ -13,6 +16,7 @@ async function testCronJobManual() {
     console.log(`📡 URL: ${url}\n`);
     
     const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${secret}` },
       timeout: 30000, // 30秒タイムアウト
     });
 

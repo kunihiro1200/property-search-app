@@ -1,0 +1,117 @@
+name: Scheduled Property Sync (protected)
+
+on:
+  # One safe diagnostic run after changing this workflow on the default branch.
+  # It never starts a property synchronization.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/scheduled-property-sync.yml'
+  schedule:
+    - cron: '17,47 * * * *' # once every 30 minutes, away from top-of-hour congestion
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-property-sync
+  cancel-in-progress: false
+
+jobs:
+  check_config_on_push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read-only Cron credential presence check
+        id: config
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # Never print, hash, compare, transmit or otherwise expose the key.
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::GitHub Actions CRON_SECRET is not configured; scheduled sync will be skipped."
+            echo "### Action needed: CRON_SECRET is missing from repository Actions secrets." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::GitHub Actions CRON_SECRET is configured (value hidden)."
+            echo "### CRON_SECRET is configured; no sync was invoked by this diagnostic." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify GitHub Cron credential matches production (read only)
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            --request GET "https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-auth-check" \
+            --header "Authorization: Bearer $CRON_SECRET" --max-time 15)
+          if [ "$status" != "204" ]; then
+            echo "::error::Read-only production Cron credential check failed (HTTP $status); no sync was started."
+            exit 1
+          fi
+          echo "::notice::GitHub Actions CRON_SECRET matches production Vercel (value hidden)."
+          echo "### Production Cron credential verified; no sync was started." >> "$GITHUB_STEP_SUMMARY"
+
+  sync:
+    # A push to the workflow file must never trigger a data sync.
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check whether the Cron credential is configured
+        id: config
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CRON_SECRET is not configured for GitHub Actions; no sync request will be sent."
+            echo "### Sync skipped: GitHub Actions CRON_SECRET is missing" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify Cron credential before data sync (read only)
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            --request GET "https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-auth-check" \
+            --header "Authorization: Bearer $CRON_SECRET" --max-time 15)
+          if [ "$status" != "204" ]; then
+            echo "::error::Production Cron credential verification failed (HTTP $status). Sync will not start."
+            exit 1
+          fi
+
+      - name: Run and verify completed property sync
+        if: steps.config.outputs.ready == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # This endpoint only returns HTTP 200 AFTER runScheduledSync completes.
+          # Do not call the GAS-compatible /api/sync/trigger (HTTP 200 is just acceptance).
+          # Do not print the secret, individual property details or error bodies.
+          url="https://property-site-frontend-kappa.vercel.app/api/internal/property-sync-and-wait"
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status=$(curl --silent --show-error --output "$response_file" \
+            --write-out "%{http_code}" --request POST "$url" \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            --header "Content-Type: application/json" \
+            --data '{}' --connect-timeout 15 --max-time 330 --retry 0)
+          echo "Completed-sync API HTTP status: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Property sync did not confirm completion (HTTP $status)."
+            exit 1
+          fi
+          if ! jq -e '.success == true and .complete == true and .failed == 0 and (.successfullyUpdated | type == "number" and . > 0)' "$response_file" >/dev/null; then
+            echo "::error::Property sync response did not confirm successful full-list completion."
+            exit 1
+          fi
+          updated="$(jq -r '.successfullyUpdated' "$response_file")"
+          echo "::notice::Verified property synchronization completed ($updated records updated, no failures)."
+          echo "### Verified sync completed: $updated records updated (HTTP 200)" >> "$GITHUB_STEP_SUMMARY"

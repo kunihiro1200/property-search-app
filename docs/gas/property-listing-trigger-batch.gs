@@ -1,77 +1,54 @@
 /**
- * 公開物件サイト 物件同期用 Google Apps Script（バッチ実行版）
+ * 物件同期を依頼するための参考GASコード（本番の設置済みGASではありません）。
  *
- * 【使用方法】
- *   関数 syncAllNow() を実行すると、全件同期が完了するまで繰り返し実行します
+ * この旧APIは同期リクエストを「受け付ける」だけです。
+ * HTTP 200は同期完了を意味しません。同期完了の検証は
+ * GitHub Actionsの Scheduled Property Sync (protected) に任せてください。
+ *
+ * 注意:
+ * - このコードを既存のGASプロジェクトに無条件で貼り付けないでください。
+ * - 稼働中のトリガーや別の呼び出し元が移行済みと確認するまで、
+ *   本番の LEGACY_SYNC_TRIGGER_AUTH_REQUIRED を変更しないでください。
+ * - CRON_SECRETの値はGAS Script Propertiesだけに保存します。
  */
-
 var BACKEND_URL = 'https://property-site-frontend-kappa.vercel.app';
 
-/**
- * 全件を今すぐ同期（50回実行 = 5000件）
- * GASの実行時間制限（6分）内で完了するように調整
- */
+/** 認証付きで同期要求を1回だけ送ります。同期自体は完了確認しません。 */
 function syncAllNow() {
-  console.log('🔄 全件同期を開始します...');
-  
-  var maxIterations = 50; // 最大50回（5000件）
-  var successCount = 0;
-  var errorCount = 0;
-  
-  for (var i = 1; i <= maxIterations; i++) {
-    console.log('バッチ ' + i + '/' + maxIterations + ' を実行中...');
-    
-    try {
-      var result = triggerFullSync();
-      if (result.success) {
-        successCount++;
-        console.log('  ✅ 成功');
-      } else {
-        errorCount++;
-        console.log('  ❌ 失敗');
-      }
-    } catch (error) {
-      errorCount++;
-      console.log('  ❌ エラー: ' + error.toString());
-    }
-    
-    // 少し待機（API制限対策）
-    Utilities.sleep(2000); // 2秒待機
+  var result = triggerFullSync();
+  if (result.accepted) {
+    console.log('同期要求を受け付けました（同期完了は未確認）。');
+  } else {
+    console.error('同期要求を受け付けられませんでした。HTTP ' + result.status);
   }
-  
-  console.log('');
-  console.log('✅ 全件同期が完了しました！');
-  console.log('  成功: ' + successCount + ' 回');
-  console.log('  失敗: ' + errorCount + ' 回');
-  console.log('  推定同期件数: ' + (successCount * 100) + ' 件');
+  return result;
 }
 
 /**
- * フル同期APIを呼び出す
+ * 旧APIへの1回限りの認証付き要求。
+ * 応答本文・Authorizationヘッダー・認証情報はログに出しません。
  */
 function triggerFullSync() {
-  var url = BACKEND_URL + '/api/sync/trigger';
+  var cronSecret = PropertiesService.getScriptProperties().getProperty('CRON_SECRET');
+  if (!cronSecret || !String(cronSecret).trim()) {
+    throw new Error('GAS Script PropertiesにCRON_SECRETが設定されていません。');
+  }
 
   var options = {
     method: 'post',
     contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + cronSecret },
     payload: JSON.stringify({}),
-    muteHttpExceptions: true,
+    muteHttpExceptions: true
   };
 
   try {
-    var response = UrlFetchApp.fetch(url, options);
+    var response = UrlFetchApp.fetch(BACKEND_URL + '/api/sync/trigger', options);
     var status = response.getResponseCode();
-    var body = response.getContentText();
-
-    if (status === 200) {
-      return { success: true, body: body };
-    } else {
-      console.error('❌ HTTP ' + status + ': ' + body);
-      return { success: false, body: body };
-    }
+    // HTTP 200 means accepted only; it is not proof of completed synchronization.
+    return { accepted: status === 200, complete: false, status: status };
   } catch (error) {
-    console.error('triggerFullSync エラー:', error.toString());
-    return { success: false, error: error.toString() };
+    // Keep exception details out of logs: they may contain request metadata.
+    return { accepted: false, complete: false, status: 'network-error' };
   }
 }

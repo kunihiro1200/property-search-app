@@ -1516,8 +1516,16 @@ const CallModePage = () => {
 
       setSuccessMessage('ステータスを更新しました');
       
-      // 売主情報を再読み込み
-      await loadAllData();
+      // 売主情報のみを軽量に再取得（キャッシュクリアなし）
+      try {
+        const sellerResponse = await api.get(`/api/sellers/${id}`);
+        const sellerData = sellerResponse.data;
+        setSeller(sellerData);
+        setUnreachableStatus(sellerData.unreachableStatus || null);
+      } catch (reloadErr) {
+        console.error('売主情報の再読み込みに失敗:', reloadErr);
+        // エラーは無視して続行（更新自体は成功している）
+      }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'ステータスの更新に失敗しました');
     } finally {
@@ -4927,6 +4935,18 @@ HP：https://ifoo-oita.com/
                   {seller?.comments || 'コメントはありません'}
                 </Typography>
               </Paper>
+              
+              {/* 市街化調整区域の警告メッセージ */}
+              {seller?.comments && seller.comments.includes('⚠市街化調整区域？') && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    ⚠️ 市街化調整区域の可能性があります
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    除外して追客してください
+                  </Typography>
+                </Alert>
+              )}
             </Box>
 
             {/* 不通フィールド（inquiry_date >= 2026-01-01の売主のみ表示） */}

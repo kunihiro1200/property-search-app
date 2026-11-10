@@ -17,6 +17,11 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
+import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
+import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
+import { toPublicEstimateData } from './src/utils/publicEstimateData';
+import { classifyLegacySyncAuthorization, isLegacySyncAuthEnforced } from './src/utils/legacySyncAuthPolicy';
 
 
 const app = express();
@@ -79,6 +84,19 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 認証ルート（社員ログイン用）
 app.use('/auth', authRoutes);
 
+// Public property browsing remains anonymous. Only administrator mutations require auth.
+// Unattended clients may authenticate with a server-side CRON_SECRET.
+const requireStaffOrMachine: express.RequestHandler = (req, res, next) => {
+  const machineSecret = process.env.CRON_SECRET;
+  if (machineSecret && req.headers.authorization === `Bearer ${machineSecret}`) {
+    next();
+    return;
+  }
+  void authenticate(req, res, next);
+};
+
+
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ 
@@ -96,98 +114,8 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// サービスアカウント診断エンドポイント（private_key問題のデバッグ用）
-app.get('/api/debug/service-account', (_req, res) => {
-  try {
-    const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!jsonStr) {
-      return res.json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON not set' });
-    }
-
-    let keyFile: any;
-    try {
-      keyFile = JSON.parse(jsonStr);
-    } catch (e: any) {
-      return res.json({ error: 'JSON parse failed', message: e.message, first100: jsonStr.substring(0, 100) });
-    }
-
-    const pk: string = keyFile.private_key || '';
-    const pkAfterReplace = pk.replace(/\\n/g, '\n');
-
-    res.json({
-      client_email: keyFile.client_email,
-      project_id: keyFile.project_id,
-      private_key_id: keyFile.private_key_id,
-      private_key_raw_length: pk.length,
-      private_key_after_replace_length: pkAfterReplace.length,
-      // private_keyの最初と最後の50文字（セキュリティのため中間は省略）
-      private_key_start: pk.substring(0, 50),
-      private_key_end: pk.substring(pk.length - 50),
-      // \\nが含まれているか
-      has_escaped_newlines: pk.includes('\\n'),
-      // 実際の改行が含まれているか
-      has_real_newlines: pk.includes('\n'),
-      // \rが含まれているか
-      has_carriage_return: pk.includes('\r'),
-      // -----BEGIN RSA PRIVATE KEY----- または -----BEGIN PRIVATE KEY----- で始まるか
-      starts_with_begin: pkAfterReplace.trimStart().startsWith('-----BEGIN'),
-      ends_with_end: pkAfterReplace.trimEnd().endsWith('-----'),
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// サービスアカウント実際認証テストエンドポイント
-app.get('/api/debug/auth-test', async (_req, res) => {
-  try {
-    const jsonStr = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    if (!jsonStr) {
-      return res.json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON not set' });
-    }
-
-    let keyFile: any;
-    try {
-      keyFile = JSON.parse(jsonStr);
-    } catch (e: any) {
-      return res.json({ error: 'JSON parse failed', message: e.message });
-    }
-
-    // private_keyの改行を正規化
-    if (keyFile.private_key) {
-      keyFile.private_key = keyFile.private_key.replace(/\\n/g, '\n');
-    }
-
-    // 実際にGoogleAuth認証を試みる
-    const { google } = await import('googleapis');
-    const auth = new google.auth.GoogleAuth({
-      credentials: keyFile,
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-
-    try {
-      const client = await auth.getClient();
-      const tokenResponse = await client.getAccessToken();
-      res.json({
-        success: true,
-        has_token: !!tokenResponse.token,
-        token_type: tokenResponse.res?.data?.token_type,
-        client_email: keyFile.client_email,
-        private_key_id: keyFile.private_key_id,
-      });
-    } catch (authError: any) {
-      res.json({
-        success: false,
-        error: authError.message,
-        error_code: authError.code,
-        client_email: keyFile.client_email,
-        private_key_id: keyFile.private_key_id,
-      });
-    }
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
+// Security: service-account diagnostics are not exposed through public APIs.
+// Credentials and key metadata must be inspected only in private provider consoles.
 
 // URL短縮リダイレクト解決エンドポイント
 app.get('/api/url-redirect/resolve', async (req, res) => {
@@ -198,17 +126,33 @@ app.get('/api/url-redirect/resolve', async (req, res) => {
       return res.status(400).json({ error: 'URL parameter is required' });
     }
     
-    console.log('🔗 Resolving shortened URL:', url);
-    
-    // HTTPSリクエストでリダイレクト先を取得
+    // Only resolve genuine Google Maps short links. Arbitrary target URLs could
+    // otherwise make the public backend send requests to internal endpoints.
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid Google Maps URL' });
+    }
+    const isGoogleMapsShortLink =
+      parsedUrl.hostname === 'maps.app.goo.gl' ||
+      (parsedUrl.hostname === 'goo.gl' && parsedUrl.pathname.startsWith('/maps/'));
+    if (
+      url.length > 2048 ||
+      parsedUrl.protocol !== 'https:' ||
+      !!parsedUrl.port ||
+      !!parsedUrl.username ||
+      !!parsedUrl.password ||
+      !isGoogleMapsShortLink
+    ) {
+      return res.status(400).json({ error: 'Only HTTPS Google Maps short links are supported' });
+    }
+
+    // Resolve a single Google redirect; do not follow the destination.
     const https = await import('https');
-    const urlModule = await import('url');
-    
-    const parsedUrl = urlModule.parse(url);
-    
     const options = {
       hostname: parsedUrl.hostname,
-      path: parsedUrl.path,
+      path: parsedUrl.pathname + parsedUrl.search,
       method: 'HEAD',
       headers: {
         'User-Agent': 'Mozilla/5.0',
@@ -230,6 +174,7 @@ app.get('/api/url-redirect/resolve', async (req, res) => {
         }
       });
       
+      request.setTimeout(5000, () => request.destroy(new Error('Google Maps link resolution timed out')));
       request.on('error', (error) => {
         console.error('❌ Error resolving URL:', error);
         reject(error);
@@ -474,9 +419,10 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
           });
           
           // コメントデータが空かどうかをフラグとして返す（同期はフロントエンドから非同期で行う）
-          const needsSync = !details.favorite_comment || 
-                           !details.recommended_comments || 
-                           (Array.isArray(details.recommended_comments) && details.recommended_comments.length === 0);
+          const needsSync = needsPublicCommentSync(
+            details.favorite_comment,
+            details.recommended_comments
+          );
           
           if (needsSync) {
             console.log(`[Complete API] Comment data is missing or empty (needsSync=true). Frontend will trigger async sync.`);
@@ -546,25 +492,23 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
 
     // レスポンスを返す
     res.json({
-      property,
+      // This nested property came from getPublicPropertyById and contains
+      // raw property_details fields. Sanitize it too; filtering only the
+      // top-level recommendedComments would still leak internal notes.
+      property: {
+        ...property,
+        property_about: null,
+        recommended_comments: filterPublicRecommendedComments(property.recommended_comments),
+      },
       favoriteComment: dbDetails.favorite_comment,
-      recommendedComments: (() => {
-        // 内部メモ行（←で始まる行）をフィルタリング
-        const raw: any[] = Array.isArray(dbDetails.recommended_comments) ? dbDetails.recommended_comments : [];
-        return raw.filter((c: any) => {
-          const text = Array.isArray(c) ? c.join(' ') : String(c ?? '');
-          const trimmed = text.trim();
-          return !trimmed.startsWith('←') && 
-                 !trimmed.includes('一般媒介で、担当もついている場合') &&
-                 !(trimmed.startsWith('＼') && trimmed.endsWith('／'));
-        });
-      })(),
+      recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments),
       athomeData: dbDetails.athome_data,
       settlementDate,
       // 内覧前伝達事項は独自サイトに表示しない
       propertyAbout: null,
       panoramaUrl,
       needsSync: dbDetails.needsSync || false, // フロントエンドが非同期同期をトリガーするためのフラグ
+      visitorCommentSyncEnabled: !isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED),
     });
     
   } catch (error: any) {
@@ -581,67 +525,241 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
   }
 });
 
+/**
+ * Authenticated replacement for visitor-triggered comment synchronization.
+ * Stage one: a bounded preview, with execution explicitly disabled unless
+ * COMMENT_BACKFILL_EXECUTION_ENABLED=true is configured on the server.
+ *
+ * Scan only listed/public, non-hidden properties, at most two per request.
+ * Preview only reads property_listings and property_details; it makes no
+ * Google Sheet calls and does not mutate Supabase.
+ */
+app.post('/api/internal/comment-backfill-batch', requireStaffOrMachine, async (req, res) => {
+  try {
+    const options = parseCommentBackfillOptions(req.body);
+    if (!options) {
+      return res.status(400).json({ success: false, error: 'Invalid backfill options' });
+    }
+
+    const mayExecute = isCommentBackfillWriteEnabled(process.env.COMMENT_BACKFILL_EXECUTION_ENABLED);
+    if (options.mode === 'execute' && !mayExecute) {
+      return res.status(503).json({ success: false, error: 'Comment backfill writes are disabled' });
+    }
+
+    let query = supabase
+      .from('property_listings')
+      .select('property_number, property_type')
+      .eq('is_hidden', false)
+      .in('atbb_status', PUBLIC_COMMENT_BACKFILL_STATUSES)
+      .order('property_number', { ascending: true })
+      .limit(options.limit + 1);
+
+    if (options.propertyNumbers) {
+      query = query.in('property_number', options.propertyNumbers);
+    } else if (options.after) {
+      query = query.gt('property_number', options.after);
+    }
+
+    const { data: candidateRows, error: candidatesError } = await query;
+    if (candidatesError) {
+      return res.status(500).json({ success: false, error: 'Unable to list backfill candidates' });
+    }
+
+    const candidates = (candidateRows || []).slice(0, options.limit);
+    const hasMore = !options.propertyNumbers && (candidateRows || []).length > options.limit;
+    const nextCursor = hasMore && candidates.length
+      ? candidates[candidates.length - 1].property_number
+      : null;
+
+    let missing = 0;
+    let alreadyComplete = 0;
+    let skippedUnsupportedType = 0;
+    let missingTrustedSource = 0;
+    let synchronized = 0;
+    let throttled = 0;
+    let failed = 0;
+
+    // Preview is DB SELECT-only and NEVER calls Google Sheets or mutates data.
+    for (const candidate of candidates) {
+      const { data: details, error: detailsError } = await supabase
+        .from('property_details')
+        .select('favorite_comment, recommended_comments')
+        .eq('property_number', candidate.property_number)
+        .maybeSingle();
+
+      if (detailsError) {
+        failed++;
+        continue;
+      }
+      if (!propertyNeedsCommentBackfill(details)) {
+        alreadyComplete++;
+        continue;
+      }
+
+      missing++;
+      const propertyType = convertPropertyTypeToEnglish(candidate.property_type);
+      if (!propertyType) {
+        skippedUnsupportedType++;
+        continue;
+      }
+
+      // Use the same source-of-truth as GyomuListService. Do not try to
+      // backfill a property without an explicit individual spreadsheet.
+      const { data: workTask, error: workTaskError } = await supabase
+        .from('work_tasks')
+        .select('spreadsheet_url')
+        .eq('property_number', candidate.property_number)
+        .maybeSingle();
+
+      if (workTaskError) {
+        failed++;
+        continue;
+      }
+      if (!isTrustedCommentSourceLink(workTask?.spreadsheet_url)) {
+        missingTrustedSource++;
+        continue;
+      }
+
+      if (options.mode === 'preview') continue;
+
+      // A real write requires BOTH a server-only opt-in and one or two exact
+      // property numbers in the authenticated request. Never scan and write
+      // the entire inventory as a side effect of pagination.
+      const attempt = await runLimitedPublicCommentSync(candidate.property_number, () => {
+        const service = new AthomeSheetSyncService();
+        return service.syncPropertyCommentsFromTrustedSource(
+          candidate.property_number, propertyType, workTask!.spreadsheet_url
+        );
+      });
+
+      if (attempt.status === 'throttled') throttled++;
+      else if (attempt.success) synchronized++;
+      else failed++;
+    }
+
+    // Reflect selected properties that were not public / not found in
+    // aggregated counts only. Never disclose private listing details.
+    const notPublicOrNotFound = options.propertyNumbers
+      ? Math.max(0, options.propertyNumbers.length - candidates.length)
+      : 0;
+
+    return res.status(failed ? 502 : 200).json({
+      success: failed === 0,
+      mode: options.mode,
+      scanned: candidates.length,
+      missing,
+      alreadyComplete,
+      skippedUnsupportedType,
+      missingTrustedSource,
+      notPublicOrNotFound,
+      synchronized,
+      throttled,
+      failed,
+      hasMore,
+      nextCursor,
+    });
+  } catch {
+    console.error('[Comment Backfill] Internal processing failed');
+    return res.status(500).json({ success: false, error: 'Comment backfill failed' });
+  }
+});
+
 // コメントデータをAthomeシートから同期（非同期トリガー用）
-app.post('/api/public/properties/:id/sync-comments', async (req, res) => {
+// The switch is OFF by default: visitors retain the old behavior until
+// authenticated backfill and panorama display are verified. Only an exact
+// server-side flag disables visitor-triggered writes.
+app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
+  if (isAnonymousCommentSyncDisabled(process.env.PUBLIC_COMMENT_SYNC_DISABLED)) {
+    return res.status(403).json({ success: false, message: 'Visitor comment sync is disabled' });
+  }
+  next();
+}, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    console.log(`[Sync Comments API] Triggered for: ${id}`);
-    
     const property = await propertyListingService.getPublicPropertyById(id);
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
-    
-    const propertyDetailsService = new PropertyDetailsService();
-    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
-    
-    if (!englishPropertyType) {
-      return res.status(400).json({ success: false, message: `Invalid property type: ${property.property_type}` });
+
+    // getPublicPropertyById already reads stored property_details. If the
+    // comments are complete, avoid a Google Sheets read or DB mutation.
+    if (!needsPublicCommentSync(property.favorite_comment, property.recommended_comments)) {
+      return res.json({
+        success: true,
+        favoriteComment: property.favorite_comment,
+        recommendedComments: filterPublicRecommendedComments(property.recommended_comments),
+        athomeData: property.athome_data,
+        propertyAbout: null,
+      });
     }
-    
-    const athomeSheetSyncService = new AthomeSheetSyncService();
-    const syncSuccess = await athomeSheetSyncService.syncPropertyComments(
+
+    const englishPropertyType = convertPropertyTypeToEnglish(property.property_type);
+    if (!englishPropertyType) {
+      return res.status(400).json({ success: false, message: 'Invalid property type' });
+    }
+
+    // An unauthenticated visitor must never initiate Google Sheets access
+    // unless the published property has an individual source in work_tasks.
+    // This is a load guard, not authorization. Staff and machine-triggered
+    // backfills use their separate authenticated route.
+    const { data: sourceTask, error: sourceLookupError } = await supabase
+      .from('work_tasks')
+      .select('spreadsheet_url')
+      .eq('property_number', property.property_number)
+      .maybeSingle();
+
+    if (sourceLookupError) {
+      console.error('[Sync Comments API] Public comment source lookup failed');
+      return res.status(503).json({ success: false, message: 'Comment refresh unavailable' });
+    }
+    if (!isTrustedCommentSourceLink(sourceTask?.spreadsheet_url)) {
+      // Preserve the public detail GET and any existing comments/panorama.
+      // If there is no individual Sheet, retries cannot repair the record.
+      return res.json({ success: false, message: 'Comment source is not configured' });
+    }
+
+    // Anonymous public visitors may still request a missing-comments refresh
+    // during this transition. Coalesce concurrent requests and throttle
+    // repeats on this one serverless instance to reduce accidental load.
+    // This is NOT distributed rate limiting or authorization.
+    const attempt = await runLimitedPublicCommentSync(
       property.property_number,
-      englishPropertyType
+      async () => {
+        const athomeSheetSyncService = new AthomeSheetSyncService();
+        return athomeSheetSyncService.syncPropertyCommentsFromTrustedSource(
+          property.property_number,
+          englishPropertyType,
+          sourceTask!.spreadsheet_url
+        );
+      }
     );
-    
-    if (!syncSuccess) {
+
+    if (attempt.status === 'throttled') {
+      return res.json({ success: false, message: 'Comment refresh temporarily limited' });
+    }
+    if (!attempt.success) {
       return res.json({ success: false, message: 'Sync failed' });
     }
-    
-    // 同期後のデータを取得
+
+    // Reload the synchronized details. Both new and existing comments must
+    // apply the same public redaction as GET /api/public/properties/:id/complete.
+    const propertyDetailsService = new PropertyDetailsService();
     const updatedDetails = await propertyDetailsService.getPropertyDetails(property.property_number);
-    
-    // property_aboutがまだnullの場合、物件スプレッドシートから取得
-    if (!updatedDetails.property_about) {
-      try {
-        const propertyService = new PropertyService();
-        const propertyAbout = await propertyService.getPropertyAbout(property.property_number);
-        if (propertyAbout) {
-          await propertyDetailsService.upsertPropertyDetails(property.property_number, {
-            property_about: propertyAbout
-          });
-          updatedDetails.property_about = propertyAbout;
-        }
-      } catch (err: any) {
-        console.error(`[Sync Comments API] Error syncing property_about:`, err.message);
-      }
-    }
-    
-    console.log(`[Sync Comments API] Sync complete for ${property.property_number}`);
-    
-    res.json({
+
+    // property_about contains private, internal notes. The public visitor
+    // does not need to refresh it. Never initiate that privileged write here.
+
+    return res.json({
       success: true,
       favoriteComment: updatedDetails.favorite_comment,
-      recommendedComments: updatedDetails.recommended_comments,
+      recommendedComments: filterPublicRecommendedComments(updatedDetails.recommended_comments),
       athomeData: updatedDetails.athome_data,
-      // 内覧前伝達事項は独自サイトに表示しない
+      // Internal notes are never shown on the public property site.
       propertyAbout: null,
     });
-  } catch (error: any) {
-    console.error('[Sync Comments API] Error:', error);
-    res.status(500).json({ success: false, message: error.message });
+  } catch {
+    console.error('[Sync Comments API] Comment refresh failed');
+    return res.status(500).json({ success: false, message: 'Comment refresh failed' });
   }
 });
 
@@ -781,7 +899,7 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
 });
 
 // 画像キャッシュクリアエンドポイント（特定の物件または全体）
-app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res) => {
+app.post('/api/public/properties/:identifier/clear-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -872,7 +990,7 @@ app.post('/api/public/properties/:identifier/clear-image-cache', async (req, res
 });
 
 // 全物件の画像キャッシュをクリア
-app.post('/api/public/clear-all-image-cache', async (req, res) => {
+app.post('/api/public/clear-all-image-cache', requireStaffOrMachine, async (req, res) => {
   try {
     console.log(`🗑️ Clearing all image cache`);
 
@@ -904,7 +1022,7 @@ app.post('/api/public/clear-all-image-cache', async (req, res) => {
 });
 
 // 格納先URLを更新
-app.post('/api/public/properties/:identifier/update-storage-url', async (req, res) => {
+app.post('/api/public/properties/:identifier/update-storage-url', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     const { storageUrl } = req.body;
@@ -975,7 +1093,7 @@ app.post('/api/public/properties/:identifier/update-storage-url', async (req, re
 });
 
 // 画像・基本情報を更新（軽量版）
-app.post('/api/public/properties/:identifier/refresh-essential', async (req, res) => {
+app.post('/api/public/properties/:identifier/refresh-essential', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -1083,7 +1201,7 @@ app.post('/api/public/properties/:identifier/refresh-essential', async (req, res
 });
 
 // 全て更新（完全版）
-app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
+app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -1447,73 +1565,45 @@ app.get('/api/public/images/:fileId', async (req, res) => {
 });
 
 // 概算書PDF生成（スプレッドシート不依存・直接PDF生成）
+// Public estimate: resolve only fields already used by the public detail API.
+ // Keep existing calculation/layout and anonymous PDF button behavior.
 app.post('/api/public/properties/:propertyNumber/estimate-pdf', async (req, res) => {
   const { propertyNumber } = req.params;
-  console.log(`[Estimate PDF v2] Starting for property: ${propertyNumber}`);
+  res.setHeader('Cache-Control', 'no-store');
+
+  // The identifier also becomes part of Content-Disposition; reject unsafe characters.
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(propertyNumber)) {
+    return res.status(400).json({ success: false, message: '物件番号が正しくありません' });
+  }
 
   try {
-    // --- スプレッドシートから物件データを取得 ---
-    const SPREADSHEET_ID = '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
-    const SHEET_NAME = '物件';
+    // Use the same current price, display address and visible-row guard as
+    // GET /api/public/properties/:propertyIdentifier. Do not read private Sheets.
+    const { data: property, error } = await supabase
+      .from('property_listings')
+      .select('property_number, display_address, address, property_type, sales_price, listing_price')
+      .eq('property_number', propertyNumber)
+      .eq('is_hidden', false)
+      .maybeSingle();
 
-    const sheetsClient = new GoogleSheetsClient({
-      spreadsheetId: SPREADSHEET_ID,
-      sheetName: SHEET_NAME,
-      serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || 'google-service-account.json',
-    });
-
-    await sheetsClient.authenticate();
-    console.log(`[Estimate PDF v2] Authenticated`);
-
-    // 物件番号で行を検索（B列）
-    const rowIndex = await sheetsClient.findRowByColumn('物件番号', propertyNumber);
-    if (!rowIndex) {
-      return res.status(404).json({ success: false, message: `物件番号 ${propertyNumber} が見つかりませんでした` });
+    if (error) {
+      throw error;
+    }
+    if (!property) {
+      return res.status(404).json({ success: false, message: '物件が見つかりませんでした' });
     }
 
-    // ZZ列まで読み取り
-    const rows = await sheetsClient.readRange(`A${rowIndex}:ZZ${rowIndex}`);
-    if (!rows || rows.length === 0) {
-      return res.status(404).json({ success: false, message: '物件データが取得できませんでした' });
-    }
-
-    const row = rows[0];
-    console.log(`[Estimate PDF v2] Row data keys:`, Object.keys(row).slice(0, 20));
-
-    // 物件名: G列（住居表示）、なければF列（所在地）
-    const propertyName = (row['住居表示（ATBB登録住所）'] || row['所在地'] || '') as string;
-    // 種別: C列
-    const propertyType = (row['種別'] || '') as string;
-    // 物件価格: BS列
-    const priceRaw = row['価格'];
-    const price = priceRaw ? Number(String(priceRaw).replace(/[^0-9]/g, '')) : 0;
-
-    console.log(`[Estimate PDF v2] Data: name="${propertyName}", type="${propertyType}", price=${price}`);
-
-    // --- PDF生成 ---
     const { generateEstimatePdfBuffer } = await import('./src/services/EstimatePdfService.js');
-    const pdfBuffer = await generateEstimatePdfBuffer({
-      propertyNumber,
-      propertyName,
-      propertyType,
-      price,
-    });
+    const pdfBuffer = await generateEstimatePdfBuffer(toPublicEstimateData(property));
 
-    console.log(`[Estimate PDF v2] PDF generated, size: ${pdfBuffer.length} bytes`);
-
-    // PDFをレスポンスとして直接返す
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="estimate-${propertyNumber}.pdf"`);
     res.setHeader('Content-Length', pdfBuffer.length);
-    res.send(pdfBuffer);
-
-  } catch (error: any) {
-    console.error('[Estimate PDF v2] Error:', error.message);
-    res.status(500).json({
-      success: false,
-      message: '概算書の生成に失敗しました',
-      details: error.message,
-    });
+    return res.send(pdfBuffer);
+  } catch {
+    // Do not reveal internal spreadsheet, customer, database, or file paths.
+    console.error('[Estimate PDF] Generation failed');
+    return res.status(500).json({ success: false, message: '概算書の生成に失敗しました' });
   }
 });
 
@@ -1594,11 +1684,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     // 物件情報を取得（propertyIdが指定されている場合）
     let propertyNumber = null;
     if (propertyId) {
-      console.log('[Inquiry API] Fetching property:', propertyId);
       const property = await propertyListingService.getPublicPropertyById(propertyId);
       if (property) {
         propertyNumber = property.property_number;
-        console.log('[Inquiry API] Property found:', propertyNumber);
       }
     }
     
@@ -1608,18 +1696,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     try {
       console.log('[Inquiry API] Getting buyer number from spreadsheet...');
       
-      // 環境変数の詳細ログ
       const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
-      console.log('[Inquiry API] Environment check:', {
-        hasGoogleServiceAccountJson: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-        googleServiceAccountJsonLength: process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length || 0,
-        spreadsheetId: spreadsheetId,
-        spreadsheetIdType: typeof spreadsheetId,
-        spreadsheetIdLength: spreadsheetId?.length || 0,
-        sheetName: sheetName,
-      });
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
@@ -1635,16 +1714,12 @@ app.post('/api/public/inquiries', async (req, res) => {
       const allRows = await sheetsClient.readAll();
       const lastRow = allRows.length > 0 ? allRows[allRows.length - 1] : null;
       
-      console.log('[Inquiry API] Last row from spreadsheet:', lastRow);
       
       if (lastRow) {
         const lastBuyerNumber = lastRow['買主番号'];
-        console.log('[Inquiry API] Last buyer number value:', lastBuyerNumber);
-        console.log('[Inquiry API] Last row keys:', Object.keys(lastRow));
         
         if (lastBuyerNumber) {
           nextBuyerNumber = parseInt(String(lastBuyerNumber)) + 1;
-          console.log('[Inquiry API] Last buyer number from spreadsheet:', lastBuyerNumber);
         } else {
           console.log('[Inquiry API] 買主番号 key not found in last row');
         }
@@ -1652,10 +1727,8 @@ app.post('/api/public/inquiries', async (req, res) => {
         console.log('[Inquiry API] Last row is null');
       }
       
-      console.log('[Inquiry API] Next buyer number:', nextBuyerNumber);
-    } catch (error: any) {
-      console.error('[Inquiry API] Failed to get buyer number from spreadsheet:', error.message);
-      console.error('[Inquiry API] Error stack:', error.stack);
+    } catch {
+      console.error('[Inquiry API] Buyer number lookup failed; using database fallback');
       // フォールバック: データベースから取得
       const { data: latestInquiry } = await supabase
         .from('property_inquiries')
@@ -1667,7 +1740,6 @@ app.post('/api/public/inquiries', async (req, res) => {
       
       if (latestInquiry?.buyer_number) {
         nextBuyerNumber = latestInquiry.buyer_number + 1;
-        console.log('[Inquiry API] Next buyer number from database:', nextBuyerNumber);
       } else {
         nextBuyerNumber = 1;
         console.log('[Inquiry API] No buyer numbers found, starting from 1');
@@ -1680,16 +1752,9 @@ app.post('/api/public/inquiries', async (req, res) => {
     try {
       console.log('[Inquiry API] Starting spreadsheet sync...');
       
-      // 環境変数の詳細ログ
       const spreadsheetId = process.env.GOOGLE_SHEETS_BUYER_SPREADSHEET_ID || '1tI_iXaiLuWBggs5y0RH7qzkbHs9wnLLdRekAmjkhcLY';
       const sheetName = process.env.GOOGLE_SHEETS_BUYER_SHEET_NAME || '買主リスト';
       
-      console.log('[Inquiry API] Sync environment check:', {
-        spreadsheetId: spreadsheetId,
-        spreadsheetIdType: typeof spreadsheetId,
-        spreadsheetIdLength: spreadsheetId?.length || 0,
-        sheetName: sheetName,
-      });
       
       const sheetsClient = new GoogleSheetsClient({
         spreadsheetId: spreadsheetId,
@@ -1727,8 +1792,8 @@ app.post('/api/public/inquiries', async (req, res) => {
       await sheetsClient.appendRow(rowData);
       console.log('[Inquiry API] Spreadsheet sync completed successfully');
       
-    } catch (syncError: any) {
-      console.error('[Inquiry API] Spreadsheet sync error:', syncError);
+    } catch {
+      console.error('[Inquiry API] Spreadsheet sync failed');
       sheetSyncStatus = 'failed';
       // エラーが発生してもデータベースには保存する
     }
@@ -1751,7 +1816,7 @@ app.post('/api/public/inquiries', async (req, res) => {
       .single();
     
     if (saveError) {
-      console.error('[Inquiry API] Database save error:', saveError);
+      console.error('[Inquiry API] Database save failed');
       throw saveError;
     }
     
@@ -1762,8 +1827,8 @@ app.post('/api/public/inquiries', async (req, res) => {
       success: true,
       message: 'お問い合わせを受け付けました。担当者より折り返しご連絡いたします。'
     });
-  } catch (error: any) {
-    console.error('[Inquiry API] Error:', error);
+  } catch {
+    console.error('[Inquiry API] Request failed');
     res.status(500).json({
       success: false,
       message: 'サーバーエラーが発生しました。しばらく時間をおいてから再度お試しください。'
@@ -1774,11 +1839,14 @@ app.post('/api/public/inquiries', async (req, res) => {
 // Cron Job: 問合せをスプレッドシートに同期（1分ごとに実行）
 app.get('/api/cron/sync-inquiries', async (req, res) => {
   try {
+    // A publicly reachable Cron URL must authenticate its caller.
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     console.log('[Cron] Starting inquiry sync job...');
-    
-    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
-    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
-    
+
     // pending状態の問合せを取得（最大10件）
     const { data: pendingInquiries, error: fetchError } = await supabase
       .from('property_inquiries')
@@ -1788,7 +1856,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
       .limit(10);
     
     if (fetchError) {
-      console.error('[Cron] Error fetching pending inquiries:', fetchError);
+      console.error('[Cron] Failed to fetch pending inquiries');
       throw fetchError;
     }
     
@@ -1829,7 +1897,6 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     
     for (const inquiry of pendingInquiries) {
       try {
-        console.log(`[Cron] Syncing inquiry ${inquiry.id} (${inquiry.name})...`);
         
         // 電話番号を正規化
         const normalizedPhone = inquiry.phone.replace(/[^0-9]/g, '');
@@ -1867,12 +1934,11 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
           })
           .eq('id', inquiry.id);
         
-        console.log(`[Cron] Synced inquiry ${inquiry.id} with buyer number ${nextBuyerNumber}`);
         syncedCount++;
         nextBuyerNumber++;
         
-      } catch (error) {
-        console.error(`[Cron] Failed to sync inquiry ${inquiry.id}:`, error);
+      } catch {
+        console.error('[Cron] Failed to sync pending inquiry');
         
         // 失敗をデータベースに記録
         await supabase
@@ -1897,7 +1963,7 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
     });
     
   } catch (error: any) {
-    console.error('[Cron] Error in sync job:', error);
+    console.error('[Cron] Inquiry sync job failed');
     res.status(500).json({
       success: false,
       error: error.message
@@ -1908,11 +1974,15 @@ app.get('/api/cron/sync-inquiries', async (req, res) => {
 // Cron Job: 物件リストをスプレッドシートから同期（15分ごとに実行）
 app.get('/api/cron/sync-property-listings', async (req, res) => {
   try {
+    // Requests claiming to be Vercel Cron are not inherently authenticated.
+    // Reject missing/mismatched secrets before any sync activity.
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     console.log('[Cron] Starting property listings sync job...');
-    
-    // ⚠️ Vercel Cron Jobsは内部的に実行されるため、認証チェックは不要
-    // 外部からのアクセスを防ぐため、Vercel Dashboardで設定する
-    
+
     // PropertyListingSyncServiceを使用してフル同期を実行
     const { getPropertyListingSyncService } = await import('./src/services/PropertyListingSyncService');
     const syncService = getPropertyListingSyncService();
@@ -1950,7 +2020,7 @@ app.get('/api/cron/sync-property-listings', async (req, res) => {
 });
 
 // 手動同期エンドポイント（第3層）- コメントデータの緊急同期用
-app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
+app.post('/api/admin/sync-comments/:propertyNumber', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     
@@ -2024,7 +2094,7 @@ app.post('/api/admin/sync-comments/:propertyNumber', async (req, res) => {
 });
 
 // 一括手動同期エンドポイント - 複数物件のコメントデータを同期
-app.post('/api/admin/sync-comments-batch', async (req, res) => {
+app.post('/api/admin/sync-comments-batch', requireStaffOrMachine, async (req, res) => {
   try {
     const { propertyNumbers } = req.body;
     
@@ -2134,7 +2204,7 @@ app.get('/api/admin/sync-distribution-dates', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -2213,17 +2283,11 @@ app.get('/api/admin/sync-distribution-dates', async (req, res) => {
 // Cron Job: 物件リストスプレッドシートからDBへの同期（10分ごと）
 app.get('/api/cron-property-sync', async (req, res) => {
   try {
-    // Cron Secretの検証
-    // Vercel Cron Jobは Authorization ヘッダーを送らないため、
-    // x-vercel-cron ヘッダーまたは Authorization ヘッダーのどちらかを許可
+    // Vercel Cron automatically sends Authorization: Bearer <CRON_SECRET>.
+    // Never trust a client-provided x-vercel-cron header or an empty secret.
     const authHeader = req.headers['authorization'];
-    const vercelCronHeader = req.headers['x-vercel-cron'];
     const cronSecret = process.env.CRON_SECRET;
-
-    // Vercel Cron Jobからのリクエスト（x-vercel-cronヘッダーあり）は認証スキップ
-    // または Authorization: Bearer <secret> で認証
-    const isVercelCron = vercelCronHeader === '1';
-    const isAuthorized = !cronSecret || isVercelCron || authHeader === `Bearer ${cronSecret}`;
+    const isAuthorized = Boolean(cronSecret) && authHeader === `Bearer ${cronSecret}`;
 
     if (!isAuthorized) {
       console.error('❌ Unauthorized cron request');
@@ -2259,9 +2323,35 @@ app.get('/api/cron-property-sync', async (req, res) => {
   }
 });
 
+// Read-only, no-side-effect authentication probe for GitHub Actions.
+// Validates the same production secret as the protected legacy Cron routes.
+// Never initiates synchronization or returns secrets, hashes or employee data.
+app.get('/api/internal/property-sync-auth-check', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).end();
+  }
+  return res.status(204).end();
+});
+
 // GASから呼び出される物件同期トリガーエンドポイント
 // 即座に200を返し、同期はバックグラウンドで実行（Vercelタイムアウト対策）
-app.post('/api/sync/trigger', async (req, res) => {
+// The audit does not log credentials, IPs or property information.
+// The auth switch stays OFF by default until every live GAS caller is confirmed.
+// Set LEGACY_SYNC_TRIGGER_AUTH_REQUIRED=true only after the GAS migration.
+app.post('/api/sync/trigger', (req, res, next) => {
+  const enforcementEnabled = isLegacySyncAuthEnforced(process.env.LEGACY_SYNC_TRIGGER_AUTH_REQUIRED);
+  const authorizationKind = classifyLegacySyncAuthorization(
+    req.headers.authorization,
+    process.env.CRON_SECRET
+  );
+  console.info('[Legacy Sync Auth Audit]', { enforcementEnabled, authorizationKind });
+  if (enforcementEnabled) {
+    return requireStaffOrMachine(req, res, next);
+  }
+  next();
+}, async (req, res) => {
   const triggeredAt = new Date().toISOString();
   console.log('🔄 [Sync Trigger] Property listing sync triggered by GAS at', triggeredAt);
 
@@ -2288,31 +2378,43 @@ app.post('/api/sync/trigger', async (req, res) => {
   })();
 });
 
-// 公開物件の座標を保存（詳細ページでGoogle Map URLから取得した座標をDBに保存）
+// 公開物件ページの座標キャッシュ（初回のみ登録・既存座標は上書き禁止）
+// 匿名クライアントの値は信用できないため、登録済み座標の保護を優先。
+// 完全な対策はURL由来の座標をサーバー側で検証して匿名書込を終了すること。
 app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {
   try {
     const { propertyNumber } = req.params;
-    const { latitude, longitude } = req.body;
-
-    if (!latitude || !longitude) {
-      return res.status(400).json({ success: false, error: 'latitude and longitude are required' });
+    const valid = validatePublicCoordinateInput(req.body);
+    if (!valid) {
+      return res.status(400).json({ success: false, error: 'Valid latitude and longitude are required' });
     }
 
-    const { error } = await supabase
+    // The condition is evaluated atomically in the DB. Even simultaneous or
+    // stale client requests cannot overwrite either pre-existing coordinate.
+    // Only non-hidden records that already have a Google Map URL can be cached.
+    const { data: updated, error } = await supabase
       .from('property_listings')
-      .update({ latitude, longitude })
-      .eq('property_number', propertyNumber);
+      .update({ latitude: valid.latitude, longitude: valid.longitude })
+      .eq('property_number', propertyNumber)
+      .eq('is_hidden', false)
+      .not('google_map_url', 'is', null)
+      .neq('google_map_url', '')
+      .is('latitude', null)
+      .is('longitude', null)
+      .select('property_number')
+      .maybeSingle();
 
     if (error) {
-      console.error(`[Save Coordinates] Failed to save coordinates for ${propertyNumber}:`, error);
-      return res.status(500).json({ success: false, error: error.message });
+      console.error('[Save Coordinates] Fill-only DB update failed');
+      return res.status(500).json({ success: false, error: 'Unable to store coordinates' });
     }
 
-    console.log(`[Save Coordinates] Saved coordinates for ${propertyNumber}: (${latitude}, ${longitude})`);
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error('[Save Coordinates] Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    // A no-op is not an error for a public detail page: another request may
+    // have already populated the coordinates, or this row is not eligible.
+    return res.json({ success: true, updated: updated !== null });
+  } catch {
+    console.error('[Save Coordinates] Unexpected fill-only update failure');
+    return res.status(500).json({ success: false, error: 'Unable to store coordinates' });
   }
 });
 
@@ -2413,6 +2515,8 @@ app.get('/api/kujira/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
+      // Public maps must hide non-public, sold and pre-release inventory.
+      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       // FI物件のみ（大文字小文字を区別しない）
@@ -2484,6 +2588,8 @@ app.get('/api/public/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
+      // Public maps must hide non-public, sold and pre-release inventory.
+      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       // いふうサイトではFI物件を除外（くじら不動産サイト専用）
