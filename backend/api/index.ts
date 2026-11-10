@@ -1257,6 +1257,26 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
       }
     }
     
+    // 「全て更新」はスプレッドシート（athomeシート）の最新内容をDBへ取り込んでから返す。
+    // 以前はDBの保存値を読み直すだけだったため、スプシを編集しても反映されなかった。
+    // 同期は非破壊（空セルで既存値を消さない）。失敗しても既存データで応答は続行する。
+    let commentSyncSuccess = false;
+    const englishTypeForSync = convertPropertyTypeToEnglish(property.property_type);
+    if (englishTypeForSync) {
+      try {
+        commentSyncSuccess = await new AthomeSheetSyncService().syncPropertyComments(
+          property.property_number,
+          englishTypeForSync,
+          1 // 手動ボタン用なのでリトライせず応答を待たせない
+        );
+        console.log(`[Refresh All] Athome sheet sync for ${property.property_number}: ${commentSyncSuccess ? 'success' : 'failed'}`);
+      } catch (syncErr: any) {
+        console.error(`[Refresh All] Athome sheet sync error for ${property.property_number}:`, syncErr.message);
+      }
+    } else {
+      console.warn(`[Refresh All] Skip athome sheet sync: unsupported property type "${property.property_type}"`);
+    }
+
     // PropertyDetailsServiceを使用して全データを取得
     const propertyDetailsService = new PropertyDetailsService();
     
@@ -1320,7 +1340,10 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
         // 内覧前伝達事項は独自サイトに表示しない
         propertyAbout: null
       },
-      message: '全てのデータを更新しました（データベースにも保存しました）'
+      commentSyncSuccess,
+      message: commentSyncSuccess
+        ? '全てのデータを更新しました（スプレッドシートの内容を反映しました）'
+        : '画像は更新しましたが、スプレッドシートのコメント取り込みに失敗しました'
     });
   } catch (error: any) {
     console.error('[Refresh All] Error:', error);
