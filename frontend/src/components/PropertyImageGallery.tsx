@@ -23,6 +23,8 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { usePropertyImages } from '../hooks/usePublicProperties';
 import ImageDeleteButton from './ImageDeleteButton';
@@ -61,6 +63,8 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [localHiddenImageIds, setLocalHiddenImageIds] = useState<string[]>([]);
   const [isHideLoading, setIsHideLoading] = useState<string | null>(null);
+  // メイン画像のローカル状態（undefined = サーバーの値を使う）
+  const [localMainImageId, setLocalMainImageId] = useState<string | null | undefined>(undefined);
   const [showAllImages, setShowAllImages] = useState(false); // 全画像表示フラグ
   const [deleteState, setDeleteState] = useState<DeleteState>({
     isOpen: false,
@@ -211,9 +215,22 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   const allImages = data?.images || [];
   
   // 表示する画像をフィルタリング（非表示画像を除外）
-  const filteredImages = showHiddenImages 
+  const visibleImages = showHiddenImages 
     ? allImages 
     : allImages.filter(img => !hiddenImageIds.includes(img.id));
+
+  // メイン画像（ローカル操作を優先し、なければサーバーの値）。非表示・存在しない画像は無効
+  const rawMainImageId = localMainImageId !== undefined ? localMainImageId : (data?.mainImageId ?? null);
+  const mainImageId =
+    rawMainImageId && visibleImages.some(img => img.id === rawMainImageId) ? rawMainImageId : null;
+
+  // メイン画像を先頭に並べる
+  const filteredImages = mainImageId
+    ? [
+        ...visibleImages.filter(img => img.id === mainImageId),
+        ...visibleImages.filter(img => img.id !== mainImageId),
+      ]
+    : visibleImages;
 
   // 表示する画像（最初8枚 or 全て）
   const INITIAL_IMAGE_COUNT = 8;
@@ -454,6 +471,43 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     }
   };
 
+  // メイン画像に設定する / 解除する（すでにメインの画像なら解除）
+  const handleToggleMainImage = async (imageId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    const isCurrentMain = mainImageId === imageId;
+    setIsHideLoading(imageId);
+
+    try {
+      if (isCurrentMain) {
+        await propertyImageApi.unsetMainImage(propertyId);
+        setLocalMainImageId(null);
+      } else {
+        await propertyImageApi.setMainImage(propertyId, imageId);
+        setLocalMainImageId(imageId);
+      }
+
+      setSnackbar({
+        open: true,
+        message: isCurrentMain
+          ? 'メイン画像の指定を解除しました'
+          : 'メイン画像に設定しました（一覧への反映には少し時間がかかる場合があります）',
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('Error setting main image:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || 'メイン画像の設定に失敗しました',
+        severity: 'error',
+      });
+    } finally {
+      setIsHideLoading(null);
+    }
+  };
+
   // 画像が非表示かどうかを判定
   const isImageHidden = (imageId: string) => hiddenImageIds.includes(imageId);
 
@@ -646,6 +700,59 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
                       )}
                     </IconButton>
                   </Tooltip>
+                )}
+
+                {/* メイン画像に設定/解除ボタン（管理者モード・非表示でない画像のみ） */}
+                {canHide && !isHidden && (
+                  <Tooltip title={mainImageId === image.id ? 'メイン画像を解除' : 'メイン画像に設定'}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleToggleMainImage(image.id, e)}
+                      disabled={isLoading}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 40,
+                        zIndex: 2,
+                        bgcolor: mainImageId === image.id ? 'rgba(25, 118, 210, 0.95)' : 'rgba(0, 0, 0, 0.5)',
+                        color: 'white',
+                        '&:hover': {
+                          bgcolor: mainImageId === image.id ? 'rgba(25, 118, 210, 1)' : 'rgba(0, 0, 0, 0.7)',
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'rgba(0, 0, 0, 0.3)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {mainImageId === image.id ? (
+                        <StarIcon sx={{ fontSize: 16 }} />
+                      ) : (
+                        <StarBorderIcon sx={{ fontSize: 16 }} />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {/* メイン画像の印（管理者モードのみ） */}
+                {canHide && mainImageId === image.id && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 4,
+                      left: 4,
+                      zIndex: 2,
+                      bgcolor: 'rgba(25, 118, 210, 0.95)',
+                      color: 'white',
+                      borderRadius: '4px',
+                      px: 0.75,
+                      py: 0.25,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: 11, fontWeight: 600 }}>
+                      メイン
+                    </Typography>
+                  </Box>
                 )}
 
                 {/* 削除ボタン（認証済みの場合のみ表示） */}

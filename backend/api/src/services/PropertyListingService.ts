@@ -437,6 +437,9 @@ export class PropertyListingService {
         throw new Error(`Supabase query error: ${error.message}`);
       }
       
+      // 手動指定されたメイン画像（失敗しても空Mapなので一覧は壊れない）
+      const mainImageMap = await this.getMainImageIds((data || []).map((p: any) => p.id));
+
       // 画像取得：image_url → storage_location
       // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
       const propertiesWithImages: any[] = [];
@@ -467,6 +470,7 @@ export class PropertyListingService {
               is_clickable: this.isPropertyClickable(property.atbb_status),
               google_map_url: property.google_map_url || null,
               storage_location: storageLocation || null,  // folder-thumbnail遅延ロード用
+              main_image_id: mainImageMap.get(property.id) || null,  // 手動指定のメイン画像
               images: []
             };
           })
@@ -503,8 +507,26 @@ export class PropertyListingService {
                 }
               }
               
+              const mainImageId = mainImageMap.get(property.id) || null;
+              const mainFolderMatch = mainImageId && storageLocation
+                ? storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/)
+                : null;
+
+              // 0. メイン画像が手動指定されている場合は最優先（folder-thumbnail が ?m= で解決する）
+              if (mainFolderMatch) {
+                const thumbnailUrl = `/api/public/folder-thumbnail/${mainFolderMatch[1]}?m=${encodeURIComponent(mainImageId!)}`;
+                images = [{
+                  id: mainImageId,
+                  name: 'Property Image',
+                  thumbnailUrl,
+                  fullImageUrl: thumbnailUrl,
+                  mimeType: 'image/jpeg',
+                  size: 0,
+                  modifiedTime: new Date().toISOString()
+                }];
+              }
               // 1. image_urlがある場合はそれを使用
-              if (property.image_url) {
+              else if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
                 
                 // image_urlからファイルIDを抽出（プロキシURL形式の場合）
@@ -908,6 +930,101 @@ export class PropertyListingService {
   }
 
 
+
+  /**
+   * メイン画像のファイルIDを取得（UUID指定）
+   * main_image_id カラムが未作成、または未設定の場合は null を返す
+   */
+  async getMainImageId(propertyId: string): Promise<string | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('property_listings')
+        .select('main_image_id')
+        .eq('id', propertyId)
+        .single();
+
+      if (error) {
+        // カラム未作成などは「未設定」として扱う（一覧・詳細を壊さない）
+        console.warn(`[PropertyListingService] getMainImageId skipped: ${error.message}`);
+        return null;
+      }
+      return data?.main_image_id || null;
+    } catch (error: any) {
+      console.warn(`[PropertyListingService] getMainImageId error: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 複数物件のメイン画像IDをまとめて取得（一覧用）
+   * 失敗しても空のMapを返す
+   */
+  async getMainImageIds(propertyIds: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (propertyIds.length === 0) return result;
+
+    try {
+      const { data, error } = await this.supabase
+        .from('property_listings')
+        .select('id, main_image_id')
+        .in('id', propertyIds)
+        .not('main_image_id', 'is', null);
+
+      if (error) {
+        console.warn(`[PropertyListingService] getMainImageIds skipped: ${error.message}`);
+        return result;
+      }
+      for (const row of data || []) {
+        if (row.main_image_id) result.set(row.id, row.main_image_id);
+      }
+    } catch (error: any) {
+      console.warn(`[PropertyListingService] getMainImageIds error: ${error.message}`);
+    }
+    return result;
+  }
+
+  /**
+   * メイン画像を設定する（fileId が null の場合は解除）
+   * 画像がその物件のフォルダにあるかの検証は呼び出し側で行う
+   */
+  async setMainImage(propertyId: string, fileId: string | null): Promise<void> {
+    const { error } = await this.supabase
+      .from('property_listings')
+      .update({ main_image_id: fileId })
+      .eq('id', propertyId);
+
+    if (error) {
+      console.error(`[PropertyListingService] Failed to set main image:`, error);
+      throw new Error(`Failed to set main image: ${error.message}`);
+    }
+  }
+
+  /**
+   * 物件番号またはUUIDから、メイン画像設定に必要な最小情報を取得
+   * （クリック可否に関係なく管理者が操作できるよう getPublicProperty* は使わない）
+   */
+  async findListingForImageSetting(idOrNumber: string): Promise<{
+    id: string;
+    property_number: string;
+    storage_location: string | null;
+  } | null> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const column = uuidRegex.test(idOrNumber) ? 'id' : 'property_number';
+
+    const { data, error } = await this.supabase
+      .from('property_listings')
+      .select('id, property_number, storage_location')
+      .eq(column, idOrNumber)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    let storageLocation: string | null = data.storage_location || null;
+    if (!storageLocation && data.property_number) {
+      storageLocation = await this.getStorageUrlFromWorkTasks(data.property_number);
+    }
+    return { id: data.id, property_number: data.property_number, storage_location: storageLocation };
+  }
 
   // 非表示画像リストを取得
   async getHiddenImages(propertyId: string): Promise<string[]> {

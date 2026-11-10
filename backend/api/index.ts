@@ -16,6 +16,7 @@ import { PanoramaUrlService } from './src/services/PanoramaUrlService';
 import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
+import { authenticate } from './src/middleware/auth';
 
 
 const app = express();
@@ -740,13 +741,26 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       filteredImages = result.images.filter(img => !hiddenImages.includes(img.id));
     }
 
+    // 手動指定のメイン画像を先頭に並べる（非表示・フォルダ外の画像は無視）
+    let mainImageId: string | null = await propertyListingService.getMainImageId(property.id);
+    if (mainImageId && !filteredImages.some(img => img.id === mainImageId)) {
+      mainImageId = null;
+    }
+    if (mainImageId) {
+      filteredImages = [
+        ...filteredImages.filter(img => img.id === mainImageId),
+        ...filteredImages.filter(img => img.id !== mainImageId),
+      ];
+    }
+
     console.log(`✅ Found ${filteredImages.length} images (${hiddenImages.length} hidden)`);
 
-    // キャッシュヘッダーを設定（1時間）
-    res.set('Cache-Control', 'public, max-age=3600');
+    // キャッシュヘッダーを設定（メイン画像の変更を早く反映するため1分）
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({
       ...result,
       images: filteredImages,
+      mainImageId,
       totalCount: result.images.length,
       visibleCount: filteredImages.length,
       hiddenCount: hiddenImages.length,
@@ -1200,6 +1214,74 @@ app.post('/api/public/properties/:identifier/refresh-all', async (req, res) => {
   }
 });
 
+// メイン画像の設定（社員ログイン必須）
+// 一覧カードとギャラリー先頭に表示する画像を手動で指定する
+app.post('/api/property-listings/:id/set-main-image', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fileId } = req.body || {};
+
+    if (!fileId || typeof fileId !== 'string') {
+      return res.status(400).json({ error: 'fileId is required', code: 'MISSING_FILE_ID' });
+    }
+
+    const listing = await propertyListingService.findListingForImageSetting(id);
+    if (!listing) {
+      return res.status(404).json({ error: 'Property not found', code: 'NOT_FOUND' });
+    }
+    if (!listing.storage_location) {
+      return res.status(400).json({ error: '画像の格納先URLが設定されていません', code: 'NO_STORAGE' });
+    }
+
+    // 指定された画像がこの物件のフォルダに実在することを確認（他物件の画像を設定させない）
+    const imageService = new PropertyImageService(
+      new GoogleDriveService(),
+      60,
+      parseInt(process.env.FOLDER_ID_CACHE_TTL_MINUTES || '60', 10),
+      parseInt(process.env.SUBFOLDER_SEARCH_TIMEOUT_SECONDS || '2', 10),
+      parseInt(process.env.MAX_SUBFOLDERS_TO_SEARCH || '3', 10)
+    );
+    const imageResult = await imageService.getImagesFromStorageUrl(listing.storage_location);
+    if (!imageResult.images.some(img => img.id === fileId)) {
+      return res.status(400).json({ error: 'この物件の画像ではありません', code: 'IMAGE_NOT_IN_FOLDER' });
+    }
+
+    // 非表示の画像はメインにできない
+    const hiddenImages = await propertyListingService.getHiddenImages(listing.id);
+    if (hiddenImages.includes(fileId)) {
+      return res.status(400).json({ error: '非表示の画像はメインにできません', code: 'IMAGE_HIDDEN' });
+    }
+
+    await propertyListingService.setMainImage(listing.id, fileId);
+    console.log(`⭐ [MainImage] Set ${fileId} for ${listing.property_number}`);
+
+    res.json({ success: true, mainImageId: fileId });
+  } catch (error: any) {
+    console.error('❌ [MainImage] set error:', error);
+    res.status(500).json({ error: error.message || 'Failed to set main image', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// メイン画像の解除（社員ログイン必須）
+app.post('/api/property-listings/:id/unset-main-image', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const listing = await propertyListingService.findListingForImageSetting(id);
+    if (!listing) {
+      return res.status(404).json({ error: 'Property not found', code: 'NOT_FOUND' });
+    }
+
+    await propertyListingService.setMainImage(listing.id, null);
+    console.log(`⭐ [MainImage] Unset for ${listing.property_number}`);
+
+    res.json({ success: true, mainImageId: null });
+  } catch (error: any) {
+    console.error('❌ [MainImage] unset error:', error);
+    res.status(500).json({ error: error.message || 'Failed to unset main image', code: 'INTERNAL_ERROR' });
+  }
+});
+
 // フォルダサムネイルエンドポイント（フォルダの最初の画像を返す）
 // 一覧ページの遅延取得用 - Google Drive APIをブラウザ表示時に呼ぶことでVercelタイムアウトを回避
 app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
@@ -1230,8 +1312,14 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
       return res.send(svgPlaceholder);
     }
 
+    // 手動指定のメイン画像（?m=ファイルID）。フォルダ内に存在する場合のみ採用し、なければ最新画像
+    const requestedMainId = typeof req.query.m === 'string' ? req.query.m : '';
+    const mainImage = requestedMainId
+      ? result.images.find(img => img.id === requestedMainId)
+      : undefined;
+
     // 最初の画像のファイルIDを取得してリダイレクト
-    const firstImage = result.images[0];
+    const firstImage = mainImage || result.images[0];
     const fileId = firstImage.id;
     console.log(`[FolderThumbnail] Redirecting to first image: ${fileId}`);
 

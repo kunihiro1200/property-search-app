@@ -315,6 +315,18 @@ export const propertyImageApi = {
     return response.data;
   },
 
+  // メイン画像に設定する（一覧カードに表示される）
+  setMainImage: async (propertyId: string, fileId: string) => {
+    const response = await api.post(`/api/property-listings/${propertyId}/set-main-image`, { fileId });
+    return response.data;
+  },
+
+  // メイン画像の指定を解除する
+  unsetMainImage: async (propertyId: string) => {
+    const response = await api.post(`/api/property-listings/${propertyId}/unset-main-image`);
+    return response.data;
+  },
+
   // 画像を復元する（非表示を解除）
   restoreImage: async (propertyId: string, fileId: string) => {
     const response = await api.post(`/api/property-listings/${propertyId}/unhide-image`, { fileId });

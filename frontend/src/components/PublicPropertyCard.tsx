@@ -158,11 +158,14 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
 
   const folderId = extractFolderIdFromStorageLocation(property.storage_location);
 
-  const thumbnailUrl = property.images && property.images.length > 0
-    ? property.images[0].thumbnailUrl
-    : folderId
-      ? `/api/public/folder-thumbnail/${folderId}`
-      : null;
+  // 手動指定のメイン画像がある場合は最優先（?m= を付けるとキャッシュも切り替わる）
+  const thumbnailUrl = property.main_image_id && folderId
+    ? `/api/public/folder-thumbnail/${folderId}?m=${encodeURIComponent(property.main_image_id)}`
+    : property.images && property.images.length > 0
+      ? property.images[0].thumbnailUrl
+      : folderId
+        ? `/api/public/folder-thumbnail/${folderId}`
+        : null;
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
 
