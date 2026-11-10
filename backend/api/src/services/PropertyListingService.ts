@@ -9,6 +9,10 @@ import { PropertyDetailsService } from './PropertyDetailsService.js';
 import { GoogleSheetsClient } from './GoogleSheetsClient.js';
 import { WorkTasksStorageCache } from '../utils/WorkTasksStorageCache.js';
 
+// テスト用に作られた物件（例: TEST-HIDDEN-001）は公開サイトに出さない
+// ilike パターン（% = 任意の文字列、大文字小文字を区別しない）
+const TEST_PROPERTY_NUMBER_PATTERN = 'TEST-%';
+
 export class PropertyListingService {
   private supabase;
   private distributionCalculator: PropertyDistributionAreaCalculator;
@@ -316,6 +320,7 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' })
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN) // テスト用物件はお客様に見せない
         // Public listings must never include private, pre-release or sold properties.
         // Non-public detail URLs remain accessible through getPublicPropertyById/ByNumber.
         .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
@@ -653,7 +658,8 @@ export class PropertyListingService {
       let query = this.supabase
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
-        .eq('is_hidden', false); // スプレッドシートから削除された物件を除外
+        .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN); // テスト用物件はお客様に見せない
       
       // UUIDまたはproperty_numberで検索
       if (isUUID) {
@@ -720,6 +726,7 @@ export class PropertyListingService {
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, floor_plan, image_url, google_map_url, latitude, longitude, atbb_status, special_notes, storage_location, created_at, updated_at')
         .eq('property_number', propertyNumber)
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN) // テスト用物件はお客様に見せない
         .single();
       
       if (error) {
@@ -807,6 +814,7 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, atbb_status')
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
+        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN) // テスト用物件はサイトマップに載せない
         // Site maps may list only openly advertised properties.
         .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
         .order('created_at', { ascending: false });
