@@ -1424,7 +1424,9 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
       const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f5f5f5"/><text x="200" y="150" text-anchor="middle" fill="#999" font-size="16" font-family="sans-serif">画像なし</text></svg>`;
       res.set({
         'Content-Type': 'image/svg+xml',
-        'Cache-Control': 'public, max-age=86400',
+        // 画像なしは一時的な状態（後から画像追加・フォルダ統合される）ため短期キャッシュにする
+        // 24時間キャッシュするとCDNが「画像なし」を返し続けてしまう
+        'Cache-Control': 'public, max-age=60, s-maxage=300',
         'Access-Control-Allow-Origin': '*',
       });
       return res.send(svgPlaceholder);
@@ -1458,7 +1460,8 @@ app.get('/api/public/folder-thumbnail/:folderId', async (req, res) => {
     const svgPlaceholder = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f5f5f5"/><text x="200" y="150" text-anchor="middle" fill="#999" font-size="16" font-family="sans-serif">画像なし</text></svg>`;
     res.set({
       'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=86400',
+      // エラー時（Drive APIクォータ超過等）はキャッシュしない
+      'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
     });
     return res.send(svgPlaceholder);
