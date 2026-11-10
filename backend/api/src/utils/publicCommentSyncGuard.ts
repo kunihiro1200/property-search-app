@@ -21,6 +21,20 @@ export function needsPublicCommentSync(
     (Array.isArray(recommendedComments) && recommendedComments.length === 0);
 }
 
+/**
+ * お気に入り文言の公開用サニタイズ。
+ * athomeシートのセルに「●」「・」等の記号だけが入っている場合があり、
+ * そのまま表示すると★欄に記号1文字だけが出てしまうため、
+ * 文字（かな・漢字・英数字）を含まない文言は null として扱う。
+ */
+export function sanitizePublicFavoriteComment(comment: unknown): string | null {
+  if (typeof comment !== 'string') return null;
+  const trimmed = comment.trim();
+  if (!trimmed) return null;
+  // 文字・数字（Unicode の Letter / Number）を1つも含まなければ記号のみとみなす
+  return /[\p{L}\p{N}]/u.test(trimmed) ? trimmed : null;
+}
+
 /** Match the internal-memo exclusion already used by GET /complete. */
 export function filterPublicRecommendedComments(comments: unknown): unknown[] {
   const raw: unknown[] = Array.isArray(comments) ? comments : [];

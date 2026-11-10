@@ -17,7 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
-import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync } from './src/utils/publicCommentSyncGuard';
+import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync, sanitizePublicFavoriteComment } from './src/utils/publicCommentSyncGuard';
 import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
 import { toPublicEstimateData } from './src/utils/publicEstimateData';
@@ -500,7 +500,7 @@ app.get('/api/public/properties/:id/complete', async (req, res) => {
         property_about: null,
         recommended_comments: filterPublicRecommendedComments(property.recommended_comments),
       },
-      favoriteComment: dbDetails.favorite_comment,
+      favoriteComment: sanitizePublicFavoriteComment(dbDetails.favorite_comment),
       recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments),
       athomeData: dbDetails.athome_data,
       settlementDate,
@@ -686,7 +686,7 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
     if (!needsPublicCommentSync(property.favorite_comment, property.recommended_comments)) {
       return res.json({
         success: true,
-        favoriteComment: property.favorite_comment,
+        favoriteComment: sanitizePublicFavoriteComment(property.favorite_comment),
         recommendedComments: filterPublicRecommendedComments(property.recommended_comments),
         athomeData: property.athome_data,
         propertyAbout: null,
@@ -751,7 +751,7 @@ app.post('/api/public/properties/:id/sync-comments', (req, res, next) => {
 
     return res.json({
       success: true,
-      favoriteComment: updatedDetails.favorite_comment,
+      favoriteComment: sanitizePublicFavoriteComment(updatedDetails.favorite_comment),
       recommendedComments: filterPublicRecommendedComments(updatedDetails.recommended_comments),
       athomeData: updatedDetails.athome_data,
       // Internal notes are never shown on the public property site.
@@ -1314,7 +1314,7 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
         property,
         images,
         recommendedComments: dbDetails.recommended_comments,
-        favoriteComment: dbDetails.favorite_comment,
+        favoriteComment: sanitizePublicFavoriteComment(dbDetails.favorite_comment),
         athomeData: dbDetails.athome_data,
         panoramaUrl,
         // 内覧前伝達事項は独自サイトに表示しない
