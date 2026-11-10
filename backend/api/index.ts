@@ -1267,7 +1267,9 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
         commentSyncSuccess = await new AthomeSheetSyncService().syncPropertyComments(
           property.property_number,
           englishTypeForSync,
-          1 // 手動ボタン用なのでリトライせず応答を待たせない
+          1, // 手動ボタン用なのでリトライせず応答を待たせない
+          1000,
+          storageUrl // 業務リストにない物件は物件フォルダ内のスプレッドシートを探す
         );
         console.log(`[Refresh All] Athome sheet sync for ${property.property_number}: ${commentSyncSuccess ? 'success' : 'failed'}`);
       } catch (syncErr: any) {
@@ -1333,7 +1335,7 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
       data: {
         property,
         images,
-        recommendedComments: dbDetails.recommended_comments,
+        recommendedComments: filterPublicRecommendedComments(dbDetails.recommended_comments),
         favoriteComment: sanitizePublicFavoriteComment(dbDetails.favorite_comment),
         athomeData: dbDetails.athome_data,
         panoramaUrl,

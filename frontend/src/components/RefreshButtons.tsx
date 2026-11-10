@@ -45,10 +45,15 @@ export const RefreshButtons: React.FC<RefreshButtonsProps> = ({
     try {
       const result = await refreshAll(propertyId);
       onRefreshComplete(result.data);
+      // スプレッドシートからのコメント取り込みに失敗した場合は成功と表示しない
+      // （commentSyncSuccess が無い旧バックエンドでは従来どおり成功扱い）
+      const commentSyncFailed = result?.commentSyncSuccess === false;
       setSnackbar({
         open: true,
-        message: '全てのデータを更新しました',
-        severity: 'success'
+        message: commentSyncFailed
+          ? '画像は更新しましたが、物件スプレッドシートが見つからずコメントを取り込めませんでした'
+          : '全てのデータを更新しました',
+        severity: commentSyncFailed ? 'error' : 'success'
       });
     } catch (error) {
       setSnackbar({

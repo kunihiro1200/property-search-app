@@ -619,6 +619,36 @@ export class GoogleDriveService extends BaseRepository {
    * @param folderId フォルダID
    * @returns サムネイル付き画像ファイル一覧
    */
+  async listSpreadsheetsInFolder(folderId: string): Promise<Array<{ id: string; name: string; modifiedTime: string }>> {
+    // listImagesWithThumbnails と同じ共有ドライブ対応の検索方法を使う（画像取得で実績あり）
+    const drive = await this.getDriveClient();
+    const q = `'${folderId}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.spreadsheet'`;
+    const fields = 'files(id, name, modifiedTime)';
+
+    const queryParams: any = {
+      q,
+      fields,
+      orderBy: 'modifiedTime desc',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    };
+    if (this.parentFolderId) {
+      queryParams.corpora = 'drive';
+      queryParams.driveId = this.parentFolderId;
+    } else {
+      queryParams.corpora = 'user';
+    }
+
+    let files = (await drive.files.list(queryParams)).data.files || [];
+
+    // マイドライブの共有フォルダの場合に備えて corpora: 'user' でも再検索
+    if (files.length === 0 && queryParams.corpora === 'drive') {
+      files = (await drive.files.list({ q, fields, orderBy: 'modifiedTime desc', corpora: 'user' })).data.files || [];
+    }
+
+    return files.map(f => ({ id: f.id || '', name: f.name || '', modifiedTime: f.modifiedTime || '' }));
+  }
+
   async listImagesWithThumbnails(folderId: string): Promise<DriveFile[]> {
     try {
       console.log(`🔍 [listImagesWithThumbnails] Starting for folder: ${folderId}`);

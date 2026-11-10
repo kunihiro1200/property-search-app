@@ -63,13 +63,14 @@ export class AthomeSheetSyncService {
    * 業務リストから個別物件スプレッドシートのIDを取得
    * GyomuListServiceを使用してカラム名で正確に取得する
    */
-  private async getIndividualSpreadsheetId(propertyNumber: string): Promise<string | null> {
+  private async getIndividualSpreadsheetId(propertyNumber: string, storageLocation?: string | null): Promise<string | null> {
     try {
       const gyomuData = await this.gyomuListService.getByPropertyNumber(propertyNumber);
       
       if (!gyomuData || !gyomuData.spreadsheetUrl) {
-        console.log(`[AthomeSheetSyncService] Spreadsheet URL not found for ${propertyNumber}`);
-        return null;
+        console.log(`[AthomeSheetSyncService] Spreadsheet URL not found in 業務リスト for ${propertyNumber}`);
+        // 業務リストにない古い物件は、物件フォルダ（保存場所）内のスプレッドシートを探す
+        return await this.findSpreadsheetInStorageFolder(propertyNumber, storageLocation);
       }
 
       // URLからスプレッドシートIDを抽出
@@ -83,6 +84,43 @@ export class AthomeSheetSyncService {
       return null;
     } catch (error: any) {
       console.error(`[AthomeSheetSyncService] Error getting spreadsheet ID for ${propertyNumber}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 物件フォルダ（storage_location）直下から個別物件スプレッドシートを探す
+   * - ファイル名に物件番号を含むものを優先
+   * - 物件番号を含むものがなく、スプレッドシートが1つだけならそれを使う
+   * - 候補が複数あって特定できない場合は誤取り込みを避けて null
+   * 見つかったシートに athome シートが無い場合は、後段の読み込みが失敗し DB は更新されない
+   */
+  private async findSpreadsheetInStorageFolder(
+    propertyNumber: string,
+    storageLocation?: string | null
+  ): Promise<string | null> {
+    const folderId = storageLocation?.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1];
+    if (!folderId) {
+      console.log(`[AthomeSheetSyncService] No storage folder to search for ${propertyNumber}`);
+      return null;
+    }
+
+    try {
+      const { GoogleDriveService } = await import('./GoogleDriveService');
+      const files = await new GoogleDriveService().listSpreadsheetsInFolder(folderId);
+
+      const named = files.filter(f => f.name.includes(propertyNumber));
+      const picked = named[0] || (files.length === 1 ? files[0] : null);
+
+      if (!picked) {
+        console.log(`[AthomeSheetSyncService] No unique spreadsheet in storage folder for ${propertyNumber} (found ${files.length})`);
+        return null;
+      }
+
+      console.log(`[AthomeSheetSyncService] Using spreadsheet from storage folder for ${propertyNumber}: ${picked.name} (${picked.id})`);
+      return picked.id;
+    } catch (error: any) {
+      console.error(`[AthomeSheetSyncService] Error searching storage folder for ${propertyNumber}:`, error.message);
       return null;
     }
   }
@@ -233,7 +271,8 @@ export class AthomeSheetSyncService {
     propertyNumber: string,
     propertyType: 'land' | 'detached_house' | 'apartment',
     maxRetries: number = 3,
-    retryDelay: number = 1000
+    retryDelay: number = 1000,
+    storageLocation?: string | null
   ): Promise<boolean> {
     let lastError: Error | null = null;
     
@@ -242,7 +281,7 @@ export class AthomeSheetSyncService {
         console.log(`[AthomeSheetSyncService] Syncing comments for ${propertyNumber} (${propertyType}) - Attempt ${attempt}/${maxRetries}`);
 
         // 個別物件スプレッドシートのIDを取得
-        const spreadsheetId = await this.getIndividualSpreadsheetId(propertyNumber);
+        const spreadsheetId = await this.getIndividualSpreadsheetId(propertyNumber, storageLocation);
         if (!spreadsheetId) {
           const errMsg = `Spreadsheet ID not found for ${propertyNumber} - check GYOMU_LIST_SPREADSHEET_ID env var and that the property exists in 業務依頼 sheet`;
           console.error(`[AthomeSheetSyncService] ${errMsg}`);
