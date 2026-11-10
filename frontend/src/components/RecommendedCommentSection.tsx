@@ -45,6 +45,13 @@ const RecommendedCommentSection: React.FC<RecommendedCommentSectionProps> = ({
     return null;
   }
 
+  // 「支払例」を含む行から下はすべて非表示にする
+  const cutIndex = data.comments.findIndex((row) => row.join(' ').includes('支払例'));
+  const visibleComments = cutIndex >= 0 ? data.comments.slice(0, cutIndex) : data.comments;
+  if (visibleComments.length === 0) {
+    return null;
+  }
+
   return (
     <Paper
       elevation={2}
@@ -67,7 +74,7 @@ const RecommendedCommentSection: React.FC<RecommendedCommentSectionProps> = ({
         おすすめポイント
       </Typography>
       <Box sx={{ m: 0 }}>
-        {data.comments.map((row, rowIndex) => (
+        {visibleComments.map((row, rowIndex) => (
           <Typography
             key={rowIndex}
             variant="body1"

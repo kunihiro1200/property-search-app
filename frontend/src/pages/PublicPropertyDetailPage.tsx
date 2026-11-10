@@ -823,7 +823,14 @@ const PublicPropertyDetailPage: React.FC = () => {
                   おすすめポイント
                 </Typography>
                 <Box sx={{ m: 0 }}>
-                  {completeData.recommendedComments
+                  {(() => {
+                    // 「支払例」を含む行から下はすべて非表示にする
+                    const list: any[] = completeData.recommendedComments;
+                    const toText = (c: any): string =>
+                      Array.isArray(c) ? c.map(toText).join(' ') : String(c ?? '');
+                    const cutIndex = list.findIndex((c) => toText(c).includes('支払例'));
+                    return cutIndex >= 0 ? list.slice(0, cutIndex) : list;
+                  })()
                     .filter((comment: any) => {
                       // 内部メモ行を除外（←で始まる、または特定のキーワードを含む）
                       const flatten = (c: any): string => {
