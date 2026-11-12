@@ -110,9 +110,9 @@ export class PropertyImageService {
    * "athome公開"または"atbb公開"サブフォルダが存在する場合はそのフォルダIDを返す
    * 検索順序: athome公開 → atbb公開 → 親フォルダ
    * 2階層まで再帰的に検索（中間フォルダがある場合に対応）
-   * 存在しない場合は元のフォルダIDを返す
+   * 存在しない場合はnullを返す（親フォルダは使用しない）
    */
-  private async getPublicFolderIdIfExists(parentFolderId: string): Promise<string> {
+  private async getPublicFolderIdIfExists(parentFolderId: string): Promise<string | null> {
     const startTime = Date.now();
     
     // キャッシュをチェック
@@ -182,17 +182,15 @@ export class PropertyImageService {
         console.warn(`⚠️ Error searching grandparent folder:`, parentError.message);
       }
       
-      // 5. 親フォルダを使用（フォールバック）
+      // 5. 公開用サブフォルダが見つからない場合はnullを返す（親フォルダは使用しない）
       const elapsedMs = Date.now() - startTime;
-      console.log(`📁 No public subfolder found in parent: ${parentFolderId}, using parent folder (${elapsedMs}ms)`);
-      this.cacheFolderId(cacheKey, parentFolderId);
-      return parentFolderId;
+      console.log(`📁 No public subfolder found in parent: ${parentFolderId}, returning null (no fallback to parent) (${elapsedMs}ms)`);
+      return null;
     } catch (error: any) {
       const elapsedMs = Date.now() - startTime;
       console.error(`⚠️ Error checking for public subfolders in parent: ${parentFolderId} (${elapsedMs}ms):`, error.message);
-      console.error(`⚠️ Falling back to parent folder`);
-      this.cacheFolderId(cacheKey, parentFolderId);
-      return parentFolderId;
+      console.error(`⚠️ No public subfolder found, returning null`);
+      return null;
     }
   }
 
@@ -324,10 +322,20 @@ export class PropertyImageService {
 
     try {
       // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
-      // 検索順序: athome公開 → atbb公開 → 親フォルダ
+      // 検索順序: athome公開 → athome作成 → atbb公開（見つからない場合は画像なし）
       console.log(`🔍 [getImagesFromStorageUrl] Checking for public subfolder...`);
       const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
       console.log(`✅ [getImagesFromStorageUrl] Target folder ID: ${targetFolderId}`);
+
+      // 公開用サブフォルダが見つからない場合は画像なしを返す
+      if (!targetFolderId) {
+        console.log(`[PropertyImageService] No public subfolder found in folder ${parentFolderId}, returning empty`);
+        return {
+          images: [],
+          folderId: null,
+          cached: false,
+        };
+      }
 
       // キャッシュを確認
       const cachedResult = this.getFromCache(targetFolderId);
@@ -462,8 +470,14 @@ export class PropertyImageService {
     }
 
     // "athome公開"または"atbb公開"サブフォルダが存在するか確認し、存在する場合はそのフォルダIDを使用
-    // 検索順序: athome公開 → atbb公開 → 親フォルダ
+    // 検索順序: athome公開 → athome作成 → atbb公開（見つからない場合は画像なし）
     const targetFolderId = await this.getPublicFolderIdIfExists(parentFolderId);
+
+    // 公開用サブフォルダが見つからない場合は画像なしを返す
+    if (!targetFolderId) {
+      console.log(`[PropertyImageService] No public subfolder found for property ${propertyId}, returning empty`);
+      return [];
+    }
 
     // キャッシュキーをfolderIdベースに変更（同じフォルダを複数の物件で共有する可能性があるため）
     const cacheKey = `first_image_folder_${targetFolderId}`;
