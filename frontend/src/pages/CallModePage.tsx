@@ -61,6 +61,7 @@ import NearbyBuyersList from '../components/NearbyBuyersList';
 import CollapsibleSection from '../components/CollapsibleSection';
 
 import { formatCurrentStatusDetailed } from '../utils/propertyStatusFormatter';
+import { shouldRemindBuildYear } from '../utils/buildYearReminder';
 
 /**
  * SMSテンプレート型定義
@@ -367,6 +368,11 @@ const CallModePage = () => {
   const [editedLandArea, setEditedLandArea] = useState<string>('');
   const [editedBuildingArea, setEditedBuildingArea] = useState<string>('');
   const [editedBuildYear, setEditedBuildYear] = useState<string>('');
+  const showBuildYearReminder = shouldRemindBuildYear(
+    seller?.inquirySite || seller?.site,
+    seller?.comments,
+    editingProperty ? editedBuildYear : propInfo.buildYear,
+  );
   const [editedFloorPlan, setEditedFloorPlan] = useState<string>('');
   const [editedStructure, setEditedStructure] = useState<string>('');
   const [editedSellerSituation, setEditedSellerSituation] = useState<string>('');
@@ -4598,6 +4604,11 @@ HP：https://ifoo-oita.com/
               p: 3,
             }}
           >
+            {showBuildYearReminder && (
+              <Alert severity="warning" sx={{ mb: 2, fontWeight: 'bold' }}>
+                築年数入力しましたか？
+              </Alert>
+            )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Typography variant="h6">
                 📝 コメント
