@@ -948,7 +948,7 @@ const PublicPropertiesPage: React.FC = () => {
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {([
                   ['current', '販売中'],
-                  ['historical', '売却済み・非公開'],
+                  ['historical', '売却済み'],
                   ['all', 'すべて'],
                 ] as const).map(([value, label]) => (
                   <Button key={value} size="small" variant={listingStatus === value ? 'contained' : 'outlined'}
@@ -958,7 +958,7 @@ const PublicPropertiesPage: React.FC = () => {
               </Stack>
               {listingStatus !== 'current' && (
                 <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
-                  ※ 非公開には未成約物件も含まれます。所在地は町名・丁目まで表示し、
+                  ※ 物件リストで「非公開」の物件は「売却済み」として表示しています。所在地は町名・丁目まで表示し、
                   物件番号・詳細リンク・写真・正確なピン位置は公開しません。表示価格は成約価格とは限りません。
                 </Typography>
               )}
