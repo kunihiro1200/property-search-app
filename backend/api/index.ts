@@ -2619,15 +2619,13 @@ app.get('/api/public/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
-      // Public maps must hide non-public, sold and pre-release inventory.
-      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
+      // 販売状況ごとのフィルターは後段で指定する。売却済みに座標は必須としない。
       // いふうサイトではFI物件を除外（くじら不動産サイト専用）
       .not('property_number', 'ilike', 'FI%');
 
     if (listingStatus === 'current') {
-      query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
+      query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
+        .not('latitude', 'is', null).not('longitude', 'is', null);
     } else if (listingStatus === 'historical') {
       query = query.not('atbb_status', 'is', null)
         .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
@@ -2694,20 +2692,31 @@ app.get('/api/public/map-properties', async (req, res) => {
         });
         continue;
       }
-      if (!Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) continue;
-      const lat = coarseGrid(p.latitude);
-      const lng = coarseGrid(p.longitude);
+      // 住所は町名・丁目までに切り詰める。地番や部屋番号はAPIで公開しない。
+      const rawAddress = String(p.address || '').replace(/〒?\\d{3}-?\\d{4}\\s*/, '').trim();
+      const chome = rawAddress.match(/^(.+?[０-９0-9一二三四五六七八九十]+丁目)/);
+      const area = chome ? chome[1] : rawAddress.replace(/[０-９0-9].*$/, '').replace(/(?:番地|地番|番|号|区画|号室).*$/, '').trim();
+      if (!area) continue;
+      const latValue = Number(p.latitude);
+      const lngValue = Number(p.longitude);
+      const hasCoordinates = p.latitude != null && p.longitude != null && Number.isFinite(latValue) && Number.isFinite(lngValue);
       const kind = typeMapping[p.property_type] || p.property_type;
-      const key = `${lat}:${lng}:${kind}`;
+      const key = `${area}:${kind}`;
       const group = soldAreas.get(key);
       if (group) {
         group.historical_count += 1;
+        if (hasCoordinates && group.latitude == null) {
+          group.latitude = coarseGrid(latValue);
+          group.longitude = coarseGrid(lngValue);
+        }
       } else {
         soldAreas.set(key, {
           id: `historical-area-${soldAreas.size}`, property_number: '',
-          property_type: kind, address: '所在地は概略エリアのみ表示',
+          property_type: kind, address: area,
           price: 0, atbb_status: '売却済み', badge_type: 'sold',
-          latitude: lat, longitude: lng, images: [], is_clickable: false,
+          latitude: hasCoordinates ? coarseGrid(latValue) : null,
+          longitude: hasCoordinates ? coarseGrid(lngValue) : null,
+          images: [], is_clickable: false,
           historical_count: 1,
         });
       }
