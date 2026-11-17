@@ -2544,7 +2544,7 @@ app.get('/api/kujira/map-properties', async (req, res) => {
 
     let query = supabase
       .from('property_listings')
-      .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
+      .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
       // 公開前は除外。売却済みの座標・物件IDは後段で必ず匿名化する。
       .not('latitude', 'is', null)
@@ -2705,6 +2705,7 @@ app.get('/api/public/map-properties', async (req, res) => {
       const group = soldAreas.get(key);
       if (group) {
         group.historical_count += 1;
+        group.historical_items.push({ price: p.sales_price || p.listing_price || null, area: p.property_type === '土地' ? p.land_area : p.property_type === 'マンション' ? p.building_area : (p.land_area || p.building_area), area_kind: p.property_type === '土地' || p.property_type === '戸建' || p.property_type === '戸建て' ? '土地面積' : '面積' });
         if (hasCoordinates && group.latitude == null) {
           group.latitude = coarseGrid(latValue);
           group.longitude = coarseGrid(lngValue);
@@ -2718,6 +2719,7 @@ app.get('/api/public/map-properties', async (req, res) => {
           longitude: hasCoordinates ? coarseGrid(lngValue) : null,
           images: [], is_clickable: false,
           historical_count: 1,
+          historical_items: [{ price: p.sales_price || p.listing_price || null, area: p.property_type === '土地' ? p.land_area : p.property_type === 'マンション' ? p.building_area : (p.land_area || p.building_area), area_kind: p.property_type === '土地' || p.property_type === '戸建' || p.property_type === '戸建て' ? '土地面積' : '面積' }],
         });
       }
     }
