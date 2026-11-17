@@ -58,7 +58,7 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
     markerColor: '#f44336', // 赤マーカー
   },
   sold: {
-    label: '成約済み',
+    label: '売却済み',
     color: '#fff',
     backgroundColor: '#9e9e9e', // グレー
     markerColor: '#9e9e9e', // グレーマーカー
@@ -73,6 +73,7 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
 
 // マーカーの色を取得
 const getMarkerColor = (atbbStatus: string): string => {
+  if (atbbStatus === '売却済み') return BADGE_CONFIGS.sold.markerColor;
   if (!atbbStatus || atbbStatus === '' || atbbStatus === '公開中') {
     return '#2196F3'; // 青（販売中物件）
   }
@@ -83,6 +84,7 @@ const getMarkerColor = (atbbStatus: string): string => {
 
 // バッジ設定を取得
 const getBadgeConfig = (atbbStatus: string): BadgeConfig | null => {
+  if (atbbStatus === '売却済み') return BADGE_CONFIGS.sold;
   if (!atbbStatus || atbbStatus === '') {
     return null;
   }
