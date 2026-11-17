@@ -57,7 +57,7 @@ const PublicPropertiesPage: React.FC = () => {
   // URLパラメータから初期値を取得
   const viewModeParam = searchParams.get('view');
   const [viewMode, setViewMode] = useState<'list' | 'map'>(
-    viewModeParam === 'map' || searchParams.get('listingStatus') === 'historical' ? 'map' : 'list'
+    viewModeParam === 'map' ? 'map' : 'list'
   );
   
   // 物件タイプフィルター状態
@@ -79,11 +79,10 @@ const PublicPropertiesPage: React.FC = () => {
     const updated = new URLSearchParams(searchParams);
     if (next === 'current') updated.delete('listingStatus');
     else updated.set('listingStatus', next);
-    if (next === 'historical') {
-      updated.set('view', 'map');
-      setViewMode('map');
-      setShouldScrollToMap(true);
-    }
+    // 販売状況を選び直した時は地図検索を解除する。
+    updated.delete('view');
+    setViewMode('list');
+    setShouldScrollToMap(false);
     setCurrentPage(1);
     setSearchParams(updated, { replace: true });
   };
@@ -427,8 +426,7 @@ const PublicPropertiesPage: React.FC = () => {
       newParams.delete('showPublicOnly');
     }
     
-    // 売却済みは地図表示専用。
-    if (viewMode === 'map' || listingStatus === 'historical') {
+    if (viewMode === 'map') {
       newParams.set('view', 'map');
     } else {
       newParams.delete('view');
@@ -460,6 +458,15 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
+    // 売却済みの詳細情報は通常の物件カードに公開しない。
+    if (listingStatus === 'historical' && viewMode === 'list') {
+      setInitialLoading(false);
+      setFilterLoading(false);
+      setProperties([]);
+      setPagination(null);
+      return;
+    }
+
     // 地図ビュー中はリスト用データ取得をスキップ
     if (viewMode === 'map') {
       // 直接 ?view=map で開いた場合にも全画面ローディングを解除する。
@@ -489,7 +496,7 @@ const PublicPropertiesPage: React.FC = () => {
     }
     
     fetchProperties();
-  }, [currentPage, searchParams, isStateRestored, viewMode]);
+  }, [currentPage, searchParams, isStateRestored, viewMode, listingStatus]);
   
   // 全件取得は地図ビューの時のみ。町名の変更ではデータを再取得せず地図の中心だけ動かす。
   const mapDataFilterKey = [
@@ -858,7 +865,7 @@ const PublicPropertiesPage: React.FC = () => {
                     }}
                     onClick={() => {
                       if (viewMode === 'map') {
-                        if (listingStatus === 'historical') { setShouldScrollToMap(true); return; }
+                        
                         // 地図検索中のボタンをもう一度押したら解除してリスト表示へ戻す。
                         mapFetchAbortControllerRef.current?.abort();
                         mapFetchAbortControllerRef.current = null;
@@ -876,7 +883,7 @@ const PublicPropertiesPage: React.FC = () => {
                       setShouldScrollToMap(true);
                     }}
                   >
-                    {listingStatus === 'historical' ? '✓ 売却済みを地図で表示' : viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
+                    {viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
                   </Button>
                   )}
                 />
@@ -1032,7 +1039,7 @@ const PublicPropertiesPage: React.FC = () => {
         )}
         
         {/* 地図モード時はリスト表示に戻るボタンを常に表示（物件0件でも） */}
-        {viewMode === 'map' && listingStatus !== 'historical' && (
+        {viewMode === 'map' && (
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="outlined"
@@ -1100,6 +1107,16 @@ const PublicPropertiesPage: React.FC = () => {
               />
             )}
           </Box>
+        ) : listingStatus === 'historical' ? (
+          <Paper sx={{ py: 6, px: 3, textAlign: 'center' }}>
+            <Typography variant="h6" fontWeight={700}>売却済み物件を地図で探す</Typography>
+            <Typography color="text.secondary" sx={{ mt: 1 }}>
+              上の検索欄に町名を入力して検索すると、その周辺の売却済み物件を地図上で確認できます。
+            </Typography>
+            <Button variant="contained" startIcon={<LocationOnIcon />} sx={{ mt: 3 }} onClick={() => { setViewMode('map'); setShouldScrollToMap(true); }}>
+              地図で検索
+            </Button>
+          </Paper>
         ) : (
           /* リストモード */
           <>
