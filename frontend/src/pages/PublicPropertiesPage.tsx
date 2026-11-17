@@ -79,7 +79,6 @@ const PublicPropertiesPage: React.FC = () => {
     const updated = new URLSearchParams(searchParams);
     if (next === 'current') updated.delete('listingStatus');
     else updated.set('listingStatus', next);
-    if (next !== 'current') setViewMode('list'); // 非公開物件の正確な位置を地図へ表示しない
     setCurrentPage(1);
     setSearchParams(updated, { replace: true });
   };
@@ -640,6 +639,8 @@ const PublicPropertiesPage: React.FC = () => {
       if (minPriceParam) params.set('minPrice', minPriceParam);
       if (maxPriceParam) params.set('maxPrice', maxPriceParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
+      const mapListingStatus = searchParams.get('listingStatus');
+      if (mapListingStatus === 'historical' || mapListingStatus === 'all') params.set('listingStatus', mapListingStatus);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const queryString = params.toString();
@@ -818,6 +819,38 @@ const PublicPropertiesPage: React.FC = () => {
                   onChange={setSearchQuery}
                   onSearch={handleSearch}
                   placeholder="所在地で検索"
+                  afterSearchButton={(
+                  <Button
+                    variant={viewMode === 'map' ? "contained" : "outlined"}
+                    startIcon={<LocationOnIcon />}
+                    sx={{
+                      height: '48px',
+                      minWidth: '140px',
+                      width: 'auto',
+                      borderColor: '#4CAF50',
+                      color: viewMode === 'map' ? '#ffffff' : '#4CAF50',
+                      backgroundColor: viewMode === 'map' ? '#4CAF50' : 'transparent',
+                      fontWeight: 'bold',
+                      '&:hover': {
+                        borderColor: '#45A049',
+                        backgroundColor: viewMode === 'map' ? '#45A049' : '#F1F8F4',
+                      },
+                    }}
+                    onClick={() => {
+                      // 進行中のリスト用フェッチをキャンセル
+                      if (listFetchAbortControllerRef.current) {
+                        listFetchAbortControllerRef.current.abort();
+                        listFetchAbortControllerRef.current = null;
+                      }
+                      setInitialLoading(false);
+                      setFilterLoading(false);
+                      setViewMode('map');
+                      setShouldScrollToMap(true); // スクロールフラグを立てる
+                    }}
+                  >
+                    {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
+                  </Button>
+                  )}
                 />
                 {searchType && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -825,37 +858,7 @@ const PublicPropertiesPage: React.FC = () => {
                   </Typography>
                 )}
               </Box>
-              <Button
-                variant={viewMode === 'map' ? "contained" : "outlined"}
-                disabled={listingStatus !== 'current'}
-                startIcon={<LocationOnIcon />}
-                sx={{
-                  height: '56px',
-                  minWidth: { xs: 'auto', sm: '140px' }, // スマホは自動、タブレット以上は140px
-                  width: { xs: '100%', sm: 'auto' }, // スマホは幅いっぱい
-                  borderColor: '#4CAF50',
-                  color: viewMode === 'map' ? '#ffffff' : '#4CAF50',
-                  backgroundColor: viewMode === 'map' ? '#4CAF50' : 'transparent',
-                  fontWeight: 'bold',
-                  '&:hover': {
-                    borderColor: '#45A049',
-                    backgroundColor: viewMode === 'map' ? '#45A049' : '#F1F8F4',
-                  },
-                }}
-                onClick={() => {
-                  // 進行中のリスト用フェッチをキャンセル
-                  if (listFetchAbortControllerRef.current) {
-                    listFetchAbortControllerRef.current.abort();
-                    listFetchAbortControllerRef.current = null;
-                  }
-                  setInitialLoading(false);
-                  setFilterLoading(false);
-                  setViewMode('map');
-                  setShouldScrollToMap(true); // スクロールフラグを立てる
-                }}
-              >
-                {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
-              </Button>
+
             </Box>
         </Container>
       </Paper>
@@ -877,6 +880,8 @@ const PublicPropertiesPage: React.FC = () => {
           <Box sx={{ p: 3 }}>
           
           <Stack spacing={3} sx={{ mt: 2 }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ md: 'flex-start' }}>
+              <Box>
             {/* 物件タイプフィルター */}
             <PropertyTypeFilterButtons
               selectedTypes={selectedTypes}
@@ -884,6 +889,33 @@ const PublicPropertiesPage: React.FC = () => {
               disabled={filterLoading}
             />
             
+              </Box>
+            {/* 売却済み・非公開を含む履歴検索 */}
+            <Box>
+              <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
+                販売状況
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {([
+                  ['current', '販売中'],
+                  ['historical', '売却済み'],
+                  ['all', 'すべて'],
+                ] as const).map(([value, label]) => (
+                  <Button key={value} size="small" variant={listingStatus === value ? 'contained' : 'outlined'}
+                    onClick={() => chooseListingStatus(value)} disabled={filterLoading}
+                    sx={{ fontWeight: 600 }}>{label}</Button>
+                ))}
+              </Stack>
+              {listingStatus !== 'current' && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
+                  ※ 物件リストで「非公開」の物件は「売却済み」として表示しています。所在地は町名・丁目まで表示し、
+                  物件番号・詳細リンク・写真・正確なピン位置は公開しません。表示価格は成約価格とは限りません。
+                </Typography>
+              )}
+            </Box>
+            
+            </Stack>
+
             {/* 価格帯フィルター */}
             <Box>
               <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
@@ -938,30 +970,6 @@ const PublicPropertiesPage: React.FC = () => {
                   inputProps={{ min: 0, step: 1 }}
                 />
               </Stack>
-            </Box>
-            
-            {/* 売却済み・非公開を含む履歴検索 */}
-            <Box>
-              <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
-                販売状況
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {([
-                  ['current', '販売中'],
-                  ['historical', '売却済み'],
-                  ['all', 'すべて'],
-                ] as const).map(([value, label]) => (
-                  <Button key={value} size="small" variant={listingStatus === value ? 'contained' : 'outlined'}
-                    onClick={() => chooseListingStatus(value)} disabled={filterLoading}
-                    sx={{ fontWeight: 600 }}>{label}</Button>
-                ))}
-              </Stack>
-              {listingStatus !== 'current' && (
-                <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
-                  ※ 物件リストで「非公開」の物件は「売却済み」として表示しています。所在地は町名・丁目まで表示し、
-                  物件番号・詳細リンク・写真・正確なピン位置は公開しません。表示価格は成約価格とは限りません。
-                </Typography>
-              )}
             </Box>
             
             {/* すべての条件をクリアボタン */}
