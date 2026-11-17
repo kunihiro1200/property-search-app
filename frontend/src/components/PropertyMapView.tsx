@@ -8,6 +8,7 @@ import { mapAtbbStatusToDisplayStatus, StatusType } from '../utils/atbbStatusDis
 
 interface PropertyMapViewProps {
   properties: PublicProperty[];
+  nearbyLocation?: string;
   isLoaded: boolean;
   loadError: Error | undefined;
   // ナビゲーション状態（一覧画面から渡される）
@@ -221,7 +222,7 @@ async function geocodeAddress(address: string, propertyNumber: string): Promise<
 /**
  * 物件を地図上に表示するコンポーネント
  */
-const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded, loadError, navigationState, detailBasePath = '/public/properties', defaultMapCenter }) => {
+const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLocation, isLoaded, loadError, navigationState, detailBasePath = '/public/properties', defaultMapCenter }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedProperty, setSelectedProperty] = useState<PropertyWithCoordinates | null>(null);
@@ -262,12 +263,25 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
         }));
         if (canceled) return;
         resolved.push(...results.filter((p): p is PropertyWithCoordinates => p !== null));
-        setPropertiesWithCoords([...withCoordinates, ...resolved]);
       }
+      if (!canceled) setPropertiesWithCoords([...withCoordinates, ...resolved]);
     };
     void resolveMissing();
     return () => { canceled = true; };
   }, [properties, isLoaded]);
+
+  // 地名検索は入力された町名周辺へ移動。個別物件の正確な場所は示さない。
+  useEffect(() => {
+    if (!map || !isLoaded || !nearbyLocation?.trim()) return;
+    let canceled = false;
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: `${nearbyLocation.trim()}, 大分県, 日本` }).then(result => {
+      if (canceled || !result.results[0]) return;
+      map.panTo(result.results[0].geometry.location);
+      map.setZoom(13);
+    }).catch(() => {});
+    return () => { canceled = true; };
+  }, [map, isLoaded, nearbyLocation]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
@@ -360,6 +374,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
           title: property.is_clickable === false ? `売却済み・概略エリア（${(property as any).historical_count || 1}件）` : property.property_number,
           icon: svgMarker,
           zIndex: zIndex,
+          animation: null, // 売却済み・販売中ともマーカーは点滅させない
         });
 
         // マーカークリックイベント
@@ -597,6 +612,17 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {selectedProperty.display_address || selectedProperty.address}
               </Typography>
+              {selectedProperty.is_clickable === false && (
+                <Box sx={{ mb: 1, maxHeight: 280, overflowY: 'auto' }}>
+                  <Typography variant="caption" color="text.secondary">掲載時価格の参考情報（実際の成約価格ではありません）</Typography>
+                  {((selectedProperty as any).historical_items || []).map((item: any, index: number) => (
+                    <Box key={index} sx={{ py: 0.7, borderBottom: '1px solid #eee' }}>
+                      <Typography variant="body2" fontWeight="bold">{item.price ? formatPrice(item.price) : '価格非掲載'}</Typography>
+                      <Typography variant="caption">{item.area_kind || '面積'}：{item.area ? `${Number(item.area).toLocaleString()}㎡` : '不明'}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
               {selectedProperty.is_clickable !== false && <Button
                 variant="contained"
                 size="small"

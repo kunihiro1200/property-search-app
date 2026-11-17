@@ -48,7 +48,7 @@ const PublicPropertiesPage: React.FC = () => {
   // 初回ロードとフィルターロードを分離
   // 詳細画面から戻ってきた場合（sessionStorageに状態がある）はフルスクリーンローディングをスキップ
   const isReturningFromDetail = useRef(!!sessionStorage.getItem('publicPropertiesNavigationState'));
-  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current && searchParams.get('view') !== 'map');
+  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current && searchParams.get('view') !== 'map' && searchParams.get('listingStatus') !== 'historical');
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,7 +57,7 @@ const PublicPropertiesPage: React.FC = () => {
   // URLパラメータから初期値を取得
   const viewModeParam = searchParams.get('view');
   const [viewMode, setViewMode] = useState<'list' | 'map'>(
-    viewModeParam === 'map' ? 'map' : 'list'
+    viewModeParam === 'map' || searchParams.get('listingStatus') === 'historical' ? 'map' : 'list'
   );
   
   // 物件タイプフィルター状態
@@ -79,6 +79,11 @@ const PublicPropertiesPage: React.FC = () => {
     const updated = new URLSearchParams(searchParams);
     if (next === 'current') updated.delete('listingStatus');
     else updated.set('listingStatus', next);
+    if (next === 'historical') {
+      updated.set('view', 'map');
+      setViewMode('map');
+      setShouldScrollToMap(true);
+    }
     setCurrentPage(1);
     setSearchParams(updated, { replace: true });
   };
@@ -112,6 +117,12 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 検索実行後に物件グリッドまでスクロール
   const handleSearch = () => {
+    if (listingStatus === 'historical') {
+      setViewMode('map');
+      setShouldScrollToMap(true);
+      if (searchQuery.trim()) originalHandleSearch();
+      return;
+    }
     // 検索クエリがある場合のみ、検索を実行
     if (searchQuery.trim()) {
       originalHandleSearch();
@@ -416,15 +427,15 @@ const PublicPropertiesPage: React.FC = () => {
       newParams.delete('showPublicOnly');
     }
     
-    // 表示モードをURLに反映
-    if (viewMode === 'map') {
+    // 売却済みは地図表示専用。
+    if (viewMode === 'map' || listingStatus === 'historical') {
       newParams.set('view', 'map');
     } else {
       newParams.delete('view');
     }
     
     setSearchParams(newParams, { replace: true });
-  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
+  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode, listingStatus]);
   
   // 前回の viewMode を追跡（map→list 切り替え時の再取得を防ぐ）
   const prevViewModeRef = useRef<'list' | 'map'>('list');
@@ -840,6 +851,7 @@ const PublicPropertiesPage: React.FC = () => {
                     }}
                     onClick={() => {
                       if (viewMode === 'map') {
+                        if (listingStatus === 'historical') { setShouldScrollToMap(true); return; }
                         // 地図検索中のボタンをもう一度押したら解除してリスト表示へ戻す。
                         mapFetchAbortControllerRef.current?.abort();
                         mapFetchAbortControllerRef.current = null;
@@ -857,7 +869,7 @@ const PublicPropertiesPage: React.FC = () => {
                       setShouldScrollToMap(true);
                     }}
                   >
-                    {viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
+                    {listingStatus === 'historical' ? '✓ 売却済みを地図で表示' : viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
                   </Button>
                   )}
                 />
@@ -1013,7 +1025,7 @@ const PublicPropertiesPage: React.FC = () => {
         )}
         
         {/* 地図モード時はリスト表示に戻るボタンを常に表示（物件0件でも） */}
-        {viewMode === 'map' && (
+        {viewMode === 'map' && listingStatus !== 'historical' && (
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               variant="outlined"
@@ -1057,6 +1069,7 @@ const PublicPropertiesPage: React.FC = () => {
             ) : (
               <PropertyMapView 
                 properties={allProperties} 
+                 nearbyLocation={listingStatus === 'historical' ? (searchParams.get('location') || searchQuery) : undefined}
                 isLoaded={isMapLoaded} 
                 loadError={mapLoadError}
                 navigationState={{
