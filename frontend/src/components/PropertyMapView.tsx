@@ -229,25 +229,44 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
-  // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
+  // 販売中は正確な座標、売却済みは町名・丁目の代表点のみ使用する。
+  // 売却済みの住所はAPI側で匿名化済み。正確な住所をGeocoderへ渡さない。
   useEffect(() => {
+    let canceled = false;
     if (!isLoaded || properties.length === 0) {
       setPropertiesWithCoords([]);
       return;
     }
+    const withCoordinates = properties.filter(p =>
+      Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude)) &&
+      p.latitude != null && p.longitude != null
+    ).map(p => ({ ...p, lat: Number(p.latitude), lng: Number(p.longitude) }));
+    setPropertiesWithCoords(withCoordinates);
+    const missing = properties.filter(p => p.is_clickable === false &&
+      (p.latitude == null || p.longitude == null) && p.address && p.address !== '所在地非公開');
+    if (missing.length === 0) return;
 
-    // データベースに座標がある物件のみをフィルタリング（高速化）
-    const propertiesWithCoordinates: PropertyWithCoordinates[] = properties
-      .filter(property => property.latitude && property.longitude)
-      .map(property => ({
-        ...property,
-        lat: property.latitude,
-        lng: property.longitude,
-      }));
-    
-    console.log(`PropertyMapView: ${propertiesWithCoordinates.length}/${properties.length} properties have coordinates`);
-    
-    setPropertiesWithCoords(propertiesWithCoordinates);
+    const geocoder = new google.maps.Geocoder();
+    const resolveMissing = async () => {
+      const resolved: PropertyWithCoordinates[] = [];
+      for (let i = 0; i < missing.length && !canceled; i += 4) {
+        const batch = missing.slice(i, i + 4);
+        const results = await Promise.all(batch.map(async property => {
+          try {
+            const result = await geocoder.geocode({ address: property.address + ', 日本' });
+            const point = result.results[0]?.geometry?.location;
+            return point ? { ...property, lat: point.lat(), lng: point.lng() } : null;
+          } catch {
+            return null;
+          }
+        }));
+        if (canceled) return;
+        resolved.push(...results.filter((p): p is PropertyWithCoordinates => p !== null));
+        setPropertiesWithCoords([...withCoordinates, ...resolved]);
+      }
+    };
+    void resolveMissing();
+    return () => { canceled = true; };
   }, [properties, isLoaded]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -505,19 +524,6 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
             }}
           />
           <Typography variant="body2">公開前情報</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Box
-            sx={{
-              width: 16,
-              height: 16,
-              borderRadius: '50%',
-              backgroundColor: '#f44336',
-              border: '2px solid #fff',
-              boxShadow: 1,
-            }}
-          />
-          <Typography variant="body2">非公開物件</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Box
