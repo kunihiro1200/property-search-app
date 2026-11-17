@@ -8,6 +8,7 @@ interface UnifiedSearchBarProps {
   onSearch: () => void;
   placeholder?: string;
   className?: string;
+  afterSearchButton?: React.ReactNode;
 }
 
 export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
@@ -16,6 +17,7 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
   onSearch,
   placeholder = '所在地で検索',
   className = '',
+  afterSearchButton,
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -56,6 +58,7 @@ export const UnifiedSearchBar: React.FC<UnifiedSearchBarProps> = ({
           <Search size={20} />
           <span className="search-button-text">検索</span>
         </button>
+        {afterSearchButton}
       </div>
     </form>
   );

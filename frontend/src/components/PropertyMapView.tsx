@@ -58,7 +58,7 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
     markerColor: '#f44336', // 赤マーカー
   },
   sold: {
-    label: '成約済み',
+    label: '売却済み',
     color: '#fff',
     backgroundColor: '#9e9e9e', // グレー
     markerColor: '#9e9e9e', // グレーマーカー
@@ -73,6 +73,7 @@ const BADGE_CONFIGS: Record<StatusType, BadgeConfig> = {
 
 // マーカーの色を取得
 const getMarkerColor = (atbbStatus: string): string => {
+  if (atbbStatus === '売却済み') return BADGE_CONFIGS.sold.markerColor;
   if (!atbbStatus || atbbStatus === '' || atbbStatus === '公開中') {
     return '#2196F3'; // 青（販売中物件）
   }
@@ -83,6 +84,7 @@ const getMarkerColor = (atbbStatus: string): string => {
 
 // バッジ設定を取得
 const getBadgeConfig = (atbbStatus: string): BadgeConfig | null => {
+  if (atbbStatus === '売却済み') return BADGE_CONFIGS.sold;
   if (!atbbStatus || atbbStatus === '') {
     return null;
   }
@@ -230,6 +232,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
   // 物件の座標を取得（データベースから座標がある物件のみ - 高速）
   useEffect(() => {
     if (!isLoaded || properties.length === 0) {
+      setPropertiesWithCoords([]);
       return;
     }
 
@@ -260,7 +263,9 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
 
   // 座標付き物件が更新されたらマーカーを作成
   useEffect(() => {
-    if (!map || propertiesWithCoords.length === 0) {
+    if (!map) return;
+    if (propertiesWithCoords.length === 0) {
+      markers.forEach(marker => marker.setMap(null));
       return;
     }
 
@@ -333,7 +338,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
         const marker = new google.maps.Marker({
           position: { lat: adjustedLat, lng: adjustedLng },
           map: map,
-          title: property.property_number,
+          title: property.is_clickable === false ? `売却済み・概略エリア（${(property as any).historical_count || 1}件）` : property.property_number,
           icon: svgMarker,
           zIndex: zIndex,
         });
@@ -525,7 +530,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
               boxShadow: 1,
             }}
           />
-          <Typography variant="body2">成約済み</Typography>
+          <Typography variant="body2">売却済み（概略位置）</Typography>
         </Box>
       </Paper>
 
@@ -576,14 +581,17 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
               
               <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
                 {getPropertyTypeLabel(selectedProperty.property_type)}
+                {selectedProperty.is_clickable === false && `・${(selectedProperty as any).historical_count || 1}件`}
               </Typography>
-              <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
-                {formatPrice(selectedProperty.price)}
-              </Typography>
+              {selectedProperty.is_clickable !== false && (
+                <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                  {formatPrice(selectedProperty.price)}
+                </Typography>
+              )}
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {selectedProperty.display_address || selectedProperty.address}
               </Typography>
-              <Button
+              {selectedProperty.is_clickable !== false && <Button
                 variant="contained"
                 size="small"
                 fullWidth
@@ -607,7 +615,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, isLoaded,
                 }}
               >
                 詳細を見る
-              </Button>
+              </Button>}
             </Box>
           </InfoWindow>
         )}
