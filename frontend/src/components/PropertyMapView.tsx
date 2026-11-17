@@ -270,18 +270,51 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
     return () => { canceled = true; };
   }, [properties, isLoaded]);
 
-  // 地名検索は入力された町名周辺へ移動。個別物件の正確な場所は示さない。
+  // 地名検索は町名などの曖昧な入力にも対応する。売却済みの正確な座標は利用しない。
   useEffect(() => {
     if (!map || !isLoaded || !nearbyLocation?.trim()) return;
     let canceled = false;
+    const keyword = nearbyLocation.trim().replace(/^(大分県)/, '');
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: `${nearbyLocation.trim()}, 大分県, 日本` }).then(result => {
-      if (canceled || !result.results[0]) return;
-      map.panTo(result.results[0].geometry.location);
-      map.setZoom(13);
-    }).catch(() => {});
+    const candidates = Array.from(new Set([
+      `大分県大分市${keyword}`,
+      `大分県${keyword}`,
+      keyword,
+    ]));
+    const focusNearby = async () => {
+      for (const address of candidates) {
+        try {
+          const result = await geocoder.geocode({ address, componentRestrictions: { country: 'JP' } });
+          const found = result.results[0];
+          if (canceled) return;
+          if (found) {
+            map.panTo(found.geometry.location);
+            map.setZoom(13);
+            return;
+          }
+        } catch {
+          // 一つの地名候補が見つからなくても次の候補を試す。
+        }
+      }
+      // Google側で地名を解決できない場合は、町名の一致する概略ピンに寄せる。
+      const nearby = propertiesWithCoords.filter(p =>
+        (p.address || '').includes(keyword) && p.lat != null && p.lng != null
+      );
+      if (!canceled && nearby.length) {
+        const bounds = new google.maps.LatLngBounds();
+        nearby.forEach(p => bounds.extend({ lat: p.lat!, lng: p.lng! }));
+        if (nearby.length === 1) {
+          map.panTo({ lat: nearby[0].lat!, lng: nearby[0].lng! });
+          map.setZoom(13);
+        } else {
+          map.fitBounds(bounds, 80);
+          if ((map.getZoom() || 0) > 14) map.setZoom(14);
+        }
+      }
+    };
+    void focusNearby();
     return () => { canceled = true; };
-  }, [map, isLoaded, nearbyLocation]);
+  }, [map, isLoaded, nearbyLocation, propertiesWithCoords]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
