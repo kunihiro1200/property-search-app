@@ -491,8 +491,15 @@ const PublicPropertiesPage: React.FC = () => {
     fetchProperties();
   }, [currentPage, searchParams, isStateRestored, viewMode]);
   
-  // 全件取得は地図ビューの時のみ（リストビューでは不要）
-  // searchParams変更時はデバウンス（400ms）で重複リクエストを防ぐ
+  // 全件取得は地図ビューの時のみ。町名の変更ではデータを再取得せず地図の中心だけ動かす。
+  const mapDataFilterKey = [
+    searchParams.get('types') || '',
+    searchParams.get('minPrice') || '',
+    searchParams.get('maxPrice') || '',
+    searchParams.get('showPublicOnly') || '',
+    searchParams.get('listingStatus') || '',
+  ].join('|');
+  // 絞り込み条件が変わった場合にだけ、地図用データを再取得する。
   useEffect(() => {
     // 状態復元が完了するまで待つ
     if (!isStateRestored) {
@@ -519,7 +526,7 @@ const PublicPropertiesPage: React.FC = () => {
         clearTimeout(mapFetchTimerRef.current);
       }
     };
-  }, [searchParams, isStateRestored, viewMode]);
+  }, [mapDataFilterKey, isStateRestored, viewMode]);
 
   const fetchProperties = async () => {
     // 前回のリクエストをキャンセル
