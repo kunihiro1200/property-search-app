@@ -881,7 +881,7 @@ const PublicPropertiesPage: React.FC = () => {
           
           <Stack spacing={3} sx={{ mt: 2 }}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ md: 'flex-start' }}>
-              <Box>
+              <Box sx={{ flexShrink: 0, '& .MuiStack-root': { flexWrap: { md: 'nowrap' } }, '& .MuiButton-root': { whiteSpace: 'nowrap' } }}>
             {/* 物件タイプフィルター */}
             <PropertyTypeFilterButtons
               selectedTypes={selectedTypes}
@@ -895,7 +895,7 @@ const PublicPropertiesPage: React.FC = () => {
               <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
                 販売状況
               </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" spacing={1} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }} useFlexGap>
                 {([
                   ['current', '販売中'],
                   ['historical', '売却済み'],
@@ -906,12 +906,6 @@ const PublicPropertiesPage: React.FC = () => {
                     sx={{ fontWeight: 600 }}>{label}</Button>
                 ))}
               </Stack>
-              {listingStatus !== 'current' && (
-                <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
-                  ※ 物件リストで「非公開」の物件は「売却済み」として表示しています。所在地は町名・丁目まで表示し、
-                  物件番号・詳細リンク・写真・正確なピン位置は公開しません。表示価格は成約価格とは限りません。
-                </Typography>
-              )}
             </Box>
             
             </Stack>
