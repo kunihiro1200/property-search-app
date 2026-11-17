@@ -48,7 +48,7 @@ const PublicPropertiesPage: React.FC = () => {
   // 初回ロードとフィルターロードを分離
   // 詳細画面から戻ってきた場合（sessionStorageに状態がある）はフルスクリーンローディングをスキップ
   const isReturningFromDetail = useRef(!!sessionStorage.getItem('publicPropertiesNavigationState'));
-  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current);
+  const [initialLoading, setInitialLoading] = useState(!isReturningFromDetail.current && searchParams.get('view') !== 'map');
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -451,6 +451,8 @@ const PublicPropertiesPage: React.FC = () => {
     
     // 地図ビュー中はリスト用データ取得をスキップ
     if (viewMode === 'map') {
+      // 直接 ?view=map で開いた場合にも全画面ローディングを解除する。
+      setInitialLoading(false);
       // 地図ビュー中の searchParams 変化を追跡（view パラメータは除外）
       const currentParams = getFilterOnlyParams(searchParams);
       if (prevViewModeRef.current === 'map' && searchParamsDuringMapRef.current !== currentParams) {
