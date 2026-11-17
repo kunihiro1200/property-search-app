@@ -218,6 +218,8 @@ app.get('/api/public/properties', async (req, res) => {
     const minAge = req.query.minAge ? parseInt(req.query.minAge as string) : undefined;
     const maxAge = req.query.maxAge ? parseInt(req.query.maxAge as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
+    const listingStatus = ['current', 'historical', 'all'].includes(String(req.query.listingStatus))
+      ? req.query.listingStatus as 'current' | 'historical' | 'all' : 'current';
     const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
     const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
     
@@ -264,6 +266,7 @@ app.get('/api/public/properties', async (req, res) => {
       propertyNumber,
       buildingAgeRange,
       showPublicOnly,
+      listingStatus,
       withCoordinates, // 座標がある物件のみ取得
       skipImages, // 画像取得をスキップ（地図ビュー用）
     });
