@@ -2546,8 +2546,7 @@ app.get('/api/kujira/map-properties', async (req, res) => {
       .from('property_listings')
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
-      // Public maps must hide non-public, sold and pre-release inventory.
-      .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
+      // 公開前は除外。売却済みの座標・物件IDは後段で必ず匿名化する。
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       // FI物件のみ（大文字小文字を区別しない）
@@ -2613,6 +2612,7 @@ app.get('/api/public/map-properties', async (req, res) => {
     const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
+    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'all' ? 'all' : 'current';
 
     // 地図表示に必要な最小限のカラムのみ取得
     let query = supabase
@@ -2625,6 +2625,15 @@ app.get('/api/public/map-properties', async (req, res) => {
       .not('longitude', 'is', null)
       // いふうサイトではFI物件を除外（くじら不動産サイト専用）
       .not('property_number', 'ilike', 'FI%');
+
+    if (listingStatus === 'current') {
+      query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
+    } else if (listingStatus === 'historical') {
+      query = query.not('atbb_status', 'is', null)
+        .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
+    } else {
+      query = query.not('atbb_status', 'in', '("公開前")');
+    }
 
     if (types) {
       const typeList = types.split(',');
@@ -2654,29 +2663,56 @@ app.get('/api/public/map-properties', async (req, res) => {
       query = query.not('atbb_status', 'is', null).ilike('atbb_status', '%公開中%');
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Supabase query error: ${error.message}`);
+    // Supabaseの既定1000件上限を超える履歴も取得する。
+    const rows: any[] = [];
+    for (let offset = 0; offset < 10000; offset += 1000) {
+      const { data, error } = await query.range(offset, offset + 999);
+      if (error) throw new Error(`Supabase query error: ${error.message}`);
+      rows.push(...(data || []));
+      if (!data || data.length < 1000) break;
     }
 
-    // 最小限の変換のみ（画像取得なし）
     const typeMapping: Record<string, string> = {
       '戸建': 'detached_house', '戸建て': 'detached_house',
       'マンション': 'apartment', '土地': 'land',
+      '収益物件': 'income',
     };
-
-    const properties = (data || []).map((p) => ({
-      id: p.id,
-      property_number: p.property_number,
-      property_type: typeMapping[p.property_type] || p.property_type,
-      address: p.address,
-      price: p.sales_price || p.listing_price || 0,
-      atbb_status: p.atbb_status,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      images: [],
-    }));
+    const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中']);
+    // 約5kmのエリア代表点。非公開・売却済みの正確なピン・ID・住所は返さない。
+    const coarseGrid = (coordinate: number) => Math.round(coordinate / 0.05) * 0.05;
+    const soldAreas = new Map<string, any>();
+    const properties: any[] = [];
+    for (const p of rows) {
+      const isCurrent = currentStatuses.has(String(p.atbb_status || ''));
+      if (isCurrent) {
+        properties.push({
+          id: p.id, property_number: p.property_number,
+          property_type: typeMapping[p.property_type] || p.property_type,
+          address: p.address, price: p.sales_price || p.listing_price || 0,
+          atbb_status: p.atbb_status, latitude: p.latitude, longitude: p.longitude,
+          images: [], is_clickable: true,
+        });
+        continue;
+      }
+      if (!Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) continue;
+      const lat = coarseGrid(p.latitude);
+      const lng = coarseGrid(p.longitude);
+      const kind = typeMapping[p.property_type] || p.property_type;
+      const key = `${lat}:${lng}:${kind}`;
+      const group = soldAreas.get(key);
+      if (group) {
+        group.historical_count += 1;
+      } else {
+        soldAreas.set(key, {
+          id: `historical-area-${soldAreas.size}`, property_number: '',
+          property_type: kind, address: '所在地は概略エリアのみ表示',
+          price: 0, atbb_status: '売却済み', badge_type: 'sold',
+          latitude: lat, longitude: lng, images: [], is_clickable: false,
+          historical_count: 1,
+        });
+      }
+    }
+    properties.push(...soldAreas.values());
 
     res.json({ success: true, properties });
   } catch (error: any) {
