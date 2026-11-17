@@ -839,18 +839,25 @@ const PublicPropertiesPage: React.FC = () => {
                       },
                     }}
                     onClick={() => {
-                      // 進行中のリスト用フェッチをキャンセル
-                      if (listFetchAbortControllerRef.current) {
-                        listFetchAbortControllerRef.current.abort();
-                        listFetchAbortControllerRef.current = null;
+                      if (viewMode === 'map') {
+                        // 地図検索中のボタンをもう一度押したら解除してリスト表示へ戻す。
+                        mapFetchAbortControllerRef.current?.abort();
+                        mapFetchAbortControllerRef.current = null;
+                        if (mapFetchTimerRef.current) clearTimeout(mapFetchTimerRef.current);
+                        mapFetchTimerRef.current = null;
+                        setIsLoadingAllProperties(false);
+                        setViewMode('list');
+                        return;
                       }
+                      listFetchAbortControllerRef.current?.abort();
+                      listFetchAbortControllerRef.current = null;
                       setInitialLoading(false);
                       setFilterLoading(false);
                       setViewMode('map');
-                      setShouldScrollToMap(true); // スクロールフラグを立てる
+                      setShouldScrollToMap(true);
                     }}
                   >
-                    {viewMode === 'map' ? '✓ 地図で検索中' : '地図で検索'}
+                    {viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
                   </Button>
                   )}
                 />
