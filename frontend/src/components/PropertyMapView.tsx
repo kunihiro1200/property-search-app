@@ -229,6 +229,14 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [propertiesWithCoords, setPropertiesWithCoords] = useState<PropertyWithCoordinates[]>([]);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [visibleAreas, setVisibleAreas] = useState<PropertyWithCoordinates[]>([]);
+  const isSoldMap = properties.some(p => p.is_clickable === false) && properties.every(p => p.is_clickable === false);
+  const updateVisibleAreas = useCallback(() => {
+    if (!map) return;
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    setVisibleAreas(propertiesWithCoords.filter(p => p.lat != null && p.lng != null && bounds.contains({ lat: p.lat, lng: p.lng })));
+  }, [map, propertiesWithCoords]);
 
   // 販売中は正確な座標、売却済みは町名・丁目の代表点のみ使用する。
   // 売却済みの住所はAPI側で匿名化済み。正確な住所をGeocoderへ渡さない。
@@ -319,6 +327,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
   }, []);
+  useEffect(() => { updateVisibleAreas(); }, [updateVisibleAreas]);
 
   const onUnmount = useCallback(() => {
     // マーカーをクリーンアップ
@@ -589,14 +598,37 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
       </Paper>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        {propertiesWithCoords.length}件の物件を地図上に表示しています
+        {propertiesWithCoords.length}地点の物件情報を地図上に表示しています
       </Typography>
+      <Box sx={{ display: isSoldMap ? 'flex' : 'block', flexDirection: { xs: 'column', md: 'row' }, gap: 0, border: isSoldMap ? '1px solid #ddd' : 'none' }}>
+        {isSoldMap && (
+          <Box sx={{ width: { xs: '100%', md: 350 }, maxHeight: { xs: 280, md: 600 }, overflowY: 'auto', flexShrink: 0, bgcolor: '#fff', borderRight: { md: '1px solid #ddd' } }}>
+            <Box sx={{ p: 1.5, bgcolor: '#22415c', color: '#fff', position: 'sticky', top: 0, zIndex: 1 }}>
+              <Typography fontWeight="bold">周辺の売却済み物件</Typography>
+              <Typography variant="caption">地図内の{visibleAreas.length}地点・概略位置</Typography>
+            </Box>
+            {visibleAreas.slice(0, 200).map(p => (
+              <Box key={p.id} onClick={() => { setSelectedProperty(p); if (p.lat != null && p.lng != null) { map?.panTo({ lat: p.lat, lng: p.lng }); if ((map?.getZoom() || 0) < 13) map?.setZoom(13); } }} sx={{ px: 1.5, py: 1.25, cursor: 'pointer', borderBottom: '1px solid #e6e6e6', bgcolor: selectedProperty?.id === p.id ? '#fff6df' : '#fff', '&:hover': { bgcolor: '#f0f7fc' } }}>
+                <Typography fontWeight="bold" variant="body2">{p.address}　{getPropertyTypeLabel(p.property_type)}</Typography>
+                <Typography variant="caption" color="text.secondary">売却済み・{(p as any).historical_count || 1}件</Typography>
+                {((p as any).historical_items || []).slice(0, 3).map((item: any, i: number) => (
+                  <Typography key={i} variant="body2" sx={{ color: '#bd3535' }}>
+                    {item.price ? formatPrice(item.price) : '価格非掲載'}　{item.area ? `${Number(item.area).toLocaleString()}㎡` : '面積不明'}
+                  </Typography>
+                ))}
+              </Box>
+            ))}
+            {visibleAreas.length === 0 && <Typography sx={{ p: 2 }} color="text.secondary">この地図範囲に表示できる物件はありません。地図を移動・縮小してください。</Typography>}
+          </Box>
+        )}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={defaultMapCenter || defaultCenter}
         zoom={11}
         onLoad={onLoad}
         onUnmount={onUnmount}
+        onIdle={updateVisibleAreas}
         options={{
           zoomControl: true,
           streetViewControl: false,
@@ -685,6 +717,9 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
           </InfoWindow>
         )}
       </GoogleMap>
+        </Box>
+      </Box>
+      {isSoldMap && <Typography variant="caption" color="text.secondary">※ピンは概略位置です。表示価格は掲載時の参考情報で、実際の成約価格とは限りません。</Typography>}
     </Box>
   );
 };
