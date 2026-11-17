@@ -73,6 +73,16 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 公開中のみ表示フィルター状態（デフォルトで全物件を表示）
   const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
+  const listingStatus = searchParams.get('listingStatus') === 'historical' ? 'historical'
+    : searchParams.get('listingStatus') === 'all' ? 'all' : 'current';
+  const chooseListingStatus = (next: 'current' | 'historical' | 'all') => {
+    const updated = new URLSearchParams(searchParams);
+    if (next === 'current') updated.delete('listingStatus');
+    else updated.set('listingStatus', next);
+    if (next !== 'current') setViewMode('list'); // 非公開物件の正確な位置を地図へ表示しない
+    setCurrentPage(1);
+    setSearchParams(updated, { replace: true });
+  };
   
   // 初回ロード完了フラグ
   const isInitialLoadDone = useRef(false);
@@ -549,6 +559,8 @@ const PublicPropertiesPage: React.FC = () => {
       if (minAgeParam) params.set('minAge', minAgeParam);
       if (maxAgeParam) params.set('maxAge', maxAgeParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
+      const statusParam = searchParams.get('listingStatus');
+      if (statusParam === 'historical' || statusParam === 'all') params.set('listingStatus', statusParam);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
@@ -710,6 +722,7 @@ const PublicPropertiesPage: React.FC = () => {
       minAge !== '' ||
       maxAge !== '' ||
       showPublicOnly ||
+      listingStatus !== 'current' ||
       searchQuery.trim() !== ''
     );
   };
@@ -814,6 +827,7 @@ const PublicPropertiesPage: React.FC = () => {
               </Box>
               <Button
                 variant={viewMode === 'map' ? "contained" : "outlined"}
+                disabled={listingStatus !== 'current'}
                 startIcon={<LocationOnIcon />}
                 sx={{
                   height: '56px',
@@ -926,9 +940,28 @@ const PublicPropertiesPage: React.FC = () => {
               </Stack>
             </Box>
             
-            {/* 公開中の物件だけを掲載（サーバー側でも強制） */}
+            {/* 売却済み・非公開を含む履歴検索 */}
             <Box>
-              <Typography variant="body2" color="text.secondary">✓ 公開中の物件のみ掲載しています</Typography>
+              <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
+                販売状況
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {([
+                  ['current', '販売中'],
+                  ['historical', '売却済み・非公開'],
+                  ['all', 'すべて'],
+                ] as const).map(([value, label]) => (
+                  <Button key={value} size="small" variant={listingStatus === value ? 'contained' : 'outlined'}
+                    onClick={() => chooseListingStatus(value)} disabled={filterLoading}
+                    sx={{ fontWeight: 600 }}>{label}</Button>
+                ))}
+              </Stack>
+              {listingStatus !== 'current' && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
+                  ※ 非公開には未成約物件も含まれます。所在地は町名・丁目まで表示し、
+                  物件番号・詳細リンク・写真・正確なピン位置は公開しません。表示価格は成約価格とは限りません。
+                </Typography>
+              )}
             </Box>
             
             {/* すべての条件をクリアボタン */}
