@@ -482,7 +482,7 @@ export class PropertyListingService {
         land_area: property.land_area,
         building_area: property.building_area,
         construction_year_month: property.construction_year_month,
-        atbb_status: '成約済み', // 履歴一覧では非公開も売却済みとして統一表示
+        atbb_status: '売却済み', // 履歴一覧では非公開も売却済みとして統一表示
         badge_type: 'sold',
         is_clickable: false,
         images: [],
