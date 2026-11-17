@@ -296,6 +296,7 @@ export class PropertyListingService {
     propertyNumber?: string;  // NEW: 物件番号フィルター（部分一致）
     buildingAgeRange?: { min?: number; max?: number };  // NEW: 築年数フィルター
     showPublicOnly?: boolean;  // NEW: 公開中のみ表示フィルター
+    listingStatus?: 'current' | 'historical' | 'all';
     withCoordinates?: boolean;  // NEW: 座標がある物件のみ取得
     skipImages?: boolean;  // NEW: 画像取得をスキップ（地図ビュー用）
   } = {}) {
@@ -309,6 +310,7 @@ export class PropertyListingService {
       propertyNumber,  // NEW
       buildingAgeRange,  // NEW
       showPublicOnly = false,  // NEW
+      listingStatus = 'current',
       withCoordinates = false,  // NEW
       skipImages = false,  // NEW
     } = options;
@@ -320,10 +322,19 @@ export class PropertyListingService {
         .from('property_listings')
         .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, construction_year_month, image_url, storage_location, atbb_status, google_map_url, latitude, longitude, distribution_date, created_at', { count: 'exact' })
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
-        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN) // テスト用物件はお客様に見せない
-        // Public listings must never include private, pre-release or sold properties.
-        // Non-public detail URLs remain accessible through getPublicPropertyById/ByNumber.
-        .in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
+        .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN); // テスト用物件はお客様に見せない
+
+      // 明示的に選択した場合のみ非公開・成約物件を公開用に匿名化して検索する。
+      // 公開前は実績扱いせず、一覧には表示しない。
+      if (listingStatus === 'historical') {
+        query = query.not('property_number', 'ilike', 'FI%')
+          .not('atbb_status', 'is', null)
+          .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
+      } else if (listingStatus === 'all') {
+        query = query.not('atbb_status', 'in', '("公開前")');
+      } else {
+        query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
+      }
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -447,18 +458,49 @@ export class PropertyListingService {
       }
       
       // 手動指定されたメイン画像（失敗しても空Mapなので一覧は壊れない）
-      const mainImageMap = await this.getMainImageIds((data || []).map((p: any) => p.id));
+      const mainImageMap = listingStatus === 'current'
+        ? await this.getMainImageIds((data || []).map((p: any) => p.id))
+        : new Map<string, string>();
+
+      const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中']);
+      const maskHistoricalArea = (value: string): string => {
+        const address = value.replace(/〒?\\d{3}-?\\d{4}\\s*/, '').trim();
+        const chome = address.match(/^(.+?[０-９0-9一二三四五六七八九十]+丁目)/);
+        if (chome) return chome[1];
+        return address.replace(/[０-９0-9].*$/, '').replace(/(?:番地|地番|番|号|区画|号室).*$/, '').trim() || '所在地非公開';
+      };
+      const historicalSummary = (property: any, index: number) => ({
+        id: `historical-${offset + index}`,
+        property_number: '',
+        property_type: this.convertPropertyTypeToEnglish(property.property_type),
+        address: maskHistoricalArea(String(property.address || '')),
+        display_address: maskHistoricalArea(String(property.address || '')),
+        price: property.sales_price || property.listing_price || 0,
+        land_area: property.land_area,
+        building_area: property.building_area,
+        construction_year_month: property.construction_year_month,
+        atbb_status: property.atbb_status?.includes('非公開') ? '非公開' : '成約済み',
+        badge_type: 'sold',
+        is_clickable: false,
+        images: [],
+        storage_location: null,
+        main_image_id: null,
+        google_map_url: null,
+      });
 
       // 画像取得：image_url → storage_location
       // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
       const propertiesWithImages: any[] = [];
       
-      if (skipImages) {
+      if (skipImages || listingStatus !== 'current') {
         // 画像取得をスキップ（一覧ページ用）
         // storage_location は work_tasks から補完して folder-thumbnail 遅延ロードに使用
         console.log('[PropertyListingService] Skipping image fetching (skipImages=true), enriching storage_location from work_tasks');
         const skipImagesResults = await Promise.all(
-          (data || []).map(async (property) => {
+          (data || []).map(async (property, index) => {
+            if (!currentStatuses.has(String(property.atbb_status || ''))) {
+              return historicalSummary(property, index);
+            }
             const { price: _price, ...propertyWithoutPrice } = property;
             let storageLocation = property.storage_location;
 
