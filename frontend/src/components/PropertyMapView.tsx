@@ -613,7 +613,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
             }}
             onCloseClick={handleInfoWindowClose}
           >
-            <Box sx={{ maxWidth: 250 }}>
+            <Box sx={{ width: { xs: 250, sm: 320 }, maxWidth: 340, p: 0.5 }}>
               {/* バッジ表示 */}
               {(() => {
                 const badgeConfig = getBadgeConfig(selectedProperty.atbb_status);
@@ -633,25 +633,28 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
                 ) : null;
               })()}
               
-              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 0.5 }}>
+                {selectedProperty.is_clickable === false ? (selectedProperty.display_address || selectedProperty.address) : getPropertyTypeLabel(selectedProperty.property_type)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 {getPropertyTypeLabel(selectedProperty.property_type)}
-                {selectedProperty.is_clickable === false && `・${(selectedProperty as any).historical_count || 1}件`}
+                {selectedProperty.is_clickable === false && `・${(selectedProperty as any).historical_count || 1}件の参考情報`}
               </Typography>
               {selectedProperty.is_clickable !== false && (
                 <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
                   {formatPrice(selectedProperty.price)}
                 </Typography>
               )}
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {selectedProperty.is_clickable !== false && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {selectedProperty.display_address || selectedProperty.address}
-              </Typography>
+              </Typography>}
               {selectedProperty.is_clickable === false && (
-                <Box sx={{ mb: 1, maxHeight: 280, overflowY: 'auto' }}>
-                  <Typography variant="caption" color="text.secondary">掲載時価格の参考情報（実際の成約価格ではありません）</Typography>
+                <Box sx={{ mb: 1, maxHeight: 340, overflowY: 'auto' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>掲載時の参考価格・面積（成約価格とは限りません）</Typography>
                   {((selectedProperty as any).historical_items || []).map((item: any, index: number) => (
-                    <Box key={index} sx={{ py: 0.7, borderBottom: '1px solid #eee' }}>
-                      <Typography variant="body2" fontWeight="bold">{item.price ? formatPrice(item.price) : '価格非掲載'}</Typography>
-                      <Typography variant="caption">{item.area_kind || '面積'}：{item.area ? `${Number(item.area).toLocaleString()}㎡` : '不明'}</Typography>
+                    <Box key={index} sx={{ p: 1, mb: 0.75, border: '1px solid #e4e8ed', borderRadius: 1, bgcolor: '#f7f9fb' }}>
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#c43131' }}>{item.price ? formatPrice(item.price) : '価格非掲載'}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.area_kind || '面積'}：{item.area ? `${Number(item.area).toLocaleString()}㎡` : '不明'}</Typography>
                     </Box>
                   ))}
                 </Box>
