@@ -326,9 +326,12 @@ export class PropertyListingService {
 
       // 明示的に選択した場合のみ非公開・成約物件を公開用に匿名化して検索する。
       // 公開前は実績扱いせず、一覧には表示しない。
+      if (listingStatus !== 'current') {
+        // くじら不動産（FI）の履歴は、いふうサイトでは検索対象外
+        query = query.not('property_number', 'ilike', 'FI%');
+      }
       if (listingStatus === 'historical') {
-        query = query.not('property_number', 'ilike', 'FI%')
-          .not('atbb_status', 'is', null)
+        query = query.not('atbb_status', 'is', null)
           .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
       } else if (listingStatus === 'all') {
         query = query.not('atbb_status', 'in', '("公開前")');
