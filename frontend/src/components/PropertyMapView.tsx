@@ -272,7 +272,13 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
 
   // 地名検索は町名などの曖昧な入力にも対応する。売却済みの正確な座標は利用しない。
   useEffect(() => {
-    if (!map || !isLoaded || !nearbyLocation?.trim()) return;
+    if (!map || !isLoaded) return;
+    if (!nearbyLocation?.trim()) {
+      map.panTo(defaultMapCenter || defaultCenter);
+      map.setZoom(11);
+      setSelectedProperty(null);
+      return;
+    }
     let canceled = false;
     const keyword = nearbyLocation.trim().replace(/^(大分県)/, '');
     const geocoder = new google.maps.Geocoder();
@@ -314,7 +320,7 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
     };
     void focusNearby();
     return () => { canceled = true; };
-  }, [map, isLoaded, nearbyLocation, propertiesWithCoords]);
+  }, [map, isLoaded, nearbyLocation, propertiesWithCoords, defaultMapCenter]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);

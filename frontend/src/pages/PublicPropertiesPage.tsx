@@ -1076,7 +1076,7 @@ const PublicPropertiesPage: React.FC = () => {
             ) : (
               <PropertyMapView 
                 properties={allProperties} 
-                 nearbyLocation={listingStatus === 'historical' ? (searchParams.get('location') || searchQuery) : undefined}
+                 nearbyLocation={listingStatus === 'historical' ? searchQuery : undefined}
                 isLoaded={isMapLoaded} 
                 loadError={mapLoadError}
                 navigationState={{
