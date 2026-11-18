@@ -195,7 +195,7 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
     : property.images && property.images.length > 0
       ? property.images[0].thumbnailUrl
       : folderId
-        ? `/api/public/folder-thumbnail/${folderId}`
+        ? `/api/public/folder-thumbnail/${folderId}?v=main-name-priority-20261118`
         : null;
   
   const typeConfig = getPropertyTypeConfig(property.property_type);
