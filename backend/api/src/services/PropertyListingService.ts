@@ -600,6 +600,7 @@ export class PropertyListingService {
                 } else {
                   console.log(`[PropertyListingService] Could not extract folder ID from storage_location: ${storageLocation}`);
                 }
+              }
               // 2. Driveフォルダがない場合だけ既存の image_url にフォールバック
               else if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
