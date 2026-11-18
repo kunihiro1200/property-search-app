@@ -271,6 +271,10 @@ export class PropertyListingService {
   private convertPropertyTypeToEnglish(japaneseType: string | null | undefined): string {
     const typeMapping: Record<string, string> = {
       '戸建': 'detached_house',
+      '戸建て': 'detached_house',
+      '一戸建て': 'detached_house',
+      '一戸建': 'detached_house',
+      '戸': 'detached_house',
       'マンション': 'apartment',
       '土地': 'land',
       '収益物件': 'other',
