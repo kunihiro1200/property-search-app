@@ -387,7 +387,7 @@ export class PropertyImageService {
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
     // Vercel環境ではフロントエンドとバックエンドが同一オリジンのため相対URLを使用
     // BACKEND_URL環境変数への依存を排除し、環境に関わらず正しいURLを生成する
-    return driveFiles.map(file => ({
+    return [...driveFiles].sort((a, b) => Number(/^メイン(?:\.[^.]+)?$/i.test(b.name.trim().normalize('NFKC'))) - Number(/^メイン(?:\.[^.]+)?$/i.test(a.name.trim().normalize('NFKC')))).map(file => ({
       id: file.id,
       name: file.name,
       // サムネイルURLはプロキシ経由で提供（CORS対策）

@@ -579,7 +579,29 @@ export class PropertyListingService {
                   modifiedTime: new Date().toISOString()
                 }];
               }
-              // 1. image_urlがある場合はそれを使用
+              // 1. Driveフォルダがある場合はフォルダ内の「メイン」画像を自動優先（手動指定は上記で最優先）
+              // Vercelのサーバーレス関数タイムアウト（10秒）を回避するため、
+              // 一覧ページでは遅延取得URLを返し、ブラウザが画像表示時にAPIを呼ぶ
+              else if (storageLocation) {
+                const folderIdMatch = storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                if (folderIdMatch) {
+                  const folderId = folderIdMatch[1];
+                  const thumbnailUrl = `/api/public/folder-thumbnail/${folderId}`;
+                  images = [{
+                    id: folderId,
+                    name: 'Property Image',
+                    thumbnailUrl,
+                    fullImageUrl: thumbnailUrl,
+                    mimeType: 'image/jpeg',
+                    size: 0,
+                    modifiedTime: new Date().toISOString()
+                  }];
+                  console.log(`[PropertyListingService] Generated folder-thumbnail URL for ${property.property_number}: ${thumbnailUrl}`);
+                } else {
+                  console.log(`[PropertyListingService] Could not extract folder ID from storage_location: ${storageLocation}`);
+                }
+              }
+              // 2. Driveフォルダがない場合だけ既存の image_url にフォールバック
               else if (property.image_url) {
                 console.log(`[PropertyListingService] Using image_url for ${property.property_number}`);
                 
@@ -613,27 +635,6 @@ export class PropertyListingService {
                   modifiedTime: new Date().toISOString()
                 }];
               }
-              // 2. storage_locationがある場合はフォルダIDからプロキシURLを生成（Google Drive APIを呼ばない）
-              // Vercelのサーバーレス関数タイムアウト（10秒）を回避するため、
-              // 一覧ページでは遅延取得URLを返し、ブラウザが画像表示時にAPIを呼ぶ
-              else if (storageLocation) {
-                const folderIdMatch = storageLocation.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-                if (folderIdMatch) {
-                  const folderId = folderIdMatch[1];
-                  const thumbnailUrl = `/api/public/folder-thumbnail/${folderId}`;
-                  images = [{
-                    id: folderId,
-                    name: 'Property Image',
-                    thumbnailUrl,
-                    fullImageUrl: thumbnailUrl,
-                    mimeType: 'image/jpeg',
-                    size: 0,
-                    modifiedTime: new Date().toISOString()
-                  }];
-                  console.log(`[PropertyListingService] Generated folder-thumbnail URL for ${property.property_number}: ${thumbnailUrl}`);
-                } else {
-                  console.log(`[PropertyListingService] Could not extract folder ID from storage_location: ${storageLocation}`);
-                }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
               }
