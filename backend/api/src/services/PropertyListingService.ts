@@ -634,7 +634,6 @@ export class PropertyListingService {
                   size: 0,
                   modifiedTime: new Date().toISOString()
                 }];
-              }
               } else {
                 console.log(`[PropertyListingService] No image source for ${property.property_number}`);
               }
