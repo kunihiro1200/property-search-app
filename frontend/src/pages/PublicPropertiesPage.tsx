@@ -20,7 +20,6 @@ import {
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
 import TuneIcon from '@mui/icons-material/Tune';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { UnifiedSearchBar } from '../components/UnifiedSearchBar';
 import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { PropertyTypeFilterButtons, PropertyType } from '../components/PropertyTypeFilterButtons';
@@ -1184,25 +1183,14 @@ const PublicPropertiesPage: React.FC = () => {
                     
                     return (
                       <Grid item xs={12} md={6} lg={4} key={property.id}>
-                        <Box sx={{ height: '100%' }}>
-                          <PublicPropertyCard
-                            property={property}
-                            animationDelay={index * 0.1}
-                            navigationState={navigationState}
-                          />
-                          <Button
-                            fullWidth
-                            size="small"
-                            startIcon={<CompareArrowsIcon />}
-                            variant={comparedProperties.some((entry) => entry.id === property.id) ? 'contained' : 'outlined'}
-                            disabled={!comparedProperties.some((entry) => entry.id === property.id) && comparedProperties.length >= 3}
-                            onClick={() => toggleComparison(property)}
-                            sx={{ mt: 1, fontWeight: 700 }}
-                            aria-pressed={comparedProperties.some((entry) => entry.id === property.id)}
-                          >
-                            {comparedProperties.some((entry) => entry.id === property.id) ? '比較から外す' : 'この物件を比較する'}
-                          </Button>
-                        </Box>
+                        <PublicPropertyCard
+                          property={property}
+                          animationDelay={index * 0.1}
+                          navigationState={navigationState}
+                          onToggleCompare={toggleComparison}
+                          isCompared={comparedProperties.some((entry) => entry.id === property.id)}
+                          compareDisabled={!comparedProperties.some((entry) => entry.id === property.id) && comparedProperties.length >= 3}
+                        />
                       </Grid>
                     );
                   })}
