@@ -10,8 +10,15 @@ export const SITE_MANAGER_EMPLOYEE_IDS = new Set([
   'a382d47c-50a7-4a9c-8802-9bf93ed53bd5', // 和田
 ]);
 
-export const canManageSite = (employee: { id: string; isActive?: boolean } | null | undefined) =>
-  !!employee && employee.isActive !== false && SITE_MANAGER_EMPLOYEE_IDS.has(employee.id);
+export const SITE_MANAGER_EMAILS = new Set([
+  'mariko.kume@ifoo-oita.com',
+  'jyuna.wada@ifoo-oita.com',
+  'yurine.kimura@ifoo-oita.com',
+]);
+
+export const canManageSite = (employee: { id?: string; email?: string; isActive?: boolean; is_active?: boolean } | null | undefined) =>
+  !!employee && employee.isActive !== false && employee.is_active !== false &&
+  (SITE_MANAGER_EMPLOYEE_IDS.has(employee.id || '') || SITE_MANAGER_EMAILS.has((employee.email || '').trim().toLowerCase()));
 
 export default function SiteManagementAccessGate({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -47,7 +54,7 @@ export default function SiteManagementAccessGate({ children }: { children: React
           ? '現在このサイトで認証されている社員には管理権限がありません。久米・木村・和田のアカウントでログインし直してください。'
           : '管理ページを開くには、久米・木村・和田のGoogleアカウントでログインしてください。'}
       </Alert>
-      {employee && <Typography variant="body2" sx={{ mt: 2 }}>現在のサイト内ログイン：{employee.name}（{employee.email}）</Typography>}
+      {employee && (employee.name || employee.email) && <Typography variant="body2" sx={{ mt: 2 }}>現在のサイト内ログイン：{employee.name || '名前未取得'}（{employee.email || 'メール未取得'}）</Typography>}
       <Button variant="contained" sx={{ mt: 2, mr: 2 }} onClick={handleLogin}>
         {isAuthenticated && employee ? '別のGoogleアカウントでログイン' : 'Googleでログイン'}
       </Button>
