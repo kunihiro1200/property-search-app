@@ -137,6 +137,12 @@ export const useAuthStore = create<AuthState>()(
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // API側のログアウトに加え、サイトのSupabaseブラウザセッションも消去する。
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Supabase logout error:', error);
+      }
       localStorage.removeItem('session_token');
       localStorage.removeItem('refresh_token');
       set({ employee: null, isAuthenticated: false });
