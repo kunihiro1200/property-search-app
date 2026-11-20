@@ -37,7 +37,13 @@ export default function AuthCallbackPage() {
         
         // 少し待ってからリダイレクト（状態更新を確実にするため）
         setTimeout(() => {
-          navigate('/', { replace: true });
+          const returnTo = sessionStorage.getItem('siteManagementReturnTo');
+          sessionStorage.removeItem('siteManagementReturnTo');
+          // 外部URLを使ったオープンリダイレクトを防ぐ。
+          const safeReturnTo = returnTo?.startsWith('/public/properties') &&
+            new URLSearchParams(returnTo.split('?')[1] || '').get('canHide') === 'true'
+            ? returnTo : '/';
+          navigate(safeReturnTo, { replace: true });
         }, 500);
       } catch (err) {
         console.error('❌ AuthCallbackPage: Authentication failed:', err);
