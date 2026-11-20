@@ -811,10 +811,10 @@ const PublicPropertiesPage: React.FC = () => {
     <>
       {/* SEO Meta Tags */}
       <SEOHead
-        title="物件一覧"
-        description="大分県の不動産物件を検索できます。戸建て、マンション、土地など、様々な物件情報を掲載しています。"
-        keywords={['不動産', '物件', '大分', '戸建て', 'マンション', '土地', '売買', '賃貸']}
-        canonicalUrl={typeof window !== 'undefined' ? window.location.href : ''}
+        title={listingStatus === 'historical' ? '売却済み物件一覧・過去の売出情報' : '販売中・売却済み物件一覧'}
+        description="いふうの不動産物件検索。大分・別府・福岡などの販売中物件に加え、売却済み物件の過去の売出情報も所在地・物件種別・価格帯から検索できます。掲載価格は成約価格とは限りません。"
+        keywords={['いふう', '売却物件一覧', '売却済み物件', '販売中物件', '過去の売出情報', '大分', '別府', '福岡', '不動産']}
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/public/properties${listingStatus === 'historical' ? '?listingStatus=historical' : ''}` : ''}
       />
       
       {/* Structured Data */}
@@ -827,8 +827,16 @@ const PublicPropertiesPage: React.FC = () => {
         <Paper elevation={1} sx={{ bgcolor: 'white' }}>
           <Container maxWidth="lg" sx={{ py: 3 }}>
             <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-              希望の住まいを探す
+              {listingStatus === 'historical' ? '売却済み物件一覧' : '販売中・売却済みの物件を探す'}
             </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+              販売中の物件だけでなく、売却済み物件の過去の売出情報も検索できます。
+            </Typography>
+            {listingStatus === 'historical' && (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                ※掲載価格は過去の売出価格です。実際の成約価格とは限りません。
+              </Typography>
+            )}
             <Typography variant="body1" color="text.secondary" gutterBottom>
               {pagination && `${pagination.total}件の物件からお探しいただけます`}
             </Typography>
@@ -918,6 +926,23 @@ const PublicPropertiesPage: React.FC = () => {
           <Box sx={{ p: { xs: 2, md: 3 } }}>
           
           <Stack spacing={2}>
+            <Box>
+              <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>
+                販売状況で探す
+              </Typography>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                {([
+                  ['current', '販売中の物件'],
+                  ['historical', '売却済み物件を探す'],
+                  ['all', 'すべての物件'],
+                ] as const).map(([value, label]) => (
+                  <Button key={value} variant={listingStatus === value ? 'contained' : 'outlined'}
+                    onClick={() => chooseListingStatus(value)} disabled={filterLoading}
+                    aria-pressed={listingStatus === value}
+                    sx={{ fontWeight: 700, textTransform: 'none' }}>{label}</Button>
+                ))}
+              </Stack>
+            </Box>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ md: 'flex-start' }}>
               <Box sx={{ flexShrink: 0, '& .MuiStack-root': { flexWrap: { md: 'nowrap' } }, '& .MuiButton-root': { whiteSpace: 'nowrap' } }}>
             {/* 物件タイプフィルター */}
@@ -939,29 +964,11 @@ const PublicPropertiesPage: React.FC = () => {
                 aria-controls="customer-advanced-filters"
                 sx={{ fontWeight: 700 }}
               >
-                {showAdvancedFilters ? '詳細条件を閉じる' : '詳細条件（価格・築年数・販売状況）'}
+                {showAdvancedFilters ? '詳細条件を閉じる' : '詳細条件（価格・築年数）'}
               </Button>
             </Box>
             <Collapse in={showAdvancedFilters} id="customer-advanced-filters">
               <Stack spacing={3} sx={{ mt: 2 }}>
-            {/* 売却済み・非公開を含む履歴検索 */}
-            <Box>
-              <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
-                販売状況
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' } }} useFlexGap>
-                {([
-                  ['current', '販売中'],
-                  ['historical', '売却済み'],
-                  ['all', 'すべて'],
-                ] as const).map(([value, label]) => (
-                  <Button key={value} size="small" variant={listingStatus === value ? 'contained' : 'outlined'}
-                    onClick={() => chooseListingStatus(value)} disabled={filterLoading}
-                    sx={{ fontWeight: 600 }}>{label}</Button>
-                ))}
-              </Stack>
-            </Box>
-            
             {/* 価格帯フィルター */}
             <Box>
               <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
