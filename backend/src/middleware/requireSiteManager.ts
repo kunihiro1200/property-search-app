@@ -14,7 +14,7 @@ const SITE_MANAGER_EMAILS = new Set([
 ]);
 
 export function requireSiteManager(req: Request, res: Response, next: NextFunction) {
-  if (!req.employee || !SITE_MANAGER_IDS.has(req.employee.id) || req.employee.isActive === false) {
+  if (!req.employee || !(SITE_MANAGER_IDS.has(req.employee.id) || SITE_MANAGER_EMAILS.has((req.employee.email || '').trim().toLowerCase())) || req.employee.isActive === false) {
     res.status(403).json({ error: 'Site management permission required' });
     return;
   }
