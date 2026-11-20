@@ -7,6 +7,12 @@ const SITE_MANAGER_IDS = new Set([
   'a382d47c-50a7-4a9c-8802-9bf93ed53bd5',
 ]);
 
+const SITE_MANAGER_EMAILS = new Set([
+  'mariko.kume@ifoo-oita.com',
+  'jyuna.wada@ifoo-oita.com',
+  'yurine.kimura@ifoo-oita.com',
+]);
+
 export function requireSiteManager(req: Request, res: Response, next: NextFunction) {
   if (!req.employee || !SITE_MANAGER_IDS.has(req.employee.id) || req.employee.isActive === false) {
     res.status(403).json({ error: 'Site management permission required' });
