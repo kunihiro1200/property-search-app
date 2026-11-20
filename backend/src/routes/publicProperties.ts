@@ -12,6 +12,7 @@ import { PropertyService } from '../services/PropertyService';
 import { PanoramaUrlService } from '../services/PanoramaUrlService';
 import { createRateLimiter } from '../middleware/rateLimiter';
 import { authenticate } from '../middleware/auth';
+import { requireSiteManager } from '../middleware/requireSiteManager';
 import { z } from 'zod';
 
 const router = Router();
@@ -701,7 +702,7 @@ router.get('/images/:fileId/thumbnail', async (req: Request, res: Response): Pro
 });
 
 // 画像削除（認証必須）
-router.delete('/properties/:propertyId/images/:imageId', authenticate, async (req: Request, res: Response): Promise<void> => {
+router.delete('/properties/:propertyId/images/:imageId', authenticate, requireSiteManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { propertyId, imageId } = req.params;
 
@@ -1281,7 +1282,7 @@ router.post('/clear-all-image-cache', async (_req: Request, res: Response): Prom
 });
 
 // 画像・基本情報を更新（軽量版）
-router.post('/properties/:identifier/refresh-essential', async (req: Request, res: Response): Promise<void> => {
+router.post('/properties/:identifier/refresh-essential', authenticate, requireSiteManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { identifier } = req.params;
     
@@ -1379,7 +1380,7 @@ router.post('/properties/:identifier/refresh-essential', async (req: Request, re
 });
 
 // 全て更新（完全版）
-router.post('/properties/:identifier/refresh-all', async (req: Request, res: Response): Promise<void> => {
+router.post('/properties/:identifier/refresh-all', authenticate, requireSiteManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { identifier } = req.params;
     
