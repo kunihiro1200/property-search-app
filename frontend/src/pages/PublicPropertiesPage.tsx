@@ -116,12 +116,6 @@ const PublicPropertiesPage: React.FC = () => {
   
   // 検索実行後に物件グリッドまでスクロール
   const handleSearch = () => {
-    if (listingStatus === 'historical') {
-      setViewMode('map');
-      setShouldScrollToMap(true);
-      if (searchQuery.trim()) originalHandleSearch();
-      return;
-    }
     // 検索クエリがある場合のみ、検索を実行
     if (searchQuery.trim()) {
       originalHandleSearch();
@@ -458,15 +452,6 @@ const PublicPropertiesPage: React.FC = () => {
       return;
     }
     
-    // 売却済みの詳細情報は通常の物件カードに公開しない。
-    if (listingStatus === 'historical' && viewMode === 'list') {
-      setInitialLoading(false);
-      setFilterLoading(false);
-      setProperties([]);
-      setPagination(null);
-      return;
-    }
-
     // 地図ビュー中はリスト用データ取得をスキップ
     if (viewMode === 'map') {
       // 直接 ?view=map で開いた場合にも全画面ローディングを解除する。
@@ -1107,23 +1092,13 @@ const PublicPropertiesPage: React.FC = () => {
               />
             )}
           </Box>
-        ) : listingStatus === 'historical' ? (
-          <Paper sx={{ py: 6, px: 3, textAlign: 'center' }}>
-            <Typography variant="h6" fontWeight={700}>売却済み物件を地図で探す</Typography>
-            <Typography color="text.secondary" sx={{ mt: 1 }}>
-              上の検索欄に町名を入力して検索すると、その周辺の売却済み物件を地図上で確認できます。
-            </Typography>
-            <Button variant="contained" startIcon={<LocationOnIcon />} sx={{ mt: 3 }} onClick={() => { setViewMode('map'); setShouldScrollToMap(true); }}>
-              地図で検索
-            </Button>
-          </Paper>
         ) : (
           /* リストモード */
           <>
             {properties.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 6 }}>
                 <Typography variant="h6" color="text.secondary">
-                  現在公開中の物件はありません
+                  {listingStatus === 'historical' ? '該当する売却済み物件はありません' : '現在公開中の物件はありません'}
                 </Typography>
               </Box>
             ) : (
