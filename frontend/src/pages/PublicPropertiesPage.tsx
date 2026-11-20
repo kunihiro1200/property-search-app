@@ -1042,7 +1042,7 @@ const PublicPropertiesPage: React.FC = () => {
             </Box>
               </Stack>
             </Collapse>
-            {hasActiveFilters() && !showAdvancedFilters() && (
+            {hasActiveFilters() && !showAdvancedFilters && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 適用中の条件は「詳細条件」から変更できます。
               </Typography>
