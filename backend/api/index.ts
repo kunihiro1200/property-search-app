@@ -17,6 +17,7 @@ import { GoogleSheetsClient } from './src/services/GoogleSheetsClient';
 import { AthomeSheetSyncService } from './src/services/AthomeSheetSyncService';
 import authRoutes from './src/routes/auth.supabase';
 import { authenticate } from './src/middleware/auth';
+import { requireSiteManager } from './src/middleware/requireSiteManager';
 import { filterPublicRecommendedComments, needsPublicCommentSync, runLimitedPublicCommentSync, sanitizePublicFavoriteComment } from './src/utils/publicCommentSyncGuard';
 import { isAnonymousCommentSyncDisabled, isTrustedCommentSourceLink, isCommentBackfillWriteEnabled, parseCommentBackfillOptions, propertyNeedsCommentBackfill, PUBLIC_COMMENT_BACKFILL_STATUSES } from './src/utils/commentBackfillPolicy';
 import { validatePublicCoordinateInput } from './src/utils/publicCoordinateWriteGuard';
@@ -1362,7 +1363,7 @@ app.post('/api/public/properties/:identifier/refresh-all', requireStaffOrMachine
 
 // メイン画像の設定（社員ログイン必須）
 // 一覧カードとギャラリー先頭に表示する画像を手動で指定する
-app.post('/api/property-listings/:id/set-main-image', authenticate, async (req, res) => {
+app.post('/api/property-listings/:id/set-main-image', authenticate, requireSiteManager, async (req, res) => {
   try {
     const { id } = req.params;
     const { fileId } = req.body || {};
@@ -1409,7 +1410,7 @@ app.post('/api/property-listings/:id/set-main-image', authenticate, async (req, 
 });
 
 // メイン画像の解除（社員ログイン必須）
-app.post('/api/property-listings/:id/unset-main-image', authenticate, async (req, res) => {
+app.post('/api/property-listings/:id/unset-main-image', authenticate, requireSiteManager, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -2412,7 +2413,7 @@ app.post('/api/sync/trigger', (req, res, next) => {
 // 公開物件ページの座標キャッシュ（初回のみ登録・既存座標は上書き禁止）
 // 匿名クライアントの値は信用できないため、登録済み座標の保護を優先。
 // 完全な対策はURL由来の座標をサーバー側で検証して匿名書込を終了すること。
-app.post('/api/public/properties/:propertyNumber/save-coordinates', async (req, res) => {
+app.post('/api/public/properties/:propertyNumber/save-coordinates', authenticate, requireSiteManager, async (req, res) => {
   try {
     const { propertyNumber } = req.params;
     const valid = validatePublicCoordinateInput(req.body);

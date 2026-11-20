@@ -8,6 +8,8 @@ import { EnhancedBuyerDistributionService } from '../services/EnhancedBuyerDistr
 import { DataIntegrityDiagnosticService } from '../services/DataIntegrityDiagnosticService';
 import { BuyerCandidateService } from '../services/BuyerCandidateService';
 import { UrlValidator } from '../utils/urlValidator';
+import { authenticate } from '../middleware/auth';
+import { requireSiteManager } from '../middleware/requireSiteManager';
 
 const router = Router();
 const propertyListingService = new PropertyListingService();
@@ -599,7 +601,7 @@ router.get('/:id/images', async (req: Request, res: Response): Promise<void> => 
 });
 
 // 画像を非表示にする
-router.post('/:id/hide-image', async (req: Request, res: Response): Promise<void> => {
+router.post('/:id/hide-image', authenticate, requireSiteManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { fileId } = req.body;
@@ -628,7 +630,7 @@ router.post('/:id/hide-image', async (req: Request, res: Response): Promise<void
 });
 
 // 画像を復元する（非表示を解除）
-router.post('/:id/unhide-image', async (req: Request, res: Response): Promise<void> => {
+router.post('/:id/unhide-image', authenticate, requireSiteManager, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { fileId } = req.body;

@@ -32,6 +32,7 @@ import { generatePropertyStructuredData } from '../utils/structuredData';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 import { useAuthStore } from '../store/authStore';
+import { canManageSite } from '../components/SiteManagementAccessGate';
 import '../styles/print.css';
 
 /**
@@ -121,14 +122,14 @@ const PublicPropertyDetailPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // スマホ判定（600px未満）
   
   // 認証状態を取得（管理者モード判定用）
-  const { isAuthenticated } = useAuthStore();
+  const { employee } = useAuthStore();
   
   // URLクエリパラメータから管理者モードを判定（location.searchが変わるたびに再計算）
   const isAdminMode = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
     const canHideParam = searchParams.get('canHide') === 'true';
-    return isAuthenticated && canHideParam;
-  }, [location.search, isAuthenticated]);
+    return canManageSite(employee) && canHideParam;
+  }, [location.search, employee]);
   
   // Google Maps API読み込み
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
