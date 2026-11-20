@@ -25,6 +25,7 @@ import KujiraPropertiesPage from './pages/KujiraPropertiesPage';
 import KujiraPropertyDetailPage from './pages/KujiraPropertyDetailPage';
 import { PropertyListingSyncDashboard } from './pages/PropertyListingSyncDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import SiteManagementAccessGate from './components/SiteManagementAccessGate';
 import { useAuthStore } from './store/authStore';
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -44,8 +45,8 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           {/* Public routes - no authentication required */}
-          <Route path="/public/properties" element={<PublicPropertiesPage />} />
-          <Route path="/public/properties/:id" element={<PublicPropertyDetailPage />} />
+          <Route path="/public/properties" element={<SiteManagementAccessGate><PublicPropertiesPage /></SiteManagementAccessGate>} />
+          <Route path="/public/properties/:id" element={<SiteManagementAccessGate><PublicPropertyDetailPage /></SiteManagementAccessGate>} />
           {/* くじら不動産サイト（FI物件専用） */}
           <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
           <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
