@@ -249,26 +249,56 @@ const PropertyMapView: React.FC<PropertyMapViewProps> = ({ properties, nearbyLoc
 
     const geocoder = new google.maps.Geocoder();
     const resolveMissing = async () => {
+      // 同じ町名・丁目は一度だけ検索し、結果を共有する。
+      // 全地域の検索が完了するまで待つと、件数が多い売却済み地図が空白になる。
+      const byArea = new Map<string, PublicProperty[]>();
+      for (const property of missing) {
+        const area = property.address.trim();
+        const grouped = byArea.get(area) || [];
+        grouped.push(property);
+        byArea.set(area, grouped);
+      }
+
       const resolved: PropertyWithCoordinates[] = [];
-      for (let i = 0; i < missing.length && !canceled; i += 4) {
-        const batch = missing.slice(i, i + 4);
-        const results = await Promise.all(batch.map(async property => {
+      const priority = nearbyLocation?.trim() || '';
+      const areas = [...byArea.keys()].sort((a, b) =>
+        Number(b.includes(priority) && priority.length > 0) - Number(a.includes(priority) && priority.length > 0)
+      );
+
+      for (let i = 0; i < areas.length && !canceled; i += 3) {
+        const batch = areas.slice(i, i + 3);
+        await Promise.all(batch.map(async area => {
+          const cacheKey = `historical_area_geocode_${area}`;
+          let coords: { lat: number; lng: number } | null = null;
           try {
-            const result = await geocoder.geocode({ address: property.address + ', 日本' });
-            const point = result.results[0]?.geometry?.location;
-            return point ? { ...property, lat: point.lat(), lng: point.lng() } : null;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) coords = parsed;
+            }
+            if (!coords) {
+              const result = await geocoder.geocode({ address: `${area}, 日本`, region: 'JP' });
+              const point = result.results[0]?.geometry?.location;
+              if (point) {
+                coords = { lat: point.lat(), lng: point.lng() };
+                sessionStorage.setItem(cacheKey, JSON.stringify(coords));
+              }
+            }
           } catch {
-            return null;
+            // 検索失敗時も他エリアのピン表示を継続する。
+          }
+          if (coords && !canceled) {
+            resolved.push(...(byArea.get(area) || []).map(property => ({ ...property, ...coords })));
           }
         }));
-        if (canceled) return;
-        resolved.push(...results.filter((p): p is PropertyWithCoordinates => p !== null));
+        // 3地域ずつ段階的に表示。大量のGeocoder呼び出しも抑える。
+        if (!canceled) setPropertiesWithCoords([...withCoordinates, ...resolved]);
+        if (i + 3 < areas.length) await new Promise(resolve => setTimeout(resolve, 120));
       }
-      if (!canceled) setPropertiesWithCoords([...withCoordinates, ...resolved]);
     };
     void resolveMissing();
     return () => { canceled = true; };
-  }, [properties, isLoaded]);
+  }, [properties, isLoaded, nearbyLocation]);
 
   // 地名検索は町名などの曖昧な入力にも対応する。売却済みの正確な座標は利用しない。
   useEffect(() => {
