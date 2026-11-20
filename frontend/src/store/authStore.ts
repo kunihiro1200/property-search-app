@@ -110,7 +110,7 @@ export const useAuthStore = create<AuthState>()(
       }
       
       set({
-        employee: response.data.employee,
+        employee: response.data?.employee ?? response.data,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -184,7 +184,11 @@ export const useAuthStore = create<AuthState>()(
       try {
         const response = await api.get('/auth/me');
         console.log('✅ Auth check successful');
-        set({ employee: response.data, isAuthenticated: true, isLoading: false });
+        const authenticatedEmployee = response.data?.employee ?? response.data;
+        if (!authenticatedEmployee?.id && !authenticatedEmployee?.email) {
+          throw new Error('社員情報の形式が不正です');
+        }
+        set({ employee: authenticatedEmployee, isAuthenticated: true, isLoading: false });
       } catch (apiError: any) {
         console.error('❌ Failed to get employee info:', apiError);
         
