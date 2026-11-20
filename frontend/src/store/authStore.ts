@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Employee } from '../types';
-import api from '../services/api';
+import axios from 'axios';
+
+// 公開物件サイトは静的配信のため、認証APIは追客システムのバックエンドに接続する。
+// VITE_API_URL は公開物件取得に使われるため変更しない。
+const authApi = axios.create({
+  baseURL: import.meta.env.VITE_AUTH_API_URL || 'https://sateituikyaku-admin-backend.vercel.app',
+  headers: { 'Content-Type': 'application/json' },
+});
 import { supabase } from '../config/supabase';
 
 interface AuthState {
@@ -96,7 +103,7 @@ export const useAuthStore = create<AuthState>()(
 
       // バックエンドにトークンを送信して社員情報を取得
       console.log('🔵 Calling backend /auth/callback...');
-      const response = await api.post('/auth/callback', {
+      const response = await authApi.post('/api/auth/callback', {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
       });
@@ -133,7 +140,9 @@ export const useAuthStore = create<AuthState>()(
 
   logout: async () => {
     try {
-      await api.post('/auth/logout');
+      await authApi.post('/api/auth/logout', {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('session_token') || ''}` },
+      });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -182,7 +191,9 @@ export const useAuthStore = create<AuthState>()(
 
       // 社員情報を取得
       try {
-        const response = await api.get('/auth/me');
+        const response = await authApi.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         console.log('✅ Auth check successful');
         const authenticatedEmployee = response.data?.employee ?? response.data;
         if (!authenticatedEmployee?.id && !authenticatedEmployee?.email) {
