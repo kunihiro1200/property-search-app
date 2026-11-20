@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, CardContent, Box, Typography, Chip } from '@mui/material';
+import { Card, CardContent, Box, Typography, Chip, Button } from '@mui/material';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
@@ -16,6 +17,9 @@ interface PublicPropertyCardProps {
   navigationState?: Omit<NavigationState, 'scrollPosition'>;
   // 詳細ページのベースパス（くじらサイト用）デフォルトは /public/properties
   detailBasePath?: string;
+  onToggleCompare?: (property: PublicProperty) => void;
+  isCompared?: boolean;
+  compareDisabled?: boolean;
 }
 
 const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({ 
@@ -23,6 +27,9 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
   animationDelay = 0,
   navigationState,
   detailBasePath = '/public/properties',
+  onToggleCompare,
+  isCompared = false,
+  compareDisabled = false,
 }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -290,6 +297,23 @@ const PublicPropertyCard: React.FC<PublicPropertyCardProps> = ({
             </Box>
           )}
         </Box>
+        {onToggleCompare && (
+          <Button
+            fullWidth
+            size="small"
+            startIcon={<CompareArrowsIcon />}
+            variant={isCompared ? 'contained' : 'outlined'}
+            disabled={compareDisabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleCompare(property);
+            }}
+            sx={{ mt: 2, fontWeight: 700 }}
+            aria-pressed={isCompared}
+          >
+            {isCompared ? '比較から外す' : 'この物件を比較する'}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

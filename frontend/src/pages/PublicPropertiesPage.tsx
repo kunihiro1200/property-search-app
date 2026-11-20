@@ -10,9 +10,16 @@ import {
   CircularProgress,
   TextField,
   Stack,
+  Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ListIcon from '@mui/icons-material/List';
+import TuneIcon from '@mui/icons-material/Tune';
 import { UnifiedSearchBar } from '../components/UnifiedSearchBar';
 import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { PropertyTypeFilterButtons, PropertyType } from '../components/PropertyTypeFilterButtons';
@@ -52,6 +59,17 @@ const PublicPropertiesPage: React.FC = () => {
   const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [comparedProperties, setComparedProperties] = useState<PublicProperty[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const toggleComparison = (property: PublicProperty) => {
+    setComparedProperties((current) => {
+      if (current.some((entry) => entry.id === property.id)) {
+        return current.filter((entry) => entry.id !== property.id);
+      }
+      return current.length >= 3 ? current : [...current, property];
+    });
+  };
   
   // 表示モード（リスト or 地図）
   // URLパラメータから初期値を取得
@@ -808,11 +826,11 @@ const PublicPropertiesPage: React.FC = () => {
         
         <Paper elevation={1} sx={{ bgcolor: 'white' }}>
           <Container maxWidth="lg" sx={{ py: 3 }}>
-            <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
-              物件一覧
+            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+              希望の住まいを探す
             </Typography>
             <Typography variant="body1" color="text.secondary" gutterBottom>
-              {pagination && `全${pagination.total}件の物件`}
+              {pagination && `${pagination.total}件の物件からお探しいただけます`}
             </Typography>
             
             {/* 検索バー */}
@@ -884,22 +902,22 @@ const PublicPropertiesPage: React.FC = () => {
       </Paper>
 
       {/* 物件を絞り込むセクション */}
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth="lg" sx={{ py: 2 }}>
         <Paper elevation={1} sx={{ p: 0, overflow: 'hidden' }}>
           <Box
             sx={{
-              backgroundColor: '#FFC107',
+              backgroundColor: '#FFF5CE',
               color: '#111827',
               p: 2,
             }}
           >
             <Typography variant="h6" fontWeight="600">
-              物件を絞り込む
+              希望条件を選ぶ
             </Typography>
           </Box>
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: { xs: 2, md: 3 } }}>
           
-          <Stack spacing={3} sx={{ mt: 2 }}>
+          <Stack spacing={2}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ md: 'flex-start' }}>
               <Box sx={{ flexShrink: 0, '& .MuiStack-root': { flexWrap: { md: 'nowrap' } }, '& .MuiButton-root': { whiteSpace: 'nowrap' } }}>
             {/* 物件タイプフィルター */}
@@ -910,6 +928,22 @@ const PublicPropertiesPage: React.FC = () => {
             />
             
               </Box>
+            </Stack>
+
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="text"
+                startIcon={<TuneIcon />}
+                onClick={() => setShowAdvancedFilters((value) => !value)}
+                aria-expanded={showAdvancedFilters}
+                aria-controls="customer-advanced-filters"
+                sx={{ fontWeight: 700 }}
+              >
+                {showAdvancedFilters ? '詳細条件を閉じる' : '詳細条件（価格・築年数・販売状況）'}
+              </Button>
+            </Box>
+            <Collapse in={showAdvancedFilters} id="customer-advanced-filters">
+              <Stack spacing={3} sx={{ mt: 2 }}>
             {/* 売却済み・非公開を含む履歴検索 */}
             <Box>
               <Typography variant="body2" fontWeight={600} color="text.secondary" gutterBottom>
@@ -928,8 +962,6 @@ const PublicPropertiesPage: React.FC = () => {
               </Stack>
             </Box>
             
-            </Stack>
-
             {/* 価格帯フィルター */}
             <Box>
               <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
@@ -1008,6 +1040,13 @@ const PublicPropertiesPage: React.FC = () => {
                 {hasActiveFilters() ? '✓ 条件をクリア' : 'すべての条件をクリア'}
               </Button>
             </Box>
+              </Stack>
+            </Collapse>
+            {hasActiveFilters() && !showAdvancedFilters() && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                適用中の条件は「詳細条件」から変更できます。
+              </Typography>
+            )}
           </Stack>
           </Box>
         </Paper>
@@ -1144,10 +1183,13 @@ const PublicPropertiesPage: React.FC = () => {
                     
                     return (
                       <Grid item xs={12} md={6} lg={4} key={property.id}>
-                        <PublicPropertyCard 
+                        <PublicPropertyCard
                           property={property}
                           animationDelay={index * 0.1}
                           navigationState={navigationState}
+                          onToggleCompare={toggleComparison}
+                          isCompared={comparedProperties.some((entry) => entry.id === property.id)}
+                          compareDisabled={!comparedProperties.some((entry) => entry.id === property.id) && comparedProperties.length >= 3}
                         />
                       </Grid>
                     );
@@ -1203,6 +1245,40 @@ const PublicPropertiesPage: React.FC = () => {
           </>
         )}
       </Container>
+      {comparedProperties.length > 0 && viewMode === 'list' && (
+        <Paper elevation={5} sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, width: 'min(94vw, 650px)', p: 2, borderRadius: 3 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+            <Typography fontWeight={700}>比較する物件：{comparedProperties.length}/3件</Typography>
+            <Stack direction="row" spacing={1}>
+              <Button size="small" onClick={() => setComparedProperties([])}>クリア</Button>
+              <Button variant="contained" onClick={() => setCompareOpen(true)} disabled={comparedProperties.length < 2}>
+                比較を見る
+              </Button>
+            </Stack>
+          </Stack>
+          {comparedProperties.length < 2 && <Typography variant="caption" color="text.secondary">あと1件選ぶと比較できます</Typography>}
+        </Paper>
+      )}
+      <Dialog open={compareOpen} onClose={() => setCompareOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>物件を比較する</DialogTitle>
+        <DialogContent dividers sx={{ overflowX: 'auto' }}>
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520, '& th, & td': { borderBottom: '1px solid #e5e7eb', p: 1.5, textAlign: 'left', verticalAlign: 'top' }, '& th': { whiteSpace: 'nowrap', bgcolor: 'grey.50' } }}>
+            <thead><tr><th>比較項目</th>{comparedProperties.map((property) => <th key={property.id}>{property.display_address || property.address}</th>)}</tr></thead>
+            <tbody>
+              <tr><th>価格</th>{comparedProperties.map((property) => <td key={property.id}>{property.price ? `${(property.price / 10000).toLocaleString()}万円` : '要確認'}</td>)}</tr>
+              <tr><th>物件種別</th>{comparedProperties.map((property) => <td key={property.id}>{({ detached_house: '戸建', apartment: 'マンション', land: '土地', income: '収益物件' } as Record<string, string>)[property.property_type] || property.property_type}</td>)}</tr>
+              <tr><th>土地面積</th>{comparedProperties.map((property) => <td key={property.id}>{property.land_area ? `${property.land_area}㎡` : '―'}</td>)}</tr>
+              <tr><th>建物面積</th>{comparedProperties.map((property) => <td key={property.id}>{property.building_area ? `${property.building_area}㎡` : '―'}</td>)}</tr>
+              <tr><th>間取り</th>{comparedProperties.map((property) => <td key={property.id}>{property.floor_plan || '―'}</td>)}</tr>
+              <tr><th>築年数</th>{comparedProperties.map((property) => <td key={property.id}>{property.building_age != null ? `築${property.building_age}年` : '―'}</td>)}</tr>
+            </tbody>
+          </Box>
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+            {comparedProperties.map((property) => <Chip key={property.id} label={property.display_address || property.address} onDelete={() => toggleComparison(property)} />)}
+          </Stack>
+        </DialogContent>
+        <DialogActions><Button onClick={() => setCompareOpen(false)}>閉じる</Button></DialogActions>
+      </Dialog>
     </Box>
     </>
   );
