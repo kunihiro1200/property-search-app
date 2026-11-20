@@ -14,16 +14,28 @@ export const canManageSite = (employee: { id: string; isActive?: boolean } | nul
   !!employee && employee.isActive !== false && SITE_MANAGER_EMPLOYEE_IDS.has(employee.id);
 
 export default function SiteManagementAccessGate({ children }: { children: ReactNode }) {
-  const { search } = useLocation();
+  const location = useLocation();
+  const { search } = location;
   const employee = useAuthStore(state => state.employee);
+  const loginWithGoogle = useAuthStore(state => state.loginWithGoogle);
   const isAdminRequest = new URLSearchParams(search).get('canHide') === 'true';
 
   // 通常の公開ページは誰でも閲覧可能。管理モードのみ権限を検証する。
   if (!isAdminRequest || canManageSite(employee)) return <>{children}</>;
 
+  const handleLogin = async () => {
+    sessionStorage.setItem('siteManagementReturnTo', location.pathname + location.search);
+    await loginWithGoogle();
+  };
+
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto', mt: 8, p: 3 }}>
-      <Alert severity="error">この管理ページは久米・木村・和田の担当者のみ利用できます。</Alert>
+      <Alert severity={employee ? 'error' : 'info'}>
+        {employee
+          ? 'この管理ページは久米・木村・和田の担当者のみ利用できます。'
+          : '管理ページを開くには、久米・木村・和田のGoogleアカウントでログインしてください。'}
+      </Alert>
+      {!employee && <Button variant="contained" sx={{ mt: 2, mr: 2 }} onClick={handleLogin}>Googleでログイン</Button>}
       <Button sx={{ mt: 2 }} href="/public/properties">一般向け物件一覧へ戻る</Button>
     </Box>
   );
