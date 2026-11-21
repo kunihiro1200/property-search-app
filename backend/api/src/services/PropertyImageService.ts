@@ -422,11 +422,13 @@ export class PropertyImageService {
         .eq('folder_id', folderId)
         .maybeSingle();
       if (readError) throw new Error('photo_ai_cache_read');
-      if (saved && saved.fingerprint === signature) {
+      if (saved && saved.fingerprint === signature && saved.status !== 'failed') {
         return saved.status === 'ready' && Array.isArray(saved.top_image_ids)
           ? reorder(saved.top_image_ids)
           : images;
       }
+      // Failed analyses may retry after the DB's 24-hour cooldown.
+      // reserve_property_photo_ai enforces the cooldown and daily limit atomically.
 
       // RPC uses a transaction lock per folder and caps new paid calls at
       // five properties per Japan day, regardless of public GET traffic.
