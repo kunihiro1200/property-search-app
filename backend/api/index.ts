@@ -268,6 +268,7 @@ app.get('/api/public/properties', async (req, res) => {
       buildingAgeRange,
       showPublicOnly,
       listingStatus,
+      sitePrefix: 'AA',
       withCoordinates, // 座標がある物件のみ取得
       skipImages, // 画像取得をスキップ（地図ビュー用）
     });
@@ -276,7 +277,7 @@ app.get('/api/public/properties', async (req, res) => {
     
     // いふうサイトではFI物件を除外（FI物件はくじら不動産サイト専用）
     const filteredProperties = (result.properties || []).filter(
-      (p: any) => !p.property_number || !String(p.property_number).toUpperCase().startsWith('FI')
+      (p: any) => String(p.property_number || '').toUpperCase().startsWith('AA')
     );
     
     // price が設定されていない物件は sales_price || listing_price || 0 でインライン計算
@@ -2502,7 +2503,7 @@ app.get('/api/kujira/properties', async (req, res) => {
 
     // DBクエリレベルでFI物件のみ取得（FI%のワイルドカードでilike検索）
     // ユーザーが物件番号を個別検索した場合はそちらを優先
-    const fiPropertyNumberFilter = propertyNumber || 'FI%';
+    const fiPropertyNumberFilter = propertyNumber;
 
     const result = await propertyListingService.getPublicProperties({
       limit,
@@ -2513,6 +2514,8 @@ app.get('/api/kujira/properties', async (req, res) => {
       propertyNumber: fiPropertyNumberFilter,
       buildingAgeRange,
       showPublicOnly,
+      listingStatus: ['historical', 'all'].includes(String(req.query.listingStatus)) ? req.query.listingStatus as 'historical' | 'all' : 'current',
+      sitePrefix: 'FI',
       skipImages,
     });
 
@@ -2535,27 +2538,41 @@ app.get('/api/kujira/properties', async (req, res) => {
   }
 });
 
-// くじら地図用エンドポイント（FI物件のみ、軽量）
+// くじらFIの地図も売却済み匿名化を適用
+// 地図表示専用エンドポイント（軽量・高速）
+// 座標と最小限のデータのみ返す（画像取得なし、storage_location不要）
 app.get('/api/kujira/map-properties', async (req, res) => {
   try {
     const types = req.query.types as string;
     const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
+    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'all' ? 'all' : 'current';
 
+    // 地図表示に必要な最小限のカラムのみ取得
     let query = supabase
       .from('property_listings')
-      .select('id, property_number, property_type, address, sales_price, listing_price, land_area, building_area, atbb_status, latitude, longitude')
+      .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
-      // 公開前は除外。売却済みの座標・物件IDは後段で必ず匿名化する。
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
-      // FI物件のみ（大文字小文字を区別しない）
+      // 販売状況ごとのフィルターは後段で指定する。売却済みに座標は必須としない。
+      // くじらサイトはFI物件だけを表示
       .ilike('property_number', 'FI%');
+
+    if (listingStatus === 'current') {
+      query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
+        .not('latitude', 'is', null).not('longitude', 'is', null);
+    } else if (listingStatus === 'historical') {
+      query = query.not('atbb_status', 'is', null)
+        .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
+    } else {
+      query = query.not('atbb_status', 'in', '("公開前")');
+    }
 
     if (types) {
       const typeList = types.split(',');
-      if (typeList.length > 0) query = query.in('property_type', typeList);
+      if (typeList.length > 0) {
+        query = query.in('property_type', typeList);
+      }
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -2570,37 +2587,82 @@ app.get('/api/kujira/map-properties', async (req, res) => {
         orParts.push(`sales_price.lte.${maxPrice * 10000}`);
         orParts.push(`listing_price.lte.${maxPrice * 10000}`);
       }
-      if (orParts.length > 0) query = query.or(orParts.join(','));
+      if (orParts.length > 0) {
+        query = query.or(orParts.join(','));
+      }
     }
 
     if (showPublicOnly) {
       query = query.not('atbb_status', 'is', null).ilike('atbb_status', '%公開中%');
     }
 
-    const { data, error } = await query;
-    if (error) throw new Error(`Supabase query error: ${error.message}`);
+    // Supabaseの既定1000件上限を超える履歴も取得する。
+    const rows: any[] = [];
+    for (let offset = 0; offset < 10000; offset += 1000) {
+      const { data, error } = await query.range(offset, offset + 999);
+      if (error) throw new Error(`Supabase query error: ${error.message}`);
+      rows.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
 
     const typeMapping: Record<string, string> = {
       '戸建': 'detached_house', '戸建て': 'detached_house',
       'マンション': 'apartment', '土地': 'land',
+      '収益物件': 'income',
     };
+    const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中']);
+    // 約5kmのエリア代表点。非公開・売却済みの正確なピン・ID・住所は返さない。
+    const coarseGrid = (coordinate: number) => Math.round(coordinate / 0.05) * 0.05;
+    const soldAreas = new Map<string, any>();
+    const properties: any[] = [];
+    for (const p of rows) {
+      const isCurrent = currentStatuses.has(String(p.atbb_status || ''));
+      if (isCurrent) {
+        properties.push({
+          id: p.id, property_number: p.property_number,
+          property_type: typeMapping[p.property_type] || p.property_type,
+          address: p.address, price: p.sales_price || p.listing_price || 0,
+          atbb_status: p.atbb_status, latitude: p.latitude, longitude: p.longitude,
+          images: [], is_clickable: true,
+        });
+        continue;
+      }
+      // 住所は町名・丁目までに切り詰める。地番や部屋番号はAPIで公開しない。
+      const rawAddress = String(p.address || '').replace(/〒?\\d{3}-?\\d{4}\\s*/, '').trim();
+      const chome = rawAddress.match(/^(.+?[０-９0-9一二三四五六七八九十]+丁目)/);
+      const area = chome ? chome[1] : rawAddress.replace(/[０-９0-9].*$/, '').replace(/(?:番地|地番|番|号|区画|号室).*$/, '').trim();
+      if (!area) continue;
+      const latValue = Number(p.latitude);
+      const lngValue = Number(p.longitude);
+      const hasCoordinates = p.latitude != null && p.longitude != null && Number.isFinite(latValue) && Number.isFinite(lngValue);
+      const kind = typeMapping[p.property_type] || p.property_type;
+      const key = `${area}:${kind}`;
+      const group = soldAreas.get(key);
+      if (group) {
+        group.historical_count += 1;
+        group.historical_items.push({ price: p.sales_price || p.listing_price || null, area: p.property_type === '土地' ? p.land_area : p.property_type === 'マンション' ? p.building_area : (p.land_area || p.building_area), area_kind: p.property_type === '土地' || p.property_type === '戸建' || p.property_type === '戸建て' ? '土地面積' : '面積' });
+        if (hasCoordinates && group.latitude == null) {
+          group.latitude = coarseGrid(latValue);
+          group.longitude = coarseGrid(lngValue);
+        }
+      } else {
+        soldAreas.set(key, {
+          id: `historical-area-${soldAreas.size}`, property_number: '',
+          property_type: kind, address: area,
+          price: 0, atbb_status: '売却済み', badge_type: 'sold',
+          latitude: hasCoordinates ? coarseGrid(latValue) : null,
+          longitude: hasCoordinates ? coarseGrid(lngValue) : null,
+          images: [], is_clickable: false,
+          historical_count: 1,
+          historical_items: [{ price: p.sales_price || p.listing_price || null, area: p.property_type === '土地' ? p.land_area : p.property_type === 'マンション' ? p.building_area : (p.land_area || p.building_area), area_kind: p.property_type === '土地' || p.property_type === '戸建' || p.property_type === '戸建て' ? '土地面積' : '面積' }],
+        });
+      }
+    }
+    properties.push(...soldAreas.values());
 
-    const properties = (data || []).map((p) => ({
-      id: p.id,
-      property_number: p.property_number,
-      property_type: typeMapping[p.property_type] || p.property_type,
-      address: p.address,
-      price: p.sales_price || p.listing_price || 0,
-      atbb_status: p.atbb_status,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      images: [],
-    }));
-
-    console.log(`🐋 [Kujira Map] Found ${properties.length} FI properties with coordinates`);
     res.json({ success: true, properties });
   } catch (error: any) {
-    console.error('🐋 [Kujira Map] Error:', error);
+    console.error('❌ Error fetching map properties:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -2621,8 +2683,8 @@ app.get('/api/public/map-properties', async (req, res) => {
       .select('id, property_number, property_type, address, sales_price, listing_price, atbb_status, latitude, longitude')
       .eq('is_hidden', false)
       // 販売状況ごとのフィルターは後段で指定する。売却済みに座標は必須としない。
-      // いふうサイトではFI物件を除外（くじら不動産サイト専用）
-      .not('property_number', 'ilike', 'FI%');
+      // いふうサイトはAA番号のみ
+      .ilike('property_number', 'AA%');
 
     if (listingStatus === 'current') {
       query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])

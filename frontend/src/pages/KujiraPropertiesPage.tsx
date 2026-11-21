@@ -61,6 +61,15 @@ const KujiraPropertiesPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
+  const listingStatus = searchParams.get('listingStatus') === 'historical' ? 'historical' : searchParams.get('listingStatus') === 'all' ? 'all' : 'current';
+  const chooseListingStatus = (next: 'current' | 'historical' | 'all') => {
+    const updated = new URLSearchParams(searchParams);
+    if (next === 'current') updated.delete('listingStatus'); else updated.set('listingStatus', next);
+    updated.delete('view');
+    setViewMode('list');
+    setCurrentPage(1);
+    setSearchParams(updated, { replace: true });
+  };
 
   const isInitialLoadDone = useRef(false);
   const { searchQuery, setSearchQuery, handleSearch: originalHandleSearch, searchType } = useUnifiedSearch();
@@ -213,7 +222,7 @@ const KujiraPropertiesPage: React.FC = () => {
     else newParams.delete('view');
 
     setSearchParams(newParams, { replace: true });
-  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode]);
+  }, [selectedTypes, minPrice, maxPrice, minAge, maxAge, showPublicOnly, viewMode, listingStatus]);
 
   const prevViewModeRef = useRef<'list' | 'map'>('list');
   const filterChangedDuringMapRef = useRef(false);
@@ -308,6 +317,7 @@ const KujiraPropertiesPage: React.FC = () => {
       if (minAgeParam) params.set('minAge', minAgeParam);
       if (maxAgeParam) params.set('maxAge', maxAgeParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
+      if (listingStatus !== 'current') params.set('listingStatus', listingStatus);
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       // くじら専用エンドポイント（FI物件のみ返す）
@@ -366,6 +376,7 @@ const KujiraPropertiesPage: React.FC = () => {
       if (minPriceParam) params.set('minPrice', minPriceParam);
       if (maxPriceParam) params.set('maxPrice', maxPriceParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
+      if (listingStatus !== 'current') params.set('listingStatus', listingStatus);
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const queryString = params.toString();
@@ -411,6 +422,7 @@ const KujiraPropertiesPage: React.FC = () => {
     minAge !== '' ||
     maxAge !== '' ||
     showPublicOnly ||
+    listingStatus !== 'current' ||
     searchQuery.trim() !== '';
 
   if (initialLoading) {
@@ -438,8 +450,8 @@ const KujiraPropertiesPage: React.FC = () => {
   return (
     <>
       <SEOHead
-        title="物件一覧 - 株式会社くじら不動産"
-        description="株式会社くじら不動産の物件情報です。大分県の不動産物件を掲載しています。"
+        title={listingStatus === 'historical' ? '売却済み物件一覧 - 株式会社くじら不動産' : '物件一覧 - 株式会社くじら不動産'}
+        description="株式会社くじら不動産のFI物件専用サイト。販売中・売却済みの過去の売出情報を検索できます。掲載価格は実際の成約価格とは限りません。"
         keywords={['不動産', '物件', 'くじら不動産', '大分', '売買']}
         canonicalUrl={typeof window !== 'undefined' ? window.location.href : ''}
         siteName="くじら不動産"
@@ -453,8 +465,10 @@ const KujiraPropertiesPage: React.FC = () => {
         <Paper elevation={1} sx={{ bgcolor: 'white' }}>
           <Container maxWidth="lg" sx={{ py: 3 }}>
             <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom sx={{ color: '#0D47A1' }}>
-              {t('page.propertyList')}
+              {listingStatus === 'historical' ? '売却済み物件一覧' : '販売中・売却済み物件一覧'}
             </Typography>
+            <Typography variant="body2" color="text.secondary">販売中と売却済みの物件を検索できます。</Typography>
+            {listingStatus === 'historical' && <Typography variant="caption" color="text.secondary">※掲載価格は過去の売出価格であり、成約価格とは限りません。</Typography>}
             <Typography variant="body1" color="text.secondary" gutterBottom>
               {pagination && `${t('pagination.total')}${pagination.total}${t('pagination.properties')}`}
             </Typography>
@@ -523,6 +537,16 @@ const KujiraPropertiesPage: React.FC = () => {
             </Box>
             <Box sx={{ p: 3 }}>
               <Stack spacing={3} sx={{ mt: 2 }}>
+                <Box>
+                  <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>販売状況で探す</Typography>
+                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                    {([["current", "販売中の物件"], ["historical", "売却済み物件を探す"], ["all", "すべての物件"]] as const).map(([value, label]) => (
+                      <Button key={value} variant={listingStatus === value ? "contained" : "outlined"}
+                        onClick={() => chooseListingStatus(value)} disabled={filterLoading} aria-pressed={listingStatus === value}
+                        sx={{ fontWeight: 700, textTransform: "none" }}>{label}</Button>
+                    ))}
+                  </Stack>
+                </Box>
                 <PropertyTypeFilterButtons
                   selectedTypes={selectedTypes}
                   onTypeToggle={handleTypeToggle}
@@ -701,7 +725,7 @@ const KujiraPropertiesPage: React.FC = () => {
             <>
               {properties.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="h6" color="text.secondary">{t('message.noResults')}</Typography>
+                  <Typography variant="h6" color="text.secondary">{listingStatus === 'historical' ? '該当する売却済み物件はありません' : t('message.noResults')}</Typography>
                 </Box>
               ) : (
                 <>

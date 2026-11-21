@@ -31,6 +31,7 @@ import { generatePropertyStructuredData } from '../utils/structuredData';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 import { useAuthStore } from '../store/authStore';
+import { canManageSite } from '../components/SiteManagementAccessGate';
 import { useLanguage } from '../contexts/LanguageContext';
 import '../styles/print.css';
 
@@ -177,13 +178,13 @@ const KujiraPropertyDetailPage: React.FC = () => {
     return translated;
   };
 
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, employee } = useAuthStore();
 
   const isAdminMode = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
     const canHideParam = searchParams.get('canHide') === 'true';
-    return isAuthenticated && canHideParam;
-  }, [location.search, isAuthenticated]);
+    return isAuthenticated && canHideParam && canManageSite(employee);
+  }, [location.search, isAuthenticated, employee]);
 
   const { isLoaded: isMapLoaded, loadError } = useGoogleMaps();
 
