@@ -405,11 +405,24 @@ export class PropertyImageService {
         selected.push(namedMain);
         used.add(namedMain.id);
       }
+      // Safety rule: an equipment detail cannot take one of the first three slots
+      // just because the vision model selected it. Preserve explicit メイン above.
+      const isEquipmentDetail = (name: string) =>
+        /リモコン|スイッチ|給湯|コンセント|操作盤|設備|メーター|換気扇|レンジフード|コンロ|間取り|図面|panorama|remote|switch|control|floor.?plan/i
+          .test(name.normalize('NFKC'));
       for (const id of ids.slice(0, 3)) {
         const image = images.find(item => item.id === id);
-        if (image && !used.has(id) && selected.length < 3) {
+        if (image && !used.has(id) && selected.length < 3 && !isEquipmentDetail(image.name)) {
           selected.push(image);
           used.add(id);
+        }
+      }
+      // Use the existing representative-photo ordering to fill AI-rejected slots.
+      for (const image of images) {
+        if (selected.length >= Math.min(3, images.length)) break;
+        if (!used.has(image.id) && !isEquipmentDetail(image.name)) {
+          selected.push(image);
+          used.add(image.id);
         }
       }
       return [...selected, ...images.filter(image => !used.has(image.id))];
