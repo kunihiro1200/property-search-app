@@ -385,15 +385,42 @@ export class PropertyImageService {
    * DriveFileをPropertyImage形式に変換
    */
   private convertToPropertyImages(driveFiles: DriveFile[]): PropertyImage[] {
-    // Vercel環境ではフロントエンドとバックエンドが同一オリジンのため相対URLを使用
-    // BACKEND_URL環境変数への依存を排除し、環境に関わらず正しいURLを生成する
-    return [...driveFiles].sort((a, b) => Number(/^メイン(?:\.[^.]+)?$/i.test(b.name.trim().normalize('NFKC'))) - Number(/^メイン(?:\.[^.]+)?$/i.test(a.name.trim().normalize('NFKC')))).map(file => ({
+    // Explicit file-name "メイン.jpg" continues to take precedence over automatic ordering.
+    // Choose up to three representative photos; preserve relative order of every remaining file.
+    const ordered = [...driveFiles].sort((a, b) =>
+      Number(/^メイン(?:\\.[^.]+)?$/i.test(b.name.trim().normalize('NFKC'))) -
+      Number(/^メイン(?:\\.[^.]+)?$/i.test(a.name.trim().normalize('NFKC')))
+    );
+    const isMain = (name: string) => /^メイン(?:\\.[^.]+)?$/i.test(name.trim().normalize('NFKC'));
+    const category = (name: string): number => {
+      const value = name.normalize('NFKC').toLowerCase();
+      // Equipment close-ups, floor plans and utility images must not displace a representative photo.
+      if (/リモコン|スイッチ|給湯|コンセント|操作盤|設備|メーター|換気扇|レンジフード|コンロ|間取り|図面|panorama|remote|switch|control|floor.?plan/.test(value)) return 99;
+      if (/外観|建物全景|住宅外観|戸建て外観|exterior|facade/.test(value)) return 0;
+      if (/リビング|ldk|living|居間/.test(value)) return 1;
+      if (/居室|洋室|和室|寝室|空室|bedroom|room/.test(value)) return 2;
+      if (/キッチン|玄関|浴室|洗面|bath|kitchen/.test(value)) return 3;
+      return 50;
+    };
+    const selected: DriveFile[] = [];
+    const remaining = [...ordered];
+    const mainIndex = remaining.findIndex(file => isMain(file.name));
+    if (mainIndex >= 0) selected.push(...remaining.splice(mainIndex, 1));
+
+    // Prefer diversity (exterior, living, room) rather than three near-identical photos.
+    for (const rank of [0, 1, 2, 3]) {
+      if (selected.length >= 3) break;
+      const index = remaining.findIndex(file => category(file.name) === rank);
+      if (index >= 0) selected.push(...remaining.splice(index, 1));
+    }
+    while (selected.length < 3 && remaining.length > 0) {
+      const index = remaining.findIndex(file => category(file.name) < 99);
+      selected.push(...remaining.splice(index >= 0 ? index : 0, 1));
+    }
+    return [...selected, ...remaining].map(file => ({
       id: file.id,
       name: file.name,
-      // サムネイルURLはプロキシ経由で提供（CORS対策）
-      // 注意: Google DriveのファイルIDをそのまま使用
       thumbnailUrl: `/api/public/images/${file.id}/thumbnail`,
-      // フル画像URLもプロキシ経由で提供
       fullImageUrl: `/api/public/images/${file.id}`,
       mimeType: file.mimeType,
       size: file.size,
