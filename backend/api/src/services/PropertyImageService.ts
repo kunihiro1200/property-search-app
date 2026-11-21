@@ -356,7 +356,7 @@ export class PropertyImageService {
       console.log(`📊 [getImagesFromStorageUrl] Retrieved ${driveFiles.length} images from Google Drive`);
       
       // PropertyImage形式に変換
-      const images = await this.rankByOpenAIVision(targetFolderId, this.convertToPropertyImages(driveFiles));
+      const images = this.convertToPropertyImages(driveFiles);
       console.log(`✅ [getImagesFromStorageUrl] Converted to ${images.length} PropertyImages`);
       
       // キャッシュに保存
@@ -390,7 +390,7 @@ export class PropertyImageService {
    * from causing repeated or unbounded paid API calls.
    * On any error, the existing filename-based image order is preserved.
    */
-  private async rankByOpenAIVision(folderId: string, images: PropertyImage[]): Promise<PropertyImage[]> {
+  async rankByOpenAIVision(folderId: string, images: PropertyImage[]): Promise<PropertyImage[]> {
     if (!process.env.OPENAI_API_KEY || images.length < 2) return images;
 
     const signature = createHash('sha256')
