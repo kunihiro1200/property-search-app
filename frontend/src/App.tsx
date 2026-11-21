@@ -48,8 +48,8 @@ function App() {
           <Route path="/public/properties" element={<SiteManagementAccessGate><PublicPropertiesPage /></SiteManagementAccessGate>} />
           <Route path="/public/properties/:id" element={<SiteManagementAccessGate><PublicPropertyDetailPage /></SiteManagementAccessGate>} />
           {/* くじら不動産サイト（FI物件専用） */}
-          <Route path="/kujira/properties" element={<KujiraPropertiesPage />} />
-          <Route path="/kujira/properties/:id" element={<KujiraPropertyDetailPage />} />
+          <Route path="/kujira/properties" element={<SiteManagementAccessGate><KujiraPropertiesPage /></SiteManagementAccessGate>} />
+          <Route path="/kujira/properties/:id" element={<SiteManagementAccessGate><KujiraPropertyDetailPage /></SiteManagementAccessGate>} />
         <Route
           path="/"
           element={

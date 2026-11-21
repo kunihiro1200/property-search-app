@@ -301,6 +301,7 @@ export class PropertyListingService {
     buildingAgeRange?: { min?: number; max?: number };  // NEW: 築年数フィルター
     showPublicOnly?: boolean;  // NEW: 公開中のみ表示フィルター
     listingStatus?: 'current' | 'historical' | 'all';
+    sitePrefix?: 'AA' | 'FI';
     withCoordinates?: boolean;  // NEW: 座標がある物件のみ取得
     skipImages?: boolean;  // NEW: 画像取得をスキップ（地図ビュー用）
   } = {}) {
@@ -315,6 +316,7 @@ export class PropertyListingService {
       buildingAgeRange,  // NEW
       showPublicOnly = false,  // NEW
       listingStatus = 'current',
+      sitePrefix,
       withCoordinates = false,  // NEW
       skipImages = false,  // NEW
     } = options;
@@ -330,8 +332,10 @@ export class PropertyListingService {
 
       // 明示的に選択した場合のみ非公開・成約物件を公開用に匿名化して検索する。
       // 公開前は実績扱いせず、一覧には表示しない。
-      if (listingStatus !== 'current') {
-        // くじら不動産（FI）の履歴は、いふうサイトでは検索対象外
+      // DBレベルでAA/FIを独立させ、物件番号検索でも他方を参照できないようにする。
+      if (sitePrefix) {
+        query = query.ilike('property_number', `${sitePrefix}%`);
+      } else if (listingStatus !== 'current') {
         query = query.not('property_number', 'ilike', 'FI%');
       }
       if (listingStatus === 'historical') {

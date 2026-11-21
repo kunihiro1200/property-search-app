@@ -58,7 +58,7 @@ export default function SiteManagementAccessGate({ children }: { children: React
       <Button variant="contained" sx={{ mt: 2, mr: 2 }} onClick={handleLogin}>
         {isAuthenticated && employee ? '別のGoogleアカウントでログイン' : 'Googleでログイン'}
       </Button>
-      <Button sx={{ mt: 2 }} href="/public/properties">一般向け物件一覧へ戻る</Button>
+      <Button sx={{ mt: 2 }} href={location.pathname.startsWith("/kujira/") ? "/kujira/properties" : "/public/properties"}>一般向け物件一覧へ戻る</Button>
     </Box>
   );
 }
