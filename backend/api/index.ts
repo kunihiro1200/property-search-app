@@ -862,6 +862,12 @@ app.get('/api/public/properties/:identifier/images', async (req, res) => {
       filteredImages = result.images.filter(img => !hiddenImages.includes(img.id));
     }
 
+    // Only displayed, public-folder images are sent to vision. Never analyze admin-hidden images.
+    // Filename sorting remains the safe fallback if the AI key, quota or provider is unavailable.
+    if (result.folderId && includeHidden !== 'true' && filteredImages.length > 1) {
+      filteredImages = await propertyImageService.rankByOpenAIVision(result.folderId, filteredImages);
+    }
+
     // 手動指定のメイン画像を先頭に並べる（非表示・フォルダ外の画像は無視）
     let mainImageId: string | null = await propertyListingService.getMainImageId(property.id);
     if (mainImageId && !filteredImages.some(img => img.id === mainImageId)) {
