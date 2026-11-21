@@ -11,6 +11,7 @@ describe('public AA and FI partition', () => {
   });
   test('listing APIs filter different brands at database', () => {
     expect(section("app.get('/api/public/properties',", "app.get('/api/public/properties/:")).toContain("sitePrefix: 'AA'");
+    expect(section("app.get('/api/public/properties',", "app.get('/api/public/properties/:")).toContain("const filteredProperties = result.properties || [];");
     expect(section("app.get('/api/kujira/properties',", "app.get('/api/kujira/map-properties',")).toContain("sitePrefix: 'FI'");
   });
   test('map APIs keep sold home address obscured', () => {

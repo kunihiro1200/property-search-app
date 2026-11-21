@@ -275,10 +275,8 @@ app.get('/api/public/properties', async (req, res) => {
 
     console.log(`✅ Found ${result.properties?.length || 0} properties (total: ${result.pagination.total})`);
     
-    // いふうサイトではFI物件を除外（FI物件はくじら不動産サイト専用）
-    const filteredProperties = (result.properties || []).filter(
-      (p: any) => String(p.property_number || '').toUpperCase().startsWith('AA')
-    );
+    // DBクエリでAAだけに限定済み。履歴は匿名化によって物件番号が空になるため再フィルターしない。
+    const filteredProperties = result.properties || [];
     
     // price が設定されていない物件は sales_price || listing_price || 0 でインライン計算
     // （N+1クエリを排除: 個別のSupabaseクエリは実行しない）
