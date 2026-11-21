@@ -388,10 +388,10 @@ export class PropertyImageService {
     // Explicit file-name "メイン.jpg" continues to take precedence over automatic ordering.
     // Choose up to three representative photos; preserve relative order of every remaining file.
     const ordered = [...driveFiles].sort((a, b) =>
-      Number(/^メイン(?:\\.[^.]+)?$/i.test(b.name.trim().normalize('NFKC'))) -
-      Number(/^メイン(?:\\.[^.]+)?$/i.test(a.name.trim().normalize('NFKC')))
+      Number(/^メイン(?:\.[^.]+)?$/i.test(b.name.trim().normalize('NFKC'))) -
+      Number(/^メイン(?:\.[^.]+)?$/i.test(a.name.trim().normalize('NFKC')))
     );
-    const isMain = (name: string) => /^メイン(?:\\.[^.]+)?$/i.test(name.trim().normalize('NFKC'));
+    const isMain = (name: string) => /^メイン(?:\.[^.]+)?$/i.test(name.trim().normalize('NFKC'));
     const category = (name: string): number => {
       const value = name.normalize('NFKC').toLowerCase();
       // Equipment close-ups, floor plans and utility images must not displace a representative photo.
