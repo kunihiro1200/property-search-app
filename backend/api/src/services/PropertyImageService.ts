@@ -422,11 +422,13 @@ export class PropertyImageService {
         .eq('folder_id', folderId)
         .maybeSingle();
       if (readError) throw new Error('photo_ai_cache_read');
-      if (saved && saved.fingerprint === signature) {
+      if (saved && saved.fingerprint === signature && saved.status !== 'failed') {
         return saved.status === 'ready' && Array.isArray(saved.top_image_ids)
           ? reorder(saved.top_image_ids)
           : images;
       }
+      // Failed analyses may retry after the DB's 24-hour cooldown.
+      // reserve_property_photo_ai enforces the cooldown and daily limit atomically.
 
       // RPC uses a transaction lock per folder and caps new paid calls at
       // five properties per Japan day, regardless of public GET traffic.
@@ -498,7 +500,18 @@ export class PropertyImageService {
         } finally {
           clearTimeout(timer);
         }
-        if (!response.ok) throw new Error('photo_ai_openai_http_' + response.status);
+        if (!response.ok) {
+          // Record only the documented API error code, never the response body or credential.
+          let reason = 'unknown';
+          try {
+            const problem: any = await response.json();
+            const code = problem?.error?.code || problem?.error?.type;
+            if (typeof code === 'string' && /^[a-z0-9_]{1,48}$/i.test(code)) reason = code;
+          } catch {
+            // Ignore malformed provider error payload.
+          }
+          throw new Error('photo_ai_openai_http_' + response.status + '_' + reason);
+        }
         const payload: any = await response.json();
         const answer = (payload.output || []).flatMap((entry: any) => entry.content || [])
           .filter((part: any) => part.type === 'output_text')
