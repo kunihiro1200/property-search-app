@@ -6,6 +6,7 @@
 
 import { GoogleDriveService, DriveFile } from './GoogleDriveService';
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
@@ -355,7 +356,7 @@ export class PropertyImageService {
       console.log(`📊 [getImagesFromStorageUrl] Retrieved ${driveFiles.length} images from Google Drive`);
       
       // PropertyImage形式に変換
-      const images = this.convertToPropertyImages(driveFiles);
+      const images = await this.rankByOpenAIVision(targetFolderId, this.convertToPropertyImages(driveFiles));
       console.log(`✅ [getImagesFromStorageUrl] Converted to ${images.length} PropertyImages`);
       
       // キャッシュに保存
@@ -378,6 +379,161 @@ export class PropertyImageService {
         folderId: parentFolderId,
         cached: false,
       };
+    }
+  }
+
+
+  /**
+   * Visual photo selection is opt-in by availability of a server-side OpenAI key.
+   * All photos originate from a verified athome公開/atbb公開 folder.
+   * A durable DB claim and an atomic daily budget prevent public page refreshes
+   * from causing repeated or unbounded paid API calls.
+   * On any error, the existing filename-based image order is preserved.
+   */
+  private async rankByOpenAIVision(folderId: string, images: PropertyImage[]): Promise<PropertyImage[]> {
+    if (!process.env.OPENAI_API_KEY || images.length < 2) return images;
+
+    const signature = createHash('sha256')
+      .update(JSON.stringify(images.map(image => [image.id, image.modifiedTime])))
+      .digest('hex');
+    const reorder = (ids: string[]): PropertyImage[] => {
+      const selected: PropertyImage[] = [];
+      const used = new Set<string>();
+      // The file explicitly named メイン always wins over the AI.
+      const namedMain = images.find(image => /^メイン(?:\.[^.]+)?$/i.test(image.name.trim().normalize('NFKC')));
+      if (namedMain) {
+        selected.push(namedMain);
+        used.add(namedMain.id);
+      }
+      for (const id of ids.slice(0, 3)) {
+        const image = images.find(item => item.id === id);
+        if (image && !used.has(id) && selected.length < 3) {
+          selected.push(image);
+          used.add(id);
+        }
+      }
+      return [...selected, ...images.filter(image => !used.has(image.id))];
+    };
+
+    try {
+      const { data: saved, error: readError } = await supabase
+        .from('property_photo_ai_rankings')
+        .select('fingerprint,status,top_image_ids')
+        .eq('folder_id', folderId)
+        .maybeSingle();
+      if (readError) throw new Error('photo_ai_cache_read');
+      if (saved && saved.fingerprint === signature) {
+        return saved.status === 'ready' && Array.isArray(saved.top_image_ids)
+          ? reorder(saved.top_image_ids)
+          : images;
+      }
+
+      // RPC uses a transaction lock per folder and caps new paid calls at
+      // five properties per Japan day, regardless of public GET traffic.
+      const { data: reserved, error: reservationError } = await supabase.rpc(
+        'reserve_property_photo_ai',
+        { p_folder_id: folderId, p_fingerprint: signature, p_daily_limit: 5 }
+      );
+      if (reservationError || reserved !== true) return images;
+
+      try {
+        const candidates = images.slice(0, 36);
+        const prepared: Array<{ index: number; dataUrl: string }> = [];
+        let next = 0;
+        // Bound Google Drive load; failed individual images are simply omitted.
+        await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, async () => {
+          while (next < candidates.length) {
+            const index = next++;
+            try {
+              const image = await this.driveService.getImageData(candidates[index].id);
+              if (image.buffer.length > 16 * 1024 * 1024) continue;
+              const sharp = require('sharp') as typeof import('sharp');
+              const thumbnail = await sharp(image.buffer)
+                .rotate()
+                .resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 60 })
+                .toBuffer();
+              prepared.push({ index, dataUrl: 'data:image/jpeg;base64,' + thumbnail.toString('base64') });
+            } catch {
+              // Do not abort the full analysis because of one unreadable image.
+            }
+          }
+        }));
+        prepared.sort((a, b) => a.index - b.index);
+        if (prepared.length < 2) throw new Error('photo_ai_insufficient_images');
+
+        const parts: any[] = [{
+          type: 'input_text',
+          text: 'You select the best first THREE photos for a Japanese real estate listing. '
+            + 'Inspect the ACTUAL PIXELS of the numbered images, not filenames. '
+            + 'Prefer a clear exterior or land overview, then spacious living room, then a representative bedroom or other wide room. '
+            + 'If a category does not exist, select the best diverse overview alternatives. '
+            + 'Avoid remotes, switches, appliances close-ups, bathroom fixtures, details, floor plans, blurred images, watermarks, and duplicates. '
+            + 'Return JSON ONLY in the exact shape {"top":[0,1,2]}, with three distinct zero-based indices from the images provided. '
+            + 'Only the numbered photos in this request are valid choices.'
+        }];
+        for (const photo of prepared) {
+          parts.push({ type: 'input_text', text: 'Photo ' + photo.index });
+          parts.push({ type: 'input_image', image_url: photo.dataUrl, detail: 'low' });
+        }
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 18000);
+        let response: Response;
+        try {
+          response = await fetch('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + process.env.OPENAI_API_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'gpt-4.1-mini',
+              store: false,
+              max_output_tokens: 180,
+              input: [{ role: 'user', content: parts }]
+            }),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timer);
+        }
+        if (!response.ok) throw new Error('photo_ai_openai_http_' + response.status);
+        const payload: any = await response.json();
+        const answer = (payload.output || []).flatMap((entry: any) => entry.content || [])
+          .filter((part: any) => part.type === 'output_text')
+          .map((part: any) => part.text || '').join('');
+        const jsonMatch = answer.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('photo_ai_invalid_response');
+        const parsed = JSON.parse(jsonMatch[0]);
+        const available = new Set(prepared.map(item => item.index));
+        if (!Array.isArray(parsed.top)) throw new Error('photo_ai_invalid_choices');
+        const topIndices = [...new Set<number>(parsed.top)]
+          .filter(index => Number.isInteger(index) && available.has(index)).slice(0, 3);
+        if (topIndices.length !== 3) throw new Error('photo_ai_invalid_choices');
+        const selectedIds = topIndices.map(index => candidates[index].id);
+        const { error: writeError } = await supabase.from('property_photo_ai_rankings')
+          .update({
+            status: 'ready',
+            top_image_ids: selectedIds,
+            model: 'gpt-4.1-mini',
+            error_code: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('folder_id', folderId).eq('fingerprint', signature);
+        if (writeError) throw new Error('photo_ai_cache_write');
+        return reorder(selectedIds);
+      } catch (error: any) {
+        // Never expose secret keys, customer content, image data, or provider bodies.
+        const code = String(error?.message || 'photo_ai_failure').slice(0, 75);
+        console.warn('[PhotoAI] Classification unavailable, using filename fallback:', code);
+        await supabase.from('property_photo_ai_rankings')
+          .update({ status: 'failed', error_code: code, updated_at: new Date().toISOString() })
+          .eq('folder_id', folderId).eq('fingerprint', signature);
+        return images;
+      }
+    } catch {
+      return images;
     }
   }
 
