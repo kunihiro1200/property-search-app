@@ -1,0 +1,43 @@
+name: Kujira and Ifoo property boundaries
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/api/index.ts'
+      - 'backend/api/src/services/PropertyListingService.ts'
+      - 'backend/api/__tests__/kujiraSiteSegregation.test.ts'
+      - 'frontend/src/pages/KujiraPropertiesPage.tsx'
+      - 'frontend/src/components/SiteManagementAccessGate.tsx'
+      - 'frontend/src/App.tsx'
+      - '.github/workflows/kujira-site-boundary.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/api/index.ts'
+      - 'backend/api/src/services/PropertyListingService.ts'
+      - 'backend/api/__tests__/kujiraSiteSegregation.test.ts'
+      - 'frontend/src/pages/KujiraPropertiesPage.tsx'
+      - 'frontend/src/components/SiteManagementAccessGate.tsx'
+      - 'frontend/src/App.tsx'
+      - '.github/workflows/kujira-site-boundary.yml'
+permissions:
+  contents: read
+jobs:
+  offline-site-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/api/package-lock.json
+      - name: Install test dependencies without access to real credentials
+        working-directory: backend/api
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify AA/FI separation and privacy protections
+        working-directory: backend/api
+        run: npx jest --runInBand --runTestsByPath __tests__/kujiraSiteSegregation.test.ts
