@@ -405,19 +405,41 @@ export class PropertyImageService {
         selected.push(namedMain);
         used.add(namedMain.id);
       }
-      // Safety rule: an equipment detail cannot take one of the first three slots
-      // just because the vision model selected it. Preserve explicit メイン above.
+      // Keep the three leading images diverse even when the vision model picks
+      // a close-up or multiple photos of the same type.
       const isEquipmentDetail = (name: string) =>
         /リモコン|スイッチ|給湯|コンセント|操作盤|設備|メーター|換気扇|レンジフード|コンロ|間取り|図面|panorama|remote|switch|control|floor.?plan/i
           .test(name.normalize('NFKC'));
+      const category = (name: string): number => {
+        const value = name.normalize('NFKC').toLowerCase();
+        if (/外観|建物全景|住宅外観|戸建て外観|exterior|facade/.test(value)) return 0;
+        if (/リビング|ldk|living|居間/.test(value)) return 1;
+        if (/居室|洋室|和室|寝室|空室|bedroom|room/.test(value)) return 2;
+        return 3;
+      };
+      const selectedCategories = new Set(selected.map(image => category(image.name)));
       for (const id of ids.slice(0, 3)) {
         const image = images.find(item => item.id === id);
-        if (image && !used.has(id) && selected.length < 3 && !isEquipmentDetail(image.name)) {
+        if (!image || used.has(id) || selected.length >= 3 || isEquipmentDetail(image.name)) continue;
+        const kind = category(image.name);
+        if (kind !== 3 && selectedCategories.has(kind)) continue;
+        selected.push(image);
+        used.add(id);
+        selectedCategories.add(kind);
+      }
+      // Fill remaining slots with missing overview categories first.
+      for (const rank of [0, 1, 2, 3]) {
+        if (selected.length >= Math.min(3, images.length)) break;
+        if (rank !== 3 && selectedCategories.has(rank)) continue;
+        const image = images.find(item => !used.has(item.id)
+          && !isEquipmentDetail(item.name) && category(item.name) === rank);
+        if (image) {
           selected.push(image);
-          used.add(id);
+          used.add(image.id);
+          selectedCategories.add(rank);
         }
       }
-      // Use the existing representative-photo ordering to fill AI-rejected slots.
+      // Small listings may have only one photo category.
       for (const image of images) {
         if (selected.length >= Math.min(3, images.length)) break;
         if (!used.has(image.id) && !isEquipmentDetail(image.name)) {
