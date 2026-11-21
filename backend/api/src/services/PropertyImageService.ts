@@ -394,13 +394,17 @@ export class PropertyImageService {
     if (!process.env.OPENAI_API_KEY || images.length < 2) return images;
 
     const signature = createHash('sha256')
-      .update(JSON.stringify(images.map(image => [image.id, image.modifiedTime])))
+      .update('privacy-person-name-v1:' + JSON.stringify(images.map(image => [image.id, image.modifiedTime])))
       .digest('hex');
-    const reorder = (ids: string[]): PropertyImage[] => {
+    const reorder = (ids: string[], skippedIds: string[] = []): PropertyImage[] => {
+      const excluded = new Set(skippedIds.filter(id => images.some(image => image.id === id)));
+      // Never publish images where vision found a recognizable face or a human name.
+      // Drive files remain unchanged; only this public image response is filtered.
+      const safeImages = images.filter(image => !excluded.has(image.id));
       const selected: PropertyImage[] = [];
       const used = new Set<string>();
       // The file explicitly named メイン always wins over the AI.
-      const namedMain = images.find(image => /^メイン(?:\.[^.]+)?$/i.test(image.name.trim().normalize('NFKC')));
+      const namedMain = safeImages.find(image => /^メイン(?:\.[^.]+)?$/i.test(image.name.trim().normalize('NFKC')));
       if (namedMain) {
         selected.push(namedMain);
         used.add(namedMain.id);
@@ -419,7 +423,7 @@ export class PropertyImageService {
       };
       const selectedCategories = new Set(selected.map(image => category(image.name)));
       for (const id of ids.slice(0, 3)) {
-        const image = images.find(item => item.id === id);
+        const image = safeImages.find(item => item.id === id);
         if (!image || used.has(id) || selected.length >= 3 || isEquipmentDetail(image.name)) continue;
         const kind = category(image.name);
         if (kind !== 3 && selectedCategories.has(kind)) continue;
@@ -429,9 +433,9 @@ export class PropertyImageService {
       }
       // Fill remaining slots with missing overview categories first.
       for (const rank of [0, 1, 2, 3]) {
-        if (selected.length >= Math.min(3, images.length)) break;
+        if (selected.length >= Math.min(3, safeImages.length)) break;
         if (rank !== 3 && selectedCategories.has(rank)) continue;
-        const image = images.find(item => !used.has(item.id)
+        const image = safeImages.find(item => !used.has(item.id)
           && !isEquipmentDetail(item.name) && category(item.name) === rank);
         if (image) {
           selected.push(image);
@@ -440,26 +444,26 @@ export class PropertyImageService {
         }
       }
       // Small listings may have only one photo category.
-      for (const image of images) {
-        if (selected.length >= Math.min(3, images.length)) break;
+      for (const image of safeImages) {
+        if (selected.length >= Math.min(3, safeImages.length)) break;
         if (!used.has(image.id) && !isEquipmentDetail(image.name)) {
           selected.push(image);
           used.add(image.id);
         }
       }
-      return [...selected, ...images.filter(image => !used.has(image.id))];
+      return [...selected, ...safeImages.filter(image => !used.has(image.id))];
     };
 
     try {
       const { data: saved, error: readError } = await supabase
         .from('property_photo_ai_rankings')
-        .select('fingerprint,status,top_image_ids')
+        .select('fingerprint,status,top_image_ids,skipped_image_ids')
         .eq('folder_id', folderId)
         .maybeSingle();
       if (readError) throw new Error('photo_ai_cache_read');
       if (saved && saved.fingerprint === signature && saved.status !== 'failed') {
         return saved.status === 'ready' && Array.isArray(saved.top_image_ids)
-          ? reorder(saved.top_image_ids)
+          ? reorder(saved.top_image_ids, Array.isArray(saved.skipped_image_ids) ? saved.skipped_image_ids : [])
           : images;
       }
       // Failed analyses may retry after the DB's 24-hour cooldown.
@@ -506,7 +510,11 @@ export class PropertyImageService {
             + 'Prefer a clear exterior or land overview, then spacious living room, then a representative bedroom or other wide room. '
             + 'If a category does not exist, select the best diverse overview alternatives. '
             + 'Avoid remotes, switches, appliances close-ups, bathroom fixtures, details, floor plans, blurred images, watermarks, and duplicates. '
-            + 'Return JSON ONLY in the exact shape {"top":[0,1,2]}, with three distinct zero-based indices from the images provided. '
+            + 'PRIVACY: For EVERY numbered image, check whether it visibly includes a discernible HUMAN FACE (even in reflections, portraits, posters or screen images), or readable text that appears to be a PERSON NAME (Japanese or Latin script: nameplate, envelope, ID, handwriting, sign, etc.). '
+            + 'Such images MUST be included in skip, and MUST NOT be in top. Do not identify, transcribe or output any names or descriptions. '
+            + 'Do not flag company names or generic real-estate watermarks as person names by themselves. When uncertain whether a specific piece of text is a personal name, err toward skip. '
+            + 'Return JSON ONLY in the exact shape {"top":[0,1,2],"skip":[4,7]}, using zero-based image indices. '
+            + 'top may have fewer than three items if there are fewer than three safe photos. Include every detected unsafe photo in skip; skip may be empty. '
             + 'Only the numbered photos in this request are valid choices.'
         }];
         for (const photo of prepared) {
@@ -527,7 +535,7 @@ export class PropertyImageService {
             body: JSON.stringify({
               model: 'gpt-4.1-mini',
               store: false,
-              max_output_tokens: 180,
+              max_output_tokens: 500,
               input: [{ role: 'user', content: parts }]
             }),
             signal: controller.signal
@@ -555,22 +563,26 @@ export class PropertyImageService {
         if (!jsonMatch) throw new Error('photo_ai_invalid_response');
         const parsed = JSON.parse(jsonMatch[0]);
         const available = new Set(prepared.map(item => item.index));
-        if (!Array.isArray(parsed.top)) throw new Error('photo_ai_invalid_choices');
+        if (!Array.isArray(parsed.top) || !Array.isArray(parsed.skip)) throw new Error('photo_ai_invalid_choices');
+        const skippedIndices = [...new Set<number>(parsed.skip)]
+          .filter(index => Number.isInteger(index) && available.has(index));
+        const skippedIndexSet = new Set(skippedIndices);
         const topIndices = [...new Set<number>(parsed.top)]
-          .filter(index => Number.isInteger(index) && available.has(index)).slice(0, 3);
-        if (topIndices.length !== 3) throw new Error('photo_ai_invalid_choices');
+          .filter(index => Number.isInteger(index) && available.has(index) && !skippedIndexSet.has(index)).slice(0, 3);
+        const skippedIds = skippedIndices.map(index => candidates[index].id);
         const selectedIds = topIndices.map(index => candidates[index].id);
         const { error: writeError } = await supabase.from('property_photo_ai_rankings')
           .update({
             status: 'ready',
             top_image_ids: selectedIds,
+            skipped_image_ids: skippedIds,
             model: 'gpt-4.1-mini',
             error_code: null,
             updated_at: new Date().toISOString()
           })
           .eq('folder_id', folderId).eq('fingerprint', signature);
         if (writeError) throw new Error('photo_ai_cache_write');
-        return reorder(selectedIds);
+        return reorder(selectedIds, skippedIds);
       } catch (error: any) {
         // Never expose secret keys, customer content, image data, or provider bodies.
         const code = String(error?.message || 'photo_ai_failure').slice(0, 75);
