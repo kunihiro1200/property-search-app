@@ -498,7 +498,18 @@ export class PropertyImageService {
         } finally {
           clearTimeout(timer);
         }
-        if (!response.ok) throw new Error('photo_ai_openai_http_' + response.status);
+        if (!response.ok) {
+          // Record only the documented API error code, never the response body or credential.
+          let reason = 'unknown';
+          try {
+            const problem: any = await response.json();
+            const code = problem?.error?.code || problem?.error?.type;
+            if (typeof code === 'string' && /^[a-z0-9_]{1,48}$/i.test(code)) reason = code;
+          } catch {
+            // Ignore malformed provider error payload.
+          }
+          throw new Error('photo_ai_openai_http_' + response.status + '_' + reason);
+        }
         const payload: any = await response.json();
         const answer = (payload.output || []).flatMap((entry: any) => entry.content || [])
           .filter((part: any) => part.type === 'output_text')
