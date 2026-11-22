@@ -592,7 +592,9 @@ const PublicPropertiesPage: React.FC = () => {
       const statusParam = searchParams.get('listingStatus');
       if (statusParam === 'historical' || statusParam === 'pre_release' || statusParam === 'all') params.set('listingStatus', statusParam);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.DEV
+         ? (import.meta.env.VITE_API_URL || 'http://localhost:3000')
+         : window.location.origin;
       const response = await fetch(
         `${apiUrl}/api/public/properties?${params.toString()}`,
         { signal: abortController.signal }
@@ -673,7 +675,9 @@ const PublicPropertiesPage: React.FC = () => {
       const mapListingStatus = searchParams.get('listingStatus');
       if (mapListingStatus === 'historical' || mapListingStatus === 'pre_release' || mapListingStatus === 'all') params.set('listingStatus', mapListingStatus);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.DEV
+         ? (import.meta.env.VITE_API_URL || 'http://localhost:3000')
+         : window.location.origin;
       const queryString = params.toString();
       const url = `${apiUrl}/api/public/map-properties${queryString ? `?${queryString}` : ''}`;
       
