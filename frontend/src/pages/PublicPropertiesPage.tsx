@@ -25,6 +25,7 @@ import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { PropertyTypeFilterButtons, PropertyType } from '../components/PropertyTypeFilterButtons';
 import PublicPropertyCard from '../components/PublicPropertyCard';
 import PublicPropertyHeader from '../components/PublicPropertyHeader';
+import { useLanguage } from '../contexts/LanguageContext';
 import PropertyMapView from '../components/PropertyMapView';
 import { PublicProperty } from '../types/publicProperty';
 import { NavigationState } from '../types/navigationState';
@@ -43,6 +44,7 @@ interface PaginationInfo {
 
 const PublicPropertiesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t, language } = useLanguage();
   const location = useLocation();
   
   // Google Maps APIローダー（Context経由で取得）
@@ -832,18 +834,18 @@ const PublicPropertiesPage: React.FC = () => {
         <Paper elevation={1} sx={{ bgcolor: 'white' }}>
           <Container maxWidth="lg" sx={{ py: 3 }}>
             <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-              {listingStatus === 'historical' ? '売却済み物件一覧' : '販売中・売却済みの物件を探す'}
+              {listingStatus === 'historical' ? t('listing.soldTitle') : t('listing.heading')}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-              販売中の物件だけでなく、売却済み物件の過去の売出情報も検索できます。
+              {t('listing.intro')}
             </Typography>
             {listingStatus === 'historical' && (
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                ※掲載価格は過去の売出価格です。実際の成約価格とは限りません。
+                {t('listing.priceNote')}
               </Typography>
             )}
             <Typography variant="body1" color="text.secondary" gutterBottom>
-              {pagination && `${pagination.total}件の物件からお探しいただけます`}
+              {pagination && (language === 'en' ? `${pagination.total} properties available` : `${pagination.total}件の物件からお探しいただけます`)}
             </Typography>
             
             {/* 検索バー */}
@@ -861,7 +863,7 @@ const PublicPropertiesPage: React.FC = () => {
                   value={searchQuery}
                   onChange={setSearchQuery}
                   onSearch={handleSearch}
-                  placeholder="所在地で検索"
+                  placeholder={t("listing.searchPlaceholder")}
                   afterSearchButton={(
                   <Button
                     variant={viewMode === 'map' ? "contained" : "outlined"}
@@ -899,13 +901,13 @@ const PublicPropertiesPage: React.FC = () => {
                       setShouldScrollToMap(true);
                     }}
                   >
-                    {viewMode === 'map' ? '✓ 地図検索を解除' : '地図で検索'}
+                    {viewMode === 'map' ? t('listing.exitMap') : t('listing.searchMap')}
                   </Button>
                   )}
                 />
                 {searchType && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {searchType === 'property_number' ? '物件番号で検索中' : '所在地で検索中'}
+                    {searchType === 'property_number' ? t('search.byPropertyNumber') : t('search.byLocation')}
                   </Typography>
                 )}
               </Box>
@@ -925,7 +927,7 @@ const PublicPropertiesPage: React.FC = () => {
             }}
           >
             <Typography variant="h6" fontWeight="600">
-              希望条件を選ぶ
+              {t('listing.chooseCriteria')}
             </Typography>
           </Box>
           <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -933,14 +935,14 @@ const PublicPropertiesPage: React.FC = () => {
           <Stack spacing={2}>
             <Box>
               <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>
-                販売状況で探す
+                {t('listing.searchByStatus')}
               </Typography>
               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                 {([
-                  ['current', '販売中の物件'],
-                  ['pre_release', '公開前の物件を探す'],
-                  ['historical', '売却済み物件を探す'],
-                  ['all', 'すべての物件'],
+                  ['current', t('listing.current')],
+                  ['pre_release', t('listing.preRelease')],
+                  ['historical', t('listing.historical')],
+                  ['all', t('listing.all')],
                 ] as const).map(([value, label]) => (
                   <Button key={value} variant={listingStatus === value ? 'contained' : 'outlined'}
                     onClick={() => chooseListingStatus(value)} disabled={filterLoading}
@@ -970,7 +972,7 @@ const PublicPropertiesPage: React.FC = () => {
                 aria-controls="customer-advanced-filters"
                 sx={{ fontWeight: 700 }}
               >
-                {showAdvancedFilters ? '詳細条件を閉じる' : '詳細条件（価格・築年数）'}
+                {showAdvancedFilters ? t('listing.hideAdvanced') : t('listing.advanced')}
               </Button>
             </Box>
             <Collapse in={showAdvancedFilters} id="customer-advanced-filters">
@@ -978,12 +980,12 @@ const PublicPropertiesPage: React.FC = () => {
             {/* 価格帯フィルター */}
             <Box>
               <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
-                価格帯（万円）
+                {t('listing.priceRange')}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <TextField
                   type="number"
-                  placeholder="最低価格"
+                  placeholder={t("listing.minPrice")}
                   size="small"
                   fullWidth
                   value={minPrice}
@@ -993,7 +995,7 @@ const PublicPropertiesPage: React.FC = () => {
                 <Typography color="text.secondary">〜</Typography>
                 <TextField
                   type="number"
-                  placeholder="最高価格"
+                  placeholder={t("listing.maxPrice")}
                   size="small"
                   fullWidth
                   value={maxPrice}
@@ -1006,12 +1008,12 @@ const PublicPropertiesPage: React.FC = () => {
             {/* 築年数フィルター */}
             <Box>
               <Typography variant="body2" fontWeight={500} color="text.secondary" gutterBottom>
-                築年数（年）
+                {t('listing.ageRange')}
               </Typography>
               <Stack direction="row" spacing={1} alignItems="center">
                 <TextField
                   type="number"
-                  placeholder="最小築年数"
+                  placeholder={t("filter.minAge")}
                   size="small"
                   fullWidth
                   value={minAge}
@@ -1021,7 +1023,7 @@ const PublicPropertiesPage: React.FC = () => {
                 <Typography color="text.secondary">〜</Typography>
                 <TextField
                   type="number"
-                  placeholder="最大築年数"
+                  placeholder={t("filter.maxAge")}
                   size="small"
                   fullWidth
                   value={maxAge}
@@ -1050,14 +1052,14 @@ const PublicPropertiesPage: React.FC = () => {
                 }}
                 aria-label="すべてのフィルター条件をクリア"
               >
-                {hasActiveFilters() ? '✓ 条件をクリア' : 'すべての条件をクリア'}
+                {hasActiveFilters() ? t('listing.clearActive') : t('search.clearFilters')}
               </Button>
             </Box>
               </Stack>
             </Collapse>
             {hasActiveFilters() && !showAdvancedFilters && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                適用中の条件は「詳細条件」から変更できます。
+                {t('listing.activeHint')}
               </Typography>
             )}
           </Stack>
@@ -1071,11 +1073,11 @@ const PublicPropertiesPage: React.FC = () => {
         {filterLoading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
             <CircularProgress size={24} sx={{ mr: 1 }} />
-            <Typography color="text.secondary">フィルター適用中...</Typography>
+            <Typography color="text.secondary">{t('filter.applying')}</Typography>
           </Box>
         )}
         
-        {/* 地図モード時はリスト表示に戻るボタンを常に表示（物件0件でも） */}
+        {/* 地図モード時は{t('listing.returnToList')}ボタンを常に表示（物件0件でも） */}
         {viewMode === 'map' && (
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
@@ -1150,7 +1152,7 @@ const PublicPropertiesPage: React.FC = () => {
             {properties.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 6 }}>
                 <Typography variant="h6" color="text.secondary">
-                  {listingStatus === 'historical' ? '該当する売却済み物件はありません' : listingStatus === 'pre_release' ? '該当する公開前物件はありません' : '該当する物件はありません'}
+                  {listingStatus === 'historical' ? t('listing.noSold') : listingStatus === 'pre_release' ? t('listing.noPreRelease') : t('message.noResults')}
                 </Typography>
               </Box>
             ) : (
@@ -1228,7 +1230,7 @@ const PublicPropertiesPage: React.FC = () => {
                       disabled={currentPage === 1 || filterLoading}
                       startIcon={filterLoading && currentPage > 1 ? <CircularProgress size={16} /> : undefined}
                     >
-                      前へ
+                      {t('pagination.prev')}
                     </Button>
                     <Typography sx={{ px: 2 }}>
                       {currentPage} / {pagination.totalPages}
@@ -1249,7 +1251,7 @@ const PublicPropertiesPage: React.FC = () => {
                       disabled={currentPage === pagination.totalPages || filterLoading}
                       endIcon={filterLoading && currentPage < pagination.totalPages ? <CircularProgress size={16} /> : undefined}
                     >
-                      次へ
+                      {t('pagination.next')}
                     </Button>
                   </Box>
                 )}
@@ -1261,11 +1263,11 @@ const PublicPropertiesPage: React.FC = () => {
       {comparedProperties.length > 0 && viewMode === 'list' && (
         <Paper elevation={5} sx={{ position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1200, width: 'min(94vw, 650px)', p: 2, borderRadius: 3 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Typography fontWeight={700}>比較する物件：{comparedProperties.length}/3件</Typography>
+            <Typography fontWeight={700}>{t('listing.compareCount')}{comparedProperties.length}/3</Typography>
             <Stack direction="row" spacing={1}>
-              <Button size="small" onClick={() => setComparedProperties([])}>クリア</Button>
+              <Button size="small" onClick={() => setComparedProperties([])}>{t('listing.clear')}</Button>
               <Button variant="contained" onClick={() => setCompareOpen(true)} disabled={comparedProperties.length < 2}>
-                比較を見る
+                {t('listing.compareView')}
               </Button>
             </Stack>
           </Stack>
