@@ -92,8 +92,9 @@ const PublicPropertiesPage: React.FC = () => {
   // 公開中のみ表示フィルター状態（デフォルトで全物件を表示）
   const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
   const listingStatus = searchParams.get('listingStatus') === 'historical' ? 'historical'
+    : searchParams.get('listingStatus') === 'pre_release' ? 'pre_release'
     : searchParams.get('listingStatus') === 'all' ? 'all' : 'current';
-  const chooseListingStatus = (next: 'current' | 'historical' | 'all') => {
+  const chooseListingStatus = (next: 'current' | 'pre_release' | 'historical' | 'all') => {
     const updated = new URLSearchParams(searchParams);
     if (next === 'current') updated.delete('listingStatus');
     else updated.set('listingStatus', next);
@@ -589,7 +590,7 @@ const PublicPropertiesPage: React.FC = () => {
       if (maxAgeParam) params.set('maxAge', maxAgeParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       const statusParam = searchParams.get('listingStatus');
-      if (statusParam === 'historical' || statusParam === 'all') params.set('listingStatus', statusParam);
+      if (statusParam === 'historical' || statusParam === 'pre_release' || statusParam === 'all') params.set('listingStatus', statusParam);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(
@@ -670,7 +671,7 @@ const PublicPropertiesPage: React.FC = () => {
       if (maxPriceParam) params.set('maxPrice', maxPriceParam);
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       const mapListingStatus = searchParams.get('listingStatus');
-      if (mapListingStatus === 'historical' || mapListingStatus === 'all') params.set('listingStatus', mapListingStatus);
+      if (mapListingStatus === 'historical' || mapListingStatus === 'pre_release' || mapListingStatus === 'all') params.set('listingStatus', mapListingStatus);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const queryString = params.toString();
@@ -933,6 +934,7 @@ const PublicPropertiesPage: React.FC = () => {
               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                 {([
                   ['current', '販売中の物件'],
+                  ['pre_release', '公開前の物件を探す'],
                   ['historical', '売却済み物件を探す'],
                   ['all', 'すべての物件'],
                 ] as const).map(([value, label]) => (
@@ -1144,7 +1146,7 @@ const PublicPropertiesPage: React.FC = () => {
             {properties.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 6 }}>
                 <Typography variant="h6" color="text.secondary">
-                  {listingStatus === 'historical' ? '該当する売却済み物件はありません' : '現在公開中の物件はありません'}
+                  {listingStatus === 'historical' ? '該当する売却済み物件はありません' : listingStatus === 'pre_release' ? '該当する公開前物件はありません' : '該当する物件はありません'}
                 </Typography>
               </Box>
             ) : (

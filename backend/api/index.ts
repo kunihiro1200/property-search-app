@@ -219,8 +219,8 @@ app.get('/api/public/properties', async (req, res) => {
     const minAge = req.query.minAge ? parseInt(req.query.minAge as string) : undefined;
     const maxAge = req.query.maxAge ? parseInt(req.query.maxAge as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
-    const listingStatus = ['current', 'historical', 'all'].includes(String(req.query.listingStatus))
-      ? req.query.listingStatus as 'current' | 'historical' | 'all' : 'current';
+    const listingStatus = ['current', 'pre_release', 'historical', 'all'].includes(String(req.query.listingStatus))
+      ? req.query.listingStatus as 'current' | 'pre_release' | 'historical' | 'all' : 'current';
     const withCoordinates = req.query.withCoordinates === 'true'; // 座標がある物件のみ取得
     const skipImages = req.query.skipImages === 'true'; // 画像取得をスキップ（地図ビュー用）
     
@@ -2551,7 +2551,7 @@ app.get('/api/kujira/map-properties', async (req, res) => {
     const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
-    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'all' ? 'all' : 'current';
+    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'pre_release' ? 'pre_release' : req.query.listingStatus === 'all' ? 'all' : 'current';
 
     // 地図表示に必要な最小限のカラムのみ取得
     let query = supabase
@@ -2679,7 +2679,7 @@ app.get('/api/public/map-properties', async (req, res) => {
     const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
     const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
     const showPublicOnly = req.query.showPublicOnly === 'true';
-    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'all' ? 'all' : 'current';
+    const listingStatus = req.query.listingStatus === 'historical' ? 'historical' : req.query.listingStatus === 'pre_release' ? 'pre_release' : req.query.listingStatus === 'all' ? 'all' : 'current';
 
     // 地図表示に必要な最小限のカラムのみ取得
     let query = supabase
@@ -2693,11 +2693,12 @@ app.get('/api/public/map-properties', async (req, res) => {
     if (listingStatus === 'current') {
       query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中'])
         .not('latitude', 'is', null).not('longitude', 'is', null);
+    } else if (listingStatus === 'pre_release') {
+      query = query.ilike('atbb_status', '%公開前%');
     } else if (listingStatus === 'historical') {
       query = query.not('atbb_status', 'is', null)
-        .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
-    } else {
-      query = query.not('atbb_status', 'in', '("公開前")');
+        .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中")')
+        .not('atbb_status', 'ilike', '%公開前%');
     }
 
     if (types) {
@@ -2742,7 +2743,7 @@ app.get('/api/public/map-properties', async (req, res) => {
       'マンション': 'apartment', '土地': 'land',
       '収益物件': 'income',
     };
-    const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中']);
+    const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中', '公開前', '専任・公開前', '一般・公開前']);
     // 約5kmのエリア代表点。非公開・売却済みの正確なピン・ID・住所は返さない。
     const coarseGrid = (coordinate: number) => Math.round(coordinate / 0.05) * 0.05;
     const soldAreas = new Map<string, any>();
