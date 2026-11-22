@@ -23,6 +23,7 @@ import publicApi from '../services/publicApi';
 import PublicInquiryForm from '../components/PublicInquiryForm';
 import PropertyImageGallery from '../components/PropertyImageGallery';
 import PublicPropertyHeader from '../components/PublicPropertyHeader';
+import { useLanguage } from '../contexts/LanguageContext';
 import { RefreshButtons } from '../components/RefreshButtons';
 import { formatConstructionDate, shouldShowConstructionDate } from '../utils/constructionDateFormatter';
 import { getBadgeType } from '../utils/propertyStatusUtils';
@@ -115,6 +116,7 @@ async function extractCoordinatesFromGoogleMapUrl(url: string): Promise<{ lat: n
 }
 
 const PublicPropertyDetailPage: React.FC = () => {
+  const { t, language } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -541,7 +543,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2 }} className="no-print">
-                  物件画像
+                  {t('detail.propertyImages')}
                 </Typography>
                 
                 {property.property_number && (
@@ -567,7 +569,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                   className="no-print"
                 >
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    360°パノラマビュー
+                    {t('detail.panorama')}
                   </Typography>
                   <Box
                     sx={{
@@ -626,7 +628,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 {showConstructionDate && (
                   <Grid item xs={6} sm={4}>
                     <Typography variant="body2" color="text.secondary">
-                      新築年月
+                      {t('detail.constructionDate')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
                       {formattedConstructionDate}
@@ -636,7 +638,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 {property.land_area && (
                   <Grid item xs={6} sm={4}>
                     <Typography variant="body2" color="text.secondary">
-                      土地面積
+                      {t('detail.landArea')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
                       {property.land_area}㎡
@@ -646,7 +648,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 {property.building_area && (
                   <Grid item xs={6} sm={4}>
                     <Typography variant="body2" color="text.secondary">
-                      建物面積
+                      {t('detail.buildingArea')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
                       {property.building_area}㎡
@@ -656,17 +658,17 @@ const PublicPropertyDetailPage: React.FC = () => {
                 {property.building_age !== undefined && property.building_age !== null && (
                   <Grid item xs={6} sm={4}>
                     <Typography variant="body2" color="text.secondary">
-                      築年数
+                      {t('detail.buildingAge')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
-                      築{property.building_age}年
+                      {language === 'en' ? `${property.building_age} years old` : `築${property.building_age}年`}
                     </Typography>
                   </Grid>
                 )}
                 {property.floor_plan && (
                   <Grid item xs={6} sm={4}>
                     <Typography variant="body2" color="text.secondary">
-                      間取り
+                      {t('property.floorPlan')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
                       {property.floor_plan}
@@ -680,7 +682,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 <>
                   <Divider sx={{ my: 3 }} />
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    物件の説明
+                    {t('detail.description')}
                   </Typography>
                   <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                     {property.description}
@@ -693,7 +695,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 <>
                   <Divider sx={{ my: 3 }} />
                   <Typography variant="h6" sx={{ mb: 2 }}>
-                    物件の特徴
+                    {t('detail.features')}
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {property.features.map((feature, index) => (
@@ -709,7 +711,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             {(property.google_map_url || mapCoordinates) && (
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 5 }}> {/* 5番目 */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  地図
+                  {t('detail.map')}
                 </Typography>
                 
                 {/* Google Mapボタン */}
@@ -723,7 +725,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                     fullWidth
                     sx={{ mb: mapCoordinates && isMapLoaded ? 2 : 0 }}
                   >
-                    Google Mapで見る
+                    {t('detail.viewOnGoogleMap')}
                   </Button>
                 )}
 
@@ -778,13 +780,13 @@ const PublicPropertyDetailPage: React.FC = () => {
             {isSold && (
               <Paper elevation={2} sx={{ p: 3, mb: 3, order: 6 }}> {/* 6番目 */}
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  成約情報
+                  {t('detail.contractInfo')}
                 </Typography>
                 
                 {/* 物件番号 */}
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" color="text.secondary">
-                    物件番号
+                    {t('detail.propertyNumber')}
                   </Typography>
                   <Typography variant="body1" fontWeight="medium">
                     {property.property_number}
@@ -795,7 +797,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 {completeData?.settlementDate && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      成約日
+                      {t('detail.contractDate')}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
                       {formatSettlementDate(completeData.settlementDate)}
@@ -821,7 +823,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#F57C00' }}>
-                  おすすめポイント
+                  {t('detail.highlights')}
                 </Typography>
                 <Box sx={{ m: 0 }}>
                   {(() => {
@@ -878,7 +880,7 @@ const PublicPropertyDetailPage: React.FC = () => {
             {/* 「概算書」セクション（印刷時は非表示） */}
             <Paper elevation={2} sx={{ p: 3, mb: 3, order: 8 }} className="no-print"> {/* 8番目 */}
               <Typography variant="h6" sx={{ mb: 2 }}>
-                概算書
+                {t('detail.estimate')}
               </Typography>
               
               {/* 概算書ボタン（PC・スマホ共通） */}
@@ -896,7 +898,7 @@ const PublicPropertyDetailPage: React.FC = () => {
                 <Box sx={{ textAlign: 'center' }}>
                   <CircularProgress size={24} sx={{ mb: 1 }} />
                   <Typography variant="body2" color="text.secondary">
-                    概算書を生成しています。10秒ほどお待ちください...
+                    {t('detail.estimateWait')}
                   </Typography>
                 </Box>
               )}
