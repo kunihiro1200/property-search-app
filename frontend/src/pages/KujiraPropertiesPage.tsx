@@ -61,8 +61,8 @@ const KujiraPropertiesPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   const [showPublicOnly, setShowPublicOnly] = useState<boolean>(false);
-  const listingStatus = searchParams.get('listingStatus') === 'historical' ? 'historical' : searchParams.get('listingStatus') === 'all' ? 'all' : 'current';
-  const chooseListingStatus = (next: 'current' | 'historical' | 'all') => {
+  const listingStatus = searchParams.get('listingStatus') === 'historical' ? 'historical' : searchParams.get('listingStatus') === 'pre_release' ? 'pre_release' : searchParams.get('listingStatus') === 'all' ? 'all' : 'current';
+  const chooseListingStatus = (next: 'current' | 'pre_release' | 'historical' | 'all') => {
     const updated = new URLSearchParams(searchParams);
     if (next === 'current') updated.delete('listingStatus'); else updated.set('listingStatus', next);
     updated.delete('view');
@@ -319,7 +319,7 @@ const KujiraPropertiesPage: React.FC = () => {
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       if (listingStatus !== 'current') params.set('listingStatus', listingStatus);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || 'http://localhost:3000') : window.location.origin;
       // くじら専用エンドポイント（FI物件のみ返す）
       const response = await fetch(
         `${apiUrl}/api/kujira/properties?${params.toString()}`,
@@ -378,7 +378,7 @@ const KujiraPropertiesPage: React.FC = () => {
       if (showPublicOnlyParam === 'true') params.set('showPublicOnly', 'true');
       if (listingStatus !== 'current') params.set('listingStatus', listingStatus);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.DEV ? (import.meta.env.VITE_API_URL || 'http://localhost:3000') : window.location.origin;
       const queryString = params.toString();
       // くじら専用地図エンドポイント（FI物件のみ返す）
       const url = `${apiUrl}/api/kujira/map-properties${queryString ? `?${queryString}` : ''}`;
@@ -467,7 +467,7 @@ const KujiraPropertiesPage: React.FC = () => {
             <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom sx={{ color: '#0D47A1' }}>
               {listingStatus === 'historical' ? '売却済み物件一覧' : '販売中・売却済み物件一覧'}
             </Typography>
-            <Typography variant="body2" color="text.secondary">販売中と売却済みの物件を検索できます。</Typography>
+            <Typography variant="body2" color="text.secondary">販売中・公開前・売却済みの物件を検索できます。</Typography>
             {listingStatus === 'historical' && <Typography variant="caption" color="text.secondary">※掲載価格は過去の売出価格であり、成約価格とは限りません。</Typography>}
             <Typography variant="body1" color="text.secondary" gutterBottom>
               {pagination && `${t('pagination.total')}${pagination.total}${t('pagination.properties')}`}
@@ -540,7 +540,7 @@ const KujiraPropertiesPage: React.FC = () => {
                 <Box>
                   <Typography variant="body1" fontWeight={700} sx={{ mb: 1 }}>販売状況で探す</Typography>
                   <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    {([["current", "販売中の物件"], ["historical", "売却済み物件を探す"], ["all", "すべての物件"]] as const).map(([value, label]) => (
+                    {([["current", "販売中の物件"], ["pre_release", "公開前の物件を探す"], ["historical", "売却済み物件を探す"], ["all", "すべての物件"]] as const).map(([value, label]) => (
                       <Button key={value} variant={listingStatus === value ? "contained" : "outlined"}
                         onClick={() => chooseListingStatus(value)} disabled={filterLoading} aria-pressed={listingStatus === value}
                         sx={{ fontWeight: 700, textTransform: "none" }}>{label}</Button>
@@ -725,7 +725,7 @@ const KujiraPropertiesPage: React.FC = () => {
             <>
               {properties.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="h6" color="text.secondary">{listingStatus === 'historical' ? '該当する売却済み物件はありません' : t('message.noResults')}</Typography>
+                  <Typography variant="h6" color="text.secondary">{listingStatus === 'historical' ? '該当する売却済み物件はありません' : listingStatus === 'pre_release' ? '該当する公開前物件はありません' : t('message.noResults')}</Typography>
                 </Box>
               ) : (
                 <>

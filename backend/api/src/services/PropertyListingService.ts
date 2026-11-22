@@ -475,7 +475,9 @@ export class PropertyListingService {
         ? await this.getMainImageIds((data || []).map((p: any) => p.id))
         : new Map<string, string>();
 
-      const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中', '公開前', '専任・公開前', '一般・公開前']);
+      const isPublicListing = (status: unknown): boolean =>
+        ['専任・公開中', '一般・公開中', '公開中'].includes(String(status || '')) ||
+        String(status || '').includes('公開前');
       const maskHistoricalArea = (value: string): string => {
         const address = value.replace(/〒?\\d{3}-?\\d{4}\\s*/, '').trim();
         const chome = address.match(/^(.+?[０-９0-9一二三四五六七八九十]+丁目)/);
@@ -511,7 +513,7 @@ export class PropertyListingService {
         console.log('[PropertyListingService] Skipping image fetching (skipImages=true), enriching storage_location from work_tasks');
         const skipImagesResults = await Promise.all(
           (data || []).map(async (property, index) => {
-            if (!currentStatuses.has(String(property.atbb_status || ''))) {
+            if (!isPublicListing(property.atbb_status)) {
               return historicalSummary(property, index);
             }
             const { price: _price, ...propertyWithoutPrice } = property;
