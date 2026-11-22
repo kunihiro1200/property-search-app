@@ -2,9 +2,9 @@ import axios from 'axios';
 
 // Vercelでは同じドメインにデプロイされているため、相対パスを使用
 // ローカル開発時のみ localhost:3000 を使用
-const API_BASE_URL = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'development' ? 'http://localhost:3000' : ''
-);
+const API_BASE_URL = import.meta.env.DEV
+  ? (import.meta.env.VITE_API_URL || 'http://localhost:3000')
+  : ''; // 公開サイトでは常に同じデプロイ環境のAPIを使用
 
 // デバッグ用ログ（本番環境でも表示）
 console.log('🔍 [publicApi] Environment:', {

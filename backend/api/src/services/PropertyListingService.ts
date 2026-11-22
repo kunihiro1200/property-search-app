@@ -300,7 +300,7 @@ export class PropertyListingService {
     propertyNumber?: string;  // NEW: 物件番号フィルター（部分一致）
     buildingAgeRange?: { min?: number; max?: number };  // NEW: 築年数フィルター
     showPublicOnly?: boolean;  // NEW: 公開中のみ表示フィルター
-    listingStatus?: 'current' | 'historical' | 'all';
+    listingStatus?: 'current' | 'pre_release' | 'historical' | 'all';
     sitePrefix?: 'AA' | 'FI';
     withCoordinates?: boolean;  // NEW: 座標がある物件のみ取得
     skipImages?: boolean;  // NEW: 画像取得をスキップ（地図ビュー用）
@@ -330,8 +330,7 @@ export class PropertyListingService {
         .eq('is_hidden', false) // スプレッドシートから削除された物件を除外
         .not('property_number', 'ilike', TEST_PROPERTY_NUMBER_PATTERN); // テスト用物件はお客様に見せない
 
-      // 明示的に選択した場合のみ非公開・成約物件を公開用に匿名化して検索する。
-      // 公開前は実績扱いせず、一覧には表示しない。
+      // 販売中・公開前は詳細表示、売却済み・非公開物件のみ匿名化して検索する。
       // DBレベルでAA/FIを独立させ、物件番号検索でも他方を参照できないようにする。
       if (sitePrefix) {
         query = query.ilike('property_number', `${sitePrefix}%`);
@@ -339,13 +338,16 @@ export class PropertyListingService {
         query = query.not('property_number', 'ilike', 'FI%');
       }
       if (listingStatus === 'historical') {
+        // 「専任・公開前」も売却済みに含めない。
         query = query.not('atbb_status', 'is', null)
-          .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中","公開前")');
-      } else if (listingStatus === 'all') {
-        query = query.not('atbb_status', 'in', '("公開前")');
-      } else {
+          .not('atbb_status', 'in', '("専任・公開中","一般・公開中","公開中")')
+          .not('atbb_status', 'ilike', '%公開前%');
+      } else if (listingStatus === 'pre_release') {
+        query = query.ilike('atbb_status', '%公開前%');
+      } else if (listingStatus === 'current') {
         query = query.in('atbb_status', ['専任・公開中', '一般・公開中', '公開中']);
       }
+      // all は公開前を含むすべての販売状況を取得する。
       
       // 複数物件タイプのフィルタリングをサポート
       if (propertyType) {
@@ -469,11 +471,13 @@ export class PropertyListingService {
       }
       
       // 手動指定されたメイン画像（失敗しても空Mapなので一覧は壊れない）
-      const mainImageMap = listingStatus === 'current'
+      const mainImageMap = listingStatus === 'current' || listingStatus === 'pre_release'
         ? await this.getMainImageIds((data || []).map((p: any) => p.id))
         : new Map<string, string>();
 
-      const currentStatuses = new Set(['専任・公開中', '一般・公開中', '公開中']);
+      const isPublicListing = (status: unknown): boolean =>
+        ['専任・公開中', '一般・公開中', '公開中'].includes(String(status || '')) ||
+        String(status || '').includes('公開前');
       const maskHistoricalArea = (value: string): string => {
         const address = value.replace(/〒?\\d{3}-?\\d{4}\\s*/, '').trim();
         const chome = address.match(/^(.+?[０-９0-9一二三四五六七八九十]+丁目)/);
@@ -503,13 +507,13 @@ export class PropertyListingService {
       // skipImages=trueの場合は画像取得をスキップ（地図ビュー用の高速化）
       const propertiesWithImages: any[] = [];
       
-      if (skipImages || listingStatus !== 'current') {
+      if (skipImages || listingStatus === 'historical' || listingStatus === 'all') {
         // 画像取得をスキップ（一覧ページ用）
         // storage_location は work_tasks から補完して folder-thumbnail 遅延ロードに使用
         console.log('[PropertyListingService] Skipping image fetching (skipImages=true), enriching storage_location from work_tasks');
         const skipImagesResults = await Promise.all(
           (data || []).map(async (property, index) => {
-            if (!currentStatuses.has(String(property.atbb_status || ''))) {
+            if (!isPublicListing(property.atbb_status)) {
               return historicalSummary(property, index);
             }
             const { price: _price, ...propertyWithoutPrice } = property;
